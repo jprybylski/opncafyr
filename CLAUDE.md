@@ -76,6 +76,21 @@ tool-specific logic in `core/`, it belongs in an adapter or workflow instead.
   creates a new run. Only `completed` runs may be published.
 - Publication and build manifests pin exact run IDs and artifact SHA-256s, never "latest".
 
+**Offline-capable (supported v1 use case).** Most installs are online: the installer
+downloads pinned, checksummed assets. Firewalled environments (such as GxP cloud
+analytical systems) are common, though, so offline has to work too.
+- Install works both online and from a verified bundle or internal mirrors (#36), through
+  one code path.
+- Every downloaded asset is pinned with a SHA-256 in `runtime/pins.toml`.
+- Nothing at runtime may *require* the network. Don't add CDN assets or web fonts,
+  `quarto add`, `uv lock` refreshes or `curl` installers. Update checks and telemetry are
+  off by default.
+- In offline mode, configure the tools so they never reach out (`UV_OFFLINE`,
+  `UV_NO_INDEX`, `UV_FIND_LINKS`, `UV_PYTHON_DOWNLOADS=never`, local renv repositories,
+  bundled Quarto extensions).
+- A step that needs the network and has no offline equivalent is a bug. Add it to #44
+  with a resolution.
+
 **Files.** Manifests and workspace JSON are schema-validated and written with
 `core.manifest.atomic_write_json`. Incomplete output directories must never look complete.
 The workspace metadata folder is `.opncafyr/` and its schema is versioned with migrations.

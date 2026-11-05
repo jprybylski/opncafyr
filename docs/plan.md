@@ -10,6 +10,11 @@ an icon, prepares a CSV, runs **one analyte at a time** in opnca-r, and publishe
 completed runs to a DOCX report or PPTX deck. Every step leaves a replayable, hashed
 record. The core is tool-agnostic so other tools can be added later.
 
+**Offline installation is a supported v1 use case** (owner decision, 2026-11-04).
+Most installs will be online, but firewalled environments are common, especially GxP
+cloud analytical systems. Offline isn't trivial, so each gate checks it rather than
+leaving it to the final release.
+
 ## How the work is organised
 
 - **Milestones** are the spec's five gates. A gate closes only when its exit evidence is
@@ -24,8 +29,8 @@ record. The core is tool-agnostic so other tools can be added later.
 
 | Gate | Delivers | Exit evidence |
 |---|---|---|
-| 0. Installation proof | Owner decisions, dependency pins, clean-account install spikes | No elevation; opnca-r loads and calculates; Quarto renders; failures give redacted diagnostics |
-| 1. Reusable shell | Controller, security, jobs, registry, proxy, workspace picker, home UI, installer v1 | Second click reuses the instance; stale state recovers; a job survives tab close; no data leaves the machine |
+| 0. Installation proof | Owner decisions, dependency pins, clean-account install spikes | No elevation; opnca-r loads and calculates; Quarto renders; failures give redacted diagnostics; the same works with networking disabled from pre-fetched assets, and every network touchpoint is listed (#44) |
+| 1. Reusable shell | Controller, security, jobs, registry, proxy, workspace picker, home UI, installer v1 | Second click reuses the instance; stale state recovers; a job survives tab close; no data leaves the machine; installer v1 installs both online and from an offline bundle (#36) |
 | 2. Analysis path | Import, cleaning, mapping, validation, analyte snapshot, run bundle, opnca adapter | A two-analyte fixture yields two distinct scripts, snapshots, manifests and outputs, with no cross-analyte rows |
 | 3. Publishing path | Sidecar validation, publication curator, quartifyr and deckifyr adapters | Report and deck use only the selected completed run hashes; missing metadata is caught before render; subpath behaviour passes |
 | 4. Release hardening | Prebuilt binaries, updater/rollback, install matrix, diagnostics, signing, guide, second-tool proof | Standard-user install and upgrade pass without admin; an interrupted upgrade leaves the old version runnable |
@@ -58,6 +63,10 @@ scheduled first.
 ## Sequencing
 
 **Now (in parallel)**
+- **Offline audit (#44).** Map every point where install or runtime reaches the network.
+  The biggest known one: quartifyr and reportifyr project setup goes through pyro, which
+  can `curl` uv and run `uv lock`/`uv sync`. Upstream, push opnca-r#23 (vendored
+  crates) and quartifyr#72 (offline project setup).
 - **Decisions #1–#4.** The owner needs representative, deidentified datasets and target
   machines to decide these.
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
@@ -65,6 +74,11 @@ scheduled first.
   what is left.
 - **Upstream work.** Start with opnca-r#25, #26 and #24, which Gate 2 needs, and
   deckifyr#82, which Gate 3 needs.
+- **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
+  can run Docker. opnca-r is compiled once, when the image is built. The same image gives
+  CI and the Gate 2/3 integration tests a working runtime while the native install spikes
+  are still open. Phase B (cloud access through an SSH tunnel or IDE proxy) follows #11,
+  #15 and #16.
 
 **After #1 and #5**
 - Install spikes #6 and #7 on clean standard-user accounts. They succeed only when an
@@ -94,16 +108,18 @@ scheduled first.
 
 | Risk | Effect | Mitigation | Issues |
 |---|---|---|---|
-| opnca-r source build fails on user machines (Rust, Rtools, linker, R ABI) | Install blocked for the target users | Prebuilt binaries are the release target; the source build is a tested fallback only | #4, #6, #7, #34, opnca-r#28, opnca-r#23 |
+| opnca-r source build fails on user machines (Rust, Rtools, linker, R ABI) | Install blocked for the target users | Prebuilt binaries are the release target; the source build is a tested fallback only. Users on cloud VMs that can run Docker use the container image instead (#42) | #4, #6, #7, #34, #42, opnca-r#28, opnca-r#23 |
 | Child apps break behind `/apps/<tool>/` | Embedded editors don't work | Configurable base path upstream; a proxy rewrite only as a tested temporary measure | #15, #16, opnca-r#24, deckifyr#82 |
 | No durable opnca-r export | Runs aren't reproducible | Temporary replay through the public API, checked against UI results | #27, #28, #29, opnca-r#25, opnca-r#26 |
 | Partial report renders exit 0 | Silent incomplete deliverables | Adapter treats warnings as errors and scans logs and placeholders; upstream job contract | #32, quartifyr#69, quartifyr#70 |
 | Unsaved deck edits lost on stop | Data loss | Dirty state on health check; save or refuse before stop | #14, #33, deckifyr#83 |
+| Cloud users reach the app through an SSH tunnel or IDE proxy (different Host/Origin, URL prefix) | App unreachable, or security checks loosened ad hoc | Explicit base-path and allow-list settings with tested presets; the session token is always required; the port is published to VM loopback only | #42, #15, #16, opnca-r#24, deckifyr#82 |
 | Shared-origin localStorage leaks a mapping between analytes | Wrong column mapping | Scope or disable it upstream; the launcher always passes an explicit mapping | #27, opnca-r#30 |
 | BLQ semantics lost on hand-off | Wrong NCA | opnca-r app maps LLOQ/BLQ; mapping is passed explicitly | #23, opnca-r#29 |
 | LibreOffice can't be packaged per user | No slide previews or field recalculation | Mark the features unavailable; never required for a build | #8, deckifyr#84 |
 | Organisational application controls block user-local binaries | Install fails despite no-admin design | Detect it in preflight; signing and notarization; clear diagnostics | #19, #38, #39 |
 | Scientific rules decided ad hoc in code | Inconsistent analyses | `decision-needed` issue #2 must be answered first; checks are configurable but never silent | #2, #22, #24 |
+| Tools reach the network during install or use (pyro uv install and sync, `quarto add`, renv bootstrap, crates.io) | Install or reports fail in firewalled environments | Offline audit with a network-blocked CI job; app-owned uv plus offline environment settings; bundled wheels, extensions and packages; upstream fixes | #44, #36, opnca-r#23, quartifyr#72 |
 
 ## Decision log
 
@@ -113,11 +129,14 @@ scheduled first.
 | Tool-agnostic core; trusted descriptors and adapters; workflow packs | Accepted | [ADR 0002](decisions/0002-tool-agnostic-core.md) |
 | Workspace metadata folder is `.opncafyr/`, with a versioned schema | Accepted | spec allowed a rename |
 | No reportifyr changes; sidecar validation lives in the launcher | Accepted | #30 |
-| Supported platforms, R minor, offline need, idle timeout | Open | #1 |
+| Offline installation supported in v1 alongside the default online install (native and container) | **Accepted** (owner, 2026-11-04) | #1, #36, #44 |
+| Supported platforms, R minor, idle timeout | Open | #1 |
 | Data conventions and warning-vs-blocking checks | Open | #2 |
 | Report/deck templates; identifiable-data policy | Open | #3 |
 | Binaries first vs. compiler-backed first install | Open (spec recommends binaries) | #4 |
 | Home UI frontend stack | Open | #18 |
+| Cloud container mode in v1: supported environments, Docker vs Podman, storage types | Open | #42, #1 |
+| Redistributing image archives: audience, opncafyr license, GPL source obligations, PPM binaries | Open (needs legal) | #43 |
 
 ## Extending to other tools
 
@@ -147,6 +166,8 @@ makes this concrete with a guide and a toy adapter.
 | #6 | Spike: clean standard-user install on Windows through to a rendered artifact | #5 | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23), [opnca-r#28](https://github.com/mantra-opnca/opnca-r/issues/28) |
 | #7 | Spike: clean standard-user install on macOS through to a rendered artifact | #5 | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23), [opnca-r#28](https://github.com/mantra-opnca/opnca-r/issues/28) |
 | #8 | Spike: per-user LibreOffice packaging for deck previews and field recalculation | #5 | [deckifyr#84](https://github.com/jprybylski/deckifyr/issues/84) |
+| #42 | Cloud container mode: pinned Docker image for users on cloud compute (plus dev/CI reference runtime) | #11, #15, #16 (Phase B) | [opnca-r#24](https://github.com/mantra-opnca/opnca-r/issues/24), [deckifyr#82](https://github.com/jprybylski/deckifyr/issues/82), [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23) |
+| #44 | Offline-first audit: inventory and eliminate every network touchpoint at install and run time | — | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23), [quartifyr#72](https://github.com/jprybylski/quartifyr/issues/72) |
 
 ### Gate 1 – Reusable shell
 
@@ -163,6 +184,7 @@ makes this concrete with a guide and a toy adapter.
 | #17 | Workspace selection: native folder picker, .opncafyr/workspace.json, schema migrations | #9, #11 | — |
 | #18 | Home page UI shell and frontend stack decision | #9, #17 | — |
 | #19 | Installer v1: per-user staging, atomic activation, desktop icon, repair and uninstall | #5, #6, #7, #9 | — |
+| #36 | Offline installation (supported v1 use case): air-gapped bundles, bundle builder, and internal-mirror mode | #44, #5, #19 | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23), [opnca-r#28](https://github.com/mantra-opnca/opnca-r/issues/28), [deckifyr#86](https://github.com/jprybylski/deckifyr/issues/86), [quartifyr#72](https://github.com/jprybylski/quartifyr/issues/72) |
 
 ### Gate 2 – Analysis path
 
@@ -194,9 +216,9 @@ makes this concrete with a guide and a toy adapter.
 |---|---|---|---|
 | #34 | Install opnca-r from prebuilt platform binaries via the renv cellar | #4, #19 | [opnca-r#28](https://github.com/mantra-opnca/opnca-r/issues/28), [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23) |
 | #35 | Updater with rollback: an interrupted upgrade leaves the old version runnable | #19 | — |
-| #36 | Offline installer bundle (if required by the platform decision) | #1, #34 | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23) |
 | #37 | Automated clean install and upgrade test matrix on standard-user VMs | #19, #35, #34 | — |
 | #38 | Redacted diagnostic and support bundle export | #11, #3 | — |
 | #39 | Code signing (Windows) and notarization (macOS) for installer and launcher | #19 | — |
 | #40 | User guide with research-use notice | #32, #33 | — |
 | #41 | "Adding a tool" guide plus a toy second adapter that proves the core is tool-agnostic | #13, #15, #12 | — |
+| #43 | Attach offline Docker image archives to each release (pending a redistribution/licensing review) | #42 | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23) |

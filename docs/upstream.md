@@ -9,7 +9,7 @@ carry the `upstream-blocked` label.
 | Issue | What | Needed by |
 |---|---|---|
 | [#24](https://github.com/mantra-opnca/opnca-r/issues/24) (existing; [launcher comment](https://github.com/mantra-opnca/opnca-r/issues/24#issuecomment-6648467601)) | Work behind a reverse proxy: configurable base path and allowed authorities, relative API paths | Gate 1 proxy |
-| [#23](https://github.com/mantra-opnca/opnca-r/issues/23) (existing; [launcher comment](https://github.com/mantra-opnca/opnca-r/issues/23#issuecomment-6648467843)) | Vendored source tarball for offline builds, with checksums | Gate 0 fallback, Gate 4 offline |
+| [#23](https://github.com/mantra-opnca/opnca-r/issues/23) (existing; [launcher comment](https://github.com/mantra-opnca/opnca-r/issues/23#issuecomment-6648467843)) | Vendored source tarball for offline builds, with checksums | Required for any offline source build; offline is a supported v1 use case (Gate 0, #36) |
 | [#25](https://github.com/mantra-opnca/opnca-r/issues/25) | File-backed, foreground launcher entry point (`opnca_serve()`) | Gate 2 opnca adapter |
 | [#26](https://github.com/mantra-opnca/opnca-r/issues/26) | Atomic server-side run export to an approved directory | Gate 2 durable save |
 | [#27](https://github.com/mantra-opnca/opnca-r/issues/27) | Generated R code reads the real relative input path | Gate 2 replayable script |
@@ -29,7 +29,7 @@ well as a Rust toolchain. #23 addresses this.
 | [#83](https://github.com/jprybylski/deckifyr/issues/83) | `serve` launcher mode: dirty state on `/api/health`, orderly stop | Gate 1 lifecycle / Gate 3 |
 | [#84](https://github.com/jprybylski/deckifyr/issues/84) | Job timeouts, cancellation, isolated LibreOffice profile | Gate 3 |
 | [#85](https://github.com/jprybylski/deckifyr/issues/85) | Versioned `--json` result schema with full warnings | Gate 3 |
-| [#86](https://github.com/jprybylski/deckifyr/issues/86) | Versioned Python wheel with SHA-256 | Gate 0 pins |
+| [#86](https://github.com/jprybylski/deckifyr/issues/86) | Versioned Python wheel with SHA-256 | Gate 0 pins; offline wheelhouse (#36) |
 
 ## jprybylski/quartifyr (public)
 
@@ -38,6 +38,11 @@ well as a Rust toolchain. #23 addresses this.
 | [#69](https://github.com/jprybylski/quartifyr/issues/69) | Noninteractive job contract; fail loudly on partial renders | Gate 3 |
 | [#70](https://github.com/jprybylski/quartifyr/issues/70) | `check_report_project()` render-free preflight | Gate 3 |
 | [#71](https://github.com/jprybylski/quartifyr/issues/71) | Quarto render timeout and process-tree cleanup | Gate 3 |
+| [#72](https://github.com/jprybylski/quartifyr/issues/72) | Offline / pre-provisioned project setup (no pyro `curl`, `uv lock` or `quarto add` at runtime) | Gate 0 offline audit, Gate 3 |
+
+Offline installation is a supported v1 use case (2026-11-04). pyro and reportifyr (A2-ai, external)
+also reach the network during project setup; opncafyr handles that in its adapter (#44)
+rather than through upstream issues.
 
 ## Not filed
 
