@@ -45,7 +45,7 @@ leaving it to the final release.
    ─► #25 snapshot ─► #26 bundle ─► #27 opnca launch ◄── opnca-r#40 (#25 done)
    ─► #28 durable save (opnca-r#26/#27 done) ─► #29 replay check
    ─► #31 curator ─► #32 quartifyr (quartifyr#69-72 done; #75-78 follow-ups)
-                  └► #33 deckifyr  ◄── deckifyr#82-86
+                  └► #33 deckifyr  ◄── deckifyr#88 (#82-86 done)
 ```
 
 The three riskiest boundaries come straight from the spec's conclusion. They are
@@ -56,9 +56,9 @@ scheduled first.
    tarball that builds offline. Each release has a SHA-256 `manifest.json`. Still
    unverified upstream: clean-account installs, renv cellar restore, and the 1.87 MSRV
    (opnca-r#43).
-2. **Child apps behind a prefix** (#15, #16, then deckifyr#82): opnca-r supports a base
-   path and allowed hosts since v0.2.5. deckifyr#82 is in progress. The opnca-r child
-   port still accepts cross-site POSTs (opnca-r#40).
+2. **Child apps behind a prefix** (#15, #16): opnca-r has supported a base path and
+   allowed hosts since v0.2.5. deckifyr has supported a path prefix since v0.3.4. Both
+   child ports still accept cross-site POSTs (opnca-r#40, deckifyr#88).
 3. **Durable opnca-r export** (#27, #28, #29): `opnca_serve()`, atomic server-side save
    and replayable `analysis.R` landed in v0.2.5. A saved run can still be overwritten from
    the UI (opnca-r#41).
@@ -78,7 +78,7 @@ scheduled first.
   what is left.
 - **Upstream work.** opnca-r#23–#30 and quartifyr#69–#72 landed on 2026-11-05. The
   review follow-ups are in [upstream.md](upstream.md). Next: opnca-r#40 (security; blocks
-  #27), quartifyr#75 (a real release to pin) and deckifyr#82–#86.
+  #27), deckifyr#88 (security; blocks #33) and quartifyr#75 (a real release to pin).
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
   CI and the Gate 2/3 integration tests a working runtime while the native install spikes
@@ -116,9 +116,10 @@ scheduled first.
 | opnca-r source build fails on user machines (Rust, Rtools, linker, R ABI) | Install blocked for the target users | Prebuilt binaries are the release target; the source build is a tested fallback only. Users on cloud VMs that can run Docker use the container image instead (#42) | #4, #6, #7, #34, #42, opnca-r#28, opnca-r#23 |
 | Child apps break behind `/apps/<tool>/` | Embedded editors don't work | Configurable base path upstream; a proxy rewrite only as a tested temporary measure | #15, #16, opnca-r#24, deckifyr#82 |
 | Saved opnca-r run replaced or half-written | Runs aren't reproducible or immutable | Upstream atomic save (done); only `COMPLETE` plus re-verified `artifacts.json` counts; block `overwrite` until upstream adds `--no-overwrite` | #27, #28, #29, opnca-r#26, opnca-r#41 |
-| A cross-site page drives the opnca-r child port directly | Exclusions or results changed without the session secret | Upstream API token injected by the proxy, and rejection of cross-site requests; negative test in the harness | #16, #27, opnca-r#40 |
+| A cross-site page drives a child's loopback port directly | Exclusions, results or decks changed without the session secret | Upstream Host allow-list, API token injected by the proxy, and rejection of cross-site requests; negative test in the harness | #16, #27, #33, opnca-r#40, deckifyr#88 |
+| A deck project file names an executable or a path outside the project | Breaks the rule that workspace files never name an executable | The adapter rejects non-default `binary` values and paths outside the project before every job; upstream flag | #33, deckifyr#89 |
 | Partial or stale report renders look complete | Silent incomplete deliverables | `render.R --strict --json` (done upstream); render in staging; trust only hashes in the result | #32, quartifyr#69, quartifyr#77 |
-| Unsaved deck edits lost on stop | Data loss | Dirty state on health check; save or refuse before stop | #14, #33, deckifyr#83 |
+| Unsaved deck edits lost on stop | Data loss | `POST /api/shutdown` refuses while there are unsaved edits (done); SIGTERM only as a fallback | #14, #33, deckifyr#83 |
 | Cloud users reach the app through an SSH tunnel or IDE proxy (different Host/Origin, URL prefix) | App unreachable, or security checks loosened ad hoc | Explicit base-path and allow-list settings with tested presets; the session token is always required; the port is published to VM loopback only | #42, #15, #16, opnca-r#24, deckifyr#82 |
 | Shared-origin localStorage leaks a mapping between analytes | Wrong column mapping | Scope or disable it upstream; the launcher always passes an explicit mapping | #27, opnca-r#30 |
 | BLQ semantics lost or defaulted on hand-off | Wrong NCA | opnca-r maps LLOQ/BLQ (done); the launcher asks for all three BLQ rules and passes a full preset; upstream `--require-blq-rules` | #23, #27, opnca-r#29, opnca-r#42 |

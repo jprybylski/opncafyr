@@ -18,3 +18,5 @@ All notable changes to this project are documented here. The format follows
   issues we filed. `docs/upstream.md` now has a status column and the follow-ups
   (opnca-r #40-#43, quartifyr #75-#78). `docs/plan.md` risks are updated, and
   `runtime/pins.toml` pins opnca-r 0.2.6 assets and the quartifyr commit and tarball.
+- Reviewed deckifyr 0.3.4 (#82-#86) and filed follow-ups #88-#91. `runtime/pins.toml` now
+  pins the deckifyr 0.3.4 wheel, sdist and R tarball by SHA-256.

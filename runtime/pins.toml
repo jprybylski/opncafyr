@@ -43,9 +43,16 @@ r_minor = "4.6"
 "opnca_0.2.6-vendored.tar.gz" = "472f8bdf8b15ef25bfccbbd12c5a60c716a73d4b327ad887d6592f4c209e5184"  # offline source fallback
 
 [packages.deckifyr]
-version = "0.3.3"          # Python wheel pending (deckifyr #86)
+version = "0.3.4"
 source = "github:jprybylski/deckifyr"
 extras = ["web", "preview"]
+# Install the wheel; R users can install the R tarball. The wheel's dependencies are
+# lower bounds only, so the offline wheelhouse pins the exact transitive versions (#36).
+wheel = "deckifyr-0.3.4-py3-none-any.whl"
+wheel_sha256 = "8e280a5a52b6789ba26b7cc2565d399119c56e2f6ef21b440e1520a8a3a2751c"
+sdist_sha256 = "13467e96b531257088beb53519d53b12884c60c513cef58f4a8010d60a206fe6"
+r_tarball_sha256 = "6120deb1c72775a66ac757b6f3c4917a5f840af4d1ca67ddc6c78410c2600322"
+sha256sums_sha256 = "b67d971ee306a747f7a26fb2bd710fd53b401d8f6b26c4b30ccc485553976ed6"
 
 [packages.quartifyr]
 version = "0.3.1"
