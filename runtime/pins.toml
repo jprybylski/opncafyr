@@ -55,13 +55,14 @@ r_tarball_sha256 = "6120deb1c72775a66ac757b6f3c4917a5f840af4d1ca67ddc6c78410c260
 sha256sums_sha256 = "b67d971ee306a747f7a26fb2bd710fd53b401d8f6b26c4b30ccc485553976ed6"
 
 [packages.quartifyr]
-version = "0.3.1"
+version = "0.3.2"
 source = "github:jprybylski/quartifyr"
-# The v0.3.1 tag and tarball were replaced on 2026-11-05 to add the job contract, preflight,
-# timeout and offline support (#69-#72). Pin the commit and tarball hash until a new
-# version is released (quartifyr #75).
-commit = "56578761f02aba53c741571969f11b9c03f2e358"
-tarball_sha256 = "d1548029118c792f36f670f92b32d299a79acc45701d58bf480e3f4b376e1a63"
+# v0.3.2 (2026-11-05) is the first real release of #69-#72 and #75-#78. Tag v0.3.2 points
+# at 5f3b0f5. v0.2.1 and v0.3.1 were re-tagged after release, and the release workflow can
+# still do that within 24 hours of publishing (quartifyr #80), so always verify the hash.
+commit = "5f3b0f51b31d46b42f36d6cdd265722e6215c22f"
+tarball_sha256 = "cb29f01bbf417dd494c510c85b5635d8f1a16350ce39a96ca04b4ee2cb2d3a03"
+sha256sums_sha256 = "bde43fd33280a42537f8ece25d5d34b6edde93d2a36fa9223475340f1b8d08ae"
 
 [packages.reportifyr]
 version = "TBD"            # external (A2-ai); pinned, not modified

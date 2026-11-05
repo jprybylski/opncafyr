@@ -44,7 +44,7 @@ leaving it to the final release.
 #2 data conventions ─► #20 fixture ─► #21 import ─► #22 clean / #23 map ─► #24 checks
    ─► #25 snapshot ─► #26 bundle ─► #27 opnca launch ◄── opnca-r#40 (#25 done)
    ─► #28 durable save (opnca-r#26/#27 done) ─► #29 replay check
-   ─► #31 curator ─► #32 quartifyr (quartifyr#69-72 done; #75-78 follow-ups)
+   ─► #31 curator ─► #32 quartifyr (quartifyr#69-72, #75-78 done in 0.3.2; #80-82 follow-ups)
                   └► #33 deckifyr  ◄── deckifyr#88 (#82-86 done)
 ```
 
@@ -69,16 +69,17 @@ scheduled first.
 - **Offline audit (#44).** Map every point where install or runtime reaches the network.
   The biggest known one: quartifyr and reportifyr project setup goes through pyro, which
   can `curl` uv and run `uv lock`/`uv sync`. opnca-r#23 (vendored crates) and
-  quartifyr#72 (offline project setup) are done. quartifyr#76 (offline-safe render) is
-  open.
+  quartifyr#72 (offline project setup) are done, and quartifyr#76 (offline-safe render)
+  shipped in 0.3.2 as an opt-in `--offline` flag, which our adapter must always pass.
 - **Decisions #1–#4.** The owner needs representative, deidentified datasets and target
   machines to decide these.
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
   already implements part of #9, #11 and #13. Each of those issues has a comment saying
   what is left.
-- **Upstream work.** opnca-r#23–#30 and quartifyr#69–#72 landed on 2026-11-05. The
-  review follow-ups are in [upstream.md](upstream.md). Next: opnca-r#40 (security; blocks
-  #27), deckifyr#88 (security; blocks #33) and quartifyr#75 (a real release to pin).
+- **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and
+  deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
+  [upstream.md](upstream.md). Next: opnca-r#40 (security; blocks #27) and deckifyr#88
+  (security; blocks #33).
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
   CI and the Gate 2/3 integration tests a working runtime while the native install spikes
@@ -101,9 +102,9 @@ scheduled first.
   results.
 
 **Gate 3**
-- Starts once #29 proves runs can be replayed. Until quartifyr#69 lands, the quartifyr
-  adapter wraps `render_report()` with `options(warn = 2)`, a `.rpfy-logs` scan and a
-  leftover-`{rpfy}:` scan.
+- Starts once #29 proves runs can be replayed. The quartifyr adapter calls quartifyr
+  0.3.2's `render.R --strict --json --offline` and `check.R --json` (quartifyr#69/#78),
+  in a staging copy of the project, until quartifyr#81 lands.
 
 **Gate 4**
 - Closes the release. #41 adds a toy second adapter to prove that `core/` stays
@@ -118,7 +119,7 @@ scheduled first.
 | Saved opnca-r run replaced or half-written | Runs aren't reproducible or immutable | Upstream atomic save (done); only `COMPLETE` plus re-verified `artifacts.json` counts; block `overwrite` until upstream adds `--no-overwrite` | #27, #28, #29, opnca-r#26, opnca-r#41 |
 | A cross-site page drives a child's loopback port directly | Exclusions, results or decks changed without the session secret | Upstream Host allow-list, API token injected by the proxy, and rejection of cross-site requests; negative test in the harness | #16, #27, #33, opnca-r#40, deckifyr#88 |
 | A deck project file names an executable or a path outside the project | Breaks the rule that workspace files never name an executable | The adapter rejects non-default `binary` values and paths outside the project before every job; upstream flag | #33, deckifyr#89 |
-| Partial or stale report renders look complete | Silent incomplete deliverables | `render.R --strict --json` (done upstream); render in staging; trust only hashes in the result | #32, quartifyr#69, quartifyr#77 |
+| Partial or stale report renders look complete | Silent incomplete deliverables | `render.R --strict --json` (done upstream); render in staging; trust only hashes in the result | #32, quartifyr#69, quartifyr#77, quartifyr#81 |
 | Unsaved deck edits lost on stop | Data loss | `POST /api/shutdown` refuses while there are unsaved edits (done); SIGTERM only as a fallback | #14, #33, deckifyr#83 |
 | Cloud users reach the app through an SSH tunnel or IDE proxy (different Host/Origin, URL prefix) | App unreachable, or security checks loosened ad hoc | Explicit base-path and allow-list settings with tested presets; the session token is always required; the port is published to VM loopback only | #42, #15, #16, opnca-r#24, deckifyr#82 |
 | Shared-origin localStorage leaks a mapping between analytes | Wrong column mapping | Scope or disable it upstream; the launcher always passes an explicit mapping | #27, opnca-r#30 |
@@ -126,7 +127,7 @@ scheduled first.
 | LibreOffice can't be packaged per user | No slide previews or field recalculation | Mark the features unavailable; never required for a build | #8, deckifyr#84 |
 | Organisational application controls block user-local binaries | Install fails despite no-admin design | Detect it in preflight; signing and notarization; clear diagnostics | #19, #38, #39 |
 | Scientific rules decided ad hoc in code | Inconsistent analyses | `decision-needed` issue #2 must be answered first; checks are configurable but never silent | #2, #22, #24 |
-| Tools reach the network during install or use (pyro uv install and sync, `quarto add`, renv bootstrap, crates.io) | Install or reports fail in firewalled environments | Offline audit with a network-blocked CI job; app-owned uv plus offline environment settings; bundled wheels, extensions and packages; upstream fixes | #44, #36, opnca-r#23, quartifyr#72, quartifyr#76 |
+| Tools reach the network during install or use (pyro uv install and sync, `quarto add`, renv bootstrap, crates.io) | Install or reports fail in firewalled environments | Offline audit with a network-blocked CI job; app-owned uv plus offline environment settings; bundled wheels, extensions and packages; upstream fixes | #44, #36, opnca-r#23, quartifyr#72, quartifyr#76, quartifyr#82 |
 
 ## Decision log
 
