@@ -46,7 +46,9 @@ All five were released in v0.3.4 (PR #87, 2026-11-05) and reviewed. The follow-u
 ## jprybylski/quartifyr (public)
 
 #69–#72 (PR #74) and #75–#78 (PR #79) were released in v0.3.2 (2026-11-05) and reviewed.
-The follow-ups #80–#82 cover the gaps.
+The follow-ups #81–#82 cover the gaps. The release workflow may still refresh a release
+(move the tag, replace the tarball) within 24 hours of publishing; that is intentional, for
+quick fixes, so pin a quartifyr release only after that window has passed.
 
 | Issue | What | Status | Needed by |
 |---|---|---|---|
@@ -54,11 +56,10 @@ The follow-ups #80–#82 cover the gaps.
 | [#70](https://github.com/jprybylski/quartifyr/issues/70) | `check_report_project()` render-free preflight | Done (v0.3.2); `scripts/check.R --json` added by #78 | Gate 3 |
 | [#71](https://github.com/jprybylski/quartifyr/issues/71) | Quarto render timeout and process-tree cleanup | Done (v0.3.2); `quarto render` only; Windows test skipped (documented) | Gate 3 |
 | [#72](https://github.com/jprybylski/quartifyr/issues/72) | Offline / pre-provisioned project setup | Done (v0.3.2) | Gate 0 offline audit, Gate 3 |
-| [#75](https://github.com/jprybylski/quartifyr/issues/75) | Release #69–#72 as a new version; stop rewriting releases | Done (v0.3.2, with `SHA256SUMS`); a 24-hour re-tag window remains, see #80 | Gate 0 pins |
+| [#75](https://github.com/jprybylski/quartifyr/issues/75) | Release #69–#72 as a new version; stop rewriting releases | Done (v0.3.2, with `SHA256SUMS`); refreshes allowed for 24 hours by design | Gate 0 pins |
 | [#76](https://github.com/jprybylski/quartifyr/issues/76) | Offline-safe render (no venv re-sync or index access) | Done (v0.3.2) as opt-in `--offline`; pass-2 error relabel doesn't fire (#82) | Gate 3, offline |
 | [#77](https://github.com/jprybylski/quartifyr/issues/77) | A failed render leaves the previous draft/final looking complete | Done (v0.3.2) for timeouts and early failures; strict rejections and partial pass-2 failures still leave a DOCX in place (#81) | Gate 3 |
 | [#78](https://github.com/jprybylski/quartifyr/issues/78) | Result `schema_version`, input hashes, tool versions; `check.R`; small fixes | Done (v0.3.2); inputs hashed after render and incomplete (#82) | Gate 3 |
-| [#80](https://github.com/jprybylski/quartifyr/issues/80) | Never move a tag or replace an asset of a published release; note the v0.3.1/v0.2.1 replacements | Open; pin by SHA-256 meanwhile | Gate 0 pins |
 | [#81](https://github.com/jprybylski/quartifyr/issues/81) | No complete-looking DOCX after a strict rejection, partial pass-2 failure or kill; `.previous` keeps the last good render | Open; adapter renders in staging meanwhile (#32) | Gate 3 |
 | [#82](https://github.com/jprybylski/quartifyr/issues/82) | Pass-2 offline relabel; relative `reference_doc`/style paths; hash inputs before render; schema-check real output; venv mismatch | Open; adapter passes absolute paths and hashes inputs itself (#32) | Gate 3, offline |
 

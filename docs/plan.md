@@ -44,7 +44,7 @@ leaving it to the final release.
 #2 data conventions ─► #20 fixture ─► #21 import ─► #22 clean / #23 map ─► #24 checks
    ─► #25 snapshot ─► #26 bundle ─► #27 opnca launch ◄── opnca-r#40 (#25 done)
    ─► #28 durable save (opnca-r#26/#27 done) ─► #29 replay check
-   ─► #31 curator ─► #32 quartifyr (quartifyr#69-72, #75-78 done in 0.3.2; #80-82 follow-ups)
+   ─► #31 curator ─► #32 quartifyr (quartifyr#69-72, #75-78 done in 0.3.2; #81-82 follow-ups)
                   └► #33 deckifyr  ◄── deckifyr#88 (#82-86 done)
 ```
 
