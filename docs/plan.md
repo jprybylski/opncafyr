@@ -42,38 +42,43 @@ leaving it to the final release.
              └─► #5 pins ─► #6/#7 install spikes ─► #19 installer v1 ─┘
 #9 controller ─► #11 security ─► #15 proxy ─► #16 base-path check ◄── opnca-r#24, deckifyr#82
 #2 data conventions ─► #20 fixture ─► #21 import ─► #22 clean / #23 map ─► #24 checks
-   ─► #25 snapshot ─► #26 bundle ─► #27 opnca launch ◄── opnca-r#25
-   ─► #28 durable save ◄── opnca-r#26/#27 ─► #29 replay check
-   ─► #31 curator ─► #32 quartifyr ◄── quartifyr#69-71
+   ─► #25 snapshot ─► #26 bundle ─► #27 opnca launch ◄── opnca-r#40 (#25 done)
+   ─► #28 durable save (opnca-r#26/#27 done) ─► #29 replay check
+   ─► #31 curator ─► #32 quartifyr (quartifyr#69-72 done; #75-78 follow-ups)
                   └► #33 deckifyr  ◄── deckifyr#82-86
 ```
 
 The three riskiest boundaries come straight from the spec's conclusion. They are
 scheduled first.
 
-1. **Native R install** (#4, #6, #7, then opnca-r#28): opnca-r is source-only today, and
-   building it needs Rust plus a matching linker. On top of that, the v0.2.4 tarball does
-   **not** bundle vendored crates, so it also needs network access to crates.io. The
-   release target is prebuilt binaries.
-2. **Child apps behind a prefix** (#15, #16, then opnca-r#24 and deckifyr#82): both apps
-   use root-relative URLs today. opnca-r also rejects proxied Host headers.
-3. **Durable opnca-r export** (#27, #28, #29, then opnca-r#25, #26, #27): export is all
-   browser downloads today. The generated script reads a placeholder `your_data.csv`.
+1. **Native R install** (#4, #6, #7, #34): since v0.2.6 (2026-11-05), opnca-r ships
+   R 4.6 binaries for macOS arm64/x86_64 and Windows x86_64, plus a vendored source
+   tarball that builds offline. Each release has a SHA-256 `manifest.json`. Still
+   unverified upstream: clean-account installs, renv cellar restore, and the 1.87 MSRV
+   (opnca-r#43).
+2. **Child apps behind a prefix** (#15, #16, then deckifyr#82): opnca-r supports a base
+   path and allowed hosts since v0.2.5. deckifyr#82 is in progress. The opnca-r child
+   port still accepts cross-site POSTs (opnca-r#40).
+3. **Durable opnca-r export** (#27, #28, #29): `opnca_serve()`, atomic server-side save
+   and replayable `analysis.R` landed in v0.2.5. A saved run can still be overwritten from
+   the UI (opnca-r#41).
 
 ## Sequencing
 
 **Now (in parallel)**
 - **Offline audit (#44).** Map every point where install or runtime reaches the network.
   The biggest known one: quartifyr and reportifyr project setup goes through pyro, which
-  can `curl` uv and run `uv lock`/`uv sync`. Upstream, push opnca-r#23 (vendored
-  crates) and quartifyr#72 (offline project setup).
+  can `curl` uv and run `uv lock`/`uv sync`. opnca-r#23 (vendored crates) and
+  quartifyr#72 (offline project setup) are done. quartifyr#76 (offline-safe render) is
+  open.
 - **Decisions #1–#4.** The owner needs representative, deidentified datasets and target
   machines to decide these.
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
   already implements part of #9, #11 and #13. Each of those issues has a comment saying
   what is left.
-- **Upstream work.** Start with opnca-r#25, #26 and #24, which Gate 2 needs, and
-  deckifyr#82, which Gate 3 needs.
+- **Upstream work.** opnca-r#23–#30 and quartifyr#69–#72 landed on 2026-11-05. The
+  review follow-ups are in [upstream.md](upstream.md). Next: opnca-r#40 (security; blocks
+  #27), quartifyr#75 (a real release to pin) and deckifyr#82–#86.
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
   CI and the Gate 2/3 integration tests a working runtime while the native install spikes
@@ -110,16 +115,17 @@ scheduled first.
 |---|---|---|---|
 | opnca-r source build fails on user machines (Rust, Rtools, linker, R ABI) | Install blocked for the target users | Prebuilt binaries are the release target; the source build is a tested fallback only. Users on cloud VMs that can run Docker use the container image instead (#42) | #4, #6, #7, #34, #42, opnca-r#28, opnca-r#23 |
 | Child apps break behind `/apps/<tool>/` | Embedded editors don't work | Configurable base path upstream; a proxy rewrite only as a tested temporary measure | #15, #16, opnca-r#24, deckifyr#82 |
-| No durable opnca-r export | Runs aren't reproducible | Temporary replay through the public API, checked against UI results | #27, #28, #29, opnca-r#25, opnca-r#26 |
-| Partial report renders exit 0 | Silent incomplete deliverables | Adapter treats warnings as errors and scans logs and placeholders; upstream job contract | #32, quartifyr#69, quartifyr#70 |
+| Saved opnca-r run replaced or half-written | Runs aren't reproducible or immutable | Upstream atomic save (done); only `COMPLETE` plus re-verified `artifacts.json` counts; block `overwrite` until upstream adds `--no-overwrite` | #27, #28, #29, opnca-r#26, opnca-r#41 |
+| A cross-site page drives the opnca-r child port directly | Exclusions or results changed without the session secret | Upstream API token injected by the proxy, and rejection of cross-site requests; negative test in the harness | #16, #27, opnca-r#40 |
+| Partial or stale report renders look complete | Silent incomplete deliverables | `render.R --strict --json` (done upstream); render in staging; trust only hashes in the result | #32, quartifyr#69, quartifyr#77 |
 | Unsaved deck edits lost on stop | Data loss | Dirty state on health check; save or refuse before stop | #14, #33, deckifyr#83 |
 | Cloud users reach the app through an SSH tunnel or IDE proxy (different Host/Origin, URL prefix) | App unreachable, or security checks loosened ad hoc | Explicit base-path and allow-list settings with tested presets; the session token is always required; the port is published to VM loopback only | #42, #15, #16, opnca-r#24, deckifyr#82 |
 | Shared-origin localStorage leaks a mapping between analytes | Wrong column mapping | Scope or disable it upstream; the launcher always passes an explicit mapping | #27, opnca-r#30 |
-| BLQ semantics lost on hand-off | Wrong NCA | opnca-r app maps LLOQ/BLQ; mapping is passed explicitly | #23, opnca-r#29 |
+| BLQ semantics lost or defaulted on hand-off | Wrong NCA | opnca-r maps LLOQ/BLQ (done); the launcher asks for all three BLQ rules and passes a full preset; upstream `--require-blq-rules` | #23, #27, opnca-r#29, opnca-r#42 |
 | LibreOffice can't be packaged per user | No slide previews or field recalculation | Mark the features unavailable; never required for a build | #8, deckifyr#84 |
 | Organisational application controls block user-local binaries | Install fails despite no-admin design | Detect it in preflight; signing and notarization; clear diagnostics | #19, #38, #39 |
 | Scientific rules decided ad hoc in code | Inconsistent analyses | `decision-needed` issue #2 must be answered first; checks are configurable but never silent | #2, #22, #24 |
-| Tools reach the network during install or use (pyro uv install and sync, `quarto add`, renv bootstrap, crates.io) | Install or reports fail in firewalled environments | Offline audit with a network-blocked CI job; app-owned uv plus offline environment settings; bundled wheels, extensions and packages; upstream fixes | #44, #36, opnca-r#23, quartifyr#72 |
+| Tools reach the network during install or use (pyro uv install and sync, `quarto add`, renv bootstrap, crates.io) | Install or reports fail in firewalled environments | Offline audit with a network-blocked CI job; app-owned uv plus offline environment settings; bundled wheels, extensions and packages; upstream fixes | #44, #36, opnca-r#23, quartifyr#72, quartifyr#76 |
 
 ## Decision log
 
