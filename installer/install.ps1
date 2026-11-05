@@ -27,5 +27,5 @@ try {
 } catch { Write-Host '  writable:  NO' }
 
 Write-Host ''
-Write-Error 'Installation is not implemented yet (see docs/plan.md, Gate 1 installer issue).' -ErrorAction Continue
+Write-Error 'Installation is not implemented yet (see issue #19, Gate 1).' -ErrorAction Continue
 exit 2

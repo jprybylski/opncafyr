@@ -33,5 +33,5 @@ echo "  free disk: $((free_kb / 1024)) MiB"
 if command -v curl >/dev/null 2>&1; then echo "  curl:      yes"; else echo "  curl:      no"; fi
 
 echo
-echo "Installation is not implemented yet (see docs/plan.md, Gate 1 installer issue)." >&2
+echo "Installation is not implemented yet (see issue #19, Gate 1)." >&2
 exit 2

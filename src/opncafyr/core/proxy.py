@@ -1,6 +1,6 @@
 """Reverse proxy for managed child apps under ``/apps/<tool>/`` (stub).
 
-Planned behaviour (docs/plan.md, Gate 1):
+Planned behaviour (#15 and #16, Gate 1):
 - HTTP proxying to a child bound on its own private loopback port; WebSocket support only if
   a child needs it (neither opnca-r nor deckifyr does today).
 - The preferred fix for prefixes is a configurable base path in each child; any rewrite here

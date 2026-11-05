@@ -5,7 +5,7 @@ terminal states reachable from any non-terminal state. Only completed jobs may p
 artifacts to a report or deck (docs/spec.md, "One local origin owns every app").
 
 Persistence, process-tree cancellation and human-readable progress live in the job
-manager (see docs/plan.md, Gate 1).
+manager (#12, Gate 1).
 """
 
 from __future__ import annotations
