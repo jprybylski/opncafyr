@@ -1,0 +1,10 @@
+id: quartifyr
+version: 1
+display_name: quartifyr + reportifyr
+runtime: r
+capabilities: [check_report, render_report]
+health: {kind: rscript, target: "library(quartifyr)"}
+jobs:
+  check_report: {input_schema: report-project-v1, output_schema: validation-v1}
+  render_report: {input_schema: report-project-v1, output_schema: report-build-v1}
+optional_requirements: [libreoffice]

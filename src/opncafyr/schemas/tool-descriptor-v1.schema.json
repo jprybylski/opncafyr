@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/tool-descriptor-v1",
+  "title": "Trusted tool descriptor",
+  "description": "Shipped with an installed adapter. Never read from a study workspace.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "runtime", "capabilities", "health"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "version": {"type": "integer", "minimum": 1},
+    "display_name": {"type": "string"},
+    "runtime": {"enum": ["python", "r"]},
+    "capabilities": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["import", "rscript", "http"]},
+        "target": {"type": "string"}
+      }
+    },
+    "web_app": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "readiness"],
+      "properties": {
+        "route": {"type": "string", "pattern": "^/apps/[a-z][a-z0-9_-]*/$"},
+        "readiness": {"type": "string", "pattern": "^/"}
+      }
+    },
+    "jobs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["input_schema", "output_schema"],
+        "properties": {
+          "input_schema": {"type": "string"},
+          "output_schema": {"type": "string"}
+        }
+      }
+    },
+    "optional_requirements": {"type": "array", "items": {"type": "string"}}
+  }
+}

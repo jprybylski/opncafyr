@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/publication-v1",
+  "title": "Publication manifest (.opncafyr/publications/<id>.json)",
+  "description": "Pins exact completed run IDs and artifact hashes. Never a moving 'latest'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "publication_id", "created_at", "items"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "publication_id": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["run_id", "artifact_path", "artifact_sha256", "published_path"],
+        "properties": {
+          "run_id": {"type": "string"},
+          "artifact_path": {"type": "string"},
+          "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "published_path": {"type": "string", "pattern": "^OUTPUTS/(figures|tables|listings)/"},
+          "sidecar_path": {"type": "string"}
+        }
+      }
+    }
+  }
+}

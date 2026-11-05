@@ -1,0 +1,45 @@
+# Exact versions and checksums for everything the installer provisions.
+# Filled in during Gate 0 (see docs/plan.md). Every artifact needs a sha256 per platform.
+# Nothing here is used yet; values marked "TBD" are open decisions.
+
+schema_version = 1
+
+[platforms]
+# Decided in the Gate 0 platform-matrix decision issue.
+supported = ["TBD: windows-x86_64", "TBD: macos-arm64", "TBD: macos-x86_64"]
+
+[uv]
+version = "TBD"
+
+[python]
+version = "3.13"           # matches .python-version; uv-managed, app-owned
+
+[r]
+version = "TBD"            # installed with `rig add --without-path --no-default`, per-user
+renv_lock = "runtime/renv.lock"   # created in Gate 0
+
+[quarto]
+version = "TBD"
+
+[rust]
+# Only for source-build fallback when no platform binary exists for opnca-r.
+toolchain = "TBD (>= 1.87.0; Windows: x86_64-pc-windows-gnu + Rtools)"
+
+[packages.opnca-r]
+version = "0.2.4"          # current release; source-only today (opnca-r #28 tracks binaries)
+source = "github:mantra-opnca/opnca-r"
+
+[packages.deckifyr]
+version = "0.3.3"          # Python wheel pending (deckifyr #86)
+source = "github:jprybylski/deckifyr"
+extras = ["web", "preview"]
+
+[packages.quartifyr]
+version = "0.3.1"
+source = "github:jprybylski/quartifyr"
+
+[packages.reportifyr]
+version = "TBD"            # external (A2-ai); pinned, not modified
+
+[optional.libreoffice]
+status = "TBD"             # bundle per-user or mark previews/field recalculation unavailable

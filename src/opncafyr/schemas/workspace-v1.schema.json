@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/workspace-v1",
+  "title": "Workspace metadata (.opncafyr/workspace.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "created_at", "sources"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "sha256", "size_bytes"],
+        "properties": {
+          "id": {"type": "string"},
+          "path": {"type": "string", "description": "Relative to the workspace root."},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "size_bytes": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "ui": {"type": "object", "description": "Display preferences only. Never commands or executable paths."}
+  }
+}

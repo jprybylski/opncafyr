@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="opncafyr-session" content="{{OPNCAFYR_SESSION}}">
+  <title>opncafyr</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 48rem; margin: 3rem auto; padding: 0 1rem; line-height: 1.5; }
+    .notice { border-left: 4px solid #c90; padding: .5rem 1rem; }
+  </style>
+</head>
+<body>
+  <h1>opncafyr</h1>
+  <p class="notice">Research use only. This workspace has not been validated for clinical or regulatory decisions.</p>
+  <p>The workspace home page is not built yet. Installed tools:</p>
+  <ul id="tools"><li>Loading…</li></ul>
+  <script>
+    fetch("api/tools").then(r => r.json()).then(d => {
+      const ul = document.getElementById("tools");
+      ul.replaceChildren(...d.tools.map(t => {
+        const li = document.createElement("li");
+        li.textContent = `${t.id}: ${t.capabilities.join(", ")}`;
+        return li;
+      }));
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/recipe-v1",
+  "title": "Cleaning and mapping recipe (.opncafyr/recipes/<id>.yaml)",
+  "description": "Ordered, explicit steps. The source file is never rewritten and rows are never silently dropped.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "source_id", "steps"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "id": {"type": "string"},
+    "source_id": {"type": "string"},
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["op"],
+        "properties": {
+          "op": {"enum": ["clean_names", "rename", "parse_type", "recode", "derive", "flag", "exclude_rows"]},
+          "note": {"type": "string"}
+        }
+      }
+    }
+  }
+}

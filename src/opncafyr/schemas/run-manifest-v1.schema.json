@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/run-manifest-v1",
+  "title": "Analysis run manifest (.opncafyr/runs/<run-id>/manifest.json)",
+  "description": "One analyte per run. Completed runs are immutable. No row data in this file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "created_at", "state", "source", "analysis_input", "analyte", "tools"],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {"path": {"type": "string"}, "sha256": {"$ref": "#/$defs/sha256"}}
+    }
+  },
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "run_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4,}$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "state": {"enum": ["queued", "preparing", "running", "reviewing", "completed", "failed", "cancelled"]},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "size_bytes"],
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "recipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sha256"],
+      "properties": {"id": {"type": "string"}, "sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "analysis_input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "rows"],
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "rows": {"type": "integer", "minimum": 0}
+      }
+    },
+    "analyte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["column", "value"],
+      "properties": {
+        "column": {"type": "string"},
+        "value": {"type": "string", "description": "Exact raw value used for the filter."},
+        "label": {"type": "string"}
+      }
+    },
+    "mapping": {"type": "object", "description": "Role -> source column, plus declared units."},
+    "nca_settings": {"type": "object"},
+    "exclusions": {"type": "object"},
+    "tools": {"type": "object", "additionalProperties": {"type": "string"}},
+    "script": {"$ref": "#/$defs/file"},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "kind", "media_type"],
+        "properties": {
+          "path": {"type": "string"},
+          "sha256": {"$ref": "#/$defs/sha256"},
+          "kind": {"enum": ["table", "figure", "record", "script", "log", "other"]},
+          "media_type": {"type": "string"}
+        }
+      }
+    }
+  }
+}
