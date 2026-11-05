@@ -20,3 +20,5 @@ All notable changes to this project are documented here. The format follows
   `runtime/pins.toml` pins opnca-r 0.2.6 assets and the quartifyr commit and tarball.
 - Reviewed deckifyr 0.3.4 (#82-#86) and filed follow-ups #88-#91. `runtime/pins.toml` now
   pins the deckifyr 0.3.4 wheel, sdist and R tarball by SHA-256.
+- Reviewed quartifyr 0.3.2 (#75-#78) and filed follow-ups #80-#82. `runtime/pins.toml`
+  now pins the quartifyr 0.3.2 tag commit, tarball and `SHA256SUMS` by SHA-256.
