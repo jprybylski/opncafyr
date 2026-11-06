@@ -1,9 +1,15 @@
 """The installed runtime: absolute paths of the pinned executables.
 
-The installer (#19) writes ``<app root>/runtime/runtime.json`` (schema ``runtime-v1``).
-Adapters take every executable they start from here, never from workspace files or PATH.
-For development, tests and CI, ``OPNCAFYR_RUNTIME_FILE`` names a different record. That
-variable belongs to the launcher's own environment and is never passed to a child.
+The installer (#19) writes ``<app root>/versions/<id>/runtime/runtime.json`` (schema
+``runtime-v1``). Adapters take every executable they start from here, never from workspace
+files or PATH. The record is found in this order:
+
+1. ``OPNCAFYR_RUNTIME_FILE`` (development, tests and CI). That variable belongs to the
+   launcher's own environment and is never passed to a child.
+2. The install this launcher runs from, so a launcher keeps its own runtime even after an
+   update activates a newer install.
+3. The active install (``<app root>/current``).
+4. The pre-installer location ``<app root>/runtime/runtime.json``.
 """
 
 from __future__ import annotations
@@ -15,7 +21,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from opncafyr.core.manifest import validate
-from opncafyr.paths import app_root
+from opncafyr.installer.layout import Layout
+from opncafyr.paths import active_install_dir, app_root
 
 RUNTIME_FILE_ENV = "OPNCAFYR_RUNTIME_FILE"
 RUNTIME_SCHEMA = "runtime-v1"
@@ -46,10 +53,22 @@ class Runtime:
         return self.r_library
 
 
+RECORD = Path("runtime") / "runtime.json"
+
+
 def default_runtime_file(environ: Mapping[str, str] | None = None) -> Path:
     env = os.environ if environ is None else environ
     override = env.get(RUNTIME_FILE_ENV)
-    return Path(override) if override else app_root() / "runtime" / "runtime.json"
+    if override:
+        return Path(override)
+    own = active_install_dir()
+    if own is not None:
+        return own / RECORD
+    root = app_root()
+    current = Layout(root).read_current()
+    if current is not None:
+        return root / "versions" / current / RECORD
+    return root / RECORD
 
 
 def _checked(label: str, value: str, *, directory: bool) -> Path:

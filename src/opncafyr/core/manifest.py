@@ -10,20 +10,24 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
-
 
 @cache
 def load_schema(name: str) -> dict[str, Any]:
     """Load a bundled JSON Schema by file stem, e.g. ``"run-manifest-v1"``."""
     text = resources.files("opncafyr.schemas").joinpath(f"{name}.schema.json").read_text("utf-8")
     schema = json.loads(text)
+    # Imported here, not at module level: the installer (stdlib only) writes JSON with
+    # atomic_write_json before jsonschema is installed.
+    from jsonschema import Draft202012Validator
+
     Draft202012Validator.check_schema(schema)
     return schema
 
 
 def validate(document: Any, schema_name: str) -> None:
     """Raise ``jsonschema.ValidationError`` if ``document`` does not match the schema."""
+    from jsonschema import Draft202012Validator
+
     Draft202012Validator(load_schema(schema_name)).validate(document)
 
 

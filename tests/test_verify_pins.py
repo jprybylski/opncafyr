@@ -23,6 +23,7 @@ def tree(tmp_path):
         "runtime/r/renv.lock",
         "runtime/r/binaries.toml",
         "runtime/python/tools/uv.lock",
+        "runtime/python/wheels.toml",
         "uv.lock",
     ):
         dst = tmp_path / rel
@@ -153,3 +154,22 @@ def test_tool_packages_must_come_from_the_cellar(tree):
     _edit(tree, "runtime/r/renv.lock", '"Source": "Cellar"', '"Source": "GitHub"')
     errors, _ = _check(tree)
     assert any("must be Source: Cellar" in e for e in errors)
+
+
+def test_every_section_needs_a_license(tree):
+    _edit(tree, "runtime/pins.toml", 'license = "MIT OR Apache-2.0"\n', "")
+    errors, _ = _check(tree)
+    assert "[uv] has no license" in errors
+    _edit(tree, "runtime/pins.toml", 'license = "Apache-2.0"\n', "")
+    errors, _ = _check(tree)
+    assert "[packages.opnca-r] has no license" in errors
+
+
+def test_wheels_toml_must_pin_the_deckifyr_wheel(tree):
+    _edit(tree, "runtime/python/wheels.toml", "0faea61387b0d7a8", "0000000000000000")
+    errors, _ = _check(tree)
+    assert any("does not pin the deckifyr wheel" in e for e in errors)
+
+
+def test_wheels_toml_is_current():
+    assert verify_pins._check_wheels_current() == []

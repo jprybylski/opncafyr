@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/install-v1",
+  "title": "Install record",
+  "description": "versions/<id>/install.json, written last by the installer (#19). Its presence makes an install complete; only complete installs are activated.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "status", "install_id", "version", "platform", "os", "identity",
+    "payload_digest", "installed_at", "mode", "source", "options", "paths", "components", "smoke"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"const": "complete"},
+    "install_id": {"type": "string", "pattern": "^[0-9A-Za-z.+]+-[0-9]+$"},
+    "version": {"type": "string", "minLength": 1},
+    "platform": {"enum": ["windows-x86_64", "macos-arm64", "macos-x86_64"]},
+    "os": {"type": "string"},
+    "identity": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the payload digest, platform and options; equal identity means a second install is a no-op."},
+    "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "installed_at": {"type": "string"},
+    "mode": {"enum": ["install", "repair"]},
+    "source": {"enum": ["online", "bundle", "mirror"]},
+    "bundle_id": {"type": "string"},
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["libreoffice"],
+      "properties": {"libreoffice": {"type": "boolean"}}
+    },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app_root", "version_dir", "r_dir"],
+      "properties": {
+        "app_root": {"type": "string"},
+        "version_dir": {"type": "string"},
+        "r_dir": {"type": "string"}
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version", "files"],
+        "properties": {
+          "name": {"type": "string"},
+          "version": {"type": "string"},
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file", "sha256"],
+              "properties": {
+                "file": {"type": "string"},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "smoke": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status", "seconds", "detail"],
+        "properties": {
+          "name": {"type": "string"},
+          "status": {"enum": ["ok", "failed"]},
+          "seconds": {"type": "number"},
+          "detail": {"type": "string"}
+        }
+      }
+    }
+  }
+}

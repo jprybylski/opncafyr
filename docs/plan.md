@@ -74,7 +74,14 @@ scheduled first.
   ([spikes/windows-install.md](spikes/windows-install.md),
   [spikes/macos-install.md](spikes/macos-install.md)). LibreOffice is an optional
   per-user download for slide previews ([spikes/libreoffice.md](spikes/libreoffice.md)).
-  The redacted-diagnostics part of the exit evidence moves to the installer (#19).
+  The redacted-diagnostics part of the exit evidence moved to the installer (#19): a
+  failed install writes a redacted support bundle.
+- **Installer v1 (#19) is done** ([install.md](install.md)). It installs per user, with
+  no admin rights, from the pins, online or from local files. Each install is staged into
+  its own `versions/<id>` and activated atomically, with an icon, repair and uninstall.
+  The `Installer` workflow proves it as a new standard user on macOS arm64 and Intel and
+  on Windows Server 2025: install, second run, launch, a failure after staging, and
+  uninstall. Clean Windows 11 VMs remain #37.
 - **Offline audit (#44)** is done: [offline.md](offline.md) lists every network
   touchpoint and its resolution, and the `offline` CI job installs from local files and
   runs import, an opnca-r calculation, a report render and a deck build with the network

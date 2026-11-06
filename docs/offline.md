@@ -18,8 +18,8 @@ at its pinned release, and traced runs (`strace` in a Linux network namespace, W
 
 | # | Where | What it fetches | Resolution | Issue |
 |---|---|---|---|---|
-| I1 | uv | The uv binary from GitHub releases | Pinned per platform (`[uv.assets]`); the installer extracts the verified archive. Never the `curl \| sh` installer. | #5, #19 |
-| I2 | uv-managed Python | python-build-standalone from GitHub when uv needs an interpreter | Pinned (`[python.assets]`). The installer extracts the archive itself (or serves it to uv with `UV_PYTHON_INSTALL_MIRROR=file://…`); `UV_PYTHON_DOWNLOADS=never` everywhere after that. | #5, #36 |
+| I1 | uv | The uv binary from GitHub releases | Pinned per platform (`[uv.assets]`); the installer extracts the verified archive (`installer/steps/runtimes.py`). Never the `curl \| sh` installer. | #5, #19 |
+| I2 | uv-managed Python | python-build-standalone from GitHub when uv needs an interpreter | Pinned (`[python.assets]`). The installer extracts the archive itself, never through `uv python install` (S3); `UV_PYTHON_DOWNLOADS=never` everywhere after that. | #5, #19, #36 |
 | I3 | Launcher Python packages | PyPI, through `uv sync` | `uv.lock` pins every wheel by hash. Offline: a wheelhouse of the locked files plus the requirements exported from the lock (`uv export --frozen`, with hashes), installed with `uv pip install --require-hashes` and `UV_OFFLINE=1`, `UV_NO_INDEX=1`, `UV_FIND_LINKS=<wheelhouse>`. **Traced:** `uv sync --locked` does *not* work this way: it fetches each locked file by its recorded PyPI URL and falls back only to uv's cache, never to `UV_FIND_LINKS` ("Network connectivity is disabled, but the requested data wasn't found in the cache"). The launcher itself comes from its built wheel, so no build backend is fetched. | #36 |
 | I4 | Tools Python environment (deckifyr `[web,preview]`, python-docx, PyYAML, Pillow) | The deckifyr wheel from GitHub releases; the rest from PyPI | `runtime/python/tools/uv.lock` pins the wheel URL and every dependency by hash. Same offline path as I3; the exported `deckifyr @ <url>` line becomes `deckifyr==0.3.5` with its hash, so the wheel comes from the wheelhouse. | #5, #36 |
 | I5 | R itself | CRAN installer (`.exe` on Windows, `.pkg` on macOS) | Pinned (`[r.assets]`). The installer runs or unpacks the local file; rig is not used (its user mode downloads its own unpinned installer). On macOS the `.pkg` payload is unpacked and relocated per user (#7). | #5, #6, #7 |
@@ -37,6 +37,21 @@ at its pinned release, and traced runs (`strace` in a Linux network namespace, W
 | I17 | LibreOffice (optional) | Vendor download | Optional pinned per-user download (`[optional.libreoffice]`, archive URLs), an optional component of offline bundles. Needs no network at install or run time. See [spikes/libreoffice.md](spikes/libreoffice.md). | #8, #36 |
 | I18 | Linux system libraries (CI and container only) | apt | Not part of a desktop install. The CI job installs them online before cutting the network; the container image (#42) bakes them in. | #42 |
 | I19 | R `openssl` 2.5.0 built from source (Linux CI and container only) | Its `tools/cacert.R` tries to download `https://curl.se/ca/cacert.pem` during the build, and uses only the system CA bundle when that fails | **Traced** (2 DNS lookups by R running `--file=tools/cacert.R`). Non-fatal and can't be switched off, so it is the one entry in `scripts/offline/allowed_attempts.toml`; still printed and recorded by the check. Desktop installs use the pinned binary, which doesn't run it. | #42, #44 |
+
+**Installer v1 (#19)** implements the install-time rows ([install.md](install.md)):
+- **Python packages (I3, I4).** One exact wheel per package and platform comes from
+  `runtime/python/wheels.toml`, which `scripts/pin_wheels.py` generates from both locks and
+  `verify_pins.py` keeps current. The wheels are installed with
+  `uv pip install --no-index --require-hashes --no-deps`, then `uv pip check`. No
+  `uv export` runs at install time.
+- **R packages (I6).** The R library is installed with base R `install.packages()` from a
+  local repository of the verified binaries, on both OSes. renv never runs at install
+  time, so it makes no crandb lookups (S1) and needs no Command Line Tools on macOS. The
+  four tool packages come from the cellar files, and every version is checked against
+  `renv.lock`.
+- **Child processes.** Every installer child gets an allow-listed environment with the
+  settings below. In bundle mode it also gets a closed proxy (`HTTPS_PROXY=http://127.0.0.1:9`),
+  so a stray attempt fails at once.
 
 ## Project setup and run time
 

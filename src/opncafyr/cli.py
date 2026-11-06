@@ -194,6 +194,10 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     print(f"opncafyr {__version__}")
     print(f"python   {sys.version.split()[0]}")
     print(f"app root {app_root()}")
+    from opncafyr.paths import active_install_dir
+
+    install = active_install_dir()
+    print(f"install  {install.name if install else 'not running from an install'}")
     # The installed product uses app-owned runtimes from runtime/pins.toml, not PATH.
     # This part only shows what a development machine has available.
     for tool in ("uv", "Rscript", "quarto", "cargo", "soffice"):
@@ -251,6 +255,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _ensure_streams() -> None:
+    """Under ``pythonw.exe`` (the Windows shortcut) there is no console: stdout and stderr
+    are None. Point them at the null device so prints and log handlers can't fail."""
+    import os
+
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115 - process lifetime
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115 - process lifetime
+
+
 def main(argv: list[str] | None = None) -> int:
+    _ensure_streams()
     args = build_parser().parse_args(argv)
     return args.func(args)

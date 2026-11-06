@@ -16,7 +16,12 @@ Without ``--network`` it checks that:
   in the lock has a binary per supported platform plus a source tarball, at the locked
   version, from the lock's snapshot; every cellar package in the lock is pinned here;
 - each Python environment's ``uv.lock`` exists and pins the deckifyr wheel with the same
-  SHA-256 as here.
+  SHA-256 as here;
+- every runtime section and release package names its ``license`` (SPDX expression), for
+  the offline bundle's licence inventory (#36);
+- ``runtime/python/wheels.toml`` has a wheel list per environment and platform, each with
+  an https URL and a SHA-256, and the tools list carries the pinned deckifyr wheel. Run
+  as a script, it also checks that the file matches the locks (``pin_wheels.py --check``).
 
 With ``--network`` it downloads each URL (streaming) and compares the SHA-256. Assets on
 private GitHub repositories are fetched through the API with ``GH_TOKEN`` or
@@ -128,6 +133,8 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
             if not SHA_RE.match(sha):
                 errors.append(f"[{name}.assets.{platform}] sha256 missing or malformed")
             assets.append(Asset(name, platform, url, sha))
+        if not str(section.get("license", "")).strip():
+            errors.append(f"[{name}] has no license")
 
     # Release packages: release_url + filename -> sha256.
     for pkg, section in pins.get("packages", {}).items():
@@ -136,6 +143,8 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
         if not files:
             errors.append(f"[packages.{pkg}] has no assets")
             continue
+        if not str(section.get("license", "")).strip():
+            errors.append(f"[packages.{pkg}] has no license")
         if not base.startswith("https://") or not base.endswith("/"):
             errors.append(f"[packages.{pkg}] release_url missing or does not end with /")
         for filename, sha in files.items():
@@ -154,7 +163,45 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
 
     errors += _check_r_packages(pins, supported, root, assets)
     errors += _check_python_envs(pins, root)
+    errors += _check_wheels(pins, supported, root, assets)
     return errors, assets
+
+
+WHEELS = "runtime/python/wheels.toml"
+
+
+def _check_wheels(
+    pins: dict[str, Any], supported: list[str], root: Path, assets: list[Asset]
+) -> list[str]:
+    path = root / WHEELS
+    if not path.is_file():
+        return [f"{WHEELS} does not exist (run scripts/pin_wheels.py)"]
+    errors: list[str] = []
+    wheels = load(path)
+    for env in pins.get("python_envs", {}):
+        for platform in supported:
+            entries = wheels.get(env, {}).get(platform, [])
+            if not entries:
+                errors.append(f"{WHEELS} has no [{env}.{platform}] wheels")
+            for w in entries:
+                if not w.get("url", "").startswith("https://") or not SHA_RE.match(
+                    w.get("sha256", "")
+                ):
+                    errors.append(f"{WHEELS} {env} {platform} {w.get('file')}: bad url or sha256")
+                assets.append(
+                    Asset(f"wheels.{env}", f"{platform} {w.get('file')}", w["url"], w["sha256"])
+                )
+    deck = pins.get("packages", {}).get("deckifyr", {})
+    want = deck.get("assets", {}).get(deck.get("wheel", ""))
+    for platform in supported:
+        got = [
+            w["sha256"]
+            for w in wheels.get("tools", {}).get(platform, [])
+            if w["name"] == "deckifyr"
+        ]
+        if got != [want]:
+            errors.append(f"{WHEELS} [tools.{platform}] does not pin the deckifyr wheel")
+    return errors
 
 
 def _check_r_packages(
@@ -278,6 +325,18 @@ def check_network(assets: list[Asset]) -> tuple[list[str], int, int]:
     return errors, ok, skipped
 
 
+def _check_wheels_current() -> list[str]:
+    """wheels.toml must be what pin_wheels.py generates from the locks today."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("pin_wheels", ROOT / "scripts" / "pin_wheels.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if (ROOT / WHEELS).read_text("utf-8") != module.render():
+        return [f"{WHEELS} is out of date: run scripts/pin_wheels.py"]
+    return []
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--pins", type=Path, default=ROOT / "runtime" / "pins.toml")
@@ -287,6 +346,8 @@ def main(argv: list[str] | None = None) -> int:
 
     root = args.pins.resolve().parents[1]
     errors, assets = check_structure(load(args.pins), root)
+    if root == ROOT:
+        errors += _check_wheels_current()
     print(f"structure: {len(assets)} pinned files, {len(errors)} problems")
     if args.network and not errors:
         if args.only:

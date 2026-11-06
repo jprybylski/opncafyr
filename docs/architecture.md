@@ -7,7 +7,7 @@ enforces. The spec remains the authority on design intent.
 
 | Layer | Package | Knows about | Must not |
 |---|---|---|---|
-| Installer | `installer/`, `runtime/pins.toml` | OS, runtimes, pinned packages, checksums | touch study workspaces or machine-wide PATH |
+| Installer | `installer/` (wrappers), `opncafyr.installer`, `runtime/` | OS, runtimes, pinned packages, checksums, the app root layout | touch study workspaces or machine-wide PATH; import anything outside the standard library |
 | Core controller | `opncafyr.core` | processes, jobs, files, manifests, routes, security | import adapters/workflows; contain NCA or document layout logic |
 | Tool adapters | `opncafyr.adapters.<tool>` | one tool's CLI/API, its input/output contracts | share mutable scientific state with other adapters |
 | Workflow packs | `opncafyr.workflows.nca` | the clin pharm user journey (import → clean → map → analyte → run → publish) | bypass adapters to call tools directly |
@@ -37,6 +37,20 @@ by core from the probe kind (`python_import`, `r_package`, `version_flag`) and a
 pattern-checked target. `/api/tools` and `opncafyr doctor` report each tool as
 `checking`, `ok` or `unavailable` with a short reason, plus the features its missing
 optional requirements disable.
+
+## Installer (#19)
+
+`installer/install.sh` and `install.ps1` only fetch and verify the pinned Python, then run
+`opncafyr.installer` from the payload's wheel. The installer uses the standard library
+only (a boundary test checks it), because it runs before any environment exists. Every
+file it installs is resolved from the cache, a bundle, an `--assets` folder or a
+download, and checked against the pins before anything is staged. Each install goes into
+its own `versions/<id>`, which is complete only once `install.json` exists. The
+`current` pointer flips atomically, so a failure leaves the previous install active.
+
+A launcher finds its own install from its interpreter's location (`installer.layout`), so
+its app root and `runtime.json` are its own even after an update. Details:
+[install.md](install.md).
 
 ## Process model
 
@@ -118,8 +132,9 @@ and the API carry text written for a person.
    the pinned runtime record (`runtime-v1`, `core/runtime.py`). Every process starts
    through `proctree.spawn`: an argv list whose first item is an absolute runtime path,
    never a shell, with an allow-listed environment and a launcher-owned cwd and TMPDIR.
-   A boundary test allows `subprocess` only in `core/proctree.py` and `core/picker.py`
-   (fixed system dialogs) and forbids `shell=True`, `os.system`/`popen`/`exec*`/`spawn*`
+   A boundary test allows `subprocess` only in `core/proctree.py`, `core/picker.py`
+   (fixed system dialogs) and `installer/proc.py` (the installer's equivalent of
+   proctree, under the same rules), and forbids `shell=True`, `os.system`/`popen`/`exec*`/`spawn*`
    and `asyncio.create_subprocess_*`. Children never see the session secret.
 5. **Machine ↔ network.** No dataset leaves the machine by default. Subject IDs and other
    cell values never reach a log (ADR 0007): `core/redaction.py` filters every launcher

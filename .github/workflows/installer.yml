@@ -1,0 +1,85 @@
+name: Installer
+
+# #19: installer v1 end to end as a new standard user on macOS (arm64, Intel) and Windows:
+# install, second run (no-op), the icon's launcher answers /health, a failure injected
+# after staging keeps the previous install and writes a support bundle, uninstall leaves a
+# workspace untouched. scripts/installer_ci/ has the legs; docs/install.md explains them.
+#
+# windows-2025 is Windows Server, not Windows 11 (no hosted Windows 11 runner); clean
+# Windows 11 and macOS VMs are #37. opnca-r is private: the job needs OPNCA_R_RELEASE_TOKEN.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "ci/**"]
+    paths:
+      - "installer/**"
+      - "runtime/**"
+      - "src/opncafyr/installer/**"
+      - "src/opncafyr/paths.py"
+      - "src/opncafyr/core/runtime.py"
+      - "src/opncafyr/cli.py"
+      - "scripts/make_installer.py"
+      - "scripts/installer_ci/**"
+      - ".github/workflows/installer.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: installer (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build the installer payload
+        run: uv run python scripts/make_installer.py --out dist --zip
+      - name: Install, second run, launch, failure, uninstall (as a standard user)
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
+          bash scripts/installer_ci/macos.sh "dist/opncafyr-installer-$(cat VERSION)" installer-ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-${{ matrix.runner }}
+          path: installer-ci/
+          if-no-files-found: ignore
+
+  windows:
+    name: installer (windows-2025)
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build the installer payload
+        run: uv run python scripts/make_installer.py --out dist --zip
+      - name: Fetch the private opnca-r files for --assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
+          v=$(python -c "import tomllib; print(tomllib.load(open('runtime/pins.toml','rb'))['packages']['opnca-r']['version'])")
+          gh release download "v$v" -R mantra-opnca/opnca-r -D ci-assets \
+            -p manifest.json -p "opnca_${v}_R4.6_windows-x86_64.zip"
+      - name: Install, second run, launch, failure, uninstall (as a standard user)
+        shell: powershell
+        run: |
+          $v = (Get-Content VERSION).Trim()
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts\installer_ci\windows.ps1 `
+            -Payload "dist\opncafyr-installer-$v" -Assets ci-assets -Results installer-ci
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-windows-2025
+          path: installer-ci/
+          if-no-files-found: ignore

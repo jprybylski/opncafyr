@@ -27,8 +27,9 @@ def test_core_never_imports_adapters_or_workflows():
 
 # Processes start only through proctree.spawn (argv list, absolute executable from the
 # pinned runtime, allow-listed env). picker.py runs fixed system dialogs (osascript,
-# PowerShell) with argv arrays.
-SUBPROCESS_ALLOWED = {"core/proctree.py", "core/picker.py"}
+# PowerShell) with argv arrays. installer/proc.py is the installer's equivalent of
+# proctree (same rules); the installer can't use proctree, which needs psutil.
+SUBPROCESS_ALLOWED = {"core/proctree.py", "core/picker.py", "installer/proc.py"}
 OS_PROCESS_CALLS = {"system", "popen", "startfile"} | {
     f"{base}{suffix}"
     for base in ("exec", "spawn")
@@ -81,3 +82,44 @@ def test_core_finds_workflow_packs_by_package_scan():
     assert all(isinstance(i, Importer) for i in packs["nca"].importers)
     assert all(isinstance(a, DatasetAnnotator) for a in packs["nca"].annotators)
     assert ".csv" in {ext for i in packs["nca"].importers for ext in i.extensions}
+
+
+# The installer runs under the bare pinned Python before anything is installed (#19).
+INSTALLER_ALLOWED = ("opncafyr.installer", "opncafyr.core.redaction", "opncafyr.core.manifest")
+
+
+def test_installer_needs_only_the_standard_library():
+    import sys
+
+    for path in (SRC / "installer").rglob("*.py"):
+        if path.name == "selfcheck.py":
+            continue  # runs in the new launcher environment, after the install
+        for name in _imports(path):
+            root = name.split(".")[0]
+            if root == "opncafyr":
+                assert name.startswith(INSTALLER_ALLOWED) or name == "opncafyr", (
+                    f"{path.name} imports {name}"
+                )
+            else:
+                assert root in sys.stdlib_module_names or root == "__future__", (
+                    f"installer/{path.name} imports {name}, which isn't in the standard library"
+                )
+
+
+def test_installer_imports_cleanly_without_third_party_packages(tmp_path):
+    """Import every installer module with site-packages hidden, as the bare Python would."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sys, pkgutil, importlib; sys.path = [p for p in sys.path if 'site-packages' "
+        "not in p]; sys.path.insert(0, sys.argv[1]); import opncafyr.installer as pkg; "
+        "[importlib.import_module(m.name) for m in pkgutil.walk_packages(pkg.__path__, "
+        "'opncafyr.installer.') if not m.name.endswith(('selfcheck', '__main__'))]; "
+        "import jsonschema"
+    )
+    done = subprocess.run(
+        [sys.executable, "-I", "-c", code, str(SRC.parent)], capture_output=True, text=True
+    )
+    # Every installer module imported; jsonschema (third party) did not.
+    assert "No module named 'jsonschema'" in done.stderr, done.stderr

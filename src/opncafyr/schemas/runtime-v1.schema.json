@@ -5,14 +5,32 @@
   "description": "Written by the installer under the app root (never in a study workspace). Names the absolute paths of the pinned executables the launcher may start.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "executables"],
+  "required": [
+    "schema_version",
+    "executables"
+  ],
   "properties": {
-    "schema_version": {"const": 1},
+    "schema_version": {
+      "const": 1
+    },
     "executables": {
       "type": "object",
-      "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"},
-      "additionalProperties": {"type": "string", "minLength": 1}
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
     },
-    "r_library": {"type": "string", "minLength": 1}
+    "r_library": {
+      "type": "string",
+      "minLength": 1
+    },
+    "wheelhouse": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Folder of the verified wheels the installer used; report projects build their .venv from it offline (docs/offline.md S4). Optional (added for #19)."
+    }
   }
 }

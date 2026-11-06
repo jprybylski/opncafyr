@@ -7,6 +7,42 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Installer v1 (#19): a per-user installer with no administrator rights
+  ([docs/install.md](docs/install.md)).
+  - `install.sh` (macOS) and `install.bat`/`install.ps1` (Windows) only fetch and verify
+    the pinned Python, then run `opncafyr.installer`. The installer uses the standard
+    library only, a rule a boundary test checks.
+  - Every pinned file is found in the download cache, an `--assets` folder or an offline
+    bundle (`--from-bundle`, never the network), or downloaded with the system `curl`. Each
+    is checked against `runtime/pins.toml` before anything is staged, and a missing or
+    tampered file is named by its component. The private opnca-r release needs
+    `GH_TOKEN` or `--assets`.
+  - Each install is staged into its own `versions/<id>`:
+    - Python and uv;
+    - the launcher and tools environments, from hash-pinned wheels
+      (`runtime/python/wheels.toml`, made by `scripts/pin_wheels.py`);
+    - R: on Windows, R's own `/CURRENTUSER` installer, which leaves the user's own R
+      registration as it was; on macOS, CRAN's `R.framework` relocated to
+      `~/Library/opncafyr`;
+    - the R library, installed with base R from a local repository and checked against
+      `renv.lock`;
+    - Quarto, and LibreOffice with `--with-libreoffice`.
+  - Smoke tests and a schema self-check run before `install.json` is written. Then the
+    `current` pointer flips atomically and the icon is created: `~/Applications/opncafyr.app`
+    on macOS, Desktop and Start Menu shortcuts on Windows.
+  - A failure leaves the previous install active and writes a redacted support bundle.
+  - A second run is a no-op. `repair` re-checks and rebuilds; `uninstall` removes the app,
+    R and the icon, never a workspace.
+  - `scripts/make_installer.py` builds the payload.
+  - The new `Installer` workflow runs it all as a standard user on macOS arm64, macOS
+    Intel and Windows Server 2025.
+  - Launcher: finds its own install and `runtime.json` from its location; `doctor` shows
+    the install; `pythonw.exe` (no console) is handled.
+  - New schemas `install-v1` and `payload-v1`. `runtime-v1` gains an optional `wheelhouse`.
+  - `runtime/pins.toml` names each component's licence, and `verify_pins.py` checks the
+    licences and `wheels.toml`.
+  - The opnca-r release checks moved to `opncafyr.installer.opnca_release`;
+    `opncafyr.adapters.opnca.release` re-exports them.
 - LibreOffice decision (#8): an optional, verified per-user download for deckifyr slide
   previews, pinned in `[optional.libreoffice]` (26.2.7.1, archive URLs). quartifyr's
   field recalculation stays off until quartifyr#84/#86. Report:

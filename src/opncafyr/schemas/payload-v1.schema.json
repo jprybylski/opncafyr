@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/payload-v1",
+  "title": "Installer payload manifest",
+  "description": "payload.json at the top of an installer payload (scripts/make_installer.py, #19): every other file with its SHA-256. The digest is the SHA-256 of the canonical JSON of `files` and identifies the payload.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "version", "files", "digest"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "version": {"type": "string", "minLength": 1},
+    "files": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
