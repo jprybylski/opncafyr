@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import socketserver
 import subprocess
 import sys
 import threading
@@ -30,6 +31,14 @@ def _read_body(handler: BaseHTTPRequestHandler) -> bytes:
         return b"".join(chunks)
     length = int(handler.headers.get("content-length") or 0)
     return handler.rfile.read(length) if length else b""
+
+
+class _Server(ThreadingHTTPServer):
+    def server_bind(self) -> None:
+        # HTTPServer.server_bind calls socket.getfqdn(), a reverse-DNS lookup that can
+        # take minutes on CI macOS runners. The real children don't do this.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = "127.0.0.1", self.server_address[1]
 
 
 def main() -> int:
@@ -116,7 +125,7 @@ def main() -> int:
 
         do_GET = do_POST = do_PUT = do_DELETE = do_HEAD = _handle
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = _Server(("127.0.0.1", port), Handler)
     grandchild = None
     if args.grandchild:
         kwargs = {"start_new_session": True} if os.name != "nt" else {}

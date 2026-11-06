@@ -153,10 +153,11 @@ class Supervisor:
                     log.info("%s ready on port %s (pid %s)", tool, child.context.port, child.pid)
                     return child
                 last_error = outcome
+                exited_early = child.exit_code is not None  # read before teardown sets it
                 self._teardown(child)
                 child.state = ChildState.STOPPED
-                if child.exit_code is None:
-                    break  # still running but never ready: retrying won't help
+                if not exited_early:
+                    break  # still running but never ready: a new port won't help
                 log.warning("%s attempt %s failed: %s", tool, attempt, outcome)
             raise LaunchError(f"{tool} did not start: {last_error}")
 

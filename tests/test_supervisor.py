@@ -79,10 +79,17 @@ def test_retry_on_early_exit_uses_a_new_port(tmp_path):
 
 
 def test_never_ready_raises_without_retry(tmp_path):
-    supervisor, _ = toy_supervisor(tmp_path, ready_timeout=1.5)
+    picked: list[int] = []
+
+    def picker() -> int:
+        picked.append(free_loopback_port())
+        return picked[-1]
+
+    supervisor, _ = toy_supervisor(tmp_path, ready_timeout=1.5, port_picker=picker)
     with pytest.raises(LaunchError, match="not ready"):
         supervisor.start("toy", {"never_ready": True})
     assert supervisor.state("toy") is ChildState.STOPPED
+    assert len(picked) == 1  # alive but never ready: a new port wouldn't help
 
 
 def test_crash_is_detected_and_restart_works(sup):
