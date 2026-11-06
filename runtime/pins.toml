@@ -1,6 +1,15 @@
-# Exact versions and checksums for everything the installer provisions.
-# Filled in during Gate 0 (see docs/plan.md). Every artifact needs a sha256 per platform.
-# Nothing here is used yet; values marked "TBD" are open decisions.
+# Exact versions and checksums for everything the installer provisions (#5).
+#
+# One source of truth for online install, internal mirrors and offline bundles (#36): each
+# file has a source URL and a SHA-256, so a bundle can be assembled from this file alone.
+# `scripts/verify_pins.py` checks the structure; `--network` downloads and hashes every
+# URL. docs/dependency-graph.md says which component needs what.
+#
+# Conventions:
+# - Runtimes: [<name>.assets.<platform>] with url + sha256 for every platform in
+#   [platforms].supported, unless the section lists `platforms`.
+# - Release packages: release_url + [packages.<name>.assets] file name -> sha256.
+# - Nothing names a moving ref (main, latest, HEAD); r-universe is never used.
 
 schema_version = 1
 
@@ -11,29 +20,122 @@ supported = ["windows-x86_64", "macos-arm64", "macos-x86_64"]
 windows_min = "11"
 macos_min = "15"           # opnca-r 0.2.7 binaries target macOS 15; 13 once opnca-r#45 lands
 
+# --- Python ---------------------------------------------------------------------------
+
 [uv]
-version = "TBD"
+version = "0.13.7"         # 2026-11-03
+
+[uv.assets.macos-arm64]
+url = "https://github.com/astral-sh/uv/releases/download/0.13.7/uv-aarch64-apple-darwin.tar.gz"
+sha256 = "81b811b57e4624df7ed3aac148e0359100d9962f3d9dce00aec533dc2e086731"
+
+[uv.assets.macos-x86_64]
+url = "https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-apple-darwin.tar.gz"
+sha256 = "20c47e4c1f630b8abaff8c291fa9b9aa300fef92c4fbff95adf198b55287cda7"
+
+[uv.assets.windows-x86_64]
+url = "https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-pc-windows-msvc.zip"
+sha256 = "0cdc5b38fe5a8168ed6a25814f5ba43c21d313dd3187314fccb37b7cec46e021"
 
 [python]
-version = "3.13"           # matches .python-version; uv-managed, app-owned
+# uv-managed, app-owned. The launcher's .python-version says 3.13; this is the exact
+# build uv 0.13.7 installs for `3.13`. Offline, these archives are served to uv through
+# UV_PYTHON_INSTALL_MIRROR (docs/offline.md).
+version = "3.13.18"
+build = "20261026"         # python-build-standalone release tag
+
+[python.assets.macos-arm64]
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-aarch64-apple-darwin-install_only_stripped.tar.gz"
+sha256 = "8392b6ea51d94391befb2c31ebe75463f045d0b69dfcf5e1bb3234e1f5fa3405"
+
+[python.assets.macos-x86_64]
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-x86_64-apple-darwin-install_only_stripped.tar.gz"
+sha256 = "7412c19d896c99431b74a18a5643e110449a7f9590fbab179c3e5ab27b9aa9e3"
+
+[python.assets.windows-x86_64]
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+sha256 = "7369f7a35f261222a6ac8b3a87c1c88eeebee8af945d85346202591a64038dd3"
+
+[python_envs.launcher]
+# The launcher itself: the repository's pyproject.toml and uv.lock.
+project = "."
+
+[python_envs.tools]
+# deckifyr (with the web editor and previews) plus the Python side of quartifyr and
+# reportifyr, used as QUARTIFYR_PYTHON_ENV so pyro never builds its own environment.
+# Installed from the requirements exported from its uv.lock (with hashes), deckifyr from
+# the verified wheel; `uv sync --locked` can't install offline (docs/offline.md I3, I4).
+project = "runtime/python/tools"
+deckifyr = true
+
+# --- R ----------------------------------------------------------------------------------
 
 [r]
-version = "4.6.2"          # ADR 0003. Installed with `rig add --without-path --no-default`,
-                           # per-user. opnca-r 0.2.7 binaries are built on R 4.6.2.
-renv_lock = "runtime/renv.lock"   # created in Gate 0
+version = "4.6.2"          # ADR 0003. opnca-r 0.2.7 binaries are built on R 4.6.2.
+# CRAN installers, used as pinned files only (rig's user mode downloads its own copy).
+# Windows: the Inno Setup installer in /CURRENTUSER mode (#6). macOS: the .pkg payload is
+# expanded and R.framework relocated, editing only text files, to an R root whose path
+# has no space (not under Application Support) (#7).
+
+[r.assets.macos-arm64]
+url = "https://cran.r-project.org/bin/macosx/sonoma-arm64/base/R-4.6.2-arm64.pkg"
+sha256 = "a678b4db1fcd71b1b1cc58edcfa4a8d36ee012a02659dde9eab9366e93571157"
+
+[r.assets.macos-x86_64]
+url = "https://cran.r-project.org/bin/macosx/big-sur-x86_64/base/R-4.6.2-x86_64.pkg"
+sha256 = "aa9b1dba09cc69710571ad93efba26a9bcb5a0098543dadc4bb8e419a423195e"
+
+[r.assets.windows-x86_64]
+url = "https://cran.r-project.org/bin/windows/base/old/4.6.2/R-4.6.2-win.exe"
+sha256 = "b0b0053baa1963b6d8a28c9642d50107ef9ce2f41c8b9a90e952846c8918b38a"
+
+[r_packages]
+# The app-private library. renv.lock is generated by scripts/lock_r.R against a dated
+# Posit Package Manager snapshot; binaries.toml (scripts/pin_r_binaries.py) pins each
+# package's binary per platform plus its source tarball. The installer fetches those
+# files into a local CRAN-like repository and restores with repos pointing only there,
+# so online, mirror and offline installs take the same path. On macOS the installer
+# uses base R's install.packages() from that repository and checks every version against
+# renv.lock: renv::restore() runs `R CMD config CC`, which needs the Command Line Tools
+# (#7). The repository's source index lists every package (#6). The packages in
+# [packages.*] come from the renv cellar. Exception: P3M's macOS gdtools links XQuartz
+# (/opt/X11, admin install), so macOS gdtools comes from CRAN's self-contained build
+# (`origin = "cran"` in binaries.toml).
+lockfile = "runtime/r/renv.lock"
+binaries = "runtime/r/binaries.toml"
+repository = "https://packagemanager.posit.co/cran/2026-11-06"
+renv = "1.3.1"            # must match renv in renv.lock
+
+# --- Quarto -----------------------------------------------------------------------------
 
 [quarto]
-version = "TBD"
+version = "1.11.9"         # quartifyr's bundled extensions need >= 1.6.36
+# Both extensions quartifyr needs ship inside the pinned quartifyr tarball
+# (inst/extensions/): quarto-plus is an unmodified copy of A2-ai/quarto-plus at be6ac44
+# (MIT), quartifyr's own is GPL-3.0-or-later. They are copied into report projects with
+# quartifyr::install_quarto_extensions(); `quarto add` is never run.
+extensions = ["quartifyr (in quartifyr 0.3.2)", "A2-ai/quarto-plus@be6ac44 (in quartifyr 0.3.2)"]
 
-[rust]
-# Only for the repair/exception source build of the vendored tarball (ADR 0004).
-toolchain = "TBD (>= 1.87.0; Windows: x86_64-pc-windows-gnu + Rtools)"
-# 1.87.0 is opnca-r's declared MSRV but upstream CI only builds on stable (opnca-r #43):
-# pin a toolchain we test ourselves. Builds use the -vendored tarball (no crates.io).
+[quarto.assets.macos-arm64]
+url = "https://github.com/quarto-dev/quarto-cli/releases/download/v1.11.9/quarto-1.11.9-macos.tar.gz"
+sha256 = "9fc24881f637612d80edbf16d62f01001fc7945a9a0c6ac247199002901e0a6d"
+
+[quarto.assets.macos-x86_64]
+# The macOS tarball is universal; same file as arm64.
+url = "https://github.com/quarto-dev/quarto-cli/releases/download/v1.11.9/quarto-1.11.9-macos.tar.gz"
+sha256 = "9fc24881f637612d80edbf16d62f01001fc7945a9a0c6ac247199002901e0a6d"
+
+[quarto.assets.windows-x86_64]
+url = "https://github.com/quarto-dev/quarto-cli/releases/download/v1.11.9/quarto-1.11.9-win.zip"
+sha256 = "eda220a2f39c392f622049de013ddf7b4dfdf019ba877f251be14ce43e5734d1"
+
+# --- Tool packages (renv cellar / wheel) ------------------------------------------------
 
 [packages.opnca-r]
 version = "0.2.7"
 source = "github:mantra-opnca/opnca-r"
+private = true             # verify_pins.py --network needs GH_TOKEN
+release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.2.7/"
 # v0.2.7 (2026-11-06, commit 0b547d0) adds the launcher API token, --no-overwrite and
 # --require-blq-rules (#40-#43). Select assets by manifest.json fields (kind/platform/arch/
 # r_minor), never by file name. manifest.json (schema_version 1) is not in SHA256SUMS,
@@ -44,6 +146,7 @@ source_commit = "0b547d05793e1bdbe7a00eac78b87fdcb58f80fa"
 r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.opnca-r.assets]
+"manifest.json" = "4e3616cddaad5e3f9d9da3b3781c66548e072363ed794af4a4b6b77b849ddd2e"
 "opnca_0.2.7_R4.6_macos-arm64.tgz" = "1766cd2152f2c8398c5b57e6084e2624cb30167046ec2a0cdec4430a18b15cb5"
 "opnca_0.2.7_R4.6_macos-x86_64.tgz" = "8aabe38f1ce5069a87d80a08504904d3745b35673a0b8c302bad9775c290a46d"
 "opnca_0.2.7_R4.6_windows-x86_64.zip" = "a9cae57fe894f7d7c7e6e831023bd0b7346ab45ba7bd1693298822f5fde3fcb8"
@@ -52,30 +155,109 @@ r_minor = "4.6"            # binaries built on R 4.6.2
 [packages.deckifyr]
 version = "0.3.5"
 source = "github:jprybylski/deckifyr"
+release_url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.5/"
 extras = ["web", "preview"]
-# Install the wheel; R users can install the R tarball. The wheel's dependencies are
-# lower bounds only, so the offline wheelhouse pins the exact transitive versions (#36).
+# Installed as a wheel into [python_envs.tools]; that uv.lock pins it by this URL and
+# hash, and pins every transitive dependency (the wheel's own are lower bounds only).
 # v0.3.5 (2026-11-06, tag e35a4fa) adds the request guard, trust policy and atomic builds
 # (#88-#91). Its release workflow no longer re-tags or replaces a published release.
 wheel = "deckifyr-0.3.5-py3-none-any.whl"
-wheel_sha256 = "0faea61387b0d7a8d8d698807bd07f96007e43a6ebee07af9f900768e17c6186"
-sdist_sha256 = "19030dba30dcf9192ac1b8db5b42adea280d22d3e21e663e858f29800c2de8b3"
-r_tarball_sha256 = "d29e58b6a40dfb89a3eb970078c61c2cab41b7059a415e5c99be3012f5c12b2c"
-sha256sums_sha256 = "18ed32bf7bb5392f89f23629f5a942b711488bb264af00628c6c508c53f1d83b"
+
+[packages.deckifyr.assets]
+"deckifyr-0.3.5-py3-none-any.whl" = "0faea61387b0d7a8d8d698807bd07f96007e43a6ebee07af9f900768e17c6186"
+"deckifyr-0.3.5.tar.gz" = "19030dba30dcf9192ac1b8db5b42adea280d22d3e21e663e858f29800c2de8b3"
+"deckifyr_0.3.5.tar.gz" = "d29e58b6a40dfb89a3eb970078c61c2cab41b7059a415e5c99be3012f5c12b2c"  # R wrapper, not installed
+"SHA256SUMS" = "18ed32bf7bb5392f89f23629f5a942b711488bb264af00628c6c508c53f1d83b"
 
 [packages.quartifyr]
 version = "0.3.2"
 source = "github:jprybylski/quartifyr"
+release_url = "https://github.com/jprybylski/quartifyr/releases/download/v0.3.2/"
 # v0.3.2 (2026-11-05) is the first real release of #69-#72 and #75-#78. Tag v0.3.2 points
 # at 5f3b0f5. quartifyr's release workflow may refresh a release (re-tag, replace the
 # tarball) within 24 hours of publishing, by design. Pin only releases older than that;
 # 0.3.2 was published 2026-11-05T22:52Z, so re-verify these hashes after 2026-11-06T22:52Z.
 commit = "5f3b0f51b31d46b42f36d6cdd265722e6215c22f"
-tarball_sha256 = "cb29f01bbf417dd494c510c85b5635d8f1a16350ce39a96ca04b4ee2cb2d3a03"
-sha256sums_sha256 = "bde43fd33280a42537f8ece25d5d34b6edde93d2a36fa9223475340f1b8d08ae"
+
+[packages.quartifyr.assets]
+"quartifyr_0.3.2.tar.gz" = "cb29f01bbf417dd494c510c85b5635d8f1a16350ce39a96ca04b4ee2cb2d3a03"
+"SHA256SUMS" = "bde43fd33280a42537f8ece25d5d34b6edde93d2a36fa9223475340f1b8d08ae"
 
 [packages.reportifyr]
-version = "TBD"            # external (A2-ai); pinned, not modified
+# External (A2-ai): pinned, never modified, no issues filed upstream. r-universe keeps
+# only the latest build, so pin the GitHub release's R source tarball. Pure R (no
+# compiled code), so the one source tarball installs on every platform without tools.
+version = "0.4.0"
+source = "github:A2-ai/reportifyr"
+release_url = "https://github.com/A2-ai/reportifyr/releases/download/v0.4.0/"
+commit = "6761ebe2339d5db13886647cff04857a2050d198"
+
+[packages.reportifyr.assets]
+"reportifyr_0.4.0.tar.gz" = "8576a3a2b6881522bf1d712942b2ea809b4180c826af30e6b0b75476fb89f801"
+"manifest.json" = "5bd7945791e6c9b504481fba2857baffbdba434847b5f78b7074c540e72773f1"
+
+[packages.pyro]
+# External (A2-ai), needed by reportifyr, quartifyr and deckifyr's R side. Pure R.
+# Its Python bootstrapping (curl-installed uv, `uv lock`) is never used: the tools
+# environment is handed over as QUARTIFYR_PYTHON_ENV (docs/offline.md).
+version = "0.1.1"
+source = "github:A2-ai/pyro"
+release_url = "https://github.com/A2-ai/pyro/releases/download/v0.1.1/"
+commit = "66065c19a9aad1cf2cc4718aee9da013e6a3209f"
+
+[packages.pyro.assets]
+"pyro_0.1.1.tar.gz" = "2aa39c43e6af927325f9058a6b02f75d48652b2579241d0fd9fba4a4d7ac4a30"
+"manifest.json" = "1b7f258fe0ea1103c6f55a72f4c2c18310a1a71a2218587b472be1e08e4a1528"
+
+# --- Repair path only (ADR 0004) ---------------------------------------------------------
+# Never installed on a normal install. Only to build opnca_0.2.7-vendored.tar.gz when a
+# binary can't be used (e.g. macOS below the binary's minimum). macOS also needs the
+# Command Line Tools for this path (#7).
+
+[rust]
+toolchain = "1.99.1"       # >= opnca-r's MSRV 1.87.0 (checked in its CI since 0.2.7)
+windows_target = "x86_64-pc-windows-gnu"   # with the Rtools MinGW linker
+
+[rust.rustup_init]
+version = "1.29.3"
+
+[rust.rustup_init.assets.macos-arm64]
+url = "https://static.rust-lang.org/rustup/archive/1.29.3/aarch64-apple-darwin/rustup-init"
+sha256 = "63752a1919a3a4793173ec70f8f212621a7ce38ba6a246095984482f4de20f9f"
+
+[rust.rustup_init.assets.macos-x86_64]
+url = "https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-apple-darwin/rustup-init"
+sha256 = "bc107f1fb0228de7fa32413c89c1b305cea9cd256e94b01150cd054128145429"
+
+[rust.rustup_init.assets.windows-x86_64]
+url = "https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-gnu/rustup-init.exe"
+sha256 = "f6289656ce42e1099f3cbc6f10ef6321dfde54773faf599dd36fd3b1f07d9103"
+
+[rust.standalone]
+# Offline equivalent of rustup: the standalone toolchain archives.
+
+[rust.standalone.assets.macos-arm64]
+url = "https://static.rust-lang.org/dist/rust-1.99.1-aarch64-apple-darwin.tar.xz"
+sha256 = "30976378b6aaefd1861ba475905c6ba22a44c981418ce52285006af26337f98c"
+
+[rust.standalone.assets.macos-x86_64]
+url = "https://static.rust-lang.org/dist/rust-1.99.1-x86_64-apple-darwin.tar.xz"
+sha256 = "13b237d0294bad3bb7b18d559517947ed8348ea25812fa3b468c904996f80e34"
+
+[rust.standalone.assets.windows-x86_64]
+url = "https://static.rust-lang.org/dist/rust-1.99.1-x86_64-pc-windows-gnu.tar.xz"
+sha256 = "0210624b2eb2bdf4ec32c2a6caf5c3bd2ab84e5df66c7530023e37f02add1084"
+
+[rtools]
+version = "45"             # Rtools45 covers R 4.5-4.7
+build = "6768-6492"
+platforms = ["windows-x86_64"]
+
+[rtools.assets.windows-x86_64]
+url = "https://cran.r-project.org/bin/windows/Rtools/rtools45/files/rtools45-6768-6492.exe"
+sha256 = "614c7378150a012e70b16edcfe5236dcead47f491f1f54203ea8d451c7743a75"
+
+# --- Optional ---------------------------------------------------------------------------
 
 [optional.libreoffice]
-status = "TBD"             # bundle per-user or mark previews/field recalculation unavailable
+status = "unavailable"     # #8 decides: bundle, optional download or unavailable

@@ -57,7 +57,7 @@ def install_deckifyr(wheel: Path, out: Path, python_version: str) -> Path:
     pins = tomllib.loads(PINS.read_text("utf-8"))["packages"]["deckifyr"]
     if wheel.name != pins["wheel"]:
         raise SystemExit(f"Expected {pins['wheel']}, got {wheel.name}")
-    if release.sha256_file(wheel) != pins["wheel_sha256"]:
+    if release.sha256_file(wheel) != pins["assets"][wheel.name]:
         raise SystemExit(f"{wheel.name} does not match the pinned SHA-256")
     venv = out / "deckifyr-venv"
     uv = shutil.which("uv")

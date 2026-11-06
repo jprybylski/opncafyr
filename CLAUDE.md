@@ -32,6 +32,9 @@ src/opncafyr/
   web/static/    home page assets
 installer/       install.sh (macOS), install.bat -> install.ps1 (Windows)
 runtime/         pins.toml: exact runtime/package versions and checksums
+  r/             renv.lock + binaries.toml: the app-private R library, per platform
+  python/tools/  locked uv project for the tools' Python (deckifyr, quartifyr, reportifyr)
+scripts/         pin generators and verify_pins.py (dev/CI tooling, not shipped)
 tests/           pytest; fixtures/ are generated, never hand-edited
 ```
 
@@ -44,6 +47,7 @@ uv run ruff check             # lint (must pass)
 uv run ruff format            # format (CI runs --check)
 uv run opncafyr launch        # start controller; --no-browser --port N for testing
 uv run opncafyr doctor        # paths and tool availability
+uv run python scripts/verify_pins.py [--network]   # pins and locks (docs/dependency-graph.md)
 ```
 
 Run `ruff check`, `ruff format --check` and `pytest` before every commit.

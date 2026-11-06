@@ -26,6 +26,10 @@ jobs:
         run: uv run ruff check
       - name: Format check
         run: uv run ruff format --check
+      - name: Check runtime pins (structure only)
+        run: uv run python scripts/verify_pins.py
+      - name: Check the tools environment lock is current
+        run: uv lock --locked --project runtime/python/tools
       - name: Tests
         run: uv run pytest -v
 

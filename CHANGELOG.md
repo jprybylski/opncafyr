@@ -7,6 +7,20 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Runtime pins and dependency graph (#5).
+  - `runtime/pins.toml` pins uv 0.13.7, Python 3.13.18, R 4.6.2, Quarto 1.11.9, opnca-r
+    0.2.7, deckifyr 0.3.5, quartifyr 0.3.2, reportifyr 0.4.0, pyro 0.1.1, Rust 1.99.1 and
+    Rtools45 by exact URL and SHA-256 for Windows x86_64 and macOS arm64/x86_64.
+  - `runtime/r/renv.lock` locks the app-private R library (130 packages from the Posit
+    Package Manager snapshot of 2026-11-06 plus the four tool packages from the cellar),
+    and `runtime/r/binaries.toml` pins every package's binary per platform and its source
+    tarball. macOS gdtools comes from CRAN, because P3M's build links XQuartz.
+  - `runtime/python/tools` locks one Python environment for deckifyr (with the web editor
+    and previews), quartifyr and reportifyr, so pyro never creates its own.
+  - `scripts/verify_pins.py` checks the pins and locks (now a CI step) and, with
+    `--network`, downloads and hashes every file. `scripts/lock_r.R` and
+    `scripts/pin_r_binaries.py` regenerate them; `scripts/check_r_restore.R` restores the
+    lock into an isolated library. `docs/dependency-graph.md` explains what needs what.
 - Dataset scan, preview and import (#21).
   - `GET /api/datasets` lists data files directly in the study folder and in
     `source-data/`, with size, rows, columns and candidate analytes. Nothing deeper is

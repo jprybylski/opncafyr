@@ -1,0 +1,37 @@
+# The app-owned Python environment for the tools (#5). It is not the launcher's own
+# environment (the repository root's pyproject.toml).
+#
+# - deckifyr runs from it (`python -m deckifyr`), with the web editor and previews.
+# - quartifyr and reportifyr use it as QUARTIFYR_PYTHON_ENV, so pyro never creates its
+#   own environment and never runs `uv lock` or installs uv (see docs/offline.md).
+#   python-docx, PyYAML and Pillow are pinned to the versions in pyro 0.1.1's bundled
+#   pyproject.toml (groups `reportifyr` and `quartifyr`).
+#
+# The installer restores it online with `uv sync --locked --no-install-project`. Offline,
+# `uv sync` won't read a wheelhouse (it falls back only to uv's cache), so the installer
+# exports this lock with hashes (`uv export --frozen`) and runs
+# `uv pip install --require-hashes` from a wheelhouse (#36, docs/offline.md I3).
+[project]
+name = "opncafyr-tools-env"
+version = "0"
+requires-python = "==3.13.*"
+dependencies = [
+    "deckifyr[web,preview]==0.3.5",
+    "python-docx==1.1.2",
+    "pyyaml==6.0.2",
+    "pillow==11.1.0",
+    # deckifyr's preview extra needs pymupdf >= 1.24. pymupdf 2.x has no macOS x86_64
+    # wheel; 1.28.2 is the newest release with wheels for all three platforms.
+    "pymupdf==1.28.2",
+]
+
+[tool.uv]
+package = false
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+]
+
+[tool.uv.sources]
+deckifyr = { url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.5/deckifyr-0.3.5-py3-none-any.whl" }
