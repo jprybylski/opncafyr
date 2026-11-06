@@ -96,10 +96,13 @@ and the API carry text written for a person.
 2. **Controller ↔ child apps.** Each child listens on its own loopback port with a
    per-child API token (`core/supervisor.py`). The proxy (`core/proxy.py`) rewrites
    `Host` to the child's port, drops `Origin`, `Referer`, `Cookie` and the session header,
-   adds the child's token, and strips `Set-Cookie` and CORS headers from responses. The
-   children themselves reject a foreign Host, cross-site requests and a missing token, so
-   their ports are safe even though the browser can reach them directly. Child pages share
-   the launcher's origin by design, so a child's own scripts are trusted like ours.
+   adds the child's token, and strips `Set-Cookie` and CORS headers from responses.
+   It adds `frame-ancestors 'self'`: the home page embeds child apps in a same-origin
+   iframe (`#/apps/<id>`, #50), and nothing else may frame them. Each proxied request
+   counts as an open page for idle shutdown. The children themselves reject a foreign
+   Host, cross-site requests and a missing token, so their ports are safe even though
+   the browser can reach them directly. Child pages share the launcher's origin by
+   design, so a child's own scripts are trusted like ours.
 3. **Controller ↔ workspace.** Every path goes through `core/workspace.resolve_in_root`.
    Workspace files hold data and options only. The workspace root itself comes from the
    native picker the controller runs (`core/picker.py`): `/api/workspace/*` accepts only

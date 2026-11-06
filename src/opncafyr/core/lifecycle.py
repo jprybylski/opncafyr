@@ -235,32 +235,51 @@ class Lifecycle:
             self.stopped.set()
 
 
-# --- the idle-timeout setting ---------------------------------------------------------
+# --- user settings ---------------------------------------------------------------------
+
+THEMES = ("system", "light", "dark")
+DEFAULT_THEME = "system"
 
 
 class Settings:
-    """User settings in the app state dir (``settings-v1``). Only the idle timeout so far."""
+    """User settings in the app state dir (``settings-v1``): idle timeout and theme.
+
+    Each setter rewrites only its own field, so saving one setting keeps the others.
+    """
 
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
         self._lock = threading.Lock()
 
-    def idle_timeout_minutes(self) -> int | None:
-        """The saved idle timeout in minutes, None for off, the default if unset."""
+    def _read(self) -> dict[str, object]:
         try:
             doc = json.loads(self.path.read_text("utf-8"))
             validate(doc, SETTINGS_SCHEMA)
         except FileNotFoundError:
-            return DEFAULT_IDLE_MINUTES
+            return {}
         except (OSError, ValueError, ValidationError):
             log.warning("Ignoring an unreadable settings file; using the defaults")
-            return DEFAULT_IDLE_MINUTES
-        return doc.get("idle_timeout_minutes", DEFAULT_IDLE_MINUTES)
+            return {}
+        return doc
+
+    def _update(self, **fields: object) -> None:
+        with self._lock:
+            doc = {**self._read(), **fields, "schema_version": "1.0"}
+            atomic_write_json(self.path, doc, SETTINGS_SCHEMA)
+
+    def idle_timeout_minutes(self) -> int | None:
+        """The saved idle timeout in minutes, None for off, the default if unset."""
+        return self._read().get("idle_timeout_minutes", DEFAULT_IDLE_MINUTES)
 
     def set_idle_timeout_minutes(self, minutes: int | None) -> None:
-        doc = {"schema_version": "1.0", "idle_timeout_minutes": minutes}
-        with self._lock:
-            atomic_write_json(self.path, doc, SETTINGS_SCHEMA)
+        self._update(idle_timeout_minutes=minutes)
+
+    def theme(self) -> str:
+        """The saved home page theme: "system", "light" or "dark"."""
+        return self._read().get("theme", DEFAULT_THEME)
+
+    def set_theme(self, theme: str) -> None:
+        self._update(theme=theme)
 
 
 def minutes_to_seconds(minutes: int | None) -> float | None:

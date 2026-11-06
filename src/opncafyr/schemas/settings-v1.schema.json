@@ -12,6 +12,10 @@
       "minimum": 5,
       "maximum": 1440,
       "description": "Stop after this many idle minutes; null turns idle shutdown off. Default 30."
+    },
+    "theme": {
+      "enum": ["system", "light", "dark"],
+      "description": "Home page colour theme; system follows the OS preference. Default system."
     }
   }
 }

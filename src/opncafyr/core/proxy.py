@@ -13,12 +13,16 @@ Origin, ``Sec-Fetch-Site`` and the session cookie. Before forwarding, the proxy:
   launcher's secret;
 - adds the child's own token header(s) and drops any inbound copy of them.
 
-Responses lose ``Set-Cookie`` and every CORS header. Bodies stream both ways, with a
-per-descriptor request size limit. WebSockets are not proxied: neither child uses them.
+Responses lose ``Set-Cookie`` and every CORS header and gain
+``Content-Security-Policy: frame-ancestors 'self'``: the launcher shows child pages in a
+same-origin iframe (#50), and no other site may frame them. Every proxied request also
+counts as an open page for idle shutdown. Bodies stream both ways, with a per-descriptor
+request size limit. WebSockets are not proxied: neither child uses them.
 """
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import AsyncIterator
 from html import escape
 
@@ -52,6 +56,14 @@ DROP_REQUEST = frozenset(
     {"host", "origin", "referer", "cookie", "x-opncafyr-session", "forwarded", "x-real-ip"}
 )
 DROP_RESPONSE = frozenset({"set-cookie", "set-cookie2"})
+
+# The launcher shows child pages in a same-origin iframe (#50). Only our own pages may
+# frame them; a child's own Content-Security-Policy still applies alongside this one.
+FRAME_POLICY = ("content-security-policy", "frame-ancestors 'self'")
+
+# A request through the proxy counts as an open page for idle shutdown, so a tool in use
+# keeps the launcher running even when the home page is hidden in another tab.
+APP_PAGE_PREFIX = "app-"
 
 
 class BodyTooLarge(Exception):
@@ -115,10 +127,13 @@ def _page(status: int, title: str, body: str) -> HTMLResponse:
         ":root{color-scheme:light dark;font-family:system-ui,sans-serif}"
         "body{max-width:40rem;margin:3rem auto;padding:0 1rem;line-height:1.5}"
         "</style></head><body>"
-        f"<h1>{escape(title)}</h1>{body}<p><a href='/'>Back to the workspace home</a></p>"
+        f"<h1>{escape(title)}</h1>{body}"
+        # _top: inside the launcher's tool view, go back to the launcher, not into a frame.
+        "<p><a href='/' target='_top'>Back to the workspace home</a></p>"
         "</body></html>"
     )
-    return HTMLResponse(html, status_code=status, headers={"cache-control": "no-store"})
+    headers = {"cache-control": "no-store", FRAME_POLICY[0]: FRAME_POLICY[1]}
+    return HTMLResponse(html, status_code=status, headers=headers)
 
 
 def unavailable_page(sup: Supervisor, tool: str, detail: str | None = None) -> HTMLResponse:
@@ -166,6 +181,10 @@ def mount_proxy(app: FastAPI) -> None:
         child = sup.get(tool)
         if child is None or child.state is not ChildState.RUNNING:
             return unavailable_page(sup, tool)
+        life = getattr(request.app.state, "lifecycle", None)
+        if life is not None:
+            with contextlib.suppress(ValueError):  # a tool id that can't be a page id
+                life.heartbeat(APP_PAGE_PREFIX + tool)
 
         limit = child.max_body_bytes
         declared = request.headers.get("content-length")
@@ -205,9 +224,9 @@ def mount_proxy(app: FastAPI) -> None:
             status_code=response.status_code,
             background=BackgroundTask(response.aclose),
         )
-        # Raw headers keep repeated ones (Vary, Link, ...) and add nothing of our own.
+        # Raw headers keep repeated ones (Vary, Link, ...); we add only the frame policy.
         streamed.raw_headers = [
             (k.encode("latin-1"), v.encode("latin-1"))
-            for k, v in filter_response_headers(response.headers, child)
+            for k, v in [*filter_response_headers(response.headers, child), FRAME_POLICY]
         ]
         return streamed

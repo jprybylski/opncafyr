@@ -5,9 +5,12 @@ from importlib import resources
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
-from opncafyr.core.app import HOME_CSP
+from opncafyr.core.app import HOME_CSP, create_app
+from opncafyr.core.lifecycle import Settings
 from opncafyr.core.registry import load_descriptors
+from opncafyr.core.security import SESSION_HEADER
 
 STATIC = Path(str(resources.files("opncafyr.web").joinpath("static")))
 TEXT_SUFFIXES = {".html", ".css", ".js"}
@@ -40,12 +43,19 @@ def test_tool_id_check_would_catch_a_name():
     assert not any(re.search(rf"\b{re.escape(i)}\b", "opncafyr", re.IGNORECASE) for i in ids)
 
 
+def _html_files() -> list[Path]:
+    pages = sorted(STATIC.rglob("*.html"))
+    assert {p.name for p in pages} >= {"index.html", "components.html"}
+    return pages
+
+
 def test_html_asset_urls_are_relative():
-    html = (STATIC / "index.html").read_text("utf-8")
-    urls = re.findall(r'\b(?:src|href|action)\s*=\s*"([^"]*)"', html)
-    assert urls
-    for url in urls:
-        assert _is_relative(url), f"index.html: {url!r} is not relative"
+    for page in _html_files():
+        html = page.read_text("utf-8")
+        urls = re.findall(r'\b(?:src|href|action)\s*=\s*"([^"]*)"', html)
+        assert urls
+        for url in urls:
+            assert _is_relative(url), f"{page.name}: {url!r} is not relative"
 
 
 def test_css_urls_and_imports_are_relative():
@@ -72,8 +82,9 @@ def test_js_imports_and_fetches_are_relative():
             assert _is_relative(url), f"{path.name}: request to {url!r}"
 
 
-def test_no_inline_script_or_style():
-    html = (STATIC / "index.html").read_text("utf-8")
+@pytest.mark.parametrize("name", ["index.html", "components.html"])
+def test_no_inline_script_or_style(name):
+    html = (STATIC / name).read_text("utf-8")
     assert "<style" not in html
     assert " style=" not in html
     assert not re.search(r"\son[a-z]+\s*=", html), "inline event handler"
@@ -85,10 +96,38 @@ def test_shell_structure():
     html = (STATIC / "index.html").read_text("utf-8")
     assert 'class="skip-link" href="#main"' in html
     assert '<main id="main"' in html
-    assert "<header" in html and "<nav" in html
+    assert "<header" in html and '<nav class="sidenav" aria-label="Main">' in html
     assert "Research use only." in html
     assert re.search(r'id="jobs-live"[^>]*aria-live="polite"', html)
     assert html.count('<script type="module"') == 1
+    # The notice and the page-wide status lines sit in the header, outside every view.
+    header = html[html.index("<header") : html.index("</header>")]
+    assert "Research use only." in header and 'id="jobs-live"' in header
+    assert '<html lang="en" data-theme="{{OPNCAFYR_THEME}}">' in html
+    for view in ("home", "jobs", "settings"):
+        assert f'id="view-{view}"' in html
+        assert f'href="#/{"" if view == "home" else view}"' in html
+
+
+@pytest.mark.parametrize("theme", [None, "system", "light", "dark"])
+def test_home_renders_the_saved_theme(security, tmp_path, theme):
+    # Its own settings file: the shared client fixture would use the real state dir.
+    app = create_app(
+        security, request_shutdown=lambda: None, settings=Settings(tmp_path / "settings.json")
+    )
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    ) as c:
+        if theme is not None:
+            resp = c.put(
+                "/api/settings", json={"theme": theme}, headers={SESSION_HEADER: security.secret}
+            )
+            assert resp.status_code == 200
+        html = c.get("/").text
+    assert f'<html lang="en" data-theme="{theme or "system"}">' in html
+    assert "{{" not in html
 
 
 def test_home_headers(client):

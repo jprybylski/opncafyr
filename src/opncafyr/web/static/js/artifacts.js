@@ -22,31 +22,48 @@ function cells(...items) {
   return tr;
 }
 
+function note(id, text) {
+  $(id).textContent = text;
+  $(id).hidden = !text;
+}
+
+// Run and publication counts under the study folder name.
+function facts(runs, pubs) {
+  const ul = $("ws-facts");
+  const fact = (n, one, many) => {
+    const li = el("li");
+    li.append(el("strong", String(n)), ` ${n === 1 ? one : many}`);
+    return li;
+  };
+  ul.replaceChildren(fact(runs, "run", "runs"), fact(pubs, "publication", "publications"));
+  ul.hidden = false;
+}
+
 function render(data) {
   const runsTable = $("runs-table");
   const pubsTable = $("pubs-table");
-  const pubsNote = $("pubs-note");
   if (!data.workspace_open) {
-    $("runs-note").textContent = "Open a study folder to see its runs.";
+    note("runs-note", "Open a study folder to see its runs.");
+    note("pubs-note", "Open a study folder to see its publications.");
     runsTable.hidden = true;
     pubsTable.hidden = true;
-    pubsNote.hidden = true;
+    $("ws-facts").hidden = true;
     return;
   }
   const runs = data.runs;
-  $("runs-note").textContent = runs.length ? "" : "No runs yet in this study folder.";
+  note("runs-note", runs.length ? "" : "No runs yet in this study folder.");
   $("runs-body").replaceChildren(
     ...runs.map((r) => cells(el("span", r.run_id, "path"), analyteText(r.analyte), stateBadge(r.state), timeCell(r.created_at))),
   );
   runsTable.hidden = !runs.length;
 
   const pubs = data.publications;
-  pubsNote.hidden = Boolean(pubs.length);
-  pubsNote.textContent = pubs.length ? "" : "No publications yet.";
+  note("pubs-note", pubs.length ? "" : "No publications yet. Publish a completed run to make a report or deck.");
   $("pubs-body").replaceChildren(
     ...pubs.map((p) => cells(el("span", p.publication_id, "path"), p.items === undefined ? "" : String(p.items), stateBadge(p.state), timeCell(p.created_at))),
   );
   pubsTable.hidden = !pubs.length;
+  facts(runs.length, pubs.length);
 }
 
 async function refresh() {

@@ -18,34 +18,87 @@ export function setStatus(node, text, isError) {
   node.append(text);
 }
 
+// Every state is a symbol, a word and a tone. The tones (ok, warn, danger, info) and
+// their colours are shared with the tools under /apps/, so a meaning learnt in one app
+// carries over. Their internal "done" is shown here as Completed.
 const STATES = {
-  queued: ["◷", "Queued"],
-  preparing: ["◔", "Preparing"],
-  running: ["▶", "Running"],
-  reviewing: ["◑", "Reviewing"],
-  completed: ["✓", "Completed"],
-  failed: ["✕", "Failed"],
-  cancelled: ["■", "Cancelled"],
-  incomplete: ["!", "Incomplete"],
-  recorded: ["✓", "Recorded"],
+  queued: ["◷", "Queued", "info"],
+  preparing: ["◔", "Preparing", "info"],
+  running: ["▶", "Running", "info"],
+  reviewing: ["◑", "Reviewing", "info"],
+  completed: ["✓", "Completed", "ok"],
+  failed: ["✕", "Failed", "danger"],
+  cancelled: ["■", "Cancelled", "warn"],
+  incomplete: ["!", "Incomplete", "warn"],
+  recorded: ["✓", "Recorded", "ok"],
   // Tool health (/api/tools)
-  checking: ["◌", "Checking"],
-  ok: ["✓", "Available"],
-  unavailable: ["✕", "Unavailable"],
+  checking: ["◌", "Checking", "info"],
+  ok: ["✓", "Available", "ok"],
+  unavailable: ["✕", "Unavailable", "danger"],
 };
 
-// A state as a symbol and a word, so it never depends on colour.
+// A state as a pill with a symbol and a word, so it never depends on colour.
 export function stateBadge(state) {
-  const [symbol, word] = STATES[state] || ["•", String(state)];
-  const badge = el("span", null, `state state-${String(state).replace(/[^a-z_]/g, "")}`);
+  const [symbol, word, tone] = STATES[state] || ["•", String(state), "neutral"];
+  const slug = String(state).replace(/[^a-z_]/g, "");
+  const badge = el("span", null, `pill pill-${tone} state state-${slug}`);
   const icon = el("span", symbol);
   icon.setAttribute("aria-hidden", "true");
   badge.append(icon, " ", word);
   return badge;
 }
 
+// A tool's web app state (/api/apps), as a pill. "Ready" rather than "Running" keeps
+// the job word "Running" (info) for work in progress.
+const APP_STATES = {
+  not_started: ["○", "Not running", "neutral"],
+  starting: ["◔", "Starting", "info"],
+  running: ["✓", "Ready", "ok"],
+  crashed: ["✕", "Stopped unexpectedly", "danger"],
+  stopped: ["■", "Stopped", "neutral"],
+};
+
+export function appBadge(state) {
+  const [symbol, word, tone] = APP_STATES[state] || ["•", String(state), "neutral"];
+  const badge = el("span", null, `pill pill-${tone} app-state`);
+  const icon = el("span", symbol);
+  icon.setAttribute("aria-hidden", "true");
+  badge.append(icon, " ", word);
+  return badge;
+}
+
+export function appStateWord(state) {
+  return (APP_STATES[state] || [null, String(state)])[1];
+}
+
+// Routes from the API are absolute paths; keep links relative to the page (ADR 0006).
+export const relativeRoute = (route) => route.replace(/^\/+/, "");
+
 export function stateWord(state) {
   return (STATES[state] || [null, String(state)])[1];
+}
+
+// An icon from the page's SVG sprite (index.html), hidden from assistive technology.
+export function icon(name, className = "icon") {
+  const ns = document.querySelector("svg.sprite").namespaceURI;
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", className);
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS(ns, "use");
+  use.setAttribute("href", `#i-${name}`);
+  svg.append(use);
+  return svg;
+}
+
+// "48 s", "2 min 14 s", "1 h 5 min".
+export function duration(fromIso, toIso) {
+  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return "";
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min ${s % 60} s`;
+  return `${Math.floor(m / 60)} h ${m % 60} min`;
 }
 
 export function formatTime(iso) {

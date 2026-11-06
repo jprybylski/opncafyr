@@ -37,9 +37,11 @@ from opncafyr.core.bootstrap import OPEN_PATH, consume_open_token, tokens_dir
 from opncafyr.core.health import ToolHealth
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
 from opncafyr.core.lifecycle import (
+    DEFAULT_THEME,
     MAX_IDLE_MINUTES,
     MIN_IDLE_MINUTES,
     SETTINGS_FILE,
+    THEMES,
     Lifecycle,
     LifecycleConfig,
     Settings,
@@ -63,6 +65,7 @@ from opncafyr.paths import logs_dir, state_dir
 log = logging.getLogger(__name__)
 
 SESSION_PLACEHOLDER = "{{OPNCAFYR_SESSION}}"
+THEME_PLACEHOLDER = "{{OPNCAFYR_THEME}}"
 
 # The home page loads only its own files and talks only to its own origin (ADR 0006).
 HOME_CSP = "; ".join(
@@ -106,7 +109,9 @@ class QuitBody(BaseModel):
 
 
 class SettingsBody(BaseModel):
-    idle_timeout_minutes: int | None = Field(ge=MIN_IDLE_MINUTES, le=MAX_IDLE_MINUTES)
+    # Send only the settings to change; an explicit null idle timeout turns it off.
+    idle_timeout_minutes: int | None = Field(default=None, ge=MIN_IDLE_MINUTES, le=MAX_IDLE_MINUTES)
+    theme: Literal["system", "light", "dark"] | None = None
 
 
 async def _monitor(lifecycle: Lifecycle, tick_s: float) -> None:
@@ -301,9 +306,18 @@ def create_app(
 
     @app.put("/api/settings")
     def put_settings(body: SettingsBody) -> dict[str, object]:
-        app.state.settings.set_idle_timeout_minutes(body.idle_timeout_minutes)
-        lifecycle_of().idle_timeout_s = minutes_to_seconds(body.idle_timeout_minutes)
-        return {"idle_timeout_minutes": body.idle_timeout_minutes}
+        sent = body.model_fields_set
+        if not sent:
+            raise HTTPException(status_code=422, detail="No setting to change.")
+        store = app.state.settings
+        if "idle_timeout_minutes" in sent:
+            store.set_idle_timeout_minutes(body.idle_timeout_minutes)
+            lifecycle_of().idle_timeout_s = minutes_to_seconds(body.idle_timeout_minutes)
+        if "theme" in sent:
+            if body.theme is None:
+                raise HTTPException(status_code=422, detail="Choose system, light or dark.")
+            store.set_theme(body.theme)
+        return {"idle_timeout_minutes": store.idle_timeout_minutes(), "theme": store.theme()}
 
     @app.post("/api/quit")
     def quit_app(body: QuitBody | None = None) -> dict[str, object]:
@@ -354,8 +368,13 @@ def create_app(
         page = resources.files("opncafyr.web").joinpath("static/index.html").read_text("utf-8")
         # Only a browser holding the session cookie gets here, and no CORS headers are
         # ever sent. The page sends the secret back as a header on state-changing calls.
+        # The saved theme goes on <html> so the first paint is already in the right theme.
+        theme = app.state.settings.theme()
+        if theme not in THEMES:
+            theme = DEFAULT_THEME
+        page = page.replace(SESSION_PLACEHOLDER, escape(security.secret))
         return HTMLResponse(
-            page.replace(SESSION_PLACEHOLDER, escape(security.secret)),
+            page.replace(THEME_PLACEHOLDER, theme),
             headers={
                 "cache-control": "no-store",
                 "content-security-policy": HOME_CSP,

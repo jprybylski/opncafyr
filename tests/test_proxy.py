@@ -58,6 +58,27 @@ def test_page_and_assets(running):
     assert css.status_code == 200 and css.headers["content-type"] == "text/css"
 
 
+def test_only_the_launcher_may_frame_a_child(running):
+    # The tool view embeds children in a same-origin iframe (#50).
+    for path in ("/apps/toy/", "/apps/toy/style.css"):
+        resp = running.get(path, headers=running.cookie)
+        assert resp.headers.get_list("content-security-policy") == ["frame-ancestors 'self'"]
+    running.sup.stop("toy")
+    down = running.get("/apps/toy/", headers=running.cookie)
+    assert down.status_code in (502, 503)
+    assert down.headers["content-security-policy"] == "frame-ancestors 'self'"
+    assert "target='_top'" in down.text
+
+
+def test_using_a_child_keeps_the_launcher_open(running):
+    lifecycle = running.app.state.lifecycle
+    assert lifecycle.status()["pages"] == 0
+    running.get("/apps/toy/", headers=running.cookie)
+    assert lifecycle.status()["pages"] == 1
+    running.get("/apps/toy/style.css", headers=running.cookie)
+    assert lifecycle.status()["pages"] == 1  # one entry per tool, refreshed
+
+
 def test_child_gets_its_token_and_never_the_launcher_secret(running):
     headers = {
         **running.cookie,

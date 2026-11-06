@@ -25,6 +25,7 @@ function showStopped() {
   clearInterval(pendingTimer);
   $("quit").disabled = true;
   $("idle").disabled = true;
+  $("theme-toggle").disabled = true;
   $("keep-open").hidden = true;
   appStatus("opncafyr has stopped. You can close this tab.");
   emit("app-stopped");

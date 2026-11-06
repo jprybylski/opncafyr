@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Launcher Design v1</title>
+<style>
+/* Design direction for #50, v1. Static mockup with sample data; not served by the app.
+   Layout: dark slate top bar (launcher chrome) over a light tinted sidebar and a card
+   dashboard: the inverse of opnca-r (dark left rail, light top bar).
+   Type: system fonts only. Status tones copy opnca-r's values exactly.
+
+   Contrast (WCAG 2.2 AA; text >= 4.5:1, UI parts >= 3:1)
+   Light  fg #14201f on bg #f2f5f4 15.2 | muted #475755 on surface 7.6, on bg 6.9
+          accent #0f766e on surface 5.5, on bg 5.0 | accent-fg #fff on accent 5.5
+          chrome fg #e8efee on #16201f 14.3 | chrome muted #a3b3b1 7.7
+          border-strong #7a8a88 on surface 3.6 | ok/warn/danger/info on tints 5.0-6.1
+   Dark   fg #e3ecea on bg #0c1413 15.5 | muted #a3b3b1 on surface 7.7
+          accent #5eead4 on surface 11.3 | accent-fg #0c1413 on accent 12.6
+          border-strong #6b7d7a on surface 3.9 | ok/warn/danger/info on tints 6.6-8.4 */
+
+:root {
+  color-scheme: light;
+  --bg: #f2f5f4;
+  --surface: #ffffff;
+  --surface-2: #f6f9f8;
+  --fg: #14201f;
+  --muted: #475755;
+  --border: #d3dddb;
+  --border-strong: #7a8a88;
+  --accent: #0f766e;
+  --accent-hover: #0b5f58;
+  --accent-fg: #ffffff;
+  --accent-soft: #dcf2ee;
+  --accent-strong: #0b5f58;
+  --chrome-bg: #16201f;
+  --chrome-fg: #e8efee;
+  --chrome-muted: #a3b3b1;
+  --chrome-line: #2e3d3b;
+  --chrome-hover: #23312f;
+  --chrome-accent: #5eead4;
+  --nav-bg: #e7eeec;
+  --nav-hover: #dbe5e2;
+  --row-hover: #f0f6f4;
+  --ok: #17693a;
+  --ok-soft: #e2f4e8;
+  --warn: #8a4b00;
+  --warn-soft: #fdf0dc;
+  --danger: #a3242a;
+  --danger-soft: #fbe5e6;
+  --info: #1d5fd1;
+  --info-soft: #e6eefc;
+  --backdrop: rgb(10 18 17 / 50%);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgb(20 32 31 / 6%), 0 2px 8px rgb(20 32 31 / 4%);
+  --shadow-lg: 0 10px 30px rgb(20 32 31 / 18%);
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0c1413;
+    --surface: #13201f;
+    --surface-2: #182725;
+    --fg: #e3ecea;
+    --muted: #a3b3b1;
+    --border: #273836;
+    --border-strong: #6b7d7a;
+    --accent: #5eead4;
+    --accent-hover: #99f6e4;
+    --accent-fg: #0c1413;
+    --accent-soft: #123532;
+    --accent-strong: #7ff0dd;
+    --chrome-bg: #060c0b;
+    --chrome-fg: #e3ecea;
+    --chrome-muted: #9fb0ae;
+    --chrome-line: #22312f;
+    --chrome-hover: #142220;
+    --chrome-accent: #5eead4;
+    --nav-bg: #0f1a19;
+    --nav-hover: #172625;
+    --row-hover: #1a2b29;
+    --ok: #7fd9a1;
+    --ok-soft: #123222;
+    --warn: #f5c16b;
+    --warn-soft: #3a2a0e;
+    --danger: #ff9a92;
+    --danger-soft: #3d1a1c;
+    --info: #8db8ff;
+    --info-soft: #1d2f52;
+    --backdrop: rgb(0 0 0 / 60%);
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 25%);
+    --shadow-lg: 0 10px 30px rgb(0 0 0 / 50%);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c1413;
+  --surface: #13201f;
+  --surface-2: #182725;
+  --fg: #e3ecea;
+  --muted: #a3b3b1;
+  --border: #273836;
+  --border-strong: #6b7d7a;
+  --accent: #5eead4;
+  --accent-hover: #99f6e4;
+  --accent-fg: #0c1413;
+  --accent-soft: #123532;
+  --accent-strong: #7ff0dd;
+  --chrome-bg: #060c0b;
+  --chrome-fg: #e3ecea;
+  --chrome-muted: #9fb0ae;
+  --chrome-line: #22312f;
+  --chrome-hover: #142220;
+  --chrome-accent: #5eead4;
+  --nav-bg: #0f1a19;
+  --nav-hover: #172625;
+  --row-hover: #1a2b29;
+  --ok: #7fd9a1;
+  --ok-soft: #123222;
+  --warn: #f5c16b;
+  --warn-soft: #3a2a0e;
+  --danger: #ff9a92;
+  --danger-soft: #3d1a1c;
+  --info: #8db8ff;
+  --info-soft: #1d2f52;
+  --backdrop: rgb(0 0 0 / 60%);
+  --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 25%);
+  --shadow-lg: 0 10px 30px rgb(0 0 0 / 50%);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { text-wrap: balance; }
+.mono { font-family: var(--mono); font-size: 0.92em; }
+.muted { color: var(--muted); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.icon { width: 1.1rem; height: 1.1rem; flex: none; }
+
+/* ---- Review page around the mockup (not part of the app) ---- */
+.review {
+  max-width: 88rem;
+  margin: 0 auto;
+  padding-block: var(--space-5) var(--space-6);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: var(--space-5);
+}
+.review-head { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: end; justify-content: space-between; }
+.review-head h1 { margin: 0; font-size: var(--text-xl); }
+.review-head p { margin: var(--space-1) 0 0; color: var(--muted); max-width: 62ch; }
+.segmented { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; }
+.segmented button { border: 0; background: var(--surface); padding: 0.35rem 0.9rem; cursor: pointer; font-size: var(--text-sm); }
+.segmented button + button { border-left: 1px solid var(--border-strong); }
+.segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.frame {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  min-width: 0;
+}
+.review h2.section { font-size: var(--text-lg); margin: var(--space-4) 0 0; }
+
+/* ---- App chrome ---- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0.6rem var(--space-5);
+  background: var(--chrome-bg);
+  color: var(--chrome-fg);
+  border-bottom: 1px solid var(--chrome-line);
+}
+.topbar :focus-visible { outline-color: var(--chrome-accent); }
+.brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; letter-spacing: 0.01em; }
+.brand-mark {
+  width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm);
+  display: grid; place-items: center;
+  background: var(--chrome-accent); color: var(--chrome-bg);
+}
+.brand-sub { font-weight: 500; color: var(--chrome-muted); font-size: var(--text-sm); }
+.study-chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  min-width: 0; flex: 1;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--chrome-line);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+.study-chip strong { white-space: nowrap; }
+.study-chip .path { color: var(--chrome-muted); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-actions { display: flex; align-items: center; gap: var(--space-2); }
+.chrome-btn {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  background: transparent; color: var(--chrome-fg);
+  border: 1px solid var(--chrome-line); border-radius: var(--radius-sm);
+  padding: 0.3rem 0.75rem; font-size: var(--text-sm); cursor: pointer; text-decoration: none;
+  white-space: nowrap;
+}
+.chrome-btn:hover { background: var(--chrome-hover); }
+.live-jobs .dot {
+  width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--chrome-accent);
+  box-shadow: 0 0 0 3px rgb(94 234 212 / 25%);
+}
+.notice {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: 0.4rem var(--space-5);
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+.statusline { margin-left: auto; color: var(--muted); }
+
+.shell { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); background: var(--bg); min-height: 46rem; }
+.sidenav { background: var(--nav-bg); border-right: 1px solid var(--border); padding: var(--space-4) var(--space-3); }
+.sidenav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.nav-heading { margin: var(--space-5) var(--space-3) var(--space-2); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.nav-link {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: 0.45rem var(--space-3); border-radius: var(--radius-sm);
+  color: var(--fg); text-decoration: none; font-weight: 500;
+}
+.nav-link:hover { background: var(--nav-hover); }
+.nav-link[aria-current="page"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 650; }
+.nav-link .count {
+  margin-left: auto; font-size: var(--text-xs); font-weight: 600;
+  padding: 0 0.45rem; border-radius: var(--radius-pill);
+  border: 1px solid currentColor;
+}
+.nav-link.planned { color: var(--muted); font-weight: 400; }
+.nav-link.planned small { margin-left: auto; font-size: var(--text-xs); }
+
+.main { padding: var(--space-5) var(--space-6) var(--space-6); min-width: 0; }
+.page-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-4); }
+.page-head h1 { margin: 0; font-size: var(--text-xl); }
+.dash { display: grid; grid-template-columns: minmax(0, 1fr) 21rem; gap: var(--space-5); align-items: start; }
+.stack { display: grid; gap: var(--space-5); min-width: 0; }
+
+/* ---- Components ---- */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+.card-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.card-head h2 { margin: 0; font-size: var(--text-md); font-weight: 650; }
+.card-head .aside { margin-left: auto; font-size: var(--text-sm); color: var(--muted); }
+.card-body { padding: var(--space-4); }
+
+.study {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-4); align-items: center;
+  padding: var(--space-4) var(--space-5);
+}
+.study-icon { width: 2.75rem; height: 2.75rem; border-radius: var(--radius); display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-strong); }
+.study h2 { margin: 0; font-size: var(--text-lg); }
+.study .path { color: var(--muted); font-family: var(--mono); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.facts { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: var(--space-2) 0 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--muted); }
+.facts strong { color: var(--fg); font-variant-numeric: tabular-nums; }
+.study-foot { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--border); font-size: var(--text-sm); }
+.linkish { background: none; border: 0; padding: 0.1rem 0.2rem; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font-size: var(--text-sm); }
+.linkish:disabled { color: var(--muted); text-decoration: none; cursor: default; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  padding: 0.45rem 0.95rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg);
+  font-weight: 600; font-size: var(--text-sm); text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-ghost { border-color: transparent; background: transparent; color: var(--accent); }
+.btn-ghost:hover { background: var(--accent-soft); }
+.btn-danger { border-color: var(--danger); color: var(--danger); background: var(--surface); }
+.btn-danger:hover { background: var(--danger-soft); }
+.btn-sm { padding: 0.2rem 0.6rem; font-size: var(--text-xs); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr)); gap: var(--space-3); list-style: none; margin: 0; padding: var(--space-4); }
+.tool { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); align-content: start; }
+.tool-top { display: flex; align-items: center; gap: var(--space-3); }
+.monogram { width: 2.25rem; height: 2.25rem; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; font-size: var(--text-lg); }
+.tool h3 { margin: 0; font-size: var(--text-md); }
+.tool .sub { font-size: var(--text-xs); color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.chip { font-size: var(--text-xs); padding: 0.05rem 0.5rem; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
+.tool-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-1); }
+.tool .note { font-size: var(--text-sm); color: var(--muted); margin: 0; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.05rem 0.55rem; border-radius: var(--radius-pill);
+  font-size: var(--text-xs); font-weight: 650; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.pill-ok { background: var(--ok-soft); color: var(--ok); }
+.pill-warn { background: var(--warn-soft); color: var(--warn); }
+.pill-danger { background: var(--danger-soft); color: var(--danger); }
+.pill-info { background: var(--info-soft); color: var(--info); }
+.pill-neutral { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
+
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--text-sm); }
+caption { text-align: left; padding: var(--space-3) var(--space-4) var(--space-2); font-weight: 650; font-size: var(--text-sm); color: var(--muted); }
+th, td { text-align: left; padding: 0.55rem var(--space-4); border-bottom: 1px solid var(--border); vertical-align: middle; }
+thead th { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 650; background: var(--surface-2); }
+tbody tr:hover { background: var(--row-hover); }
+tbody tr:last-child td { border-bottom: 0; }
+td.num, time { font-variant-numeric: tabular-nums; }
+td time { color: var(--muted); }
+
+.activity { list-style: none; margin: 0; padding: 0; }
+.job { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.job:last-child { border-bottom: 0; }
+.job-top { display: flex; align-items: center; gap: var(--space-2); }
+.job-top strong { font-size: var(--text-sm); }
+.job-top .pill { margin-left: auto; }
+.job p { margin: 0; font-size: var(--text-sm); color: var(--muted); }
+.job-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--border); }
+.bar span { display: block; width: 35%; height: 100%; background: var(--accent); animation: slide 1.4s ease-in-out infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@media (prefers-reduced-motion: reduce) { .bar span { animation: none; width: 100%; opacity: 0.5; } }
+.card-link { display: block; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); font-size: var(--text-sm); color: var(--accent); font-weight: 600; text-decoration: none; }
+
+.empty { display: grid; justify-items: center; gap: var(--space-2); text-align: center; padding: var(--space-6) var(--space-4); }
+.empty-icon { width: 2.75rem; height: 2.75rem; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.empty h3 { margin: var(--space-1) 0 0; font-size: var(--text-md); }
+.empty p { margin: 0 0 var(--space-2); color: var(--muted); font-size: var(--text-sm); max-width: 40ch; }
+
+.field { display: grid; gap: var(--space-1); max-width: 22rem; }
+.field label { font-weight: 600; font-size: var(--text-sm); }
+.field select, .field input { padding: 0.4rem 0.6rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); }
+.field .hint { font-size: var(--text-xs); color: var(--muted); }
+
+.status { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); border: 1px solid var(--border); background: var(--surface); }
+.status-ok { border-color: var(--ok); }
+.status-ok .icon { color: var(--ok); }
+.status-danger { border-color: var(--danger); }
+.status-danger .icon { color: var(--danger); }
+
+.dialog-demo { background: var(--backdrop); padding: var(--space-5); border-radius: var(--radius); display: grid; place-items: center; }
+.dialog { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: var(--space-5); max-width: 30rem; display: grid; gap: var(--space-3); }
+.dialog h3 { margin: 0; font-size: var(--text-lg); }
+.dialog p { margin: 0; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+
+.components { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: var(--space-4); }
+.components .card-body { display: grid; gap: var(--space-3); }
+
+.notes { margin: 0; padding-left: 1.2rem; max-width: 80ch; display: grid; gap: var(--space-2); }
+
+.contrast td:first-child { white-space: nowrap; }
+.swatch { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 3px; border: 1px solid var(--border-strong); vertical-align: -2px; margin-right: 0.3rem; }
+
+
+/* ---- Opening a tool: embedded (iframe) and separate tab ---- */
+.shell.tool-mode { grid-template-columns: 3.75rem minmax(0, 1fr); min-height: 40rem; }
+.rail-mini { background: var(--nav-bg); border-right: 1px solid var(--border); padding: var(--space-3) var(--space-2); display: grid; align-content: start; justify-items: center; gap: var(--space-1); }
+.rail-mini a, .rail-mini span.app { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: var(--radius-sm); color: var(--fg); text-decoration: none; position: relative; }
+.rail-mini a:hover { background: var(--nav-hover); }
+.rail-mini .sep { width: 1.75rem; height: 1px; background: var(--border); margin: var(--space-2) 0; }
+.rail-mini .app .monogram { width: 2rem; height: 2rem; font-size: var(--text-md); }
+.rail-mini .app.current { background: var(--accent-soft); outline: 2px solid var(--accent); outline-offset: -2px; }
+.rail-mini .app .live { position: absolute; right: 0.15rem; bottom: 0.15rem; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--ok); border: 2px solid var(--nav-bg); }
+.tool-pane { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; }
+.toolstrip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: 0.45rem var(--space-4); background: var(--surface); border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+.toolstrip .monogram { width: 1.6rem; height: 1.6rem; font-size: var(--text-sm); }
+.toolstrip .crumb { color: var(--muted); }
+.toolstrip .crumb a { color: var(--accent); }
+.toolstrip .spacer { flex: 1; }
+.embed { padding: 0; background: var(--bg); min-width: 0; overflow: hidden; }
+
+/* A stand-in for opnca-r's own page, using its real tokens (light and dark). */
+.fake-tool {
+  --t-bg: #f4f6fb; --t-surface: #ffffff; --t-fg: #172033; --t-muted: #4b5768; --t-accent: #1d5fd1;
+  --t-accent-fg: #ffffff; --t-border: #d5dcea; --t-rail: #101a2e; --t-rail-fg: #dfe6f3; --t-rail-muted: #9fb0cc; --t-rail-active: #1d3560;
+  --t-status: #eaeff8; --t-ok: #17693a; --t-ok-soft: #e2f4e8;
+  display: grid; grid-template-columns: 12.5rem minmax(0, 1fr); height: 100%; min-height: 34rem;
+  background: var(--t-bg); color: var(--t-fg); font-size: var(--text-sm);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .fake-tool {
+    --t-bg: #0e1626; --t-surface: #152037; --t-fg: #e6ebf5; --t-muted: #a9b4c7; --t-accent: #8db8ff; --t-accent-fg: #0e1626;
+    --t-border: #2a3a58; --t-rail: #0a1120; --t-rail-active: #1d3153; --t-rail-muted: #8fa0bd; --t-status: #12203a; --t-ok: #7fd9a1; --t-ok-soft: #123222;
+  }
+}
+:root[data-theme="dark"] .fake-tool {
+  --t-bg: #0e1626; --t-surface: #152037; --t-fg: #e6ebf5; --t-muted: #a9b4c7; --t-accent: #8db8ff; --t-accent-fg: #0e1626;
+  --t-border: #2a3a58; --t-rail: #0a1120; --t-rail-active: #1d3153; --t-rail-muted: #8fa0bd; --t-status: #12203a; --t-ok: #7fd9a1; --t-ok-soft: #123222;
+}
+.ft-rail { background: var(--t-rail); color: var(--t-rail-fg); padding: var(--space-3) var(--space-2); display: grid; align-content: start; gap: 2px; }
+.ft-brand { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2) var(--space-4); font-weight: 700; font-size: var(--text-md); }
+.ft-brand i { width: 1.6rem; height: 1.6rem; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #22d3ee); display: grid; place-items: center; color: #08111f; font-style: normal; font-size: var(--text-xs); }
+.ft-tab { display: flex; align-items: center; gap: var(--space-2); padding: 0.45rem var(--space-2); border-radius: var(--radius-sm); }
+.ft-tab b { width: 1.3rem; height: 1.3rem; border-radius: 50%; border: 1px solid var(--t-rail-muted); color: var(--t-rail-muted); display: grid; place-items: center; font-size: 0.65rem; font-weight: 500; }
+.ft-tab.on { background: var(--t-rail-active); color: #fff; font-weight: 600; }
+.ft-tab.on b { background: #fff; color: var(--t-rail); border-color: #fff; }
+.ft-main { display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+.ft-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 0.55rem var(--space-4); background: var(--t-surface); border-bottom: 1px solid var(--t-border); }
+.ft-top strong { color: var(--t-muted); }
+.ft-chip { padding: 0.15rem 0.6rem; border-radius: 999px; background: var(--t-status); border: 1px solid var(--t-border); font-size: var(--text-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ft-body { padding: var(--space-4); display: grid; gap: var(--space-3); align-content: start; min-width: 0; }
+.ft-card { background: var(--t-surface); border: 1px solid var(--t-border); border-radius: 12px; padding: var(--space-3) var(--space-4); min-width: 0; }
+.ft-card h4 { margin: 0 0 var(--space-2); font-size: var(--text-md); }
+.ft-btn { display: inline-block; padding: 0.35rem 0.8rem; border-radius: 8px; background: var(--t-accent); color: var(--t-accent-fg); font-weight: 600; }
+.ft-badge { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: var(--text-xs); font-weight: 600; background: var(--t-ok-soft); color: var(--t-ok); }
+.ft-plot { height: 9rem; border-radius: 8px; border: 1px solid var(--t-border); background:
+  linear-gradient(var(--t-border) 1px, transparent 1px) 0 0 / 100% 25%; position: relative; overflow: hidden; }
+.ft-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ft-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--space-3); }
+.ft-kv { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem var(--space-3); margin: 0; color: var(--t-muted); }
+.ft-kv dd { margin: 0; color: var(--t-fg); font-variant-numeric: tabular-nums; }
+
+.browser { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-lg); min-width: 0; }
+.tabstrip { display: flex; align-items: end; gap: 2px; padding: var(--space-2) var(--space-3) 0; background: var(--surface-2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.btab { display: flex; align-items: center; gap: var(--space-2); padding: 0.4rem 0.9rem; border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-size: var(--text-xs); color: var(--muted); white-space: nowrap; border: 1px solid transparent; border-bottom: 0; }
+.btab.on { background: var(--surface); color: var(--fg); border-color: var(--border); margin-bottom: -1px; font-weight: 600; }
+.fav { width: 0.9rem; height: 0.9rem; border-radius: 3px; display: inline-block; }
+.fav-l { background: #0f766e; }
+.fav-t { background: linear-gradient(135deg, #3b82f6, #22d3ee); border-radius: 50%; }
+.fav-d { background: #7c3aed; }
+.urlbar { padding: 0.35rem var(--space-3); font-family: var(--mono); font-size: var(--text-xs); color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--border); }
+.compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: var(--space-4); }
+.compare ul { margin: 0; padding-left: 1.1rem; display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.compare h3 { margin: 0 0 var(--space-2); font-size: var(--text-md); }
+.lede { margin: 0; color: var(--muted); max-width: 80ch; }
+@media (max-width: 46rem) {
+  .shell.tool-mode { grid-template-columns: minmax(0, 1fr); }
+  .rail-mini { grid-auto-flow: column; justify-content: start; border-right: 0; border-bottom: 1px solid var(--border); }
+  .rail-mini .sep { width: 1px; height: 1.75rem; margin: 0 var(--space-2); }
+  .fake-tool { grid-template-columns: minmax(0, 1fr); }
+  .ft-rail { display: none; }
+}
+
+@media (max-width: 60rem) {
+  .dash { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 46rem) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .sidenav { border-right: 0; border-bottom: 1px solid var(--border); padding: var(--space-2); }
+  .sidenav ul { display: flex; flex-wrap: wrap; }
+  .nav-heading, .planned-group { display: none; }
+  .main { padding: var(--space-4); }
+  .topbar { flex-wrap: wrap; padding: 0.6rem var(--space-4); }
+  .study-chip { order: 3; flex-basis: 100%; }
+  .study { grid-template-columns: auto minmax(0, 1fr); }
+  .study > .btn { grid-column: 1 / -1; justify-self: start; }
+  .notice { padding: 0.4rem var(--space-4); flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-jobs" viewBox="0 0 24 24"><path d="M4 6h10M4 12h16M4 18h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="6" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="15" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M7 16c3-8 5-9 7-6s3 2 6-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-deck" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 17v3M8 21h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-mark" viewBox="0 0 24 24"><path d="M12 3l8 4.5-8 4.5-8-4.5zM4 12l8 4.5 8-4.5M4 16.5L12 21l8-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6L19 19M5 19l1.4-1.4M17.6 6.4L19 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<main class="review">
+  <div class="review-head">
+    <div>
+      <h1>opncafyr launcher: design direction v1</h1>
+      <p>Issue #50. A static mockup with sample data, for sign-off before the components are built. Switch the theme to compare light and dark.</p>
+    </div>
+    <div class="segmented" role="group" aria-label="Mockup theme">
+      <button type="button" data-set-theme="system" aria-pressed="true">System</button>
+      <button type="button" data-set-theme="light" aria-pressed="false">Light</button>
+      <button type="button" data-set-theme="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+
+  <!-- ================= The app ================= -->
+  <div class="frame" id="app-frame">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-mark"/></svg></span>
+        opncafyr <span class="brand-sub">Workspace</span>
+      </div>
+      <div class="study-chip" title="Open study folder">
+        <svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>
+        <strong>PK-2041 Phase 1</strong>
+        <span class="path">~/Studies/PK-2041</span>
+      </div>
+      <div class="top-actions">
+        <a class="chrome-btn live-jobs" href="#jobs"><span class="dot" aria-hidden="true"></span>1 running · 1 waiting</a>
+        <button type="button" class="chrome-btn"><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg>Theme: System</button>
+        <button type="button" class="chrome-btn">Quit</button>
+      </div>
+    </header>
+    <div class="notice" role="note">
+      <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+      <span><strong>Research use only.</strong> This workspace has not been validated for clinical or regulatory decisions.</span>
+      <span class="statusline">Opened PK-2041 Phase 1.</span>
+    </div>
+
+    <div class="shell">
+      <nav class="sidenav" aria-label="Main">
+        <ul>
+          <li><a class="nav-link" href="#home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Home</a></li>
+          <li><a class="nav-link" href="#jobs"><svg class="icon" aria-hidden="true"><use href="#i-jobs"/></svg>Jobs<span class="count">2</span></a></li>
+          <li><a class="nav-link" href="#settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Settings</a></li>
+        </ul>
+        <div class="planned-group">
+          <p class="nav-heading">Workflows</p>
+          <ul>
+            <li><span class="nav-link planned"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Analyses<small>soon</small></span></li>
+            <li><span class="nav-link planned"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg>Reports<small>soon</small></span></li>
+            <li><span class="nav-link planned"><svg class="icon" aria-hidden="true"><use href="#i-deck"/></svg>Decks<small>soon</small></span></li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="main">
+        <div class="page-head">
+          <h1>Home</h1>
+          <span class="muted">Thursday, 6 November 2026</span>
+        </div>
+
+        <div class="stack">
+          <section class="card study" aria-labelledby="study-h">
+            <span class="study-icon"><svg class="icon" aria-hidden="true" style="width:1.5rem;height:1.5rem"><use href="#i-folder"/></svg></span>
+            <div>
+              <h2 id="study-h">PK-2041 Phase 1</h2>
+              <div class="path">/Users/analyst/Studies/PK-2041</div>
+              <ul class="facts">
+                <li><strong>4</strong> runs</li>
+                <li><strong>1</strong> publication</li>
+                <li>Workspace format <strong>1.0</strong></li>
+                <li>Writable</li>
+              </ul>
+            </div>
+            <button type="button" class="btn">Change study folder…</button>
+            <div class="study-foot">
+              <span class="muted">Recent:</span>
+              <button type="button" class="linkish">PK-2038 Food effect</button>
+              <button type="button" class="linkish">DDI-0112</button>
+              <button type="button" class="linkish" disabled>PK-1990 (not found)</button>
+            </div>
+          </section>
+
+          <div class="dash">
+            <div class="stack">
+              <section class="card" aria-labelledby="tools-h">
+                <div class="card-head"><h2 id="tools-h">Tools</h2><span class="aside">3 installed</span></div>
+                <ul class="tools">
+                  <li class="tool">
+                    <div class="tool-top"><span class="monogram" aria-hidden="true">o</span><div><h3>opnca-r</h3><div class="sub">Web app running</div></div></div>
+                    <ul class="chips"><li class="chip">analyze nca</li><li class="chip">replay nca</li></ul>
+                    <div class="tool-foot"><span class="pill pill-ok"><span aria-hidden="true">✓</span> Available</span><a class="btn btn-primary btn-sm" href="#">Open opnca-r</a></div>
+                  </li>
+                  <li class="tool">
+                    <div class="tool-top"><span class="monogram" aria-hidden="true">q</span><div><h3>quartifyr + reportifyr</h3><div class="sub">Command-line tool</div></div></div>
+                    <ul class="chips"><li class="chip">check report</li><li class="chip">render report</li></ul>
+                    <div class="tool-foot"><span class="pill pill-ok"><span aria-hidden="true">✓</span> Available</span></div>
+                  </li>
+                  <li class="tool">
+                    <div class="tool-top"><span class="monogram" aria-hidden="true">d</span><div><h3>deckifyr</h3><div class="sub">Web app not running</div></div></div>
+                    <ul class="chips"><li class="chip">edit deck</li><li class="chip">build deck</li><li class="chip">preview deck</li></ul>
+                    <p class="note">LibreOffice was not found, so previews are off.</p>
+                    <div class="tool-foot"><span class="pill pill-danger"><span aria-hidden="true">✕</span> Unavailable</span><button type="button" class="btn btn-sm">Start</button></div>
+                  </li>
+                </ul>
+              </section>
+
+              <section class="card" aria-labelledby="runs-h">
+                <div class="card-head"><h2 id="runs-h">Recent runs</h2><span class="aside">Newest first</span></div>
+                <div class="table-scroll">
+                  <table>
+                    <thead><tr><th scope="col">Run</th><th scope="col">Analyte</th><th scope="col">State</th><th scope="col">Created</th></tr></thead>
+                    <tbody>
+                      <tr><td class="mono">20261106T091402Z-a1f3</td><td>Metabolite M1 (PARAM)</td><td><span class="pill pill-info"><span aria-hidden="true">▶</span> Running</span></td><td><time>6 Nov 2026, 09:14</time></td></tr>
+                      <tr><td class="mono">20261105T162210Z-7c4e</td><td>Parent (PARAM)</td><td><span class="pill pill-ok"><span aria-hidden="true">✓</span> Completed</span></td><td><time>5 Nov 2026, 16:22</time></td></tr>
+                      <tr><td class="mono">20261105T110847Z-03bd</td><td>Parent (PARAM)</td><td><span class="pill pill-danger"><span aria-hidden="true">✕</span> Failed</span></td><td><time>5 Nov 2026, 11:08</time></td></tr>
+                      <tr><td class="mono">20261104T101010Z-beef</td><td></td><td><span class="pill pill-warn"><span aria-hidden="true">!</span> Incomplete</span></td><td><time>4 Nov 2026, 10:10</time></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="card" aria-labelledby="pubs-h">
+                <div class="card-head"><h2 id="pubs-h">Publications</h2></div>
+                <div class="table-scroll">
+                  <table>
+                    <thead><tr><th scope="col">Publication</th><th scope="col">Runs</th><th scope="col">State</th><th scope="col">Created</th></tr></thead>
+                    <tbody>
+                      <tr><td class="mono">pub-20261105-report</td><td class="num">1</td><td><span class="pill pill-ok"><span aria-hidden="true">✓</span> Recorded</span></td><td><time>5 Nov 2026, 17:40</time></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <section class="card" aria-labelledby="act-h" id="jobs">
+              <div class="card-head"><h2 id="act-h">Activity</h2><span class="aside">1 running · 1 waiting</span></div>
+              <ul class="activity">
+                <li class="job">
+                  <div class="job-top"><strong>NCA: Metabolite M1</strong><span class="pill pill-info"><span aria-hidden="true">▶</span> Running</span></div>
+                  <p>Computing parameters for 24 profiles</p>
+                  <div class="bar" aria-hidden="true"><span></span></div>
+                  <div class="job-meta"><span>Started 09:14 · 2 min 14 s</span><button type="button" class="btn btn-sm">Cancel</button></div>
+                </li>
+                <li class="job">
+                  <div class="job-top"><strong>Render report</strong><span class="pill pill-info"><span aria-hidden="true">◷</span> Queued</span></div>
+                  <p>Waiting to start: Render report.</p>
+                  <div class="job-meta"><span>Added 09:15</span><button type="button" class="btn btn-sm">Cancel</button></div>
+                </li>
+                <li class="job">
+                  <div class="job-top"><strong>NCA: Parent</strong><span class="pill pill-ok"><span aria-hidden="true">✓</span> Completed</span></div>
+                  <div class="job-meta"><span>5 Nov, 16:22 · 48 s</span></div>
+                </li>
+                <li class="job">
+                  <div class="job-top"><strong>NCA: Parent</strong><span class="pill pill-danger"><span aria-hidden="true">✕</span> Failed</span></div>
+                  <p>Time column has 3 non-numeric values.</p>
+                  <div class="job-meta"><span>5 Nov, 11:08 · 6 s</span></div>
+                </li>
+              </ul>
+              <a class="card-link" href="#jobs">All jobs →</a>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Opening a tool ================= -->
+  <h2 class="section">Opening a tool</h2>
+  <p class="lede">Two ways the launcher could open opnca-r or deckifyr. Both show the tool's own page unchanged; the grey-blue page below is a stand-in for opnca-r using its real colours.</p>
+
+  <h3 style="margin:0">A. Embedded in the launcher (iframe)</h3>
+  <div class="frame" id="embed-frame">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-mark"/></svg></span>
+        opncafyr <span class="brand-sub">Workspace</span>
+      </div>
+      <div class="study-chip"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><strong>PK-2041 Phase 1</strong><span class="path">~/Studies/PK-2041</span></div>
+      <div class="top-actions">
+        <a class="chrome-btn live-jobs" href="#jobs"><span class="dot" aria-hidden="true"></span>1 running</a>
+        <button type="button" class="chrome-btn"><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg>Theme: System</button>
+        <button type="button" class="chrome-btn">Quit</button>
+      </div>
+    </header>
+    <div class="notice"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span><strong>Research use only.</strong> This workspace has not been validated for clinical or regulatory decisions.</span></div>
+    <div class="shell tool-mode">
+      <nav class="rail-mini" aria-label="Launcher, compact">
+        <a href="#home" title="Home"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span class="visually-hidden">Home</span></a>
+        <a href="#jobs" title="Jobs"><svg class="icon" aria-hidden="true"><use href="#i-jobs"/></svg><span class="visually-hidden">Jobs</span></a>
+        <a href="#settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="visually-hidden">Settings</span></a>
+        <span class="sep" aria-hidden="true"></span>
+        <span class="app current" title="opnca-r (open)"><span class="monogram">o</span><span class="live" aria-hidden="true"></span></span>
+        <span class="app" title="deckifyr (open)"><span class="monogram">d</span><span class="live" aria-hidden="true"></span></span>
+      </nav>
+      <div class="tool-pane">
+        <div class="toolstrip">
+          <span class="monogram" aria-hidden="true">o</span>
+          <span class="crumb"><a href="#home">Home</a> / <strong style="color:var(--fg)">opnca-r</strong></span>
+          <span class="pill pill-ok"><span aria-hidden="true">✓</span> Running</span>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost btn-sm">Reload</button>
+          <button type="button" class="btn btn-sm">Open in new tab ↗</button>
+          <button type="button" class="btn btn-danger btn-sm">Stop</button>
+        </div>
+        <div class="embed">
+          <div class="fake-tool">
+            <div class="ft-rail">
+              <div class="ft-brand"><i aria-hidden="true">op</i>opnca</div>
+              <div class="ft-tab"><b>1</b>Data</div>
+              <div class="ft-tab"><b>2</b>Grouping</div>
+              <div class="ft-tab on"><b>3</b>Profiles</div>
+              <div class="ft-tab"><b>4</b>Results</div>
+              <div class="ft-tab"><b>5</b>Export</div>
+            </div>
+            <div class="ft-main">
+              <div class="ft-top"><strong>Profiles</strong><span class="ft-chip">pk_cleaned.csv · Parent · 24 profiles</span></div>
+              <div class="ft-body">
+                <div class="ft-card">
+                  <h4>Subject 1003 <span class="ft-badge">t½ 6.84 h</span></h4>
+                  <div class="ft-plot"><svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 95 L20 30 L45 12 L80 28 L130 52 L190 72 L250 84 L300 90" fill="none" stroke="var(--t-accent)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
+                </div>
+                <div class="ft-grid">
+                  <div class="ft-card"><dl class="ft-kv"><dt>Cmax</dt><dd>412 ng/mL</dd><dt>Tmax</dt><dd>1.5 h</dd><dt>AUClast</dt><dd>3 870 h·ng/mL</dd></dl></div>
+                  <div class="ft-card"><p style="margin:0 0 var(--space-2)">Terminal phase: last 4 points, adj. R² 0.991</p><span class="ft-btn">Apply to all</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin:0">B. In its own browser tab</h3>
+  <div class="browser">
+    <div class="tabstrip" aria-hidden="true">
+      <span class="btab"><span class="fav fav-l"></span>opncafyr · PK-2041 Phase 1</span>
+      <span class="btab on"><span class="fav fav-t"></span>opnca-r · PK-2041 Phase 1</span>
+      <span class="btab"><span class="fav fav-d"></span>deckifyr · PK-2041 Phase 1</span>
+    </div>
+    <div class="urlbar">127.0.0.1:53817/apps/opnca/</div>
+    <div class="fake-tool">
+            <div class="ft-rail">
+              <div class="ft-brand"><i aria-hidden="true">op</i>opnca</div>
+              <div class="ft-tab"><b>1</b>Data</div>
+              <div class="ft-tab"><b>2</b>Grouping</div>
+              <div class="ft-tab on"><b>3</b>Profiles</div>
+              <div class="ft-tab"><b>4</b>Results</div>
+              <div class="ft-tab"><b>5</b>Export</div>
+            </div>
+            <div class="ft-main">
+              <div class="ft-top"><strong>Profiles</strong><span class="ft-chip">pk_cleaned.csv · Parent · 24 profiles</span></div>
+              <div class="ft-body">
+                <div class="ft-card">
+                  <h4>Subject 1003 <span class="ft-badge">t½ 6.84 h</span></h4>
+                  <div class="ft-plot"><svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 95 L20 30 L45 12 L80 28 L130 52 L190 72 L250 84 L300 90" fill="none" stroke="var(--t-accent)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
+                </div>
+                <div class="ft-grid">
+                  <div class="ft-card"><dl class="ft-kv"><dt>Cmax</dt><dd>412 ng/mL</dd><dt>Tmax</dt><dd>1.5 h</dd><dt>AUClast</dt><dd>3 870 h·ng/mL</dd></dl></div>
+                  <div class="ft-card"><p style="margin:0 0 var(--space-2)">Terminal phase: last 4 points, adj. R² 0.991</p><span class="ft-btn">Apply to all</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+  </div>
+
+  <div class="compare">
+    <section class="card"><div class="card-body">
+      <h3>A. Embedded</h3>
+      <ul>
+        <li>The launcher's top bar, research notice, live jobs and Quit stay in view while you work in a tool.</li>
+        <li>One browser tab; switch tools from the compact rail. Tools stay loaded when you go back to Home, so unsaved edits survive.</li>
+        <li>The launcher page stays open, so auto-close can't shut the app while you work in a tool.</li>
+        <li>Costs about 90&nbsp;px of height and 60&nbsp;px of width. Two sets of chrome: the launcher's across the top, the tool's down the side.</li>
+        <li>The tool keeps its own theme switch, so the two can differ until the tools accept a theme from the launcher.</li>
+        <li>"Open in new tab" stays available for side-by-side work.</li>
+      </ul>
+    </div></section>
+    <section class="card"><div class="card-body">
+      <h3>B. Separate tab</h3>
+      <ul>
+        <li>Each tool gets the whole window and looks exactly as it does on its own.</li>
+        <li>Nothing to build beyond a link; the browser's tabs and back button work as people expect.</li>
+        <li>The research notice, jobs and Quit are only on the launcher's tab.</li>
+        <li>The launcher tab is hidden while you work, so auto-close needs a fix: count activity in a tool as use (small core change).</li>
+        <li>Orientation comes from tab titles and icons; each tool needs a distinct favicon and a title naming the study.</li>
+      </ul>
+    </div></section>
+  </div>
+
+  <!-- ================= Components ================= -->
+  <h2 class="section">Shared components</h2>
+  <div class="components">
+    <section class="card">
+      <div class="card-head"><h2>Buttons</h2></div>
+      <div class="card-body">
+        <div class="row">
+          <button type="button" class="btn btn-primary">Run analysis</button>
+          <button type="button" class="btn">Change folder…</button>
+          <button type="button" class="btn btn-ghost">View log</button>
+        </div>
+        <div class="row">
+          <button type="button" class="btn btn-danger">Cancel jobs and quit</button>
+          <button type="button" class="btn" disabled>Publish</button>
+        </div>
+        <p class="muted" style="margin:0;font-size:var(--text-sm)">One primary action per view. Danger only for actions that discard work.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Status pills</h2></div>
+      <div class="card-body">
+        <div class="row">
+          <span class="pill pill-info"><span aria-hidden="true">◷</span> Queued</span>
+          <span class="pill pill-info"><span aria-hidden="true">◔</span> Preparing</span>
+          <span class="pill pill-info"><span aria-hidden="true">▶</span> Running</span>
+          <span class="pill pill-info"><span aria-hidden="true">◑</span> Reviewing</span>
+          <span class="pill pill-ok"><span aria-hidden="true">✓</span> Completed</span>
+          <span class="pill pill-ok"><span aria-hidden="true">✓</span> Recorded</span>
+          <span class="pill pill-warn"><span aria-hidden="true">■</span> Cancelled</span>
+          <span class="pill pill-warn"><span aria-hidden="true">!</span> Incomplete</span>
+          <span class="pill pill-danger"><span aria-hidden="true">✕</span> Failed</span>
+          <span class="pill pill-info"><span aria-hidden="true">◌</span> Checking</span>
+          <span class="pill pill-ok"><span aria-hidden="true">✓</span> Available</span>
+          <span class="pill pill-danger"><span aria-hidden="true">✕</span> Unavailable</span>
+        </div>
+        <p class="muted" style="margin:0;font-size:var(--text-sm)">Always a symbol and a word. Tones match opnca-r: ok, warn, danger, info.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Form field and status lines</h2></div>
+      <div class="card-body">
+        <div class="field">
+          <label for="demo-idle">Close automatically when unused for</label>
+          <select id="demo-idle"><option>30 minutes</option></select>
+          <span class="hint">It never closes while a job is running or an editor has unsaved changes.</span>
+        </div>
+        <div class="status status-ok" role="status"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Opened PK-2041 Phase 1.</div>
+        <div class="status status-danger"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg><span><strong>Error:</strong> Could not load the runs.</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Empty state</h2></div>
+      <div class="empty">
+        <span class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></span>
+        <h3>No study folder is open</h3>
+        <p>Choose a folder to keep this study's data, runs and reports together.</p>
+        <button type="button" class="btn btn-primary">Choose study folder…</button>
+      </div>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1">
+      <div class="card-head"><h2>Dialog</h2></div>
+      <div class="card-body">
+        <div class="dialog-demo">
+          <div class="dialog" role="group" aria-label="Dialog example">
+            <h3>Jobs are still running</h3>
+            <p>1 job is running and 1 is waiting. Quitting now stops them.</p>
+            <div class="row">
+              <button type="button" class="btn btn-primary">Keep running and quit when finished</button>
+              <button type="button" class="btn btn-danger">Cancel jobs and quit</button>
+              <button type="button" class="btn btn-ghost">Don't quit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= Notes ================= -->
+  <h2 class="section">What to sign off</h2>
+  <ul class="notes">
+    <li><strong>Orientation.</strong> The launcher's chrome is a dark band across the top with a light sidebar; opnca-r's is a dark rail down the left with a light top bar. Teal is the launcher accent; blue stays opnca-r's accent and the shared "info" tone.</li>
+    <li><strong>Shared meanings.</strong> Status tones and their colours are copied from opnca-r (ok, warn, danger, info). State words stay as the launcher uses them today; opnca-r shows no job-state words of its own.</li>
+    <li><strong>Navigation.</strong> Home, Jobs and Settings exist now. Analyses, Reports and Decks are shown greyed here only to preview the final layout; each appears when its workflow lands.</li>
+    <li><strong>Theme.</strong> A top-bar button cycles System, Light, Dark. The choice is saved in the launcher's settings file, because the browser forgets it when the port changes each launch.</li>
+    <li><strong>Type.</strong> System fonts, no vendored font. Table text 13px, body 15px.</li>
+    <li><strong>Jobs.</strong> An activity panel on Home (live and latest jobs, message, elapsed time, a moving bar while running, Cancel) and the full list on the Jobs page.</li>
+  </ul>
+
+  <h2 class="section">Contrast</h2>
+  <div class="card table-scroll">
+    <table class="contrast">
+      <thead><tr><th scope="col">Pair</th><th scope="col">Light</th><th scope="col">Dark</th><th scope="col">Needs</th></tr></thead>
+      <tbody>
+        <tr><td>Text on page</td><td class="num">15.2</td><td class="num">15.5</td><td class="num">4.5</td></tr>
+        <tr><td>Muted text on card</td><td class="num">7.6</td><td class="num">7.7</td><td class="num">4.5</td></tr>
+        <tr><td>Accent text on card</td><td class="num">5.5</td><td class="num">11.3</td><td class="num">4.5</td></tr>
+        <tr><td>Button text on accent</td><td class="num">5.5</td><td class="num">12.6</td><td class="num">4.5</td></tr>
+        <tr><td>Top bar text</td><td class="num">14.3</td><td class="num">16.4</td><td class="num">4.5</td></tr>
+        <tr><td>Top bar muted text</td><td class="num">7.7</td><td class="num">8.5</td><td class="num">4.5</td></tr>
+        <tr><td>Field border on card</td><td class="num">3.6</td><td class="num">3.9</td><td class="num">3.0</td></tr>
+        <tr><td>Status text on its tint</td><td class="num">5.0–6.1</td><td class="num">6.6–8.4</td><td class="num">4.5</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+  (function () {
+    var buttons = document.querySelectorAll("[data-set-theme]");
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var t = b.getAttribute("data-set-theme");
+        if (t === "system") document.documentElement.removeAttribute("data-theme");
+        else document.documentElement.setAttribute("data-theme", t);
+        buttons.forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      });
+    });
+  })();
+</script>
+</body>
+</html>

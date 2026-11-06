@@ -320,6 +320,21 @@ def test_settings_default_and_persist(tmp_path):
     assert store.idle_timeout_minutes() == DEFAULT_IDLE_MINUTES  # out of range: ignored
 
 
+def test_settings_theme_keeps_the_idle_timeout(tmp_path):
+    store = Settings(tmp_path / SETTINGS_FILE)
+    assert store.theme() == "system"
+    store.set_idle_timeout_minutes(15)
+    store.set_theme("dark")
+    store.set_idle_timeout_minutes(60)
+    again = Settings(tmp_path / SETTINGS_FILE)
+    assert (again.theme(), again.idle_timeout_minutes()) == ("dark", 60)
+    # An older file without a theme still reads, with the default theme.
+    (tmp_path / SETTINGS_FILE).write_text('{"schema_version": "1.0", "idle_timeout_minutes": 5}')
+    assert (store.theme(), store.idle_timeout_minutes()) == ("system", 5)
+    (tmp_path / SETTINGS_FILE).write_text('{"schema_version": "1.0", "theme": "sepia"}')
+    assert store.theme() == "system"  # invalid: ignored
+
+
 def test_cli_idle_timeout_option():
     parse = cli.build_parser().parse_args
     assert parse(["launch", "--idle-timeout", "off"]).idle_timeout is None
@@ -384,6 +399,20 @@ def test_settings_api_validates_persists_and_applies(api, tmp_path):
     assert resp.status_code == 200
     assert api.get("/api/lifecycle").json()["idle_timeout_minutes"] is None
     assert Settings(tmp_path / "state" / SETTINGS_FILE).idle_timeout_minutes() is None
+
+
+def test_settings_api_theme(api, tmp_path):
+    put = lambda body: api.put("/api/settings", json=body, headers=api.session_headers)  # noqa: E731
+    for bad in ({"theme": "sepia"}, {"theme": None}, {}):
+        assert put(bad).status_code == 422, bad
+    assert put({"idle_timeout_minutes": 15}).json() == {
+        "idle_timeout_minutes": 15,
+        "theme": "system",
+    }
+    assert put({"theme": "light"}).json() == {"idle_timeout_minutes": 15, "theme": "light"}
+    store = Settings(tmp_path / "state" / SETTINGS_FILE)
+    assert (store.theme(), store.idle_timeout_minutes()) == ("light", 15)
+    assert api.get("/api/lifecycle").json()["idle_timeout_minutes"] == 15
 
 
 def test_quit_api_asks_about_unsaved_edits(api):

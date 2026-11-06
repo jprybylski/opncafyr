@@ -1,6 +1,6 @@
 # 0006. Home UI: static HTML and vanilla JavaScript, no build step
 
-- Status: accepted (owner, 2026-11-05, plan review)
+- Status: accepted (owner, 2026-11-05, plan review); amended 2026-11-06 for #50 (theme)
 - Date: 2026-11-05
 - Issue: #18 (option A, without htmx); the build continues in the follow-up UI shell
   issue, #49
@@ -28,7 +28,8 @@ The stack has to respect three invariants from `CLAUDE.md`:
   version, licence and SHA-256, and a test checks that entry against the file.
 - **Serving:** a Starlette `StaticFiles` mount at `/static/`. Every asset URL is
   relative, so the page still works if a base path is added later (for example cloud
-  container mode, #42). The session `<meta>` stays the only server-side substitution.
+  container mode, #42). The session `<meta>` and the saved theme on `<html data-theme>` (#50) are
+  the only server-side substitutions.
   No Jinja2. Home keeps `cache-control: no-store`.
 - **Data from JSON APIs, not server-rendered fragments:**
   - `/api/tools` for tool tiles. No tool names in core HTML or JS; a test checks this.
@@ -45,7 +46,8 @@ The stack has to respect three invariants from `CLAUDE.md`:
   - visible focus;
   - `aria-live="polite"` on the job panel;
   - status never shown by colour alone;
-  - system fonts and `prefers-color-scheme`.
+  - system fonts and `prefers-color-scheme`, with a System / Light / Dark override
+    (`data-theme`, #50).
 - **Checks:**
   - `axe-playwright-python` (bundles axe-core, pinned through `uv.lock`) in a dev/test
     dependency group;
@@ -80,3 +82,15 @@ The stack has to respect three invariants from `CLAUDE.md`:
 - Tests guard two rules: no tool ids appear in core static files, and every asset URL is
   relative.
 - Any vendored library adds a NOTICE entry and a checksum test.
+
+## Amendment, 2026-11-06 (#50)
+- The home page has a theme setting: System, Light or Dark. It is saved in the
+  launcher's settings file (`settings-v1`, optional `theme`), not in browser storage:
+  the controller binds a new port each launch, and browser storage is per origin, so it
+  would forget the choice every launch.
+- `home()` writes the saved value into `<html data-theme="…">`, taken only from that
+  fixed list, so the first paint is already in the right theme. "system" matches no
+  override rule, so the OS preference applies.
+- Fonts stay system fonts; nothing new is vendored.
+- `tests/test_design_tokens.py` checks the colour tokens in `app.css`: both dark blocks
+  agree, and every listed text/background pair meets WCAG 2.2 AA.

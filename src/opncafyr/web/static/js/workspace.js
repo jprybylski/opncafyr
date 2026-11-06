@@ -12,14 +12,27 @@ const ACTIONS = {
 
 const status = (text, isError) => setStatus($("ws-status"), text, isError);
 
+// The study card on Home and the chip in the top bar.
 function showCurrent(ws) {
-  const p = $("ws-current");
-  p.replaceChildren();
+  const box = $("ws-current");
+  const chip = $("study-chip-text");
+  const pick = $("ws-pick");
   if (!ws) {
-    p.textContent = "No study folder is open.";
+    box.replaceChildren(
+      el("span", "No study folder is open", "study-title"),
+      el("span", "Choose a folder to keep this study's data, runs and reports together.", "lede"),
+    );
+    chip.replaceChildren("No study folder open");
+    chip.className = "chip-text none";
+    pick.textContent = "Choose study folder…";
+    pick.className = "btn btn-primary";
     return;
   }
-  p.append("Open: ", el("strong", ws.name), " ", el("span", ws.path, "path"));
+  box.replaceChildren(el("span", ws.name, "study-title"), el("span", ws.path, "path"));
+  chip.replaceChildren(el("strong", ws.name), " ", el("span", ws.path, "path"));
+  chip.className = "chip-text";
+  pick.textContent = "Change study folder…";
+  pick.className = "btn";
 }
 
 async function activate(folder) {
@@ -41,7 +54,7 @@ function showFolder(folder) {
   const box = $("ws-folder");
   box.replaceChildren();
   box.hidden = false;
-  const dl = el("dl");
+  const dl = el("dl", null, "kv");
   const row = (k, v, cls) => dl.append(el("dt", k), el("dd", v, cls));
   row("Folder", folder.path, "path");
   row("Can write here", folder.writable ? "Yes" : "No");
@@ -50,7 +63,7 @@ function showFolder(folder) {
   box.append(dl, el("p", folder.message));
   const label = ACTIONS[folder.state];
   if (!label) return;
-  const button = el("button", label);
+  const button = el("button", label, "btn btn-primary");
   button.type = "button";
   button.addEventListener("click", async () => {
     button.disabled = true;
@@ -72,7 +85,7 @@ function showFolder(folder) {
 
 function recentItem(entry) {
   const li = el("li");
-  const button = el("button", entry.name);
+  const button = el("button", entry.name, "linkish");
   button.type = "button";
   button.disabled = !entry.available;
   button.addEventListener("click", async () => {
@@ -91,7 +104,7 @@ async function refresh() {
   const d = await getJSON("api/workspace");
   showCurrent(d.workspace);
   const ul = $("ws-recent");
-  if (!d.recent.length) ul.replaceChildren(el("li", "None yet."));
+  if (!d.recent.length) ul.replaceChildren(el("li", "None yet.", "muted"));
   else ul.replaceChildren(...d.recent.map(recentItem));
 }
 

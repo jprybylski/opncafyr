@@ -7,6 +7,38 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Launcher visual design (#50), approved by the owner on 2026-11-06.
+  - Approved design and screenshots: `docs/design/home-v1/`. Teal accent, a dark
+    slate top bar and a light sidebar, the reverse of the tools' own layout. Status
+    tones (ok, warn, danger, info) match the tools'. System fonts only.
+  - `app.css` holds colour, spacing, radius, shadow and type tokens for light and dark,
+    with a contrast table. `tests/test_design_tokens.py` checks every listed pair
+    against WCAG 2.2 AA.
+  - App shell: a top bar with the open study folder, a live-jobs indicator, a theme
+    switch and Quit; the research-use notice and page status lines on every view;
+    sidebar views Home, Jobs and Settings (`#/`, `#/jobs`, `#/settings`).
+  - Home is a dashboard: a study-folder card, tool cards with capabilities and health,
+    recent runs and publications with status pills, and an activity card for jobs
+    (message, start time and duration, a moving bar while running, Cancel). The Jobs
+    view lists every job.
+  - Theme: System, Light or Dark, saved as `theme` in `settings-v1` (an optional,
+    additive field). The server renders it on `<html data-theme>` (ADR 0006 amended).
+    `PUT /api/settings` now takes either setting on its own, and saving one keeps the
+    other.
+  - Component reference at `static/components.html` (linked from Settings): buttons,
+    pills, fields, status lines, empty state, tables, activity items and dialogs, for
+    the guided screens (#21–#24) to reuse.
+  - Tools' web apps open inside the launcher (owner's choice, option A): `#/apps/<id>`
+    shows the app in a same-origin iframe under a tool strip (Home / name, state,
+    Reload, Open in new tab). The sidebar folds into an icon rail and lists every web
+    app. Each frame stays loaded while other views are shown, so work in a tool
+    survives a visit to Home.
+  - The proxy adds `Content-Security-Policy: frame-ancestors 'self'` to every `/apps/`
+    response, so only the launcher can frame a tool. The "not running" page's home link
+    targets the top window.
+  - Using a tool now keeps the launcher open: each proxied request counts as an open
+    page for idle shutdown, so auto-close no longer stops the app while someone works
+    in a tool in another tab.
 - Local-origin hardening finished (#11).
   - The browser gets the session cookie only from a one-time link: the launcher (and a
     second launch that reopens it) opens `/open?token=…`. The token is stored as a

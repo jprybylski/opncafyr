@@ -1,127 +1,213 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="{{OPNCAFYR_THEME}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <meta name="opncafyr-session" content="{{OPNCAFYR_SESSION}}">
-  <title>opncafyr</title>
+  <title>Home · opncafyr</title>
   <link rel="stylesheet" href="static/app.css">
   <script type="module" src="static/js/main.js"></script>
 </head>
-<body>
+<body class="app">
   <a class="skip-link" href="#main">Skip to main content</a>
-  <header class="site-header">
-    <div class="wrap">
-      <p class="brand">opncafyr</p>
-      <p class="banner" role="note"><strong>Research use only.</strong> This workspace has not been validated for clinical or regulatory decisions.</p>
-      <nav aria-label="Sections">
-        <ul class="nav">
-          <li><a href="#workspace">Study folder</a></li>
-          <li><a href="#tools-section">Tools</a></li>
-          <li><a href="#runs-section">Runs and publications</a></li>
-          <li><a href="#jobs-section">Jobs</a></li>
-          <li><a href="#app-section">Application</a></li>
-        </ul>
-      </nav>
+
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-mark" viewBox="0 0 24 24"><path d="M12 3l8 4.5-8 4.5-8-4.5zM4 12l8 4.5 8-4.5M4 16.5L12 21l8-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-jobs" viewBox="0 0 24 24"><path d="M4 6h10M4 12h16M4 18h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="6" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="15" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6L19 19M5 19l1.4-1.4M17.6 6.4L19 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M9 10v9" stroke="currentColor" stroke-width="1.8"/></symbol>
+  </svg>
+
+  <header class="masthead">
+  <div class="topbar">
+    <p class="brand">
+      <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-mark"/></svg></span>
+      opncafyr <span class="brand-sub">Workspace</span>
+    </p>
+    <p class="study-chip" id="study-chip">
+      <svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>
+      <span class="visually-hidden">Open study folder:</span>
+      <span id="study-chip-text" class="chip-text none">No study folder open</span>
+    </p>
+    <div class="top-actions">
+      <a class="chrome-btn live-jobs" id="live-jobs" href="#/jobs"><span class="dot" aria-hidden="true"></span><span id="live-jobs-text">No jobs running</span></a>
+      <button type="button" class="chrome-btn" id="theme-toggle"><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg><span id="theme-label">Theme: System</span></button>
+      <button type="button" class="chrome-btn" id="quit">Quit</button>
     </div>
+  </div>
+
+  <div class="subbar">
+    <p class="notice" role="note">
+      <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+      <span><strong>Research use only.</strong> This workspace has not been validated for clinical or regulatory decisions.</span>
+    </p>
+    <div class="statusline">
+      <p id="jobs-live" class="status" role="status" aria-live="polite">Open a study folder to see its jobs.</p>
+      <p id="app-status" class="status" role="status" aria-live="polite"></p>
+      <button type="button" class="btn btn-sm" id="keep-open" hidden>Keep the app open</button>
+    </div>
+  </div>
   </header>
 
-  <main id="main" class="wrap" tabindex="-1">
-    <h1 class="visually-hidden">Workspace home</h1>
+  <div class="shell">
+    <nav class="sidenav" aria-label="Main">
+      <ul>
+        <li><a class="nav-link" href="#/" data-view="home" title="Home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span class="nav-label">Home</span></a></li>
+        <li><a class="nav-link" href="#/jobs" data-view="jobs" title="Jobs"><svg class="icon" aria-hidden="true"><use href="#i-jobs"/></svg><span class="nav-label">Jobs</span><span class="count" id="nav-jobs-count" hidden></span></a></li>
+        <li><a class="nav-link" href="#/settings" data-view="settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-label">Settings</span></a></li>
+      </ul>
+      <p class="nav-heading" id="nav-apps-heading" hidden>Apps</p>
+      <ul id="nav-apps" aria-labelledby="nav-apps-heading" hidden></ul>
+    </nav>
 
-    <section id="workspace" aria-labelledby="ws-heading">
-      <h2 id="ws-heading">Study folder</h2>
-      <p id="ws-current">No study folder is open.</p>
-      <p><button type="button" id="ws-pick">Choose study folder…</button></p>
-      <div id="ws-folder" class="panel" hidden></div>
-      <p id="ws-status" class="status" role="status" aria-live="polite"></p>
-      <h3>Recent study folders</h3>
-      <ul id="ws-recent" class="recent"><li>None yet.</li></ul>
-    </section>
+    <main id="main" class="main" tabindex="-1">
+      <!-- Home -->
+      <div class="view" id="view-home" data-title="Home">
+        <div class="page-head"><h1 id="home-heading" tabindex="-1">Home</h1></div>
 
-    <section id="tools-section" aria-labelledby="tools-heading">
-      <h2 id="tools-heading">Tools</h2>
-      <ul id="tools" class="tiles"><li>Loading…</li></ul>
-      <p id="tools-status" class="status" role="status" aria-live="polite"></p>
-    </section>
+        <section id="workspace" class="card" aria-labelledby="ws-heading">
+          <div class="study">
+            <span class="study-icon"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-folder"/></svg></span>
+            <div class="study-main">
+              <h2 id="ws-heading" class="eyebrow">Study folder</h2>
+              <div id="ws-current"><span class="study-title">No study folder is open</span><span class="lede">Choose a folder to keep this study's data, runs and reports together.</span></div>
+              <ul class="facts" id="ws-facts" hidden></ul>
+            </div>
+            <button type="button" class="btn btn-primary" id="ws-pick">Choose study folder…</button>
+            <div class="study-extra">
+              <div id="ws-folder" class="panel" hidden></div>
+              <p id="ws-status" class="status" role="status" aria-live="polite"></p>
+              <div>
+                <h3>Recent study folders</h3>
+                <ul id="ws-recent" class="recent"><li class="muted">None yet.</li></ul>
+              </div>
+            </div>
+          </div>
+        </section>
 
-    <section id="runs-section" aria-labelledby="runs-heading">
-      <h2 id="runs-heading">Runs and publications</h2>
-      <p id="runs-note">Open a study folder to see its runs.</p>
-      <div class="table-scroll">
-        <table id="runs-table" hidden>
-          <caption>Runs, newest first</caption>
-          <thead>
-            <tr><th scope="col">Run</th><th scope="col">Analyte</th><th scope="col">State</th><th scope="col">Created</th></tr>
-          </thead>
-          <tbody id="runs-body"></tbody>
-        </table>
+        <div class="dash">
+          <div class="stack">
+            <section id="tools-section" class="card" aria-labelledby="tools-heading">
+              <div class="card-head"><h2 id="tools-heading">Tools</h2><span class="aside" id="tools-count"></span></div>
+              <ul id="tools" class="tools"><li class="card-note">Loading…</li></ul>
+              <p id="tools-status" class="status card-status" role="status" aria-live="polite"></p>
+            </section>
+
+            <section id="runs-section" class="card" aria-labelledby="runs-heading">
+              <div class="card-head"><h2 id="runs-heading">Recent runs</h2><span class="aside">Newest first</span></div>
+              <p id="runs-note" class="card-note">Open a study folder to see its runs.</p>
+              <div class="table-scroll">
+                <table id="runs-table" hidden>
+                  <caption class="visually-hidden">Runs, newest first</caption>
+                  <thead>
+                    <tr><th scope="col">Run</th><th scope="col">Analyte</th><th scope="col">State</th><th scope="col">Created</th></tr>
+                  </thead>
+                  <tbody id="runs-body"></tbody>
+                </table>
+              </div>
+              <p id="runs-status" class="status card-status" role="status" aria-live="polite"></p>
+            </section>
+
+            <section id="pubs-section" class="card" aria-labelledby="pubs-heading">
+              <div class="card-head"><h2 id="pubs-heading">Publications</h2></div>
+              <p id="pubs-note" class="card-note">Open a study folder to see its publications.</p>
+              <div class="table-scroll">
+                <table id="pubs-table" hidden>
+                  <caption class="visually-hidden">Publications, newest first</caption>
+                  <thead>
+                    <tr><th scope="col">Publication</th><th scope="col">Items</th><th scope="col">State</th><th scope="col">Created</th></tr>
+                  </thead>
+                  <tbody id="pubs-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <section id="activity" class="card" aria-labelledby="activity-heading">
+            <div class="card-head"><h2 id="activity-heading" tabindex="-1">Activity</h2><span class="aside" id="activity-summary"></span></div>
+            <p id="home-jobs-note" class="card-note">Open a study folder to see its jobs.</p>
+            <ul id="home-jobs" class="activity" hidden></ul>
+            <a class="card-link" href="#/jobs">All jobs →</a>
+          </section>
+        </div>
       </div>
-      <p id="pubs-note" hidden></p>
-      <div class="table-scroll">
-        <table id="pubs-table" hidden>
-          <caption>Publications</caption>
-          <thead>
-            <tr><th scope="col">Publication</th><th scope="col">Items</th><th scope="col">State</th><th scope="col">Created</th></tr>
-          </thead>
-          <tbody id="pubs-body"></tbody>
-        </table>
-      </div>
-      <p id="runs-status" class="status" role="status" aria-live="polite"></p>
-    </section>
 
-    <section id="jobs-section" aria-labelledby="jobs-heading">
-      <h2 id="jobs-heading">Jobs</h2>
-      <p id="jobs-live" class="status" role="status" aria-live="polite">Open a study folder to see its jobs.</p>
-      <div class="table-scroll">
-        <table id="jobs-table" hidden>
-          <caption>Jobs in this study folder, newest first</caption>
-          <thead>
-            <tr><th scope="col">Job</th><th scope="col">State</th><th scope="col">Details</th><th scope="col">Started</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
-          </thead>
-          <tbody id="jobs-body"></tbody>
-        </table>
+      <!-- Jobs -->
+      <div class="view" id="view-jobs" data-title="Jobs" hidden>
+        <div class="page-head"><h1 id="jobs-heading" tabindex="-1">Jobs</h1><p>Every job in this study folder, newest first.</p></div>
+        <section class="card" aria-labelledby="jobs-list-heading">
+          <div class="card-head"><h2 id="jobs-list-heading">All jobs</h2><span class="aside" id="jobs-summary"></span></div>
+          <p id="jobs-note" class="card-note">Open a study folder to see its jobs.</p>
+          <ul id="jobs-list" class="activity activity-full" hidden></ul>
+        </section>
       </div>
-    </section>
 
-    <section id="app-section" aria-labelledby="app-heading">
-      <h2 id="app-heading">Application</h2>
-      <p>
-        <label for="idle">Close automatically when unused for</label>
-        <select id="idle">
-          <option value="5">5 minutes</option>
-          <option value="15">15 minutes</option>
-          <option value="30">30 minutes</option>
-          <option value="60">1 hour</option>
-          <option value="120">2 hours</option>
-          <option value="off">Never</option>
-        </select>
-      </p>
-      <p>It never closes while a job is running or an editor has unsaved changes.</p>
-      <p id="app-status" class="status" role="status" aria-live="polite"></p>
-      <p class="actions">
-        <button type="button" id="quit">Quit application</button>
-        <button type="button" id="keep-open" hidden>Keep the app open</button>
-      </p>
-    </section>
-  </main>
+      <!-- A tool's web app, embedded (#50): "#/apps/<id>". Frames stay loaded while
+           other views are shown, so work in a tool survives a visit to Home. -->
+      <div class="view view-tool" id="view-tool" data-title="App" hidden>
+        <div class="toolstrip">
+          <span class="monogram" id="tool-mono" aria-hidden="true"></span>
+          <p class="crumb"><a href="#/">Home</a> <span aria-hidden="true">/</span></p>
+          <h1 id="tool-heading" tabindex="-1">App</h1>
+          <span id="tool-state"></span>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost btn-sm" id="tool-reload">Reload</button>
+          <a class="btn btn-sm" id="tool-newtab" href="#/" target="_blank" rel="noopener">Open in new tab <span aria-hidden="true">↗</span></a>
+        </div>
+        <p id="tool-note" class="tool-note" role="status" hidden></p>
+        <div id="tool-frames" class="tool-frames"></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="view" id="view-settings" data-title="Settings" hidden>
+        <div class="page-head"><h1 id="settings-heading" tabindex="-1">Settings</h1></div>
+        <section class="card" aria-labelledby="app-heading">
+          <div class="card-head"><h2 id="app-heading">Application</h2></div>
+          <div class="card-body">
+            <div class="field">
+              <label for="idle">Close automatically when unused for</label>
+              <select id="idle">
+                <option value="5">5 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+                <option value="off">Never</option>
+              </select>
+              <p class="hint">It never closes while a job is running or an editor has unsaved changes.</p>
+            </div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="about-heading">
+          <div class="card-head"><h2 id="about-heading">For developers</h2></div>
+          <div class="card-body">
+            <p><a href="static/components.html">Component reference</a>: the shared buttons, cards, pills, tables and dialogs that guided screens reuse.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
 
   <dialog id="jobs-dialog" aria-labelledby="jobs-title">
     <h2 id="jobs-title">Jobs are still running</h2>
     <p id="jobs-text"></p>
     <form method="dialog" class="actions">
-      <button value="keep" autofocus>Keep running and quit when finished</button>
-      <button value="cancel">Cancel jobs and quit</button>
-      <button value="stay">Don't quit</button>
+      <button class="btn btn-primary" value="keep" autofocus>Keep running and quit when finished</button>
+      <button class="btn btn-danger" value="cancel">Cancel jobs and quit</button>
+      <button class="btn btn-ghost" value="stay">Don't quit</button>
     </form>
   </dialog>
   <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
     <h2 id="unsaved-title">Unsaved changes</h2>
     <p id="unsaved-text"></p>
     <form method="dialog" class="actions">
-      <button value="stay" autofocus>Go back and save</button>
-      <button value="save">Save and quit</button>
+      <button class="btn btn-primary" value="stay" autofocus>Go back and save</button>
+      <button class="btn" value="save">Save and quit</button>
     </form>
   </dialog>
 </body>

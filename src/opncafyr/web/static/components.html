@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Components · opncafyr</title>
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="js/components.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <main id="main" class="ref" tabindex="-1">
+    <div class="ref-head">
+      <div>
+        <h1>Component reference</h1>
+        <p>The shared pieces of the launcher's screens. Guided screens reuse these classes from <code>app.css</code> instead of styling their own. Examples use made-up data.</p>
+      </div>
+      <div class="segmented" role="group" aria-label="Preview theme">
+        <button type="button" data-set-theme="system" aria-pressed="true">System</button>
+        <button type="button" data-set-theme="light" aria-pressed="false">Light</button>
+        <button type="button" data-set-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+
+    <div class="ref-grid">
+      <section class="card" aria-labelledby="c-buttons">
+        <div class="card-head"><h2 id="c-buttons">Buttons</h2></div>
+        <div class="card-body">
+          <div class="actions">
+            <button type="button" class="btn btn-primary">Run analysis</button>
+            <button type="button" class="btn">Change folder…</button>
+            <button type="button" class="btn btn-ghost">View log</button>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-danger">Cancel jobs and quit</button>
+            <button type="button" class="btn btn-sm">Cancel</button>
+            <button type="button" class="btn" disabled>Publish</button>
+          </div>
+          <p class="usage"><code>.btn</code> plus <code>.btn-primary</code>, <code>.btn-ghost</code>, <code>.btn-danger</code>, <code>.btn-sm</code>. One primary action per view; danger only for actions that discard work. Links that act as buttons use the same classes.</p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="c-pills">
+        <div class="card-head"><h2 id="c-pills">Status pills</h2></div>
+        <div class="card-body">
+          <div class="actions">
+            <span class="pill pill-info"><span aria-hidden="true">◷</span> Queued</span>
+            <span class="pill pill-info"><span aria-hidden="true">◔</span> Preparing</span>
+            <span class="pill pill-info"><span aria-hidden="true">▶</span> Running</span>
+            <span class="pill pill-info"><span aria-hidden="true">◑</span> Reviewing</span>
+            <span class="pill pill-ok"><span aria-hidden="true">✓</span> Completed</span>
+            <span class="pill pill-ok"><span aria-hidden="true">✓</span> Recorded</span>
+            <span class="pill pill-warn"><span aria-hidden="true">■</span> Cancelled</span>
+            <span class="pill pill-warn"><span aria-hidden="true">!</span> Incomplete</span>
+            <span class="pill pill-danger"><span aria-hidden="true">✕</span> Failed</span>
+            <span class="pill pill-info"><span aria-hidden="true">◌</span> Checking</span>
+            <span class="pill pill-ok"><span aria-hidden="true">✓</span> Available</span>
+            <span class="pill pill-danger"><span aria-hidden="true">✕</span> Unavailable</span>
+          </div>
+          <p class="usage">Build them with <code>stateBadge(state)</code> from <code>js/dom.js</code>: always a symbol and a word. Tones <code>ok</code>, <code>warn</code>, <code>danger</code>, <code>info</code> mean the same as in the tools under <code>/apps/</code>.</p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="c-fields">
+        <div class="card-head"><h2 id="c-fields">Form field and status lines</h2></div>
+        <div class="card-body">
+          <div class="field">
+            <label for="demo-select">Analyte column</label>
+            <select id="demo-select"><option>PARAM</option><option>ANALYTE</option></select>
+            <p class="hint">The column whose exact values name each analyte.</p>
+          </div>
+          <div class="field">
+            <label for="demo-input">Run label</label>
+            <input id="demo-input" type="text" value="Parent, fasted">
+          </div>
+          <p class="status-box ok"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Saved the cleaning recipe.</p>
+          <p class="status-box error"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg><span><strong>Error:</strong> Could not read the file. Check that it is a CSV and try again.</span></p>
+          <p class="usage"><code>.field</code> wraps a label, control and <code>.hint</code>. Status lines use <code>setStatus()</code> (errors start with "Error:") or <code>.status-box</code>.</p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="c-empty">
+        <div class="card-head"><h2 id="c-empty">Empty state</h2></div>
+        <div class="empty">
+          <span class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></span>
+          <h3>No data imported yet</h3>
+          <p>Import a CSV to preview its columns, check its values and pick an analyte.</p>
+          <button type="button" class="btn btn-primary">Import CSV…</button>
+        </div>
+        <p class="usage card-note">One sentence on what will appear, one clear next action.</p>
+      </section>
+
+      <section class="card wide" aria-labelledby="c-table">
+        <div class="card-head"><h2 id="c-table">Card with a table</h2><span class="aside">Newest first</span></div>
+        <div class="table-scroll">
+          <table>
+            <caption class="visually-hidden">Example runs</caption>
+            <thead><tr><th scope="col">Run</th><th scope="col">Analyte</th><th scope="col">State</th><th scope="col">Created</th></tr></thead>
+            <tbody>
+              <tr><td><span class="path">20261106T091402Z-a1f3</span></td><td>Metabolite M1 (PARAM)</td><td><span class="pill pill-info"><span aria-hidden="true">▶</span> Running</span></td><td><time datetime="2026-11-06T09:14:02Z">6 Nov 2026, 09:14</time></td></tr>
+              <tr><td><span class="path">20261105T162210Z-7c4e</span></td><td>Parent (PARAM)</td><td><span class="pill pill-ok"><span aria-hidden="true">✓</span> Completed</span></td><td><time datetime="2026-11-05T16:22:10Z">5 Nov 2026, 16:22</time></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="usage card-note"><code>.card</code> with <code>.card-head</code>, then <code>.table-scroll</code> around the table. Give every table a caption (visually hidden if the card heading says it).</p>
+      </section>
+
+      <section class="card" aria-labelledby="c-activity">
+        <div class="card-head"><h2 id="c-activity">Activity item</h2></div>
+        <ul class="activity">
+          <li class="job">
+            <div class="job-top"><strong class="job-label">Example analysis</strong><span class="pill pill-info"><span aria-hidden="true">▶</span> Running</span></div>
+            <p class="job-msg">Computing parameters for 24 profiles</p>
+            <div class="bar" aria-hidden="true"><span></span></div>
+            <div class="job-meta"><span>Started <time datetime="2026-11-06T09:14:02Z">09:14</time></span><button type="button" class="btn btn-sm">Cancel</button></div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="c-dialog">
+        <div class="card-head"><h2 id="c-dialog">Dialog</h2></div>
+        <div class="card-body">
+          <p>Use the native <code>&lt;dialog&gt;</code> with <code>showModal()</code> and a <code>method="dialog"</code> form, so Escape and focus work without extra code.</p>
+          <p><button type="button" class="btn" id="demo-open">Open the example dialog</button></p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="demo-dialog" aria-labelledby="demo-title">
+    <h2 id="demo-title">Discard the cleaning changes?</h2>
+    <p>The three steps you added since the last preview will be lost.</p>
+    <form method="dialog" class="actions">
+      <button class="btn btn-ghost" value="keep" autofocus>Keep editing</button>
+      <button class="btn btn-danger" value="discard">Discard changes</button>
+    </form>
+  </dialog>
+</body>
+</html>
