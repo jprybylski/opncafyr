@@ -18,13 +18,16 @@ comments on #15/#16, #27, #28, #32, #33 and #34.
 | [#28](https://github.com/mantra-opnca/opnca-r/issues/28) | Platform R binaries + SHA-256 manifest + build diagnostics | Done (PR #39, v0.2.6); clean-install and cellar checks still open, see #43 | Gate 4 |
 | [#29](https://github.com/mantra-opnca/opnca-r/issues/29) | App maps LLOQ, BLQ, missing, nominal time, tau, infusion duration | Done (PR #38) | Gate 2 mapping hand-off |
 | [#30](https://github.com/mantra-opnca/opnca-r/issues/30) | Scope or disable persisted localStorage under a shared origin | Done (PR #38) | Gate 2 multi-analyte safety |
-| [#40](https://github.com/mantra-opnca/opnca-r/issues/40) | **Security:** launcher API token; reject cross-site requests (a cross-site form POST can change exclusions today; reproduced) | Open, blocks opncafyr #27 | Gate 2 |
-| [#41](https://github.com/mantra-opnca/opnca-r/issues/41) | `--no-overwrite`: a saved run can't be replaced | Open; adapter blocks `overwrite:true` meanwhile (#28) | Gate 2 |
-| [#42](https://github.com/mantra-opnca/opnca-r/issues/42) | `--require-blq-rules`, preset `blq_method`, no nominal-time guess for `time`, BLQ flag types | Open; adapter sends a full preset meanwhile (#27) | Gate 2 |
-| [#43](https://github.com/mantra-opnca/opnca-r/issues/43) | Verify clean installs, renv cellar, MSRV 1.87, Windows shutdown; scalable asset names; manifest `schema_version` | Open; installer selects by manifest meanwhile (#34) | Gate 0/4 |
+| [#40](https://github.com/mantra-opnca/opnca-r/issues/40) | **Security:** launcher API token; reject cross-site requests | Done (v0.2.7); verified against a running server | Gate 2 |
+| [#41](https://github.com/mantra-opnca/opnca-r/issues/41) | `--no-overwrite`: a saved run can't be replaced | Done (v0.2.7); no lock across processes (#46) | Gate 2 |
+| [#42](https://github.com/mantra-opnca/opnca-r/issues/42) | `--require-blq-rules`, preset `blq_method`, no nominal-time guess for `time`, BLQ flag types | Done (v0.2.7); `blq_method` still defaults and roles are still guessed when not preset (#46) | Gate 2 |
+| [#43](https://github.com/mantra-opnca/opnca-r/issues/43) | Verify clean installs, renv cellar, MSRV 1.87, Windows shutdown; scalable asset names; manifest `schema_version` | Done (v0.2.7) except clean-account installs and a CI cellar restore, which our spikes cover (#6, #7, #34) | Gate 0/4 |
+| [#45](https://github.com/mantra-opnca/opnca-r/issues/45) | macOS binaries require macOS 15 (no `MACOSX_DEPLOYMENT_TARGET`); match R 4.6's macOS 13 | Open; sets our macOS minimum to 15 meanwhile (#1) | Gate 0 |
+| [#46](https://github.com/mantra-opnca/opnca-r/issues/46) | Save lock across processes; `blq_method` and role-guess defaults; record every effective `opnca()` setting | Open; adapter uses one folder per session, sends a full preset and records the opnca-r version (#27, #28) | Gate 2 |
 
-Select v0.2.6 assets by `manifest.json` fields, never by file name. The Windows binary is
-`opnca_<ver>.zip`, while macOS binaries are `opnca_<ver>_R<minor>_macos-<arch>.tgz`.
+Select assets by `manifest.json` fields, never by file name. Since v0.2.7 every binary is
+`opnca_<ver>_R<minor>_<platform>-<arch>.<ext>`. Rename it to `opnca_<ver>.<ext>` before
+`R CMD INSTALL` or a renv cellar restore.
 
 ## jprybylski/deckifyr (public)
 

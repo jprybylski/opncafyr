@@ -29,18 +29,22 @@ toolchain = "TBD (>= 1.87.0; Windows: x86_64-pc-windows-gnu + Rtools)"
 # pin a toolchain we test ourselves. Builds use the -vendored tarball (no crates.io).
 
 [packages.opnca-r]
-version = "0.2.6"
+version = "0.2.7"
 source = "github:mantra-opnca/opnca-r"
-# Select assets by manifest.json fields (kind/platform/arch/r_minor), never by file name:
-# the Windows binary is opnca_<ver>.zip, macOS is opnca_<ver>_R4.6_macos-<arch>.tgz.
-manifest_sha256 = "cc2db122e580ad332526848435e5741ce94da0b06db3e5d20ab5b1f313c11f63"
-r_minor = "4.6"
+# v0.2.7 (2026-11-06, commit 0b547d0) adds the launcher API token, --no-overwrite and
+# --require-blq-rules (#40-#43). Select assets by manifest.json fields (kind/platform/arch/
+# r_minor), never by file name. manifest.json (schema_version 1) is not in SHA256SUMS,
+# so pin its hash here.
+manifest_sha256 = "4e3616cddaad5e3f9d9da3b3781c66548e072363ed794af4a4b6b77b849ddd2e"
+sha256sums_sha256 = "9d6d429ad999c4c88fff1a5d621a932f30e1b36c513465b66420cc9f3cc55700"
+source_commit = "0b547d05793e1bdbe7a00eac78b87fdcb58f80fa"
+r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.opnca-r.assets]
-"opnca_0.2.6_R4.6_macos-arm64.tgz" = "e7edd15a1510a8bb588980e62cfef62c8d160e255a8e9364f0dab31bff2dabeb"
-"opnca_0.2.6_R4.6_macos-x86_64.tgz" = "cc1d1e5fcd01ffedc84988b758d96d1b9423f23dcf3369db4993a98a034b5ceb"
-"opnca_0.2.6.zip" = "a61322db8bfab06da2f35a8a8fdc8728d07f5f5b3c384d41375a030a024169b0"   # windows-x86_64, R 4.6
-"opnca_0.2.6-vendored.tar.gz" = "472f8bdf8b15ef25bfccbbd12c5a60c716a73d4b327ad887d6592f4c209e5184"  # offline source fallback
+"opnca_0.2.7_R4.6_macos-arm64.tgz" = "1766cd2152f2c8398c5b57e6084e2624cb30167046ec2a0cdec4430a18b15cb5"
+"opnca_0.2.7_R4.6_macos-x86_64.tgz" = "8aabe38f1ce5069a87d80a08504904d3745b35673a0b8c302bad9775c290a46d"
+"opnca_0.2.7_R4.6_windows-x86_64.zip" = "a9cae57fe894f7d7c7e6e831023bd0b7346ab45ba7bd1693298822f5fde3fcb8"
+"opnca_0.2.7-vendored.tar.gz" = "4a6f3fc9306833a98c260eb9b5ca18c660b36625cbb2b63cd617c067113a892c"  # offline source fallback
 
 [packages.deckifyr]
 version = "0.3.5"

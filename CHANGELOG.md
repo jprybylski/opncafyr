@@ -24,3 +24,6 @@ All notable changes to this project are documented here. The format follows
   now pins the quartifyr 0.3.2 tag commit, tarball and `SHA256SUMS` by SHA-256.
 - Reviewed deckifyr 0.3.5 (#88-#91) and pinned its wheel, sdist and R tarball by SHA-256.
   `upstream-blocked` removed from #33.
+- Reviewed opnca-r 0.2.7 (#40-#43) and filed follow-ups #45-#46. `runtime/pins.toml` now
+  pins the 0.2.7 binaries, vendored tarball, `manifest.json` and `SHA256SUMS` by SHA-256.
+  `upstream-blocked` removed from #27.
