@@ -24,6 +24,7 @@ comments on #15/#16, #27, #28, #32, #33 and #34.
 | [#43](https://github.com/mantra-opnca/opnca-r/issues/43) | Verify clean installs, renv cellar, MSRV 1.87, Windows shutdown; scalable asset names; manifest `schema_version` | Done (v0.2.7) except clean-account installs and a CI cellar restore, which our spikes cover (#6, #7, #34) | Gate 0/4 |
 | [#45](https://github.com/mantra-opnca/opnca-r/issues/45) | macOS binaries require macOS 15 (no `MACOSX_DEPLOYMENT_TARGET`); match R 4.6's macOS 13 | Open; sets our macOS minimum to 15 meanwhile (#1) | Gate 0 |
 | [#46](https://github.com/mantra-opnca/opnca-r/issues/46) | Save lock across processes; `blq_method` and role-guess defaults; record every effective `opnca()` setting | Open; adapter uses one folder per session, sends a full preset and records the opnca-r version (#27, #28) | Gate 2 |
+| [#47](https://github.com/mantra-opnca/opnca-r/issues/47) | `POST /api/v1/shutdown` reply sometimes cut off before the server stops | Open; adapter treats a 202 status line followed by process exit as a clean stop (#27) | Gate 2 |
 
 Select assets by `manifest.json` fields, never by file name. Since v0.2.7 every binary is
 `opnca_<ver>_R<minor>_<platform>-<arch>.<ext>`. Rename it to `opnca_<ver>.<ext>` before

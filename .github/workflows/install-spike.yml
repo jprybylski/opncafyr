@@ -1,0 +1,112 @@
+name: Install spike (macOS)
+
+# #7: clean standard-user install on macOS through to a rendered DOCX and PPTX, on
+# arm64 and Intel, online and then offline. See docs/spikes/macos-install.md.
+#
+# GitHub's runner user is an admin with R preinstalled, so the job (with sudo, as runner
+# setup only) hides the preinstalled R.framework, R/Quarto on PATH, and creates a
+# standard user `spike`. Everything the spike installs runs as `spike`, without sudo.
+# The LibreOffice checks (#8) aren't run here: headless soffice on macOS hangs for a user
+# with no GUI login session, and `spike` has none on a runner (see the spike report).
+on:
+  workflow_dispatch:
+  push:
+    branches: ["spike/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: install spike (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    env:
+      WORK: /Users/Shared/opncafyr-spike
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Platform
+        run: |
+          case "$(uname -m)" in
+            arm64) echo "PLATFORM=macos-arm64" >> "$GITHUB_ENV" ;;
+            x86_64) echo "PLATFORM=macos-x86_64" >> "$GITHUB_ENV" ;;
+          esac
+          sw_vers
+
+      # Runner setup only. The spike itself never uses sudo.
+      - name: Hide preinstalled R and Quarto; create the standard user
+        run: |
+          set -x
+          if [ -e /Library/Frameworks/R.framework ]; then
+            sudo mv /Library/Frameworks/R.framework /Library/Frameworks/R.framework.hidden
+          fi
+          for b in R Rscript quarto; do
+            p="$(command -v "$b" || true)"
+            if [ -n "$p" ]; then sudo mv "$p" "$p.hidden"; fi
+          done
+          pw="$(openssl rand -hex 16)"
+          sudo sysadminctl -addUser spike -fullName "Spike" -password "$pw" -home /Users/spike
+          sudo createhomedir -c -u spike > /dev/null
+          id spike; dseditgroup -o checkmember -m spike admin || true
+
+      - name: Asset list (from runtime/pins.toml and the locks)
+        run: |
+          mkdir -p "$WORK/assets-online" "$WORK/assets-offline"
+          uv run python scripts/spikes/spike_assets.py --platform "$PLATFORM" > "$RUNNER_TEMP/a.json"
+          uv run python scripts/spikes/assets_tsv.py "$RUNNER_TEMP/a.json" --platform "$PLATFORM" > "$WORK/assets-online/assets.tsv"
+          awk -F'\t' '{print $1}' "$WORK/assets-online/assets.tsv" | sort | uniq -c
+
+      - name: Pre-fetch the private opnca-r assets and the report fixture
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
+          gh release download v0.2.7 -R mantra-opnca/opnca-r -D "$WORK/assets-online" \
+            -p "opnca_0.2.7_R4.6_${PLATFORM}.tgz" -p "opnca_0.2.7-vendored.tar.gz" -p manifest.json
+          curl -fsSL -o "$WORK/assets-online/quartifyr-v0.3.2-src.tar.gz" \
+            https://github.com/jprybylski/quartifyr/archive/refs/tags/v0.3.2.tar.gz
+          cp -R "$GITHUB_WORKSPACE" "$WORK/repo"
+          sudo chown -R spike "$WORK"
+
+      - name: Online install (as spike)
+        run: |
+          sudo -u spike -H env -i HOME=/Users/spike USER=spike LOGNAME=spike \
+            bash "$WORK/repo/scripts/spikes/macos-install.sh" --assets "$WORK/assets-online" --online \
+            --repo "$WORK/repo"
+
+      - name: Keep the online downloads for the offline run
+        if: always()
+        run: |
+          root="/Users/spike/Library/Application Support/opncafyr/spike"
+          sudo mkdir -p "$GITHUB_WORKSPACE/spike-logs/online"
+          sudo cp -R "$root/logs/." "$GITHUB_WORKSPACE/spike-logs/online/" || true
+          sudo -u spike bash -c "cp \"$root\"/downloads/* '$WORK/assets-offline/' 2>/dev/null; cp '$WORK'/assets-online/* '$WORK/assets-offline/'"
+
+      - name: Offline install (as spike, outbound network denied)
+        if: success() || failure()
+        run: |
+          sudo -u spike -H env -i HOME=/Users/spike USER=spike LOGNAME=spike \
+            sandbox-exec -f "$WORK/repo/scripts/spikes/nonet.sb" \
+            bash "$WORK/repo/scripts/spikes/macos-install.sh" --assets "$WORK/assets-offline" \
+            --repo "$WORK/repo" --quarantine-test --vendored
+
+      - name: Collect logs
+        if: always()
+        run: |
+          root="/Users/spike/Library/Application Support/opncafyr/spike"
+          sudo mkdir -p "$GITHUB_WORKSPACE/spike-logs/offline"
+          sudo cp -R "$root/logs/." "$GITHUB_WORKSPACE/spike-logs/offline/" || true
+          sudo chown -R "$(id -u)" "$GITHUB_WORKSPACE/spike-logs"
+          for d in online offline; do echo "== $d"; cat "$GITHUB_WORKSPACE/spike-logs/$d/steps.tsv" 2>/dev/null || true; done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: install-spike-${{ matrix.runner }}
+          path: spike-logs/

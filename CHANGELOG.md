@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- macOS install spike (#7). `scripts/spikes/macos-install.sh` installs the pinned stack
+  as a standard user on macOS 15 by relocating CRAN's R, online or offline, and runs the
+  same checks; the `install-spike` workflow (manual, or `spike/**` branches) runs it on
+  GitHub's arm64 and Intel runners. Report: `docs/spikes/macos-install.md`.
 - Windows install spike (#6). `scripts/spikes/windows-install.ps1` installs the pinned
   stack as a standard user on Windows 11, online or from local files, and runs opnca-r,
   its server, a deck build and a report render. It passed with no elevation, no machine

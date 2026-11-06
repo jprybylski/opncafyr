@@ -1,0 +1,7 @@
+; Deny all outbound network except loopback and local sockets (offline variants of the
+; install spikes, #7, #44). Use: sandbox-exec -f scripts/spikes/nonet.sb <command>
+(version 1)
+(allow default)
+(deny network-outbound)
+(allow network-outbound (remote ip "localhost:*"))
+(allow network-outbound (remote unix-socket))
