@@ -37,12 +37,24 @@ completed` (+ `failed`, `cancelled`).
 
 1. **Browser ↔ controller.** Host must be our loopback authority; state-changing requests
    need the per-launch session secret and a same-origin `Origin`. No CORS. Implemented in
-   `core/security.py`.
-2. **Controller ↔ workspace.** Every path goes through `core/workspace.resolve_in_root`.
+   `core/security.py`. Under `/apps/` the secret is a `HttpOnly; SameSite=Strict;
+   Path=/apps/` cookie named after the port, required on every request, with
+   `Sec-Fetch-Site` limited to `same-origin`/`none` and our `Origin` on state-changing
+   requests.
+2. **Controller ↔ child apps.** Each child listens on its own loopback port with a
+   per-child API token (`core/supervisor.py`). The proxy (`core/proxy.py`) rewrites
+   `Host` to the child's port, drops `Origin`, `Referer`, `Cookie` and the session header,
+   adds the child's token, and strips `Set-Cookie` and CORS headers from responses. The
+   children themselves reject a foreign Host, cross-site requests and a missing token, so
+   their ports are safe even though the browser can reach them directly. Child pages share
+   the launcher's origin by design, so a child's own scripts are trusted like ours.
+3. **Controller ↔ workspace.** Every path goes through `core/workspace.resolve_in_root`.
    Workspace files hold data and options only.
-3. **Controller ↔ tools.** Only installed descriptors are trusted; executables come from
-   the pinned runtime; arguments are arrays. Children never see the session secret.
-4. **Machine ↔ network.** No dataset leaves the machine by default. Logs and diagnostic
+4. **Controller ↔ tools.** Only installed descriptors are trusted; executables come from
+   the pinned runtime record (`runtime-v1`, `core/runtime.py`); arguments are arrays
+   (`core/proctree.py`); the environment is allow-listed; cwd and TMPDIR are
+   launcher-owned. Children never see the session secret.
+5. **Machine ↔ network.** No dataset leaves the machine by default. Logs and diagnostic
    bundles are redacted of subject-level values.
 
 ## Workspace contract

@@ -7,5 +7,6 @@ health: {kind: rscript, target: "library(opnca)"}
 web_app:
   route: /apps/opnca/
   readiness: /api/v1/health
+  max_body_bytes: 25165824
 jobs:
   replay_nca: {input_schema: run-manifest-v1, output_schema: run-manifest-v1}

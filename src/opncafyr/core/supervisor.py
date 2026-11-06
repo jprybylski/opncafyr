@@ -254,6 +254,8 @@ class Supervisor:
                             return None
                     except httpx.HTTPError:
                         pass
+                    except LaunchError as exc:  # the adapter knows it will never be ready
+                        return str(exc)
                 time.sleep(0.1)
         return f"not ready after {self.ready_timeout:.0f}s"
 

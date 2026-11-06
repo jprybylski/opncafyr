@@ -7,6 +7,7 @@ health: {kind: import, target: deckifyr}
 web_app:
   route: /apps/deckifyr/
   readiness: /api/health
+  max_body_bytes: 67108864
 jobs:
   validate_deck: {input_schema: deck-project-v1, output_schema: validation-v1}
   build_deck: {input_schema: deck-project-v1, output_schema: deck-build-v1}

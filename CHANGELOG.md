@@ -7,6 +7,22 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Reverse proxy for child apps under `/apps/<tool>/` (#15).
+  - Request and response bodies are streamed, with a per-descriptor body limit (413).
+  - `/apps/<tool>` redirects to `/apps/<tool>/` with a 308.
+  - Before forwarding, the proxy rewrites `Host` to the child's port, drops `Origin`,
+    `Cookie` and the session header, and injects the child's token. It strips
+    `Set-Cookie` and CORS headers from responses.
+  - A crashed child gets a 502 page with a restart button.
+  - `GET /api/apps` reports each app's state.
+  - The home page sets a `HttpOnly; SameSite=Strict; Path=/apps/` session cookie. It is
+    required on every proxied request, along with a same-origin `Sec-Fetch-Site` and our
+    own `Origin` on state-changing requests.
+- opnca and deckifyr web adapters (start, ready, stop):
+  - opnca-r 0.2.7 runs `scripts/serve.R` with `--base-path`, the API and shutdown tokens,
+    `--lock-dataset`, `--no-overwrite` and `--require-blq-rules`;
+  - deckifyr 0.3.5 runs `serve` with `--root-path`, its API token, a fixed port and
+    `--trusted-binaries-only`.
 - Child process supervision (#12, #9). `core/proctree.py` spawns argv arrays only, with an
   allow-listed environment (it always drops `OPNCAFYR_*` and the variables that widen
   opnca-r's Host check), and kills whole process trees: freeze-and-walk on POSIX, a Job
