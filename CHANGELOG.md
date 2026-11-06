@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- ADR 0005 records the data conventions (#2):
+  - the analyte is filtered on the exact code value, with a separate specimen role;
+  - units come from a column or a user declaration, never inferred;
+  - BLQ and LLOQ are built by explicit recipe steps, and all three BLQ rules are always
+    chosen by the user;
+  - every exclusion has a reason;
+  - duplicates, undosed profiles and nominal time used as actual time are blocking;
+  - a table sets each check's level (warning or blocking) with a snake_case id for #24.
 - Job manager (#12) in `core/jobmanager.py`.
   - Each job lives in `.opncafyr/jobs/<job-id>/`:
     - `state.json` (new schema `job-v1`, written atomically);

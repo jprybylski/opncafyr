@@ -72,8 +72,8 @@ scheduled first.
   can `curl` uv and run `uv lock`/`uv sync`. opnca-r#23 (vendored crates) and
   quartifyr#72 (offline project setup) are done, and quartifyr#76 (offline-safe render)
   shipped in 0.3.2 as an opt-in `--offline` flag, which our adapter must always pass.
-- **Decisions #2 and #3.** The owner needs representative, deidentified datasets and
-  target machines to decide these. #1 and #4 are decided (ADR 0003, ADR 0004).
+- **Decision #3** (report/deck templates, identifiable-data policy) is still open. #1, #2
+  and #4 are decided (ADR 0003, ADR 0005, ADR 0004).
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
   already implements part of #9, #11 and #13. Each of those issues has a comment saying
   what is left. The job manager (#12) is done. The run, status and cancel methods of
@@ -84,7 +84,6 @@ scheduled first.
   [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7 and deckifyr#88–#91 in 0.3.5,
   so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
   children run behind `/apps/<tool>/` with no rewriting ([spike result](spikes/basepath.md)).
-  Owner decision #2 is next in parallel.
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
   CI and the Gate 2/3 integration tests a working runtime while the native install spikes
@@ -95,9 +94,10 @@ scheduled first.
 - Install spikes #6 and #7 on clean standard-user accounts. They succeed only when an
   artifact renders, not when `cargo --version` works.
 
-**After #2**
-- The fixture generator (#20) and the import/clean/map/validate chain (#21–#24). This
-  chain can be built and tested before opnca-r changes land.
+**Now that #2 is decided (ADR 0005)**
+- The fixture generator (#20) and the import/clean/map/validate chain (#21–#24) can start.
+  They use ADR 0005's rules and check ids. This chain can be built and tested before
+  opnca-r changes land.
 
 **opnca adapter (#27, #28)**
 - Use opnca-r 0.2.7 directly: `scripts/serve.R` with the launcher flags (#27) and the
@@ -144,7 +144,7 @@ scheduled first.
 | No reportifyr changes; sidecar validation lives in the launcher | Accepted | #30 |
 | Offline installation supported in v1 alongside the default online install (native and container) | **Accepted** (owner, 2026-11-04) | #1, #36, #44 |
 | v1 matrix: Windows 11 x86_64, macOS arm64/x86_64 (macOS 15 until opnca-r#45), R 4.6.2; 30-min configurable idle timeout; no native Linux | **Accepted** (owner, 2026-11-06) | [ADR 0003](decisions/0003-platform-matrix.md), #1 |
-| Data conventions and warning-vs-blocking checks | Open | #2 |
+| Data conventions and warning-vs-blocking checks: exact-code analyte filter plus specimen role, declared units, explicit BLQ/LLOQ steps and BLQ rules, reasons for every exclusion, duplicates and undosed profiles blocking | **Accepted** (owner, 2026-11-05); provisional until checked on sponsor data | [ADR 0005](decisions/0005-data-conventions.md), #2 |
 | Report/deck templates; identifiable-data policy | Open | #3 |
 | opnca-r from prebuilt binaries; vendored source tarball only as a repair/exception fallback (option C) | **Accepted** (owner, 2026-11-06) | [ADR 0004](decisions/0004-opnca-r-binaries-with-vendored-fallback.md), #4 |
 | Home UI frontend stack | Open | #18 |
