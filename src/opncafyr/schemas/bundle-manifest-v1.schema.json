@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/bundle-manifest-v1",
+  "title": "Offline bundle manifest",
+  "description": "bundle.json at the top of an offline bundle (#36). For people and audits: the installer never takes a hash from it; it checks every file against the pins inside its own payload.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "bundle_id", "opncafyr_version", "platform", "payload_digest", "options", "trust", "files"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "bundle_id": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the payload digest, the platform and every (path, SHA-256)."},
+    "opncafyr_version": {"type": "string", "minLength": 1},
+    "platform": {"enum": ["windows-x86_64", "macos-arm64", "macos-x86_64"]},
+    "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["libreoffice"],
+      "properties": {"libreoffice": {"type": "boolean"}}
+    },
+    "trust": {"type": "string"},
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "component", "name", "version", "sha256", "size", "source_url", "license", "optional"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^assets/[a-z0-9-]+/[^/]+$"},
+          "component": {"type": "string"},
+          "name": {"type": "string"},
+          "version": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "size": {"type": "integer", "minimum": 0},
+          "source_url": {"type": "string", "pattern": "^https://"},
+          "license": {"type": "string", "minLength": 1},
+          "optional": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

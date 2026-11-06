@@ -132,7 +132,7 @@ land.
 Desktop platforms are covered by the install spikes' offline variants (#6, #7) and, later,
 network-disabled VMs in the install matrix (#37).
 
-## Internal-mirror mode (evaluation)
+## Internal-mirror mode
 
 Many firewalled sites allow internal mirrors (Artifactory, Nexus, an internal CRAN-like
 repository, a PyPI proxy) instead of carrying a bundle. Every pin is a content hash, so a
@@ -144,11 +144,30 @@ mirror changes only where a file comes from, never what is accepted.
 | R packages (`binaries.toml`) | CRAN-like remote (P3M snapshot or Artifactory/Nexus "CRAN" remote) | Same prefix rewrite of each pinned file URL. The binary paths (`bin/macosx/…/contrib/4.6`, `bin/windows/contrib/4.6`) must be proxied too, not only `src/contrib` |
 | Python wheels (`uv.lock`, tools `uv.lock`) | PyPI remote | Don't point `uv sync` at the mirror: the locks record PyPI as their registry. Download the locked files (`pip download --require-hashes` with `--index-url <mirror>`, or a prefix rewrite of `files.pythonhosted.org`) into a wheelhouse, then take the offline path |
 
-**Recommendation:** mirror mode is the bundle builder (#36, option 2) pointed at the mirrors,
-followed by the ordinary offline install. That keeps one install path, verifies every file
-against the same hashes, and never lets a tool resolve against an index at install or run
-time. The private opnca-r release must be uploaded to the mirror by the site (no GitHub
-token behind the firewall).
+**Implemented (#36):** `install --mirror mirror.toml` and `bundle --mirror mirror.toml`
+([install.md](install.md#internal-mirror-mode)). Both take the one install path:
+- every pinned URL is rewritten by its longest prefix;
+- files are fetched with the system curl and checked against the pins;
+- a URL with no configured mirror is refused, never fetched from the origin;
+- no tool resolves against an index at install or run time.
+
+The wheels are fetched by their pinned `files.pythonhosted.org` URLs (`wheels.toml`), so a
+plain prefix rewrite covers them; no `pip download` is needed. The private opnca-r release
+must be uploaded to the mirror by the site, since there is no GitHub token behind the
+firewall.
+
+## Offline bundles (#36)
+
+`install.sh bundle` / `install.bat bundle` (and `opncafyr bundle`) write a bundle with
+every pinned file for a platform, the installer, a manifest, `SHA256SUMS`, an SPDX SBOM
+and a licence inventory ([install.md](install.md#offline-installation-for-it-administrators-36)).
+`install --from-bundle` installs from it and never touches the network. The bundle keeps
+its own copy of CRAN-only binaries such as macOS `gdtools` (I16).
+
+The `Installer` workflow builds the bundle twice per platform and compares the manifests.
+It then installs, updates and repairs from it as a standard user with the network
+blocked: `sandbox-exec` on macOS, a per-user firewall rule on Windows. Any logged attempt
+fails the job.
 
 ## Found by the install spikes (#6, #7)
 
@@ -181,4 +200,6 @@ platform (#8).
 - Upstream, filed with this audit: [quartifyr#83](https://github.com/jprybylski/quartifyr/issues/83) `--soffice-bin` (R8); [deckifyr#93](https://github.com/jprybylski/deckifyr/issues/93) offline mode for
   the R wrappers (R6) and `--from-repo` (R7).
 - #51: route the offline CI job through the adapters (#22, #25, #27, #32, #33).
-- #36: bundle layout, `mirror.toml`, and keeping copies of CRAN-only binaries (I16).
+- #51: the Gate 2 end-to-end run from an offline bundle, once the analysis path exists. The
+  installer's report smoke tests (opnca-r calculation, Quarto DOCX, deckifyr build) are the
+  offline proof until then.

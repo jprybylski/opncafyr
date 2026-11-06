@@ -82,6 +82,13 @@ scheduled first.
   The `Installer` workflow proves it as a new standard user on macOS arm64 and Intel and
   on Windows Server 2025: install, second run, launch, a failure after staging, and
   uninstall. Clean Windows 11 VMs remain #37.
+- **Offline installation (#36) is done** ([install.md](install.md#offline-installation-for-it-administrators-36)).
+  The bundle builder, `--from-bundle` (no network at all), mirror mode and the installation
+  verification report are in place. CI installs, updates and rejects a tampered bundle
+  with the user's network blocked, and any logged attempt fails the job. Two parts wait on
+  other work:
+  - attaching CI-built bundles to releases waits on the licensing review (#43);
+  - the Gate 2 end-to-end run from a bundle waits on the analysis path (#51).
 - **Offline audit (#44)** is done: [offline.md](offline.md) lists every network
   touchpoint and its resolution, and the `offline` CI job installs from local files and
   runs import, an opnca-r calculation, a report render and a deck build with the network

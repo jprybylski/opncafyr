@@ -219,6 +219,23 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_bundle(args: argparse.Namespace) -> int:
+    """``opncafyr bundle``: the installer's bundle builder, from this install's payload."""
+    from opncafyr.installer import cli as installer_cli
+    from opncafyr.paths import active_install_dir
+
+    install = active_install_dir()
+    payload = install / "installer" if install is not None else None
+    if payload is None or not (payload / "payload.json").is_file():
+        print(
+            "opncafyr bundle runs from an installed opncafyr. From a downloaded installer, "
+            "run `install.sh bundle` or `install.bat bundle` instead.",
+            file=sys.stderr,
+        )
+        return 1
+    return installer_cli.main(["bundle", *args.bundle_args], payload_dir=payload)
+
+
 def cmd_version(_: argparse.Namespace) -> int:
     print(__version__)
     return 0
@@ -249,6 +266,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = sub.add_parser("doctor", help="Report paths and tool availability.")
     doctor.set_defaults(func=cmd_doctor)
+
+    bundle = sub.add_parser(
+        "bundle",
+        help="Build an offline bundle (same options as `install.sh bundle`).",
+        add_help=False,
+    )
+    bundle.add_argument("bundle_args", nargs=argparse.REMAINDER)
+    bundle.set_defaults(func=cmd_bundle)
 
     version = sub.add_parser("version", help="Print the version.")
     version.set_defaults(func=cmd_version)

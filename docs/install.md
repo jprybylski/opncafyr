@@ -97,7 +97,9 @@ standard library.
    - the launcher and tools environments import;
    - `library(opnca)`, quartifyr and reportifyr load;
    - `quarto --version`;
-   - `deckifyr --json validate` on a sample deck.
+   - `deckifyr --json validate` on a sample deck;
+   - the report's checks (#36): an opnca-r calculation with known answers on synthetic
+     data, a Quarto DOCX render with an R chunk run by the pinned R, and a deckifyr build.
 
    Then the new launcher environment validates the records (`selfcheck`).
 5. **Commit and activate.** `install.json` is written, then `current` is switched in one
@@ -124,18 +126,131 @@ Windows, when `install.bat uninstall` runs from the installed copy
 (`%LOCALAPPDATA%\opncafyr\installer`), that folder goes a few seconds after the command
 finishes, because cmd is still reading `install.bat` until then.
 
-## Offline bundles
+## Offline installation: for IT administrators (#36)
 
-`--from-bundle` takes a folder or a `.zip` laid out as:
+Offline installation is a supported v1 use case, for firewalled environments such as GxP
+cloud analytical systems. It uses the same installer and the same code path as an online
+install; only the source of the files differs. In bundle mode the installer never uses
+the network, not even as a fallback. Every file is checked against the SHA-256 pinned
+inside the installer before anything is installed.
 
+### 1. Build a bundle on a connected machine
+
+Any connected Mac or Windows PC can build a bundle for any supported platform:
+
+```sh
+# macOS, for Windows users:
+./install.sh bundle --platform windows-x86_64 --out bundles --archive \
+    --assets <folder with the opnca-r files>        # or set GH_TOKEN
 ```
-assets/<component>/<file>     every pinned file, e.g. assets/r/R-4.6.2-win.exe,
-                              assets/r-packages/R6_2.6.1.zip, assets/wheels/…
-installer/                    the installer payload (wrappers, wheel, pins)
+```bat
+rem Windows, for Mac users:
+install.bat bundle --platform macos-arm64 --out bundles --archive --assets <folder>
 ```
 
-The installer looks files up by their pinned name and SHA-256. It never reads a bundle's
-own hash list, so a bundle can't change what is accepted.
+- `--platform`: `windows-x86_64`, `macos-arm64` or `macos-x86_64` (default: this machine).
+- `--archive` also writes `opncafyr-bundle-<version>-<platform>.zip`.
+- `--with-libreoffice` adds LibreOffice (optional, for slide previews; about 300–400 MB).
+- `--mirror mirror.toml` fetches from internal mirrors instead (below).
+- An installed opncafyr can do the same with `opncafyr bundle …`.
+
+The builder fetches every file from its original source and checks each against the
+pins. Your organisation assembles the bundle itself, so it is not a copy we redistribute
+(#43). opnca-r is private: provide its release files with `--assets`, or set `GH_TOKEN`.
+A macOS or Windows bundle is about 550 MB.
+
+Contents of `opncafyr-bundle-<version>-<platform>/`:
+
+| Path | What |
+|---|---|
+| `assets/<component>/<file>` | Every pinned file, e.g. `assets/r/R-4.6.2-win.exe`, `assets/r-packages/R6_2.6.1.zip`, `assets/wheels/…` |
+| `installer/` | The installer itself: `install.sh`, `install.bat`, the opncafyr wheel, the pins |
+| `bundle.json` | Manifest (schema `bundle-manifest-v1`): bundle ID, and for every file its component, version, SHA-256, size, source URL and licence |
+| `SHA256SUMS` | Every other file's SHA-256 (`shasum -a 256 -c SHA256SUMS`, or `Get-FileHash`) |
+| `sbom.spdx.json` | SPDX 2.3 software bill of materials |
+| `licenses.json` | Licence inventory, read from each package's own metadata |
+
+Two builds from the same installer list the same files and hashes; the bundle ID is a
+hash of them. CI builds a bundle for each platform on every change to the installer, and
+keeps it as a workflow artifact.
+
+### 2. Carry it across and check it
+
+Copy the folder or the zip to the target machine by your usual approved route. You can
+check it with `SHA256SUMS`, but you don't have to: the installer checks every file
+against the pins inside it and refuses a missing or changed file, naming the component.
+It never reads `bundle.json` or `SHA256SUMS`.
+
+There is no detached signature yet; code signing is #39. Until then, compare the
+installer payload digest (in `installer/payload.json` and in the installation report)
+with the value published for the release.
+
+### 3. Install as the user, offline
+
+```sh
+opncafyr-bundle-<version>-macos-arm64/installer/install.sh install --from-bundle opncafyr-bundle-<version>-macos-arm64.zip
+```
+```bat
+opncafyr-bundle-<version>-windows-x86_64\installer\install.bat install --from-bundle opncafyr-bundle-<version>-windows-x86_64.zip
+```
+
+`--from-bundle` takes the zip or the unzipped folder. It needs no administrator rights,
+and it makes no connection attempt. CI checks that by blocking the user's network and
+failing on any logged attempt: `sandbox-exec` on macOS, a per-user firewall rule with drop
+logging on Windows.
+
+**Updates.** Build a bundle for the new version and run its installer the same way. The
+new version is staged next to the old one and activated in one step. If the update fails,
+or is interrupted (a closed window, a power cut), the old version stays active, and the
+next run cleans up.
+
+**Repair offline:** `install.sh repair --from-bundle <bundle>`.
+
+### 4. The installation verification report
+
+After every install, update or repair, the installer writes a report to
+`<app root>/state/reports/`. It comes as `install-report-<time>.json` (schema
+`install-report-v1`) and as a printable `install-report-<time>.html`. It records:
+- the opncafyr version and the installer payload digest;
+- the bundle ID, and how files were trusted;
+- OS and architecture;
+- the install paths;
+- the version and SHA-256 of every component;
+- the smoke tests: an opnca-r calculation against known values (synthetic data), a
+  Quarto DOCX render with an R chunk run by the pinned R, and a deckifyr build.
+
+Your organisation's own qualification (for example IQ) may use it as evidence.
+**opncafyr is for research use only; the report is not a validation of opncafyr or of
+any calculation.**
+
+### Internal-mirror mode
+
+If your site mirrors GitHub releases, PyPI files and CRAN (Artifactory, Nexus and the
+like), you don't need to carry a bundle. Describe the mirrors in a `mirror.toml`:
+
+```toml
+[mirrors]
+"https://github.com/" = "https://artifacts.example.org/github-releases/"
+"https://files.pythonhosted.org/" = "https://artifacts.example.org/pypi-files/"
+"https://packagemanager.posit.co/cran/2026-11-06/" = "https://artifacts.example.org/cran-snapshot/"
+"https://cran.r-project.org/" = "https://artifacts.example.org/cran/"
+```
+
+Then run `install.sh install --mirror mirror.toml`, or build a bundle from the mirrors
+with `install.sh bundle … --mirror mirror.toml`.
+
+- Each pinned URL is rewritten by its longest matching prefix. The file name and the
+  pinned SHA-256 don't change, so a mirror changes only where a file comes from, never
+  what is accepted.
+- A URL without a configured prefix is refused; mirror mode never falls back to the
+  public origin.
+- The binary paths (`bin/windows/contrib/4.6`, `bin/macosx/…/contrib/4.6`) must be
+  proxied, not only `src/contrib`.
+- The private opnca-r release must be uploaded to the mirror by the site, under the same
+  file names.
+- Mirror credentials, if any, come from the user's `~/.netrc` (`%USERPROFILE%\_netrc`),
+  never from `mirror.toml`.
+- For HTTPS through a TLS-inspecting proxy, use `--cacert`.
 
 ## Testing
 
@@ -145,7 +260,18 @@ own hash list, so a bundle can't change what is accepted.
   new standard user on `macos-15` (arm64), `macos-15-intel` and `windows-2025`:
   install, second run, start the icon's launcher and check `/health`, a failure injected
   after staging (`OPNCAFYR_INSTALL_FAIL_AFTER=staging`), and uninstall with a workspace
-  that must survive. `windows-2025` is Windows Server; clean Windows 11 and macOS VMs are
+  that must survive.
+- The same workflow then covers the offline legs (#36):
+  - it builds the bundle twice, compares the manifests, and keeps the zip as an artifact;
+  - it blocks the user's network: `sandbox-exec` on macOS, a per-user firewall rule on
+    Windows, where a deliberate attempt first proves that blocked connections are logged;
+  - with the network blocked it installs from the bundle and checks the report, refuses a
+    tampered bundle, kills an update to a newer payload part-way through, and then
+    completes it.
+
+  Any logged connection attempt fails the job. `OPNCAFYR_PROXY_TRAP=0` turns off the
+  closed loopback proxy during these legs, so a stray attempt reaches the logged block
+  instead of failing quietly. `windows-2025` is Windows Server; clean Windows 11 and macOS VMs are
   #37.
 - Build a payload locally with `uv run python scripts/make_installer.py`. For a scratch
   install, set `OPNCAFYR_APP_ROOT`, `OPNCAFYR_R_ROOT` (macOS) and `OPNCAFYR_APPS_DIR`

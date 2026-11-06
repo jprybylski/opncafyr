@@ -7,6 +7,39 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Offline installation (#36), as a supported v1 use case
+  ([docs/install.md](docs/install.md#offline-installation-for-it-administrators-36)).
+  - The bundle builder (`install.sh bundle`, `install.bat bundle`, `opncafyr bundle`)
+    fetches every pinned file for a platform from its original source and checks each
+    against the pins. It writes a bundle containing:
+    - the installer;
+    - `bundle.json` (schema `bundle-manifest-v1`): every file with its version, SHA-256,
+      source URL and licence;
+    - `SHA256SUMS`;
+    - an SPDX 2.3 SBOM;
+    - a licence inventory read from each package's own metadata.
+
+    `--archive` writes a deterministic zip.
+  - `install --from-bundle` (folder or zip) never uses the network. A missing or tampered
+    file is refused, naming its component, and the previous install stays active. Updates
+    from a newer bundle use the same staging and atomic activation.
+  - Internal-mirror mode: `--mirror mirror.toml` rewrites each pinned URL to a configured
+    mirror prefix, keeps the pinned SHA-256, and never falls back to the origin.
+  - Every install, update or repair writes an installation verification report (JSON,
+    schema `install-report-v1`, and printable HTML). It records:
+    - versions and hashes;
+    - the bundle ID and the payload digest;
+    - OS and paths;
+    - smoke tests, now including an opnca-r calculation with known answers, a Quarto
+      DOCX render with an R chunk and a deckifyr build.
+
+    It is for research use and is not a validation claim.
+  - The `Installer` workflow builds each platform's bundle twice and compares the
+    manifests. It then installs from the bundle with the user's network blocked
+    (`sandbox-exec` on macOS, a per-user firewall rule on Windows) and fails on any logged
+    connection attempt. It also checks that a tampered bundle is refused, and that an
+    update killed mid-way and then completed leaves the right install active. The bundle
+    is kept as a workflow artifact.
 - Installer v1 (#19): a per-user installer with no administrator rights
   ([docs/install.md](docs/install.md)).
   - `install.sh` (macOS) and `install.bat`/`install.ps1` (Windows) only fetch and verify

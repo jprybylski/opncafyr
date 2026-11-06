@@ -193,3 +193,12 @@ def fake_steps(log: list[str] | None = None):
         ("runtime_record", record),
         ("installer_copy", runtimes.installer_copy),
     ]
+
+
+def run(layout, payload_dir: Path, messages: list[str] | None = None, **opts) -> int:
+    from opncafyr.installer import payload as payload_mod
+    from opncafyr.installer.install import Installer, Options
+
+    out = messages if messages is not None else []
+    options = Options(skip_disk_check=True, **opts)
+    return Installer(layout, payload_mod.load(payload_dir), options, out.append).run()

@@ -30,7 +30,7 @@ from typing import Any
 
 from opncafyr.installer import proc
 from opncafyr.installer.pins import Asset
-from opncafyr.installer.verify import AssetError, MissingAssets, sha256_file
+from opncafyr.installer.verify import AssetError, InstallError, MissingAssets, sha256_file
 
 _GITHUB_RELEASE = re.compile(
     r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)/releases/download/"
@@ -183,6 +183,8 @@ class DownloadSource:
             argv += ["--cacert", str(self.cacert)]
         if self.proxy:
             argv += ["--proxy", self.proxy]
+        if self.rewrite is not None:
+            argv.append("--netrc-optional")  # mirror credentials, if any, from ~/.netrc
         return [*argv, url]
 
     def _env(self) -> dict[str, str]:
@@ -196,7 +198,10 @@ class DownloadSource:
         dest.parent.mkdir(parents=True, exist_ok=True)
         part = dest.with_name(dest.name + ".download")
         part.unlink(missing_ok=True)
-        url = self.rewrite(asset.url) if self.rewrite else asset.url
+        try:
+            url = self.rewrite(asset.url) if self.rewrite else asset.url
+        except InstallError as exc:  # MirrorError: no mirror for this origin
+            raise AssetError(asset.component, asset.file, str(exc)) from None
         headers: list[str] = []
         if asset.private and _GITHUB_RELEASE.match(url):
             url, headers = self._github_asset(asset, url)

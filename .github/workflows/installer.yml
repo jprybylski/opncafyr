@@ -1,9 +1,15 @@
 name: Installer
 
-# #19: installer v1 end to end as a new standard user on macOS (arm64, Intel) and Windows:
-# install, second run (no-op), the icon's launcher answers /health, a failure injected
-# after staging keeps the previous install and writes a support bundle, uninstall leaves a
-# workspace untouched. scripts/installer_ci/ has the legs; docs/install.md explains them.
+# The installer end to end as a new standard user on macOS (arm64, Intel) and Windows.
+# #19: install, second run (no-op), the icon's launcher answers /health, a failure
+# injected after staging keeps the previous install and writes a support bundle, uninstall
+# leaves a workspace untouched.
+# #36: the offline bundle is built twice and the manifests compared; then, with the user's
+# network blocked (sandbox-exec / a per-user firewall rule) and every denied attempt
+# logged: install from the bundle, the installation report, a tampered bundle refused, an
+# update to a newer payload killed mid-way and then completed. Any logged attempt fails.
+# The bundle is uploaded as a workflow artifact (attaching it to releases waits on #43).
+# scripts/installer_ci/ has the legs; docs/install.md explains them.
 #
 # windows-2025 is Windows Server, not Windows 11 (no hosted Windows 11 runner); clean
 # Windows 11 and macOS VMs are #37. opnca-r is private: the job needs OPNCA_R_RELEASE_TOKEN.
@@ -37,20 +43,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - name: Build the installer payload
-        run: uv run python scripts/make_installer.py --out dist --zip
-      - name: Install, second run, launch, failure, uninstall (as a standard user)
+      - name: Build the installer payload (and one for a later version, for updates)
+        run: |
+          uv run python scripts/make_installer.py --out dist --zip
+          uv run python scripts/make_installer.py --out dist-newer --version "$(cat VERSION).post1"
+      - name: Installer legs (as a standard user)
         env:
           GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
         run: |
           test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
-          bash scripts/installer_ci/macos.sh "dist/opncafyr-installer-$(cat VERSION)" installer-ci
+          bash scripts/installer_ci/macos.sh "dist/opncafyr-installer-$(cat VERSION)" installer-ci \
+            "dist-newer/opncafyr-installer-$(cat VERSION).post1"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: installer-${{ matrix.runner }}
           path: installer-ci/
           if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: bundle-${{ matrix.runner }}
+          path: bundle-artifact/*.zip
+          compression-level: 0
+          retention-days: 7
 
   windows:
     name: installer (windows-2025)
@@ -59,8 +75,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - name: Build the installer payload
-        run: uv run python scripts/make_installer.py --out dist --zip
+      - name: Build the installer payload (and one for a later version, for updates)
+        shell: bash
+        run: |
+          uv run python scripts/make_installer.py --out dist --zip
+          uv run python scripts/make_installer.py --out dist-newer --version "$(cat VERSION).post1"
       - name: Fetch the private opnca-r files for --assets
         shell: bash
         env:
@@ -70,12 +89,13 @@ jobs:
           v=$(python -c "import tomllib; print(tomllib.load(open('runtime/pins.toml','rb'))['packages']['opnca-r']['version'])")
           gh release download "v$v" -R mantra-opnca/opnca-r -D ci-assets \
             -p manifest.json -p "opnca_${v}_R4.6_windows-x86_64.zip"
-      - name: Install, second run, launch, failure, uninstall (as a standard user)
+      - name: Installer legs (as a standard user)
         shell: powershell
         run: |
           $v = (Get-Content VERSION).Trim()
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts\installer_ci\windows.ps1 `
-            -Payload "dist\opncafyr-installer-$v" -Assets ci-assets -Results installer-ci
+            -Payload "dist\opncafyr-installer-$v" -Newer "dist-newer\opncafyr-installer-$v.post1" `
+            -Assets ci-assets -Results installer-ci
           exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         if: always()
@@ -83,3 +103,10 @@ jobs:
           name: installer-windows-2025
           path: installer-ci/
           if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: bundle-windows-2025
+          path: bundle-artifact/*.zip
+          compression-level: 0
+          retention-days: 7

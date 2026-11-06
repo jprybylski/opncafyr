@@ -1,5 +1,7 @@
-# CI (#19): one installer leg, run as the standard user by windows.ps1 (scheduled task).
-#   powershell -File windows_user.ps1 -Leg <identity|install|noop|launch|failure|uninstall> -Work <dir>
+# CI (#19, #36): one installer leg, run as the standard user by windows.ps1 (scheduled task).
+#   powershell -File windows_user.ps1 -Leg <leg> -Work <dir>
+#   #19 legs: identity, install, noop, launch, failure, uninstall
+#   #36 legs: sanity, offline, tamper, interrupted, update
 param(
     [Parameter(Mandatory = $true)][string]$Leg,
     [Parameter(Mandatory = $true)][string]$Work
@@ -11,6 +13,9 @@ $root = Join-Path $env:LOCALAPPDATA 'opncafyr'
 $shell = New-Object -ComObject WScript.Shell
 $desktopLnk = Join-Path $shell.SpecialFolders.Item('Desktop') 'opncafyr.lnk'
 $startLnk = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\opncafyr.lnk'
+$bundleName = if (Test-Path "$Work\bundle\name.txt") { (Get-Content "$Work\bundle\name.txt" -Raw).Trim() } else { '' }
+$bundleZip = "$Work\bundle\$bundleName.zip"
+$bundleDir = "$Work\bundle\$bundleName"
 
 function Fail([string]$msg) { Write-Output "FAIL: $msg"; exit 1 }
 function Native([string]$exe, [string[]]$argv) {
@@ -92,6 +97,66 @@ switch ($Leg) {
         foreach ($l in $desktopLnk, $startLnk) { if (Test-Path $l) { Fail "shortcut left: $l" } }
         if (-not (Test-Path (Join-Path $study 'data.csv'))) { Fail 'the workspace was touched' }
         if (-not (Test-Path (Join-Path $study '.opncafyr\workspace.json'))) { Fail 'the workspace metadata was touched' }
+    }
+    'sanity' {
+        # With the firewall rule on, this must fail and be logged as a drop.
+        $curl = Join-Path $env:SystemRoot 'System32\curl.exe'
+        $rc = Native $curl @('-sS', '-m', '10', '-o', 'NUL', 'https://example.com')
+        if ($rc -eq 0) { Fail 'the network is not blocked' }
+    }
+    'offline' {
+        $rc = Native "$Work\payload\install.bat" @('install', '--from-bundle', $bundleZip)
+        if ($rc -ne 0) { Fail "offline install exited $rc" }
+        if ($script:lastOut -notmatch '\(bundle\)') { Fail 'not a bundle install' }
+        $report = Get-ChildItem (Join-Path $root 'state\reports') -Filter 'install-report-*.json' | Sort-Object LastWriteTime | Select-Object -Last 1
+        Copy-Item $report.FullName "$Work\results\report-offline.json"
+        Copy-Item ($report.FullName -replace '\.json$', '.html') "$Work\results\report-offline.html"
+        $r = Get-Content $report.FullName -Raw | ConvertFrom-Json
+        $manifest = Get-Content (Join-Path $bundleDir 'bundle.json') -Raw | ConvertFrom-Json
+        if ($r.result -ne 'pass') { Fail "report result $($r.result)" }
+        if ($r.source -ne 'bundle' -or $r.bundle.bundle_id -ne $manifest.bundle_id) { Fail 'report does not name the bundle' }
+        foreach ($n in 'opnca_calculation', 'quarto_docx_render', 'deckifyr_build') {
+            if (-not ($r.smoke | Where-Object { $_.name -eq $n -and $_.status -eq 'ok' })) { Fail "report lacks a passing $n" }
+        }
+        Health 47813
+    }
+    'tamper' {
+        $before = Active
+        $t = "$Work\tampered"
+        Remove-Item -Recurse -Force $t -ErrorAction SilentlyContinue
+        Copy-Item -Recurse $bundleDir $t
+        $victim = Get-ChildItem "$t\assets\quarto" | Select-Object -First 1
+        [IO.File]::AppendAllText($victim.FullName, 'x')
+        Remove-Item -Recurse -Force (Join-Path $root 'cache\downloads') -ErrorAction SilentlyContinue
+        $rc = Native "$Work\payload-newer\install.bat" @('install', '--from-bundle', $t)
+        if ($rc -ne 1) { Fail "a tampered bundle was not refused (exit $rc)" }
+        if ($script:lastOut -notmatch 'in: quarto') { Fail 'the error does not name quarto' }
+        if ((Active) -ne $before) { Fail 'the active install changed' }
+        Health 47814
+    }
+    'interrupted' {
+        $before = Active
+        $log = "$Work\results\interrupted-run.log"
+        $p = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\cmd.exe') -PassThru -WindowStyle Hidden `
+            -ArgumentList "/c `"`"$Work\payload-newer\install.bat`" install --from-bundle `"$bundleZip`" > `"$log`" 2>&1`""
+        $reached = $false
+        for ($i = 0; $i -lt 600 -and -not $p.HasExited; $i++) {
+            Start-Sleep -Seconds 1
+            if ((Test-Path $log) -and (Select-String -Path $log -Pattern '^\[r_library\]' -Quiet)) { $reached = $true; break }
+        }
+        $ErrorActionPreference = 'Continue'; & taskkill.exe /T /F /PID $p.Id *> $null; $ErrorActionPreference = 'Stop'
+        Start-Sleep -Seconds 3
+        if (-not $reached) { Fail 'the update never reached r_library' }
+        if ((Active) -ne $before) { Fail 'the active install changed after an interrupted update' }
+        Health 47815
+    }
+    'update' {
+        $rc = Native "$Work\payload-newer\install.bat" @('install', '--from-bundle', $bundleZip)
+        if ($rc -ne 0) { Fail "offline update exited $rc" }
+        if ($script:lastOut -notmatch 'removing incomplete install') { Fail 'the interrupted install was not cleaned up' }
+        $newer = (Get-Content "$Work\payload-newer\payload.json" -Raw | ConvertFrom-Json).version
+        if ((Active) -notlike "$newer-*") { Fail "the update is not active: $(Active)" }
+        Health 47816
     }
     default { Fail "unknown leg $Leg" }
 }

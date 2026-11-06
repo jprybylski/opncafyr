@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/install-report-v1",
+  "title": "Installation verification report",
+  "description": "state/reports/install-report-<time>.json, written after every install, update or repair (#36). Evidence a customer's own qualification may use; not a validation claim (research use only).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "notice", "opncafyr_version", "install_id", "mode", "source", "payload_digest", "bundle", "signature", "system", "paths", "components", "smoke", "result"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"type": "string"},
+    "notice": {"type": "string", "minLength": 1},
+    "opncafyr_version": {"type": "string"},
+    "install_id": {"type": "string"},
+    "mode": {"enum": ["install", "repair"]},
+    "source": {"enum": ["online", "bundle", "mirror"]},
+    "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "bundle": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bundle_id", "platform"],
+          "properties": {"bundle_id": {"type": "string"}, "platform": {"type": "string"}}
+        }
+      ]
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked", "trust"],
+      "properties": {"checked": {"type": "boolean"}, "trust": {"type": "string"}}
+    },
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "os", "machine"],
+      "properties": {"platform": {"type": "string"}, "os": {"type": "string"}, "machine": {"type": "string"}}
+    },
+    "paths": {
+      "type": "object",
+      "required": ["app_root", "version_dir", "r_dir"],
+      "properties": {"app_root": {"type": "string"}, "version_dir": {"type": "string"}, "r_dir": {"type": "string"}}
+    },
+    "components": {"type": "array", "items": {"type": "object", "required": ["name", "version", "files"]}},
+    "smoke": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "status", "seconds", "detail"],
+        "properties": {"status": {"enum": ["ok", "failed"]}}
+      }
+    },
+    "result": {"enum": ["pass", "fail"]}
+  }
+}

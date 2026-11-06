@@ -5,6 +5,8 @@
     repair     same options as install
     uninstall  [--force] [--dry-run]
     status
+    bundle     --out DIR [--platform P] [--archive] [--mirror TOML] [--assets DIR ...]
+               [--with-libreoffice]
 
 Exit status: 0 done (or nothing to do), 1 failed, 2 bad arguments.
 """
@@ -17,6 +19,7 @@ from pathlib import Path
 
 from opncafyr.installer import payload as payload_mod
 from opncafyr.installer.layout import InstallerBusy, Layout
+from opncafyr.installer.platforms import SUPPORTED
 from opncafyr.installer.verify import InstallError
 
 
@@ -39,6 +42,12 @@ def _source_args(p: argparse.ArgumentParser) -> None:
         metavar="DIR",
         help="a folder of pinned files to use before downloading (e.g. the private opnca-r "
         "binary); may be repeated",
+    )
+    p.add_argument(
+        "--mirror",
+        type=Path,
+        metavar="TOML",
+        help="download every pinned file from internal mirrors (mirror.toml), never the origin",
     )
     p.add_argument(
         "--with-libreoffice",
@@ -68,7 +77,45 @@ def build_parser() -> argparse.ArgumentParser:
     un.add_argument("--dry-run", action="store_true", help="list what would be removed")
     un.add_argument("--leave", type=Path, help=argparse.SUPPRESS)
     sub.add_parser("status", help="show the active install")
+    b = sub.add_parser(
+        "bundle",
+        help="build an offline bundle for a platform (run on a connected machine)",
+        description="Fetch every pinned file for PLATFORM from its original source (or the "
+        "mirrors in --mirror), check each against the pins, and write an offline bundle "
+        "with this installer in it (docs/install.md).",
+    )
+    b.add_argument("--platform", choices=SUPPORTED, help="default: this machine's platform")
+    b.add_argument("--out", type=Path, required=True, help="folder to write the bundle in")
+    b.add_argument("--archive", action="store_true", help="also write a .zip of the bundle")
+    b.add_argument("--mirror", type=Path, metavar="TOML", help="fetch from internal mirrors")
+    b.add_argument("--assets", type=Path, action="append", default=[], metavar="DIR")
+    b.add_argument("--with-libreoffice", action="store_true", help="include LibreOffice")
+    b.add_argument("--cacert", type=Path)
+    b.add_argument("--proxy")
     return parser
+
+
+def _bundle(args: argparse.Namespace, payload: payload_mod.Payload) -> int:
+    from opncafyr.installer import bundle, platforms
+
+    rewrite = None
+    if args.mirror is not None:
+        from opncafyr.installer.mirror import Mirror
+
+        rewrite = Mirror.load(args.mirror).rewrite
+    bundle.build(
+        payload,
+        args.platform or platforms.detect(),
+        args.out.resolve(),
+        say=_say,
+        with_libreoffice=args.with_libreoffice,
+        assets_dirs=list(args.assets),
+        rewrite=rewrite,
+        cacert=args.cacert,
+        proxy=args.proxy,
+        archive=args.archive,
+    )
+    return 0
 
 
 def status(layout: Layout) -> int:
@@ -99,10 +146,15 @@ def main(argv: list[str] | None = None, *, payload_dir: Path | None = None) -> i
         if payload_dir is None:
             raise InstallError("No installer payload: run install.sh or install.bat.")
         payload = payload_mod.load(payload_dir)
+        if args.mode == "bundle":
+            return _bundle(args, payload)
+        if args.from_bundle is not None and args.mirror is not None:
+            raise InstallError("--from-bundle and --mirror can't be combined.")
         opts = Options(
             mode=args.mode,
             from_bundle=args.from_bundle,
             assets=list(args.assets),
+            mirror=args.mirror,
             with_libreoffice=args.with_libreoffice,
             dry_run=args.dry_run,
             cacert=args.cacert,

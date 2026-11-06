@@ -49,6 +49,9 @@ _KEEP_POSIX = ("HOME", "USER", "LOGNAME")
 _PROXY = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy")
 _PROXY += ("ALL_PROXY", "all_proxy", "CURL_CA_BUNDLE", "SSL_CERT_FILE")
 CLOSED_PROXY = "http://127.0.0.1:9"
+# CI only: "0" turns the closed proxy off, so a stray attempt reaches the network block
+# (sandbox, firewall) and is logged there, instead of failing quietly on loopback.
+PROXY_TRAP_ENV = "OPNCAFYR_PROXY_TRAP"
 
 
 class ProcError(RuntimeError):
@@ -108,7 +111,9 @@ def base_env(
         "RENV_CONFIG_AUTOLOADER_ENABLED": "FALSE",
         "RENV_CONFIG_UPDATES_CHECK": "FALSE",
     }
-    if offline:
+    if offline and src.get(PROXY_TRAP_ENV) == "0":
+        pass
+    elif offline:
         for key in ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"):
             env[key] = CLOSED_PROXY
         for key in ("ALL_PROXY", "all_proxy"):

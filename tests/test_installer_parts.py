@@ -220,6 +220,8 @@ def test_children_get_an_allow_listed_environment():
     assert env["UV_OFFLINE"] == "1" and env["UV_PYTHON_DOWNLOADS"] == "never"
     assert env["R_PROFILE_USER"] == proc.NULL_DEVICE
     assert env["HTTPS_PROXY"] == proc.CLOSED_PROXY  # bundle mode: any attempt fails at once
+    traced = proc.base_env(offline=True, environ={proc.PROXY_TRAP_ENV: "0"})
+    assert "HTTPS_PROXY" not in traced  # CI: attempts must reach the logged network block
     online = proc.base_env(offline=False, environ={"HTTPS_PROXY": "http://corp:8080"})
     assert online["HTTPS_PROXY"] == "http://corp:8080"
 

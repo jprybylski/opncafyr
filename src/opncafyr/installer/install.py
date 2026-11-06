@@ -49,6 +49,7 @@ class Options:
     mode: str = "install"  # install | repair
     from_bundle: Path | None = None
     assets: list[Path] = field(default_factory=list)
+    mirror: Path | None = None
     with_libreoffice: bool = False
     dry_run: bool = False
     cacert: Path | None = None
@@ -65,6 +66,8 @@ class Options:
     def source(self) -> str:
         if self.from_bundle is not None:
             return "bundle"
+        if self.mirror is not None:
+            return "mirror"
         return "online"
 
 
@@ -134,6 +137,14 @@ class Installer:
         self.opts = opts
         self._say = say
         self.run_log: support.RunLog | None = None
+        self.bundle: dict[str, Any] | None = None
+        if opts.from_bundle is not None:
+            from opncafyr.installer.bundle import read_manifest
+
+            # For the record and the report only: hashes always come from the pins.
+            manifest = read_manifest(opts.from_bundle)
+            if manifest and isinstance(manifest.get("bundle_id"), str):
+                self.bundle = manifest
 
     def say(self, message: str) -> None:
         self._say(message)
@@ -177,12 +188,18 @@ class Installer:
                 raise InstallError(str(exc)) from None
         download = None
         if not self.opts.offline:
+            rewrite = None
+            if self.opts.mirror is not None:
+                from opncafyr.installer.mirror import Mirror
+
+                rewrite = Mirror.load(self.opts.mirror).rewrite
             log = self.run_log.dir / "downloads.log" if self.run_log else Path(os.devnull)
             download = DownloadSource(
                 cache,
                 log=log,
                 cacert=self.opts.cacert,
                 proxy=self.opts.proxy,
+                rewrite=rewrite,
                 user_agent=f"opncafyr-installer/{self.payload.version}",
             )
         return cache, local, download
@@ -381,6 +398,7 @@ class Installer:
                 f"Support bundle (redacted): {bundle}\nLogs: {self.run_log.dir}"
             ) from None
         self.activate(install_id, previous)
+        self.write_report(install_id)
         self.say(
             f"opncafyr {self.payload.version} installed ({install_id}) in "
             f"{time.monotonic() - started:.0f} s"
@@ -410,7 +428,25 @@ class Installer:
             },
             "components": [{"name": k, **v} for k, v in sorted(ctx.components.items())],
             "smoke": results,
+            **({"bundle_id": self.bundle["bundle_id"]} if self.bundle else {}),
         }
+
+    def write_report(self, install_id: str) -> None:
+        """The installation verification report (#36): JSON and HTML in state/reports."""
+        from opncafyr.installer import report
+
+        record = self.layout.record(install_id)
+        if record is None:
+            return
+        try:
+            json_path, html_path = report.write(
+                self.layout, report.build(self.layout, record, bundle=self.bundle)
+            )
+        except OSError as exc:
+            self.say(f"warning: could not write the installation report: {exc}")
+            return
+        self.say(f"installation report: {html_path}")
+        self.say(f"                     {json_path}")
 
     def activate(self, install_id: str, previous: str | None) -> None:
         self.layout.write_current(install_id)

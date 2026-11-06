@@ -2,7 +2,10 @@
 
 Each returns a result ``{name, status, seconds, detail}``; any failure stops the install
 and the previous version stays active. They prove that the parts start and agree with the
-pins, not that any analysis is right (research use only).
+pins, not that any analysis is right (research use only). The last three are the
+installation report's checks (#36): an opnca-r calculation against known values on
+synthetic data, a Quarto DOCX render with an R chunk run by the pinned R, and a deckifyr
+build with only the pinned binaries.
 """
 
 from __future__ import annotations
@@ -47,6 +50,12 @@ def _check(
     if log is not None:
         with log.open("a", encoding="utf-8") as fh:
             fh.write(f"[{status}] {name}: {detail}\n")
+
+
+def _resource(name: str) -> str:
+    from importlib import resources
+
+    return resources.files("opncafyr.installer").joinpath(name).read_text("utf-8")
 
 
 def _out(argv: list[Any], env: Mapping[str, str], cwd: Path | None = None) -> str:
@@ -119,12 +128,55 @@ def run_all(
             raise RuntimeError(f"validate status {doc.get('status')}: {out[-400:]}")
         return "deckifyr validate ok"
 
+    def opnca_calc() -> str:
+        script = work / "smoke_opnca.R"
+        script.write_text(_resource("r/smoke_opnca.R"), "utf-8")
+        return _out([exe["rscript"], "--vanilla", script], r_env, cwd=work).splitlines()[-1]
+
+    def quarto_docx() -> str:
+        """Quarto renders a document with one R chunk (run by the pinned R) to DOCX."""
+        doc = work / "report"
+        doc.mkdir()
+        (doc / "smoke.qmd").write_text(
+            "---\ntitle: opncafyr installation check\nformat: docx\n---\n\n"
+            "Synthetic numbers only.\n\n```{r}\nx <- c(1, 2, 3)\nmean(x)\n```\n",
+            "utf-8",
+        )
+        qenv = {**r_env, "QUARTO_R": str(exe["rscript"].parent)}
+        _out([exe["quarto"], "render", "smoke.qmd", "--to", "docx"], qenv, cwd=doc)
+        out = doc / "smoke.docx"
+        if not out.is_file() or out.read_bytes()[:2] != b"PK":
+            raise RuntimeError("no DOCX was written")
+        return f"DOCX {out.stat().st_size} bytes"
+
+    def deckifyr_build() -> str:
+        deck = work / "deck"
+        py = exe["deckifyr_python"]
+        out = _out(
+            [py, "-I", "-m", "deckifyr", "--json", "build", deck / "presentation.yaml"]
+            + ["--trusted-binaries-only", "--rscript-bin", exe["rscript"]]
+            + ["--quarto-bin", exe["quarto"]],
+            env,
+            cwd=work,
+        )
+        doc = json.loads(out)
+        pptx = [a for a in doc.get("artifacts", []) if a.get("kind") == "pptx"]
+        if doc.get("status") != "ok" or not pptx:
+            raise RuntimeError(f"build status {doc.get('status')}: {out[-400:]}")
+        path = Path(pptx[0]["path"])
+        if path.read_bytes()[:2] != b"PK":
+            raise RuntimeError(f"{path.name} is not a PPTX")
+        return f"PPTX {path.stat().st_size} bytes"
+
     for name, fn in (
         ("launcher_import", launcher),
         ("tools_import", tools),
         ("r_packages", r_packages),
         ("quarto_version", quarto),
         ("deckifyr_validate", deckifyr_validate),
+        ("opnca_calculation", opnca_calc),
+        ("quarto_docx_render", quarto_docx),
+        ("deckifyr_build", deckifyr_build),
     ):
         _check(name, fn, results, log)
     shutil.rmtree(work, ignore_errors=True)
