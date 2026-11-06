@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- ADR 0007 records the templates and the identifiable-data policy (#3).
+  - v1 ships one generic NCA report (quartifyr 0.3.2 `examples/demo-report` and
+    `org-reference.docx`) and deckifyr's bundled default deck, with an auto-built "NCA
+    results" deck. Both templates ship with the install and are never fetched.
+  - The curator pre-selects all four artifact types.
+  - Coded subject IDs may appear in run bundles and published outputs, never in logs,
+    URLs, telemetry or diagnostic bundles.
+  - A likely direct-identifier column needs an explicit keep-or-exclude choice.
+  - Source files are copied into `source-data/` by default, with a reference-only
+    option.
 - Home page UI shell (#49, ADR 0006). The page is a static shell, plain ES modules and one
   stylesheet in `web/static/`, served from a `/static/` mount. No build step and no
   third-party code.
