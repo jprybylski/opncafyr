@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/recent-workspaces-v1",
+  "title": "Recently opened workspaces (app state dir, paths only)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "workspaces"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "workspaces": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "opened_at"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1, "description": "Absolute workspace root."},
+          "opened_at": {"type": "string", "format": "date-time"}
+        }
+      }
+    }
+  }
+}

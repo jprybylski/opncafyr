@@ -1,0 +1,155 @@
+"""Workspace selection API (#17).
+
+The folder comes from the native picker, which the controller runs (``core.picker``). The
+browser never names an arbitrary folder: inspect, init and open accept only a folder
+picked in this session or one on the recently-used list. Every POST also needs the
+session secret (``core.security``). Paths travel in JSON bodies, never in URLs.
+"""
+
+from __future__ import annotations
+
+import threading
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+import anyio.to_thread
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+from opncafyr import __version__
+from opncafyr.core.jobmanager import JobManager, JobManagerError
+from opncafyr.core.picker import PickerError, PickerUnavailable
+from opncafyr.core.workspace import (
+    MISSING,
+    RecentWorkspaces,
+    Workspace,
+    WorkspaceError,
+    init_workspace,
+    inspect_folder,
+    open_workspace,
+)
+
+PICK_PROMPT = "Choose or create a study folder"
+
+Picker = Callable[[str, Path | None], Path | None]
+
+
+class PathBody(BaseModel):
+    path: str
+
+
+class OpenBody(PathBody):
+    migrate: bool = False
+
+
+def _error(status: int, code: str, message: str) -> HTTPException:
+    return HTTPException(status_code=status, detail={"code": code, "message": message})
+
+
+def _canonical(path: str) -> str:
+    try:
+        return str(Path(path).resolve())
+    except (OSError, ValueError):
+        raise _error(400, "invalid_path", "That path can't be used.") from None
+
+
+def mount_workspace_api(app: FastAPI, picker: Picker, recent: RecentWorkspaces) -> None:
+    picker_lock = threading.Lock()
+    open_lock = threading.Lock()
+    picked: set[str] = set()
+
+    def approved(path: str) -> str:
+        canonical = _canonical(path)
+        if canonical not in picked and canonical not in recent.paths():
+            raise _error(403, "not_approved", "Choose this folder with the folder picker first.")
+        return canonical
+
+    def activate(workspace: Workspace) -> dict[str, Any]:
+        jobs: JobManager = app.state.jobs
+        try:
+            swept = jobs.open(workspace.root)
+        except JobManagerError as exc:
+            raise _error(409, "jobs_active", str(exc)) from None
+        app.state.workspace = workspace
+        recent.remember(workspace.root)
+        return {
+            "workspace": workspace.summary(),
+            "migrated_from": workspace.migrated_from,
+            "backups": [p.relative_to(workspace.root).as_posix() for p in workspace.backups],
+            "swept_jobs": swept,
+        }
+
+    def workspace_error(exc: WorkspaceError) -> HTTPException:
+        status = 409 if exc.code in ("needs_migration", "newer", "exists") else 400
+        if exc.code == "permission":
+            status = 403
+        return _error(status, exc.code, exc.message)
+
+    def check_jobs_idle() -> None:
+        jobs: JobManager = app.state.jobs
+        if jobs.active():
+            raise _error(409, "jobs_active", "Jobs are still running in the current workspace.")
+
+    @app.get("/api/workspace")
+    def current() -> dict[str, Any]:
+        ws: Workspace | None = app.state.workspace
+        return {
+            "workspace": ws.summary() if ws else None,
+            "recent": [
+                {
+                    "path": entry["path"],
+                    "name": Path(entry["path"]).name,
+                    "opened_at": entry["opened_at"],
+                    "available": Path(entry["path"]).is_dir(),
+                }
+                for entry in recent.load()
+            ],
+        }
+
+    @app.post("/api/workspace/pick")
+    async def pick() -> dict[str, Any]:
+        if not picker_lock.acquire(blocking=False):
+            raise _error(409, "picker_busy", "A folder picker is already open.")
+        try:
+            last = recent.paths()
+            start = Path(last[0]).parent if last else None
+            chosen = await anyio.to_thread.run_sync(picker, PICK_PROMPT, start)
+        except PickerUnavailable as exc:
+            raise _error(501, "picker_unavailable", str(exc)) from None
+        except PickerError as exc:
+            raise _error(500, "picker_failed", str(exc)) from None
+        finally:
+            picker_lock.release()
+        if chosen is None:
+            return {"cancelled": True, "folder": None}
+        info = inspect_folder(chosen)
+        if info.state != MISSING:
+            picked.add(info.path)
+        return {"cancelled": False, "folder": info.to_dict()}
+
+    @app.post("/api/workspace/inspect")
+    def inspect(body: PathBody) -> dict[str, Any]:
+        return {"folder": inspect_folder(approved(body.path)).to_dict()}
+
+    @app.post("/api/workspace/init")
+    def init(body: PathBody) -> dict[str, Any]:
+        path = approved(body.path)
+        with open_lock:
+            check_jobs_idle()
+            try:
+                workspace = init_workspace(path, __version__)
+            except WorkspaceError as exc:
+                raise workspace_error(exc) from None
+            return activate(workspace)
+
+    @app.post("/api/workspace/open")
+    def open_(body: OpenBody) -> dict[str, Any]:
+        path = approved(body.path)
+        with open_lock:
+            check_jobs_idle()
+            try:
+                workspace = open_workspace(path, allow_migrate=body.migrate)
+            except WorkspaceError as exc:
+                raise workspace_error(exc) from None
+            return activate(workspace)

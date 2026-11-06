@@ -7,6 +7,35 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Workspace selection (#17).
+  - `core/picker.py` shows the native folder dialog from the controller: AppleScript
+    `choose folder` on macOS, `FolderBrowserDialog` in Windows PowerShell. Both scripts
+    are fixed. The prompt and start folder reach them as argv or environment data. Both
+    dialogs can create a new folder.
+  - `core/workspace.py` adds `inspect_folder`, `init_workspace` and `open_workspace`.
+    - Inspecting shows the path, write permission, item count and state, and writes
+      nothing.
+    - Initializing creates only `.opncafyr/workspace.json`, which now records
+      `app_version`.
+    - A workspace with a newer schema is refused, with a message naming its version.
+  - The recently used list lives in the app state dir (`recent-workspaces-v1`, paths
+    only, at most 10).
+  - `core/migrations/` holds the ordered `vN → vN+1` steps. A migration runs only when the
+    user agrees, backs up to `.opncafyr/backups/` first, and must validate before it
+    replaces the file. A failed step leaves the original untouched. The first step
+    upgrades a synthetic schema 0.
+  - API:
+    - `GET /api/workspace`;
+    - `POST /api/workspace/pick`;
+    - `POST /api/workspace/inspect`;
+    - `POST /api/workspace/init`;
+    - `POST /api/workspace/open`.
+
+    The browser cannot name an arbitrary folder: only a folder picked in this session or
+    one on the recent list is accepted. Opening a workspace runs the job manager's sweep.
+    Switching while jobs run is refused.
+  - The home page has a minimal *Study folder* section. Manual test steps are in
+    `docs/testing/workspace-picker.md`.
 - Two-analyte scientific fixture (#20). `tests/fixtures/make_fixtures.py` is seeded and
   stdlib-only, and writes three files:
   - `two_analyte.csv`: PARENT and METAB on a shared subject × time grid;

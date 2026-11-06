@@ -9,14 +9,147 @@
     :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
     body { max-width: 48rem; margin: 3rem auto; padding: 0 1rem; line-height: 1.5; }
     .notice { border-left: 4px solid #c90; padding: .5rem 1rem; }
+    .panel { border: 1px solid #8884; border-radius: .5rem; padding: .75rem 1rem; margin: .75rem 0; }
+    .path { font-family: ui-monospace, monospace; word-break: break-all; }
+    .error { color: #c33; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: .5rem 0; }
+    dt { font-weight: 600; }
+    dd { margin: 0; }
+    button { font: inherit; padding: .35rem .9rem; margin-right: .5rem; }
+    ul.recent { padding-left: 1.2rem; }
   </style>
 </head>
 <body>
-  <h1>opncafyr</h1>
-  <p class="notice">Research use only. This workspace has not been validated for clinical or regulatory decisions.</p>
-  <p>The workspace home page is not built yet. Installed tools:</p>
-  <ul id="tools"><li>Loading…</li></ul>
+  <header>
+    <h1>opncafyr</h1>
+    <p class="notice">Research use only. This workspace has not been validated for clinical or regulatory decisions.</p>
+  </header>
+  <main>
+    <section aria-labelledby="ws-heading">
+      <h2 id="ws-heading">Study folder</h2>
+      <p id="ws-current">No study folder is open.</p>
+      <button type="button" id="ws-pick">Choose study folder…</button>
+      <div id="ws-folder" class="panel" hidden></div>
+      <p id="ws-status" role="status" aria-live="polite"></p>
+      <h3>Recent study folders</h3>
+      <ul id="ws-recent" class="recent"><li>None yet.</li></ul>
+    </section>
+    <section aria-labelledby="tools-heading">
+      <h2 id="tools-heading">Installed tools</h2>
+      <ul id="tools"><li>Loading…</li></ul>
+    </section>
+  </main>
   <script>
+    // Minimal workspace UI for #17. The full shell (ES modules, /static/) is #49.
+    const SESSION = document.querySelector('meta[name="opncafyr-session"]').content;
+    const $ = (id) => document.getElementById(id);
+    const el = (tag, text) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; return e; };
+
+    async function post(url, body) {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-opncafyr-session": SESSION },
+        body: JSON.stringify(body || {}),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const d = data.detail;
+        throw Object.assign(new Error(typeof d === "string" ? d : (d && d.message) || `Request failed (${r.status}).`), { code: d && d.code });
+      }
+      return data;
+    }
+
+    function status(text, isError) {
+      const s = $("ws-status");
+      s.textContent = text || "";
+      s.className = isError ? "error" : "";
+    }
+
+    function showCurrent(ws) {
+      const p = $("ws-current");
+      p.replaceChildren();
+      if (!ws) { p.textContent = "No study folder is open."; return; }
+      p.append("Open: ", el("strong", ws.name), " ", el("span", ws.path));
+      p.lastChild.className = "path";
+    }
+
+    function showFolder(folder) {
+      const box = $("ws-folder");
+      box.replaceChildren();
+      box.hidden = false;
+      const dl = el("dl");
+      const row = (k, v, cls) => { const dd = el("dd", v); if (cls) dd.className = cls; dl.append(el("dt", k), dd); };
+      row("Folder", folder.path, "path");
+      row("Can write here", folder.writable ? "Yes" : "No");
+      row("Items in folder", String(folder.entries));
+      if (folder.schema_version) row("Workspace format", `schema ${folder.schema_version}`);
+      box.append(dl, el("p", folder.message));
+      const actions = { new: "Create workspace here", incomplete: "Create workspace here",
+                        workspace: "Open workspace", needs_migration: "Upgrade (backup kept) and open" };
+      const label = actions[folder.state];
+      if (!label) return;
+      const b = el("button", label);
+      b.type = "button";
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        try {
+          const creating = folder.state === "new" || folder.state === "incomplete";
+          const res = creating
+            ? await post("api/workspace/init", { path: folder.path })
+            : await post("api/workspace/open", { path: folder.path, migrate: folder.state === "needs_migration" });
+          box.hidden = true;
+          let msg = `Opened ${res.workspace.name}.`;
+          if (res.migrated_from) msg += ` Upgraded from schema ${res.migrated_from}; the old file is in ${res.backups.join(", ")}.`;
+          if (res.swept_jobs.length) msg += ` ${res.swept_jobs.length} unfinished job(s) from an earlier session were marked failed.`;
+          status(msg);
+          await refresh();
+        } catch (e) {
+          status(e.message, true);
+          b.disabled = false;
+        }
+      });
+      box.append(b);
+    }
+
+    async function refresh() {
+      const d = await fetch("api/workspace").then(r => r.json());
+      showCurrent(d.workspace);
+      const ul = $("ws-recent");
+      if (!d.recent.length) { ul.replaceChildren(el("li", "None yet.")); return; }
+      ul.replaceChildren(...d.recent.map(r => {
+        const li = el("li");
+        const b = el("button", r.name);
+        b.type = "button";
+        b.disabled = !r.available;
+        b.addEventListener("click", async () => {
+          try { showFolder((await post("api/workspace/inspect", { path: r.path })).folder); status(""); }
+          catch (e) { status(e.message, true); }
+        });
+        const p = el("span", r.available ? r.path : `${r.path} (not found)`);
+        p.className = "path";
+        li.append(b, " ", p);
+        return li;
+      }));
+    }
+
+    $("ws-pick").addEventListener("click", async () => {
+      const b = $("ws-pick");
+      b.disabled = true;
+      status("Waiting for the folder picker…");
+      try {
+        const res = await post("api/workspace/pick");
+        if (res.cancelled) { status("No folder chosen."); return; }
+        status("");
+        showFolder(res.folder);
+      } catch (e) {
+        status(e.message, true);
+      } finally {
+        b.disabled = false;
+      }
+    });
+
+    refresh().catch(() => status("Could not load the workspace state.", true));
+
     fetch("api/tools").then(r => r.json()).then(d => {
       const ul = document.getElementById("tools");
       ul.replaceChildren(...d.tools.map(t => {

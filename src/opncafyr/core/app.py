@@ -3,7 +3,8 @@
 One origin serves the home page, the API and the proxied child apps under
 ``/apps/<tool>/``. The lifespan owns the child supervisor and the job manager: children
 and jobs are started by workflows and adapters, and all of them are stopped when the
-controller exits.
+controller exits. The user picks the study workspace through ``/api/workspace/*``
+(``core.workspace_api``); opening one points the job manager at it.
 """
 
 from __future__ import annotations
@@ -21,11 +22,14 @@ from fastapi.responses import HTMLResponse
 
 from opncafyr import __version__
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
+from opncafyr.core.picker import pick_folder
 from opncafyr.core.proxy import mount_proxy
 from opncafyr.core.registry import ToolDescriptor, load_descriptors, load_web_adapters
 from opncafyr.core.runtime import load_runtime
 from opncafyr.core.security import PROXY_PREFIX, LoopbackGuardMiddleware, SecurityConfig
 from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
+from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
+from opncafyr.core.workspace_api import Picker, mount_workspace_api
 from opncafyr.paths import logs_dir, state_dir
 
 SESSION_PLACEHOLDER = "{{OPNCAFYR_SESSION}}"
@@ -55,15 +59,18 @@ def create_app(
     request_shutdown: Callable[[], None] | None = None,
     supervisor: Supervisor | None = None,
     jobs: JobManager | None = None,
+    picker: Picker | None = None,
+    recent: RecentWorkspaces | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.tools = load_descriptors()
         sup = supervisor if supervisor is not None else build_supervisor(app.state.tools)
         app.state.supervisor = sup
-        # A workspace is opened later (#17), which runs the job sweep.
+        # Opening a workspace (/api/workspace/open) runs the job sweep.
         manager = jobs if jobs is not None else JobManager(runtime=load_runtime())
         app.state.jobs = manager
+        app.state.workspace = None
         # In case the server dies without running shutdown (atexit runs these in reverse).
         atexit.register(sup.stop_all)
         atexit.register(manager.shutdown)
@@ -162,5 +169,10 @@ def create_app(
         )
         return response
 
+    mount_workspace_api(
+        app,
+        picker=picker if picker is not None else pick_folder,
+        recent=recent if recent is not None else RecentWorkspaces(state_dir() / RECENT_FILE),
+    )
     mount_proxy(app)
     return app

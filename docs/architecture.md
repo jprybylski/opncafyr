@@ -54,7 +54,10 @@ and the API carry text written for a person.
    their ports are safe even though the browser can reach them directly. Child pages share
    the launcher's origin by design, so a child's own scripts are trusted like ours.
 3. **Controller ↔ workspace.** Every path goes through `core/workspace.resolve_in_root`.
-   Workspace files hold data and options only.
+   Workspace files hold data and options only. The workspace root itself comes from the
+   native picker the controller runs (`core/picker.py`): `/api/workspace/*` accepts only
+   a folder picked in this session or one on the recent list (paths only, in the app
+   state dir).
 4. **Controller ↔ tools.** Only installed descriptors are trusted; executables come from
    the pinned runtime record (`runtime-v1`, `core/runtime.py`); arguments are arrays
    (`core/proctree.py`); the environment is allow-listed; cwd and TMPDIR are
@@ -68,7 +71,9 @@ and the API carry text written for a person.
 Study folder/
   source-data/                  optional immutable copies or references
   .opncafyr/
-    workspace.json              schemas/workspace-v1
+    workspace.json              schemas/workspace-v1 (core/workspace.py, migrations in
+                                core/migrations/)
+    backups/                    copies made before a schema migration
     recipes/<recipe-id>.yaml    schemas/recipe-v1
     runs/<run-id>/
       input/source-fingerprint.json

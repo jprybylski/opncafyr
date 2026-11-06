@@ -8,6 +8,7 @@
   "properties": {
     "schema_version": {"const": "1.0"},
     "created_at": {"type": "string", "format": "date-time"},
+    "app_version": {"type": "string", "description": "opncafyr version that created the workspace."},
     "sources": {
       "type": "array",
       "items": {
