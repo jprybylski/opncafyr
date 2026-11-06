@@ -5,8 +5,11 @@
 schema_version = 1
 
 [platforms]
-# Decided in the Gate 0 platform-matrix decision issue.
-supported = ["TBD: windows-x86_64", "TBD: macos-arm64", "TBD: macos-x86_64"]
+# Decided in ADR 0003 (#1): Windows 11 x86_64, macOS arm64/x86_64, R 4.6.2. No arm64
+# Windows, no Windows 10, no native Linux (Linux only through the container, #42).
+supported = ["windows-x86_64", "macos-arm64", "macos-x86_64"]
+windows_min = "11"
+macos_min = "15"           # opnca-r 0.2.7 binaries target macOS 15; 13 once opnca-r#45 lands
 
 [uv]
 version = "TBD"
@@ -15,15 +18,15 @@ version = "TBD"
 version = "3.13"           # matches .python-version; uv-managed, app-owned
 
 [r]
-version = "TBD: 4.6.x"      # installed with `rig add --without-path --no-default`, per-user.
-                           # 4.6 because opnca-r 0.2.6 binaries are built for R 4.6.
+version = "4.6.2"          # ADR 0003. Installed with `rig add --without-path --no-default`,
+                           # per-user. opnca-r 0.2.7 binaries are built on R 4.6.2.
 renv_lock = "runtime/renv.lock"   # created in Gate 0
 
 [quarto]
 version = "TBD"
 
 [rust]
-# Only for source-build fallback when no platform binary exists for opnca-r.
+# Only for the repair/exception source build of the vendored tarball (ADR 0004).
 toolchain = "TBD (>= 1.87.0; Windows: x86_64-pc-windows-gnu + Rtools)"
 # 1.87.0 is opnca-r's declared MSRV but upstream CI only builds on stable (opnca-r #43):
 # pin a toolchain we test ourselves. Builds use the -vendored tarball (no crates.io).

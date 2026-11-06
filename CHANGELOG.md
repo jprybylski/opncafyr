@@ -14,6 +14,11 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- Recorded the v1 platform matrix (ADR 0003, #1): Windows 11 x86_64, macOS arm64/x86_64
+  (macOS 15 until opnca-r#45), R 4.6.2, a 30-minute configurable idle timeout and no
+  native Linux. Also recorded the opnca-r install path (ADR 0004, #4): prebuilt binaries,
+  with the vendored source tarball as the repair/exception fallback.
+  `runtime/pins.toml` now has the platform table and the R pin.
 - Reviewed the merged opnca-r (#23-#30, v0.2.6) and quartifyr (#69-#72) work against the
   issues we filed. `docs/upstream.md` now has a status column and the follow-ups
   (opnca-r #40-#43, quartifyr #75-#78). `docs/plan.md` risks are updated, and

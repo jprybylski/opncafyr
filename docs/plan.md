@@ -1,6 +1,6 @@
 # Plan of action
 
-**Updated:** 2026-11-04. **Repo:** jprybylski/opncafyr (private).
+**Updated:** 2026-11-06. **Repo:** jprybylski/opncafyr (private).
 **Spec:** [spec.md](spec.md). **Upstream changes:** [upstream.md](upstream.md).
 
 ## Goal
@@ -72,8 +72,8 @@ scheduled first.
   can `curl` uv and run `uv lock`/`uv sync`. opnca-r#23 (vendored crates) and
   quartifyr#72 (offline project setup) are done, and quartifyr#76 (offline-safe render)
   shipped in 0.3.2 as an opt-in `--offline` flag, which our adapter must always pass.
-- **Decisions #1–#4.** The owner needs representative, deidentified datasets and target
-  machines to decide these.
+- **Decisions #2 and #3.** The owner needs representative, deidentified datasets and
+  target machines to decide these. #1 and #4 are decided (ADR 0003, ADR 0004).
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
   already implements part of #9, #11 and #13. Each of those issues has a comment saying
   what is left.
@@ -81,7 +81,7 @@ scheduled first.
   deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
   [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7 and deckifyr#88–#91 in 0.3.5,
   so no opncafyr issue is blocked upstream. Next: #15/#16 (proxy slice), with owner
-  decisions #1, #2 and #4 in parallel.
+  decision #2 in parallel.
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
   CI and the Gate 2/3 integration tests a working runtime while the native install spikes
@@ -140,10 +140,10 @@ scheduled first.
 | Workspace metadata folder is `.opncafyr/`, with a versioned schema | Accepted | spec allowed a rename |
 | No reportifyr changes; sidecar validation lives in the launcher | Accepted | #30 |
 | Offline installation supported in v1 alongside the default online install (native and container) | **Accepted** (owner, 2026-11-04) | #1, #36, #44 |
-| Supported platforms, R minor, idle timeout | Open | #1 |
+| v1 matrix: Windows 11 x86_64, macOS arm64/x86_64 (macOS 15 until opnca-r#45), R 4.6.2; 30-min configurable idle timeout; no native Linux | **Accepted** (owner, 2026-11-06) | [ADR 0003](decisions/0003-platform-matrix.md), #1 |
 | Data conventions and warning-vs-blocking checks | Open | #2 |
 | Report/deck templates; identifiable-data policy | Open | #3 |
-| Binaries first vs. compiler-backed first install | Open (spec recommends binaries) | #4 |
+| opnca-r from prebuilt binaries; vendored source tarball only as a repair/exception fallback (option C) | **Accepted** (owner, 2026-11-06) | [ADR 0004](decisions/0004-opnca-r-binaries-with-vendored-fallback.md), #4 |
 | Home UI frontend stack | Open | #18 |
 | Cloud container mode in v1: supported environments, Docker vs Podman, storage types | Open | #42, #1 |
 | Redistributing image archives: audience, opncafyr license, GPL source obligations, PPM binaries | Open (needs legal) | #43 |
