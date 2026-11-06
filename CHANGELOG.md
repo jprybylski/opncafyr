@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Windows install spike (#6). `scripts/spikes/windows-install.ps1` installs the pinned
+  stack as a standard user on Windows 11, online or from local files, and runs opnca-r,
+  its server, a deck build and a report render. It passed with no elevation, no machine
+  changes and, offline, no connection attempts. Report: `docs/spikes/windows-install.md`.
 - Offline audit (#44). `docs/offline.md` lists every network touchpoint at install and
   run time with its resolution, including those found by the install spikes. A new
   `offline` CI job installs the whole stack from local files
