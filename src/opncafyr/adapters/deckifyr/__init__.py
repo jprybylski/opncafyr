@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from opncafyr.core.adapter import ChildView, LaunchContext, LaunchSpec
+from opncafyr.core.adapter import ChildActivity, ChildView, LaunchContext, LaunchSpec
 from opncafyr.core.supervisor import LaunchError
 
 API_TOKEN_HEADER = "X-Deckifyr-Api-Token"  # noqa: S105 - a name, not a secret
@@ -80,9 +80,19 @@ class DeckifyrWebApp:
             raise LaunchError(f"deckifyr could not load the project ({code}).")
         return bool(health.get("project_loaded"))
 
+    def activity(self, child: ChildView, client: httpx.Client) -> ChildActivity:
+        resp = client.get(child.context.base_url + "api/health")
+        resp.raise_for_status()
+        health = resp.json()
+        # A health reply without the flag can't promise the edits are saved.
+        return ChildActivity(
+            unsaved=bool(health.get("dirty", True)),
+            busy=int(health.get("active_jobs") or 0) > 0,
+        )
+
     def stop(self, child: ChildView, client: httpx.Client) -> None:
-        # Save rather than lose unsaved edits when the launcher exits. #14 adds the
-        # refuse-then-ask flow for an explicit Quit.
+        # By the time the launcher stops, the lifecycle has asked the user about unsaved
+        # edits (#14), so save anything edited since rather than lose it.
         client.post(
             child.context.base_url + "api/shutdown",
             headers=child.spec.auth_headers,

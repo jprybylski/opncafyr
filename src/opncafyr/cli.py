@@ -15,9 +15,18 @@ from pathlib import Path
 
 from opncafyr import __version__
 from opncafyr.core.instance import CLAIM_WAIT, claim, clear_record, write_record
+from opncafyr.core.lifecycle import (
+    MAX_IDLE_MINUTES,
+    MIN_IDLE_MINUTES,
+    SETTINGS_FILE,
+    LifecycleConfig,
+    Settings,
+    minutes_to_seconds,
+)
 from opncafyr.paths import app_root, state_dir
 
 LOOPBACK = "127.0.0.1"
+_SAVED = object()  # --idle-timeout not given: use the saved setting
 
 
 def _bind_loopback(port: int) -> socket.socket:
@@ -47,6 +56,7 @@ def run_controller(
     port: int = 0,
     open_browser: bool = True,
     claim_wait: float = CLAIM_WAIT,
+    lifecycle: LifecycleConfig | None = None,
 ) -> int:
     """Start the controller, or reopen the one already running for this user."""
     import uvicorn
@@ -76,7 +86,13 @@ def run_controller(
             if server is not None:
                 server.should_exit = True
 
-        app = create_app(security, request_shutdown=request_shutdown, instance_id=instance_id)
+        app = create_app(
+            security,
+            request_shutdown=request_shutdown,
+            instance_id=instance_id,
+            lifecycle=lifecycle,
+            settings=Settings(state / SETTINGS_FILE),
+        )
         server = uvicorn.Server(uvicorn.Config(app, log_level="info"))
 
         url = f"http://{LOOPBACK}:{port}/"
@@ -91,8 +107,32 @@ def run_controller(
     return 0
 
 
+def _idle_minutes(value: str) -> int | None:
+    if value.lower() == "off":
+        return None
+    try:
+        minutes = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("use a number of minutes or 'off'") from None
+    if not MIN_IDLE_MINUTES <= minutes <= MAX_IDLE_MINUTES:
+        raise argparse.ArgumentTypeError(
+            f"use {MIN_IDLE_MINUTES} to {MAX_IDLE_MINUTES} minutes, or 'off'"
+        )
+    return minutes
+
+
 def cmd_launch(args: argparse.Namespace) -> int:
-    return run_controller(state=state_dir(), port=args.port, open_browser=not args.no_browser)
+    lifecycle = None
+    if args.idle_timeout is not _SAVED:
+        lifecycle = LifecycleConfig(
+            override_idle=True, idle_timeout_s=minutes_to_seconds(args.idle_timeout)
+        )
+    return run_controller(
+        state=state_dir(),
+        port=args.port,
+        open_browser=not args.no_browser,
+        lifecycle=lifecycle,
+    )
 
 
 def cmd_doctor(_: argparse.Namespace) -> int:
@@ -118,6 +158,14 @@ def build_parser() -> argparse.ArgumentParser:
     launch = sub.add_parser("launch", help="Start the local workspace controller.")
     launch.add_argument("--port", type=int, default=0, help="Loopback port (0 = ephemeral).")
     launch.add_argument("--no-browser", action="store_true", help="Do not open a browser.")
+    launch.add_argument(
+        "--idle-timeout",
+        type=_idle_minutes,
+        default=_SAVED,
+        metavar="MINUTES|off",
+        help="Stop after this many idle minutes, for this launch only "
+        "(default: the saved setting, 30 minutes unless changed).",
+    )
     launch.set_defaults(func=cmd_launch)
 
     doctor = sub.add_parser("doctor", help="Report paths and tool availability.")

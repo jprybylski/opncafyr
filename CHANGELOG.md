@@ -7,6 +7,28 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Launcher lifecycle (#14). `core/lifecycle.py` decides when the launcher stops.
+  - The home page sends a heartbeat every 15 s while it is visible
+    (`POST /api/session/heartbeat`). Closing the tab sends a best-effort `leave` with
+    `fetch(..., {keepalive: true})`; it is only a hint.
+  - **Idle shutdown** after 30 minutes by default (ADR 0003) with no visible page, no
+    live job and no child reporting unsaved edits or busy work. The home page sets it
+    (5 minutes to 2 hours, or never) and it is saved in `state/settings.json`
+    (`settings-v1`). `opncafyr launch --idle-timeout MINUTES|off` overrides it for one
+    launch.
+  - **Quit application** (`POST /api/quit`).
+    - Live jobs: the default keeps them running, refuses new jobs and stops when they
+      finish. `{"jobs": "cancel"}` cancels them. The page asks first, and *Keep the app
+      open* (`POST /api/quit/abort`) withdraws a pending quit.
+    - Unsaved edits: the quit is refused (409 `needs_choice`) until the user saves in
+      the editor or chooses *Save and quit* (`{"unsaved": "save"}`).
+  - Stop order: refuse new jobs, stop the children, close the listener, clear the state
+    record.
+  - Web-app adapters can report `activity()` (`ChildActivity`: unsaved, busy). deckifyr
+    reads `dirty` and `active_jobs` from its `api/health`. A probe that fails counts as
+    unsaved, so it never lets the launcher stop on its own.
+  - `GET /api/lifecycle` reports pages, live jobs, unsaved and busy tools, the timeout
+    and the time left before an idle stop.
 - Single-instance launcher (#10). `core/instance.py` holds an OS lock on
   `state/instance.lock` (`flock` on macOS/Linux, `msvcrt.locking` on Windows) for the
   life of the launcher and writes `state/instance.json` (`instance-v1`: pid, pid start
@@ -87,7 +109,7 @@ All notable changes to this project are documented here. The format follows
     tree, and does not promote their staging.
   - `GET /api/jobs`, `GET /api/jobs/{id}?after=N` and `POST /api/jobs/{id}/cancel`.
     Jobs are submitted only from trusted Python code. Stopping the controller cancels
-    running jobs (#14 adds keep-running).
+    running jobs; since #14 an explicit Quit keeps them running by default.
   - `proctree.kill_recorded_tree()`.
   - `OwnedProcess.kill_tree()` no longer walks a pid that has already been reaped.
 - Proxy compatibility harness (#16) in `tests/integration/proxy/`, run with

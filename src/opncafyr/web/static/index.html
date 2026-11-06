@@ -17,6 +17,9 @@
     dd { margin: 0; }
     button { font: inherit; padding: .35rem .9rem; margin-right: .5rem; }
     ul.recent { padding-left: 1.2rem; }
+    dialog { max-width: 32rem; border: 1px solid #8888; border-radius: .5rem; }
+    dialog form { display: flex; flex-wrap: wrap; gap: .5rem; }
+    dialog form button { margin: 0; }
   </style>
 </head>
 <body>
@@ -38,23 +41,58 @@
       <h2 id="tools-heading">Installed tools</h2>
       <ul id="tools"><li>Loading…</li></ul>
     </section>
+    <section aria-labelledby="app-heading">
+      <h2 id="app-heading">Application</h2>
+      <p>
+        <label for="idle">Close automatically when unused for</label>
+        <select id="idle">
+          <option value="5">5 minutes</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="120">2 hours</option>
+          <option value="off">Never</option>
+        </select>
+      </p>
+      <p>It never closes while a job is running or an editor has unsaved changes.</p>
+      <p id="app-status" role="status" aria-live="polite"></p>
+      <button type="button" id="quit">Quit application</button>
+      <button type="button" id="keep-open" hidden>Keep the app open</button>
+    </section>
   </main>
+  <dialog id="jobs-dialog" aria-labelledby="jobs-title">
+    <h2 id="jobs-title">Jobs are still running</h2>
+    <p id="jobs-text"></p>
+    <form method="dialog">
+      <button value="keep" autofocus>Keep running and quit when finished</button>
+      <button value="cancel">Cancel jobs and quit</button>
+      <button value="stay">Don't quit</button>
+    </form>
+  </dialog>
+  <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
+    <h2 id="unsaved-title">Unsaved changes</h2>
+    <p id="unsaved-text"></p>
+    <form method="dialog">
+      <button value="stay" autofocus>Go back and save</button>
+      <button value="save">Save and quit</button>
+    </form>
+  </dialog>
   <script>
     // Minimal workspace UI for #17. The full shell (ES modules, /static/) is #49.
     const SESSION = document.querySelector('meta[name="opncafyr-session"]').content;
     const $ = (id) => document.getElementById(id);
     const el = (tag, text) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; return e; };
 
-    async function post(url, body) {
+    async function post(url, body, method = "POST") {
       const r = await fetch(url, {
-        method: "POST",
+        method,
         headers: { "content-type": "application/json", "x-opncafyr-session": SESSION },
         body: JSON.stringify(body || {}),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         const d = data.detail;
-        throw Object.assign(new Error(typeof d === "string" ? d : (d && d.message) || `Request failed (${r.status}).`), { code: d && d.code });
+        throw Object.assign(new Error(typeof d === "string" ? d : (d && d.message) || `Request failed (${r.status}).`), { code: d && d.code, tools: d && d.tools });
       }
       return data;
     }
@@ -149,6 +187,138 @@
     });
 
     refresh().catch(() => status("Could not load the workspace state.", true));
+
+    // --- Lifecycle (#14): heartbeats while visible, Quit, auto-close setting. ---
+    const PAGE_ID = (self.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)).replace(/[^A-Za-z0-9_-]/g, "");
+    let stopped = false;
+
+    function beat() {
+      if (stopped || document.visibilityState !== "visible") return;
+      post("api/session/heartbeat", { page_id: PAGE_ID }).catch(() => {});
+    }
+    setInterval(beat, 15000);
+    document.addEventListener("visibilitychange", beat);
+    window.addEventListener("pageshow", beat);
+    // A hint only: page-unload events are unreliable, so the idle timer doesn't rely on it.
+    window.addEventListener("pagehide", () => {
+      try {
+        fetch("api/session/leave", {
+          method: "POST",
+          keepalive: true,
+          headers: { "content-type": "application/json", "x-opncafyr-session": SESSION },
+          body: JSON.stringify({ page_id: PAGE_ID }),
+        }).catch(() => {});
+      } catch (e) { /* ignore */ }
+    });
+    beat();
+
+    function appStatus(text, isError) {
+      const s = $("app-status");
+      s.textContent = text || "";
+      s.className = isError ? "error" : "";
+    }
+
+    function showStopped() {
+      stopped = true;
+      $("quit").disabled = true;
+      $("idle").disabled = true;
+      $("keep-open").hidden = true;
+      appStatus("opncafyr has stopped. You can close this tab.");
+    }
+
+    function ask(dialog) {
+      return new Promise((resolve) => {
+        dialog.returnValue = "";
+        dialog.addEventListener("close", () => resolve(dialog.returnValue || "stay"), { once: true });
+        dialog.showModal();
+      });
+    }
+
+    async function lifecycle() {
+      return fetch("api/lifecycle").then(r => r.json());
+    }
+
+    let pendingTimer = null;
+    function watchPendingQuit() {
+      clearInterval(pendingTimer);
+      pendingTimer = setInterval(async () => {
+        try {
+          const st = await lifecycle();
+          if (!st.quit_pending && !st.stopping) { clearInterval(pendingTimer); return; }
+          if (st.jobs) appStatus(`Quitting when ${st.jobs} job(s) finish.`);
+        } catch (e) {
+          clearInterval(pendingTimer);
+          showStopped();
+        }
+      }, 5000);
+    }
+
+    async function quit(jobs, unsaved) {
+      try {
+        const res = await post("api/quit", { jobs, unsaved });
+        if (res.status === "stopping_after_jobs") {
+          const n = res.jobs || 0;
+          appStatus(n ? `Quitting when ${n} job(s) finish. New jobs can't be started.` : "Quitting when the running work finishes.");
+          $("keep-open").hidden = false;
+          watchPendingQuit();
+        } else {
+          showStopped();
+        }
+      } catch (e) {
+        if (e.code !== "needs_choice") { appStatus(e.message, true); return; }
+        $("unsaved-text").textContent = `There are unsaved changes in: ${(e.tools || []).join(", ") || "an editor"}. Go back and save them, or save them now and quit.`;
+        if (await ask($("unsaved-dialog")) === "save") await quit(jobs, "save");
+      }
+    }
+
+    $("quit").addEventListener("click", async () => {
+      appStatus("");
+      let jobs = "keep";
+      try {
+        const st = await lifecycle();
+        if (st.jobs || st.busy.length) {
+          const parts = [];
+          if (st.jobs) parts.push(`${st.jobs} job(s) are still running`);
+          if (st.busy.length) parts.push(`${st.busy.join(", ")} is still working`);
+          $("jobs-text").textContent = `${parts.join(" and ")}. You can keep them running and quit when they finish, or cancel them and quit now.`;
+          jobs = await ask($("jobs-dialog"));
+          if (jobs === "stay") return;
+        }
+      } catch (e) {
+        appStatus("Could not read the application state.", true);
+        return;
+      }
+      await quit(jobs, "refuse");
+    });
+
+    $("keep-open").addEventListener("click", async () => {
+      try {
+        await post("api/quit/abort");
+        clearInterval(pendingTimer);
+        $("keep-open").hidden = true;
+        appStatus("The app stays open.");
+      } catch (e) {
+        appStatus(e.message, true);
+      }
+    });
+
+    lifecycle().then(st => {
+      const sel = $("idle");
+      const value = st.idle_timeout_minutes === null ? "off" : String(st.idle_timeout_minutes);
+      if (![...sel.options].some(o => o.value === value)) sel.append(new Option(`${value} minutes`, value));
+      sel.value = value;
+      if (st.quit_pending) { $("keep-open").hidden = false; appStatus("Quitting when the running jobs finish."); watchPendingQuit(); }
+    }).catch(() => {});
+
+    $("idle").addEventListener("change", async (ev) => {
+      const v = ev.target.value;
+      try {
+        await post("api/settings", { idle_timeout_minutes: v === "off" ? null : Number(v) }, "PUT");
+        appStatus(v === "off" ? "The app will stay open until you quit it." : "Saved.");
+      } catch (e) {
+        appStatus(e.message, true);
+      }
+    });
 
     fetch("api/tools").then(r => r.json()).then(d => {
       const ul = document.getElementById("tools");

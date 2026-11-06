@@ -38,7 +38,11 @@ a passing review. Opening a workspace marks jobs left behind by a dead launcher 
 and kills their recorded process tree. The single-instance lock (`core/instance.py`) is an
 OS file lock in the app state dir, plus a state record (`instance-v1`) naming the port and
 instance id; a second launch reopens the browser on the healthy instance and never kills
-a process because a record names it. Raw output stays in the job's log files; messages
+a process because a record names it. The lifecycle (`core/lifecycle.py`) stops the
+launcher after the idle timeout only when no page has sent a visible heartbeat, no job is
+live and no child reports unsaved edits or busy work (an optional adapter `activity()`
+hook). An explicit Quit keeps live jobs running by default and asks before saving
+unsaved edits. Raw output stays in the job's log files; messages
 and the API carry text written for a person.
 
 ## Trust boundaries

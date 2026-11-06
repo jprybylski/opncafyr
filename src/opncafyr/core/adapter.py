@@ -131,3 +131,21 @@ class WebAppAdapter(Protocol):
     def is_ready(self, child: ChildView, client: httpx.Client) -> bool: ...
 
     def stop(self, child: ChildView, client: httpx.Client) -> None: ...
+
+
+@dataclass(frozen=True)
+class ChildActivity:
+    """What a running child reports about work that stopping it could disturb."""
+
+    unsaved: bool  # in-memory edits not yet on disk: blocks idle shutdown
+    busy: bool  # work in progress inside the child (e.g. a deck build)
+
+
+@runtime_checkable
+class SupportsActivity(Protocol):
+    """Optional for web-app adapters: report unsaved edits and busy work (#14).
+
+    A child whose adapter lacks this is treated as never unsaved and never busy.
+    """
+
+    def activity(self, child: ChildView, client: httpx.Client) -> ChildActivity: ...

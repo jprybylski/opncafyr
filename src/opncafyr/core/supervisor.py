@@ -32,7 +32,13 @@ from typing import IO, Any
 
 import httpx
 
-from opncafyr.core.adapter import LaunchContext, LaunchSpec, WebAppAdapter
+from opncafyr.core.adapter import (
+    ChildActivity,
+    LaunchContext,
+    LaunchSpec,
+    SupportsActivity,
+    WebAppAdapter,
+)
 from opncafyr.core.proctree import OwnedProcess, child_env, free_loopback_port, spawn
 from opncafyr.core.runtime import Runtime
 
@@ -132,6 +138,28 @@ class Supervisor:
 
     def can_restart(self, tool: str) -> bool:
         return tool in self._sessions
+
+    def activity(self) -> dict[str, ChildActivity]:
+        """Unsaved/busy state of each running child whose adapter can report it.
+
+        A probe that fails reports ``unsaved``: a child we can't ask may hold unsaved
+        edits, so it must not let the launcher stop on its own.
+        """
+        out: dict[str, ChildActivity] = {}
+        for tool in self.tools:
+            child = self.get(tool)
+            adapter = self.apps[tool].adapter
+            if child is None or child.state is not ChildState.RUNNING:
+                continue
+            if not isinstance(adapter, SupportsActivity):
+                continue
+            try:
+                with httpx.Client(timeout=2.0) as client:
+                    out[tool] = adapter.activity(child, client)
+            except Exception as exc:  # noqa: BLE001 - any failure means "unknown"
+                log.warning("%s activity probe failed: %s", tool, type(exc).__name__)
+                out[tool] = ChildActivity(unsaved=True, busy=False)
+        return out
 
     # --- lifecycle -------------------------------------------------------------------
 

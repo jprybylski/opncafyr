@@ -15,6 +15,7 @@ SCHEMAS = [
     "runtime-v1",
     "job-v1",
     "instance-v1",
+    "settings-v1",
 ]
 SHA = "0" * 64
 

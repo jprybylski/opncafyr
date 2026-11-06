@@ -288,6 +288,10 @@ class JobManager:
         with self._lock:
             return any(job.state not in TERMINAL_STATES for job in self._jobs.values())
 
+    def active_count(self) -> int:
+        with self._lock:
+            return sum(job.state not in TERMINAL_STATES for job in self._jobs.values())
+
     def list(self) -> list[dict[str, Any]]:
         with self._lock:
             jobs = sorted(self._jobs.values(), key=lambda j: j.record["created_at"], reverse=True)
@@ -396,8 +400,21 @@ class JobManager:
                 return job.state
             time.sleep(0.05)
 
+    def stop_accepting(self) -> None:
+        """Refuse new jobs. Queued and running ones carry on (Quit after jobs, #14)."""
+        with self._lock:
+            self._accepting = False
+
+    def resume_accepting(self) -> None:
+        with self._lock:
+            self._accepting = True
+
     def shutdown(self, timeout: float = 30.0) -> None:
-        """Stop accepting jobs and cancel every live one. #14 adds keep-running on Quit."""
+        """Stop accepting jobs and cancel every live one.
+
+        The lifecycle (``core/lifecycle.py``) only stops the launcher with no live jobs,
+        or after the user chose to cancel them, so this cancel is the backstop.
+        """
         with self._lock:
             self._accepting = False
             live = [j for j in self._jobs.values() if j.state not in TERMINAL_STATES]

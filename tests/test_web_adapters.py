@@ -7,7 +7,7 @@ import pytest
 
 from opncafyr.adapters.deckifyr import DeckifyrWebApp
 from opncafyr.adapters.opnca import MAX_UPLOAD_BYTES, OpncaWebApp
-from opncafyr.core.adapter import LaunchContext
+from opncafyr.core.adapter import ChildActivity, LaunchContext, SupportsActivity
 from opncafyr.core.registry import load_descriptors, load_web_adapters
 from opncafyr.core.runtime import Runtime
 from opncafyr.core.supervisor import LaunchError
@@ -189,3 +189,28 @@ def test_deckifyr_ready_checks_project_loaded(tmp_path, runtime):
     assert not adapter.is_ready(child, client({"project_loaded": False}))
     with pytest.raises(LaunchError):
         adapter.is_ready(child, client({"project_loaded": False, "project_error": {"code": "E"}}))
+
+
+def test_deckifyr_reports_unsaved_edits_and_busy_jobs(tmp_path, runtime):
+    project = tmp_path / "deck"
+    project.mkdir()
+    ctx = _ctx(tmp_path, runtime, "deckifyr", "/apps/deckifyr/")
+    child = _Child(ctx, DeckifyrWebApp().launch(ctx, {"project": str(project)}))
+
+    def client(doc, status=200):
+        return httpx.Client(
+            transport=httpx.MockTransport(lambda r: httpx.Response(status, json=doc))
+        )
+
+    adapter = DeckifyrWebApp()
+    assert isinstance(adapter, SupportsActivity)
+    assert adapter.activity(child, client({"dirty": False, "active_jobs": 0})) == ChildActivity(
+        unsaved=False, busy=False
+    )
+    assert adapter.activity(child, client({"dirty": True, "active_jobs": 2})) == ChildActivity(
+        unsaved=True, busy=True
+    )
+    # No dirty flag: it can't promise the edits are saved.
+    assert adapter.activity(child, client({"active_jobs": 0})).unsaved is True
+    with pytest.raises(httpx.HTTPStatusError):
+        adapter.activity(child, client({}, status=500))

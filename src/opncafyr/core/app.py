@@ -3,26 +3,42 @@
 One origin serves the home page, the API and the proxied child apps under
 ``/apps/<tool>/``. The lifespan owns the child supervisor and the job manager: children
 and jobs are started by workflows and adapters, and all of them are stopped when the
-controller exits. The user picks the study workspace through ``/api/workspace/*``
-(``core.workspace_api``); opening one points the job manager at it.
+controller exits. The lifespan also runs the lifecycle monitor (``core.lifecycle``): page
+heartbeats, idle shutdown and the explicit Quit flow. The user picks the study workspace
+through ``/api/workspace/*`` (``core.workspace_api``); opening one points the job manager
+at it.
 """
 
 from __future__ import annotations
 
+import asyncio
 import atexit
+import contextlib
+import logging
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from html import escape
 from importlib import resources
+from typing import Literal
 
 import anyio.to_thread
 import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
 
 from opncafyr import __version__
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
+from opncafyr.core.lifecycle import (
+    MAX_IDLE_MINUTES,
+    MIN_IDLE_MINUTES,
+    SETTINGS_FILE,
+    Lifecycle,
+    LifecycleConfig,
+    Settings,
+    minutes_to_seconds,
+)
 from opncafyr.core.picker import pick_folder
 from opncafyr.core.proxy import mount_proxy
 from opncafyr.core.registry import ToolDescriptor, load_descriptors, load_web_adapters
@@ -33,11 +49,36 @@ from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
 from opncafyr.core.workspace_api import Picker, mount_workspace_api
 from opncafyr.paths import logs_dir, state_dir
 
+log = logging.getLogger(__name__)
+
 SESSION_PLACEHOLDER = "{{OPNCAFYR_SESSION}}"
 
 # Children may take a while to answer (an NCA calculation, a deck build request), but a
 # connection to a local child either opens at once or not at all.
 PROXY_TIMEOUT = httpx.Timeout(connect=5.0, read=300.0, write=300.0, pool=10.0)
+
+
+class PageBody(BaseModel):
+    page_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
+
+
+class QuitBody(BaseModel):
+    # The spec's default: keep live jobs running and stop once they finish.
+    jobs: Literal["keep", "cancel"] = "keep"
+    unsaved: Literal["refuse", "save"] = "refuse"
+
+
+class SettingsBody(BaseModel):
+    idle_timeout_minutes: int | None = Field(ge=MIN_IDLE_MINUTES, le=MAX_IDLE_MINUTES)
+
+
+async def _monitor(lifecycle: Lifecycle, tick_s: float) -> None:
+    while not lifecycle.stopped.is_set():
+        await asyncio.sleep(tick_s)
+        try:
+            await anyio.to_thread.run_sync(lifecycle.check)
+        except Exception:
+            log.exception("Lifecycle check failed")
 
 
 def build_supervisor(tools: dict[str, ToolDescriptor]) -> Supervisor:
@@ -63,9 +104,12 @@ def create_app(
     picker: Picker | None = None,
     recent: RecentWorkspaces | None = None,
     instance_id: str | None = None,
+    lifecycle: LifecycleConfig | None = None,
+    settings: Settings | None = None,
 ) -> FastAPI:
     # Lets a second launch confirm that /health on the recorded port is this instance.
     instance_id = instance_id or uuid.uuid4().hex
+    lifecycle_config = lifecycle or LifecycleConfig()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -76,14 +120,33 @@ def create_app(
         manager = jobs if jobs is not None else JobManager(runtime=load_runtime())
         app.state.jobs = manager
         app.state.workspace = None
+        store = settings if settings is not None else Settings(state_dir() / SETTINGS_FILE)
+        app.state.settings = store
+        if lifecycle_config.override_idle:
+            idle_s = lifecycle_config.idle_timeout_s
+        else:
+            idle_s = minutes_to_seconds(store.idle_timeout_minutes())
+        life = Lifecycle(
+            jobs=manager,
+            activity=sup.activity,
+            stop_children=sup.stop_all,
+            request_shutdown=request_shutdown or (lambda: None),
+            idle_timeout_s=idle_s,
+            heartbeat_window_s=lifecycle_config.heartbeat_window_s,
+        )
+        app.state.lifecycle = life
         # In case the server dies without running shutdown (atexit runs these in reverse).
         atexit.register(sup.stop_all)
         atexit.register(manager.shutdown)
         async with httpx.AsyncClient(timeout=PROXY_TIMEOUT, follow_redirects=False) as client:
             app.state.proxy_client = client
+            monitor = asyncio.create_task(_monitor(life, lifecycle_config.tick_s))
             try:
                 yield
             finally:
+                monitor.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await monitor
                 await anyio.to_thread.run_sync(manager.shutdown)
                 await anyio.to_thread.run_sync(sup.stop_all)
                 atexit.unregister(manager.shutdown)
@@ -149,12 +212,51 @@ def create_app(
         job_manager().cancel(job_id)
         return {"job": job_manager().get(job_id)}
 
+    def lifecycle_of() -> Lifecycle:
+        return app.state.lifecycle
+
+    @app.post("/api/session/heartbeat")
+    def heartbeat(body: PageBody) -> dict[str, bool]:
+        lifecycle_of().heartbeat(body.page_id)
+        return {"ok": True}
+
+    @app.post("/api/session/leave")
+    def leave(body: PageBody) -> dict[str, bool]:
+        lifecycle_of().leave(body.page_id)
+        return {"ok": True}
+
+    @app.get("/api/lifecycle")
+    def lifecycle_status() -> dict[str, object]:
+        return lifecycle_of().status()
+
+    @app.put("/api/settings")
+    def put_settings(body: SettingsBody) -> dict[str, object]:
+        app.state.settings.set_idle_timeout_minutes(body.idle_timeout_minutes)
+        lifecycle_of().idle_timeout_s = minutes_to_seconds(body.idle_timeout_minutes)
+        return {"idle_timeout_minutes": body.idle_timeout_minutes}
+
     @app.post("/api/quit")
-    def quit_app() -> dict[str, str]:
-        # Gate 1 adds the "keep running jobs vs cancel" prompt and unsaved-editor checks.
-        if request_shutdown is not None:
-            request_shutdown()
-        return {"status": "stopping"}
+    def quit_app(body: QuitBody | None = None) -> dict[str, object]:
+        choice = body or QuitBody()
+        result = lifecycle_of().request_quit(jobs=choice.jobs, unsaved=choice.unsaved)
+        if result.status == "needs_choice":
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "needs_choice",
+                    "message": "There are unsaved changes. Save them in the editor, "
+                    "or choose Save and quit.",
+                    "reasons": result.reasons,
+                    "tools": result.tools,
+                },
+            )
+        return {"status": result.status, "jobs": result.jobs, "busy": result.tools}
+
+    @app.post("/api/quit/abort")
+    def abort_quit() -> dict[str, bool]:
+        if not lifecycle_of().abort_quit():
+            raise HTTPException(status_code=409, detail="The launcher is already stopping.")
+        return {"ok": True}
 
     @app.get("/", response_class=HTMLResponse)
     def home() -> HTMLResponse:
