@@ -1,6 +1,6 @@
 """Owned process trees: argv-only spawn, an allow-listed environment, and tree kill.
 
-Every child the launcher starts (web apps now, jobs in #12) goes through this module:
+Every child the launcher starts (web apps and jobs) goes through this module:
 
 - ``argv`` is a list whose first item is an absolute path from the pinned runtime. There is
   no shell, ever.
@@ -137,17 +137,19 @@ class OwnedProcess:
         ``known`` are descendants seen earlier (for example just before an orderly stop).
         Once their parent exits they are reparented and can't be found by walking the
         tree, so they are killed explicitly. psutil checks each process's start time, so a
-        reused pid is never killed.
+        reused pid is never killed. Once the child has exited and been reaped its pid may
+        belong to another process, so only ``known`` is walked then.
         """
+        exited = self.popen.poll() is not None
         if IS_WINDOWS:
-            procs = [*self.descendants(), *known]
+            procs = [*([] if exited else self.descendants()), *known]
             if self._job is not None:
                 self._job.terminate()
             _kill_all(procs)
-            if self.popen.poll() is None:
+            if not exited:
                 self.popen.kill()
         else:
-            procs = _freeze_tree(self.pid, extra=known)
+            procs = _freeze_tree(None if exited else self.pid, extra=known)
             with contextlib.suppress(ProcessLookupError, PermissionError):
                 os.killpg(self.pid, signal.SIGKILL)  # start_new_session: pgid == pid
             _kill_all(procs)
@@ -166,13 +168,14 @@ def _kill_all(procs: Iterable[psutil.Process]) -> None:
 
 
 def _freeze_tree(
-    root_pid: int, rounds: int = 10, extra: Iterable[psutil.Process] = ()
+    root_pid: int | None, rounds: int = 10, extra: Iterable[psutil.Process] = ()
 ) -> list[psutil.Process]:
     """SIGSTOP the root, ``extra`` and all their descendants until no new ones appear."""
     seen: dict[int, psutil.Process] = {}
     roots = [p for p in extra if p.is_running()]
-    with contextlib.suppress(psutil.Error):
-        roots.insert(0, psutil.Process(root_pid))
+    if root_pid is not None:
+        with contextlib.suppress(psutil.Error):
+            roots.insert(0, psutil.Process(root_pid))
     for _ in range(rounds):
         current: list[psutil.Process] = []
         for root in roots:
@@ -187,6 +190,33 @@ def _freeze_tree(
             with contextlib.suppress(psutil.Error):
                 proc.suspend()
     return list(seen.values())
+
+
+def kill_recorded_tree(pid: int, create_time: float, timeout: float = 10.0) -> bool:
+    """Kill a tree that an earlier launcher started and recorded, if it is still running.
+
+    ``create_time`` is the psutil start time recorded at spawn. A pid now held by a
+    different process is left alone. Returns True if the recorded process was found.
+    A grandchild whose parent has already exited can't be found from here; on Windows the
+    Job Object killed the whole tree when the old launcher's handle closed.
+    """
+    try:
+        proc = psutil.Process(pid)
+        if abs(proc.create_time() - create_time) > 0.5:
+            return False
+    except psutil.Error:
+        return False
+    if IS_WINDOWS:
+        procs = [proc]
+        with contextlib.suppress(psutil.Error):
+            procs.extend(proc.children(recursive=True))
+    else:
+        procs = _freeze_tree(pid)
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(pid, signal.SIGKILL)  # started with start_new_session: pgid == pid
+    _kill_all(procs)
+    psutil.wait_procs(procs, timeout=timeout)
+    return True
 
 
 def spawn(
@@ -321,6 +351,7 @@ __all__ = [
     "OwnedProcess",
     "child_env",
     "free_loopback_port",
+    "kill_recorded_tree",
     "spawn",
     "system_path_dirs",
 ]

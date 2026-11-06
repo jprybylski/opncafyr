@@ -31,7 +31,12 @@ launcher (uvicorn, 127.0.0.1:<ephemeral>)
 
 The controller owns child lifetimes (FastAPI lifespan), the single-instance lock, idle
 shutdown and the job state machine `queued → preparing → running → reviewing →
-completed` (+ `failed`, `cancelled`).
+completed` (+ `failed`, `cancelled`). The job manager (`core/jobmanager.py`) runs each job
+on a worker thread with a required timeout and a per-pool concurrency limit (default 1).
+Outputs go to `<target>.staging/` and are renamed into place only after a clean exit and
+a passing review. Opening a workspace marks jobs left behind by a dead launcher `failed`
+and kills their recorded process tree. Raw output stays in the job's log files; messages
+and the API carry text written for a person.
 
 ## Trust boundaries
 
@@ -72,6 +77,8 @@ Study folder/
       settings.json  analysis-record.json  results/  artifacts/  logs/
       manifest.json             schemas/run-manifest-v1
     publications/<id>.json      schemas/publication-v1
+    jobs/<job-id>/              schemas/job-v1 state.json, events.jsonl, stdout/stderr
+                                logs, diagnostic.json (core/jobmanager.py)
   OUTPUTS/{figures,tables}/     reportifyr-compatible copies + *_metadata.json sidecars
   report/                       quartifyr / Quarto project
   deck/                         deckifyr project

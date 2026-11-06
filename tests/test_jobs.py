@@ -38,3 +38,25 @@ def test_cannot_skip_review():
 
 def test_only_completed_publishes():
     assert [s for s in JobState if can_publish(s)] == [JobState.COMPLETED]
+
+
+# Every allowed transition; all other pairs (including self-transitions) are forbidden.
+ALLOWED = {
+    "queued": {"preparing", "failed", "cancelled"},
+    "preparing": {"running", "failed", "cancelled"},
+    "running": {"reviewing", "failed", "cancelled"},
+    "reviewing": {"completed", "failed", "cancelled"},
+    "completed": set(),
+    "failed": set(),
+    "cancelled": set(),
+}
+
+
+@pytest.mark.parametrize("current", list(JobState))
+@pytest.mark.parametrize("new", list(JobState))
+def test_transition_matrix(current, new):
+    if new.value in ALLOWED[current.value]:
+        assert transition(current, new) is new
+    else:
+        with pytest.raises(JobStateError):
+            transition(current, new)

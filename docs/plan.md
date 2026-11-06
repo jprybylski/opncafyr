@@ -76,7 +76,9 @@ scheduled first.
   target machines to decide these. #1 and #4 are decided (ADR 0003, ADR 0004).
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
   already implements part of #9, #11 and #13. Each of those issues has a comment saying
-  what is left.
+  what is left. The job manager (#12) is done. The run, status and cancel methods of
+  `core.adapter.Adapter` will move onto `JobRequest` when the first job adapter lands
+  (#22, #32).
 - **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and
   deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
   [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7 and deckifyr#88–#91 in 0.3.5,

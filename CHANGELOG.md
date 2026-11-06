@@ -7,6 +7,23 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Job manager (#12) in `core/jobmanager.py`.
+  - Each job lives in `.opncafyr/jobs/<job-id>/`:
+    - `state.json` (new schema `job-v1`, written atomically);
+    - `events.jsonl` (messages written for a person);
+    - `stdout.log` and `stderr.log`;
+    - `diagnostic.json` when the job fails or is cancelled.
+  - Every job must set a timeout. Each pool has a concurrency limit, default 1.
+  - Outputs are written to `<target>.staging/`. They are renamed into place only after a
+    clean exit and a passing review, and an existing target is never replaced.
+  - Cancel kills the whole process tree.
+  - Opening a workspace marks jobs left by a dead launcher `failed`, kills their recorded
+    tree, and does not promote their staging.
+  - `GET /api/jobs`, `GET /api/jobs/{id}?after=N` and `POST /api/jobs/{id}/cancel`.
+    Jobs are submitted only from trusted Python code. Stopping the controller cancels
+    running jobs (#14 adds keep-running).
+  - `proctree.kill_recorded_tree()`.
+  - `OwnedProcess.kill_tree()` no longer walks a pid that has already been reaped.
 - Proxy compatibility harness (#16) in `tests/integration/proxy/`, run with
   `pytest -m integration`. It runs opnca-r 0.2.7 and deckifyr 0.3.5 from their pinned
   releases behind the proxy and checks:

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/job-v1",
+  "title": "Job state (.opncafyr/jobs/<job-id>/state.json)",
+  "description": "Written atomically by the job manager. Holds no command output and no row data; raw output stays in the job's log files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "job_id", "kind", "label", "pool", "state", "message", "created_at", "updated_at", "timeout_s"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "job_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{6}$"},
+    "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]*$"},
+    "label": {"type": "string", "minLength": 1},
+    "pool": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "state": {"enum": ["queued", "preparing", "running", "reviewing", "completed", "failed", "cancelled"]},
+    "message": {"type": "string", "description": "Written for a person; never raw stderr."},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "started_at": {"type": ["string", "null"], "format": "date-time"},
+    "finished_at": {"type": ["string", "null"], "format": "date-time"},
+    "timeout_s": {"type": "number", "exclusiveMinimum": 0},
+    "output": {"type": ["string", "null"], "description": "Target directory, relative to the workspace root."},
+    "pid": {"type": ["integer", "null"]},
+    "pid_create_time": {"type": ["number", "null"]},
+    "exit_code": {"type": ["integer", "null"]},
+    "reason": {
+      "type": ["string", "null"],
+      "enum": [null, "exit_code", "timeout", "cancelled", "review_failed", "prepare_failed", "spawn_failed", "promote_failed", "launcher_stopped", "launcher_restarted", "internal_error"]
+    }
+  }
+}

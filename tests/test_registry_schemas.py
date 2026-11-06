@@ -13,6 +13,7 @@ SCHEMAS = [
     "publication-v1",
     "recipe-v1",
     "runtime-v1",
+    "job-v1",
 ]
 SHA = "0" * 64
 

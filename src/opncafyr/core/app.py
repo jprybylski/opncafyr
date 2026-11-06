@@ -1,8 +1,9 @@
 """FastAPI application factory for the loopback controller.
 
 One origin serves the home page, the API and the proxied child apps under
-``/apps/<tool>/``. The lifespan owns the child supervisor: children are started on
-demand by workflows and adapters, and all of them are stopped when the controller exits.
+``/apps/<tool>/``. The lifespan owns the child supervisor and the job manager: children
+and jobs are started by workflows and adapters, and all of them are stopped when the
+controller exits.
 """
 
 from __future__ import annotations
@@ -15,10 +16,11 @@ from importlib import resources
 
 import anyio.to_thread
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
 from opncafyr import __version__
+from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
 from opncafyr.core.proxy import mount_proxy
 from opncafyr.core.registry import ToolDescriptor, load_descriptors, load_web_adapters
 from opncafyr.core.runtime import load_runtime
@@ -52,19 +54,27 @@ def create_app(
     security: SecurityConfig,
     request_shutdown: Callable[[], None] | None = None,
     supervisor: Supervisor | None = None,
+    jobs: JobManager | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.tools = load_descriptors()
         sup = supervisor if supervisor is not None else build_supervisor(app.state.tools)
         app.state.supervisor = sup
-        atexit.register(sup.stop_all)  # in case the server dies without running shutdown
+        # A workspace is opened later (#17), which runs the job sweep.
+        manager = jobs if jobs is not None else JobManager(runtime=load_runtime())
+        app.state.jobs = manager
+        # In case the server dies without running shutdown (atexit runs these in reverse).
+        atexit.register(sup.stop_all)
+        atexit.register(manager.shutdown)
         async with httpx.AsyncClient(timeout=PROXY_TIMEOUT, follow_redirects=False) as client:
             app.state.proxy_client = client
             try:
                 yield
             finally:
+                await anyio.to_thread.run_sync(manager.shutdown)
                 await anyio.to_thread.run_sync(sup.stop_all)
+                atexit.unregister(manager.shutdown)
                 atexit.unregister(sup.stop_all)
 
     app = FastAPI(
@@ -99,6 +109,33 @@ def create_app(
                 for tool in sup.tools
             ]
         }
+
+    def job_manager() -> JobManager:
+        return app.state.jobs
+
+    def checked_job(job_id: str) -> dict[str, object]:
+        if not JOB_ID_RE.match(job_id):
+            raise HTTPException(status_code=404, detail="Unknown job.")
+        try:
+            return job_manager().get(job_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="Unknown job.") from None
+
+    @app.get("/api/jobs")
+    def list_jobs() -> dict[str, object]:
+        manager = job_manager()
+        return {"workspace_open": manager.workspace is not None, "jobs": manager.list()}
+
+    @app.get("/api/jobs/{job_id}")
+    def get_job(job_id: str, after: int = Query(default=0, ge=0)) -> dict[str, object]:
+        job = checked_job(job_id)
+        return {"job": job, "events": job_manager().events(job_id, after=after)}
+
+    @app.post("/api/jobs/{job_id}/cancel")
+    def cancel_job(job_id: str) -> dict[str, object]:
+        checked_job(job_id)
+        job_manager().cancel(job_id)
+        return {"job": job_manager().get(job_id)}
 
     @app.post("/api/quit")
     def quit_app() -> dict[str, str]:
