@@ -16,7 +16,11 @@ def security() -> SecurityConfig:
 def client(security: SecurityConfig):
     calls: list[str] = []
     app = create_app(security, request_shutdown=lambda: calls.append("quit"))
-    with TestClient(app, base_url=f"http://127.0.0.1:{PORT}") as c:
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{PORT}",
+        cookies={security.cookie_name: security.secret},
+    ) as c:
         c.shutdown_calls = calls
         c.session_headers = {SESSION_HEADER: security.secret}
         yield c

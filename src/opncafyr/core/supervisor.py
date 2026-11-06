@@ -40,6 +40,7 @@ from opncafyr.core.adapter import (
     WebAppAdapter,
 )
 from opncafyr.core.proctree import OwnedProcess, child_env, free_loopback_port, spawn
+from opncafyr.core.redaction import REDACTOR, Redactor
 from opncafyr.core.runtime import Runtime
 
 log = logging.getLogger(__name__)
@@ -103,8 +104,10 @@ class Supervisor:
         stop_grace: float = 10.0,
         port_attempts: int = 3,
         port_picker: Callable[[], int] = free_loopback_port,
+        redactor: Redactor = REDACTOR,
     ) -> None:
         self.apps = dict(apps)
+        self.redactor = redactor
         self.runtime = runtime
         self.state_root = Path(state_root)
         self.log_root = Path(log_root)
@@ -260,7 +263,10 @@ class Supervisor:
             max_body_bytes=app.max_body_bytes,
         )
         reader = threading.Thread(
-            target=_pump_output, args=(child,), name=f"{tool}-output", daemon=True
+            target=_pump_output,
+            args=(child, self.redactor),
+            name=f"{tool}-output",
+            daemon=True,
         )
         child._reader = reader
         reader.start()
@@ -301,8 +307,11 @@ class Supervisor:
             time.sleep(0.2)
 
 
-def _pump_output(child: Child) -> None:
-    """Copy the child's merged stdout/stderr to its log and catch the ready line."""
+def _pump_output(child: Child, redactor: Redactor) -> None:
+    """Copy the child's merged stdout/stderr to its log, redacted, and catch the ready line.
+
+    The ready line is read from the raw output; only the log file sees redacted text.
+    """
     stream: IO[bytes] | None = child.proc.popen.stdout
     if stream is None:
         return
@@ -310,7 +319,7 @@ def _pump_output(child: Child) -> None:
     with child.log_path.open("ab") as out:
         out.write(f"--- start {child.tool} pid {child.pid} port {child.context.port}\n".encode())
         for raw in iter(stream.readline, b""):
-            out.write(raw)
+            out.write(redactor.redact_bytes(raw))
             out.flush()
             if prefix and child.ready_line is None:
                 line = raw.decode("utf-8", "replace").strip()

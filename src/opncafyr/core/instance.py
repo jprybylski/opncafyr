@@ -6,8 +6,8 @@ A second icon click reopens the healthy running launcher instead of starting ano
   launcher. The OS drops it when the process dies, so a crash never leaves it held.
 - The **state record** ``<state>/instance.json`` (schema ``instance-v1``) says where the
   running launcher listens: pid, pid start time, port, instance id, start time and
-  version. It holds no session secret: the home page hands the secret to same-origin
-  pages, so reopening the browser needs only the URL. ``atomic_write_json`` writes it
+  version. It holds no session secret: a launch that reopens the browser mints a one-time
+  ``/open`` link instead (``core.bootstrap``). ``atomic_write_json`` writes it
   through ``mkstemp``, so on POSIX it is readable by the user only (0600).
 
 A launch that finds the lock held probes ``/health`` on the recorded port and checks the

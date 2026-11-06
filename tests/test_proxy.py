@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from opncafyr.core.app import create_app
+from opncafyr.core.bootstrap import mint_open_token
 from opncafyr.core.security import SESSION_HEADER, SecurityConfig
 from opncafyr.core.supervisor import ChildState
 from toy_adapter import TOKEN_HEADER, toy_supervisor
@@ -16,8 +17,9 @@ ORIGIN = f"http://127.0.0.1:{PORT}"
 def env(tmp_path):
     security = SecurityConfig(port=PORT)
     sup, _ = toy_supervisor(tmp_path)
-    app = create_app(security, supervisor=sup)
+    app = create_app(security, supervisor=sup, open_tokens=tmp_path / "tokens")
     with TestClient(app, base_url=ORIGIN, follow_redirects=False) as client:
+        client.tokens = tmp_path / "tokens"
         client.cookie = {"cookie": f"{security.cookie_name}={security.secret}"}
         client.sup = sup
         client.security = security
@@ -31,13 +33,16 @@ def running(env):
     return env
 
 
-def test_home_sets_the_session_cookie(env):
-    resp = env.get("/")
+def test_open_sets_the_session_cookie_for_the_whole_origin(env):
+    resp = env.get(f"/open?token={mint_open_token(env.tokens)}")
+    assert resp.status_code == 303 and resp.headers["location"] == "/"
     cookie = resp.headers["set-cookie"]
     assert cookie.startswith(f"{env.security.cookie_name}={env.security.secret};")
     attrs = {a.strip().lower() for a in cookie.split(";")[1:]}
-    assert {"httponly", "path=/apps/", "samesite=strict"} <= attrs
+    assert {"httponly", "path=/", "samesite=strict"} <= attrs
     assert resp.headers["cache-control"] == "no-store"
+    home = env.get("/", headers=env.cookie)
+    assert home.status_code == 200 and "set-cookie" not in home.headers
 
 
 def test_missing_slash_redirects(running):
@@ -179,5 +184,5 @@ def test_crash_shows_502_with_restart(running):
 
 
 def test_api_apps_reports_state(running):
-    apps = running.get("/api/apps").json()["apps"]
+    apps = running.get("/api/apps", headers=running.cookie).json()["apps"]
     assert apps == [{"id": "toy", "route": "/apps/toy/", "state": "running"}]

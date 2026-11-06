@@ -1,16 +1,20 @@
 """Loopback security boundary for the controller.
 
 The local URL is still a security boundary (docs/spec.md, "One local origin owns every app").
-This module enforces:
+Other processes on this machine, including other users' on a shared host, and any web page
+the user visits can reach 127.0.0.1. This module enforces:
 
 - Host header must be the loopback authority we bound to (blocks DNS rebinding).
-- State-changing requests must carry the per-launch session secret (blocks CSRF) and,
-  when the browser sends an Origin, it must be our own origin.
-- Proxied child apps under ``/apps/`` can't send a custom header from navigations and
-  asset loads, so there the secret travels in an ``HttpOnly; SameSite=Strict;
-  Path=/apps/`` cookie (accepted on #15). Every request needs it, ``Sec-Fetch-Site``
-  must be ``same-origin`` or ``none`` (any other loopback port counts as same-site), and
-  state-changing requests need our own ``Origin``.
+- When a browser sends an Origin, it must be our own origin.
+- Every request except ``/health`` and ``/open`` must carry the per-launch session cookie
+  (``HttpOnly; SameSite=Strict; Path=/``, named after the port). The browser gets it only
+  from ``/open`` with a one-time token (``core.bootstrap``), so the home page, its secret
+  and the API are closed to anyone who can merely connect.
+- ``Sec-Fetch-Site``, when sent, must be ``same-origin`` or ``none``. Any other loopback
+  port counts as same-site, so ``same-site`` is refused too.
+- State-changing requests also need the session secret in the ``x-opncafyr-session``
+  header (the home page reads it from a meta tag). Proxied child apps under ``/apps/``
+  can't send a custom header, so there they need our own ``Origin`` instead.
 - No CORS headers are ever added, so other origins cannot read responses.
 """
 
@@ -23,6 +27,8 @@ from dataclasses import dataclass, field
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 SESSION_HEADER = "x-opncafyr-session"
+# Open without the cookie: the instance probe and the one-time token exchange.
+PUBLIC_PATHS = frozenset({"/health", "/open"})
 SESSION_COOKIE_PREFIX = "opncafyr_session_"
 PROXY_PREFIX = "/apps/"
 ALLOWED_FETCH_SITES = frozenset({"same-origin", "none"})
@@ -84,27 +90,38 @@ class LoopbackGuardMiddleware:
 
         method = scope.get("method", "GET")
         state_changing = scope["type"] == "websocket" or method not in SAFE_METHODS
+        path = scope.get("path", "")
 
-        if scope.get("path", "").startswith(PROXY_PREFIX):
-            cookie = parse_cookies(headers.get("cookie", "")).get(self.config.cookie_name)
-            if not self.config.secret_matches(cookie):
-                await _reject(scope, receive, send, 403, "Missing or invalid session cookie.")
-                return
-            site = headers.get("sec-fetch-site")
-            if site is not None and site not in ALLOWED_FETCH_SITES:
+        if path in PUBLIC_PATHS and scope["type"] == "http" and not state_changing:
+            if path != "/health" and not _fetch_site_ok(headers):
                 await _reject(scope, receive, send, 403, "Cross-site request rejected.")
-                return
-            if state_changing and origin is None:
-                await _reject(scope, receive, send, 403, "Missing Origin header.")
                 return
             await self.app(scope, receive, send)
             return
 
-        if state_changing and not self.config.secret_matches(headers.get(SESSION_HEADER)):
+        if not _fetch_site_ok(headers):
+            await _reject(scope, receive, send, 403, "Cross-site request rejected.")
+            return
+
+        cookie = parse_cookies(headers.get("cookie", "")).get(self.config.cookie_name)
+        if not self.config.secret_matches(cookie):
+            await _reject(scope, receive, send, 403, "Missing or invalid session cookie.")
+            return
+
+        if path.startswith(PROXY_PREFIX):
+            if state_changing and origin is None:
+                await _reject(scope, receive, send, 403, "Missing Origin header.")
+                return
+        elif state_changing and not self.config.secret_matches(headers.get(SESSION_HEADER)):
             await _reject(scope, receive, send, 403, "Missing or invalid session token.")
             return
 
         await self.app(scope, receive, send)
+
+
+def _fetch_site_ok(headers: dict[str, str]) -> bool:
+    site = headers.get("sec-fetch-site")
+    return site is None or site in ALLOWED_FETCH_SITES
 
 
 def parse_cookies(header: str) -> dict[str, str]:
@@ -117,19 +134,43 @@ def parse_cookies(header: str) -> dict[str, str]:
     return cookies
 
 
+# Shown when a page is opened without a valid session (an old tab, a copied URL, a used
+# token). It carries no secret and no data.
+REOPEN_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>opncafyr</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body><main><h1>Open opncafyr from its shortcut</h1>
+<p>This page is not connected to a running opncafyr session. It may be from an earlier
+session, or the link was already used.</p>
+<p>Open opncafyr again from its desktop shortcut (or run <code>opncafyr launch</code>).
+If opncafyr is still running, this reopens it.</p></main></body></html>
+"""
+
+
+def reopen_page_headers() -> list[tuple[bytes, bytes]]:
+    return [
+        (b"content-type", b"text/html; charset=utf-8"),
+        (b"cache-control", b"no-store"),
+        (b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'"),
+        (b"referrer-policy", b"no-referrer"),
+    ]
+
+
 async def _reject(scope: Scope, receive: Receive, send: Send, status: int, detail: str) -> None:
     if scope["type"] == "websocket":
         await send({"type": "websocket.close", "code": 1008})
         return
-    body = ('{"detail":"' + detail + '"}').encode()
+    if scope.get("path") == "/" and scope.get("method") in ("GET", "HEAD") and status == 403:
+        body = REOPEN_PAGE.encode()
+        headers = reopen_page_headers()
+    else:
+        body = ('{"detail":"' + detail + '"}').encode()
+        headers = [(b"content-type", b"application/json")]
     await send(
         {
             "type": "http.response.start",
             "status": status,
-            "headers": [
-                (b"content-type", b"application/json"),
-                (b"content-length", str(len(body)).encode()),
-            ],
+            "headers": [*headers, (b"content-length", str(len(body)).encode())],
         }
     )
     await send({"type": "http.response.body", "body": body})

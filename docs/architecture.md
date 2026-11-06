@@ -68,18 +68,31 @@ and the API carry text written for a person.
 
 ## Trust boundaries
 
-1. **Browser ↔ controller.** Host must be our loopback authority; state-changing requests
-   need the per-launch session secret and a same-origin `Origin`. No CORS. Implemented in
-   `core/security.py`. The home page (ADR 0006) is static HTML, ES modules and one CSS
+1. **Browser ↔ controller.** Anyone on the machine can connect to 127.0.0.1, including
+   other users on a shared host and any web page the user visits. Implemented in
+   `core/security.py` and `core/bootstrap.py`:
+   - Host must be our loopback authority (400 otherwise); a browser-sent `Origin` must be
+     ours; `Sec-Fetch-Site`, when sent, must be `same-origin` or `none`. No CORS.
+   - Every request except `/health` and `/open` needs the per-launch session cookie
+     (`HttpOnly; SameSite=Strict; Path=/`, named after the port). A process that can
+     merely connect gets neither the home page, its secret, nor any API data.
+   - The browser gets the cookie only from `/open?token=…`. The launcher, and a second
+     launch that reopens it, mint a one-time token: its SHA-256 is a file name in
+     `state/open-tokens/` (user-only), valid for 120 s and consumed by the first use.
+     `/open` sets the cookie and redirects to `/`. A page without a session shows
+     "Open opncafyr from its shortcut". The secret is never in a URL, a file or
+     `instance.json`.
+   - State-changing requests also need the secret in `x-opncafyr-session` (the home page
+     reads it from a meta tag). Under `/apps/`, where child pages can't add a header,
+     they need our `Origin` instead.
+
+   The home page (ADR 0006) is static HTML, ES modules and one CSS
    file in `web/static/`, served under `/static/`; `/` sends a `self`-only
    Content-Security-Policy, so the page runs no inline script and requests nothing from
    another origin. Its data comes from JSON APIs (`/api/tools`, `/api/apps`, `/api/jobs`,
    `/api/workspace/artifacts`, a read-only runs and publications listing in
    `core/artifacts.py`), and its `api.js` adds the session header to every
-   state-changing request. Under `/apps/` the secret is a `HttpOnly; SameSite=Strict;
-   Path=/apps/` cookie named after the port, required on every request, with
-   `Sec-Fetch-Site` limited to `same-origin`/`none` and our `Origin` on state-changing
-   requests.
+   state-changing request.
 2. **Controller ↔ child apps.** Each child listens on its own loopback port with a
    per-child API token (`core/supervisor.py`). The proxy (`core/proxy.py`) rewrites
    `Host` to the child's port, drops `Origin`, `Referer`, `Cookie` and the session header,
@@ -93,11 +106,19 @@ and the API carry text written for a person.
    a folder picked in this session or one on the recent list (paths only, in the app
    state dir).
 4. **Controller ↔ tools.** Only installed descriptors are trusted; executables come from
-   the pinned runtime record (`runtime-v1`, `core/runtime.py`); arguments are arrays
-   (`core/proctree.py`); the environment is allow-listed; cwd and TMPDIR are
-   launcher-owned. Children never see the session secret.
-5. **Machine ↔ network.** No dataset leaves the machine by default. Logs and diagnostic
-   bundles are redacted of subject-level values.
+   the pinned runtime record (`runtime-v1`, `core/runtime.py`). Every process starts
+   through `proctree.spawn`: an argv list whose first item is an absolute runtime path,
+   never a shell, with an allow-listed environment and a launcher-owned cwd and TMPDIR.
+   A boundary test allows `subprocess` only in `core/proctree.py` and `core/picker.py`
+   (fixed system dialogs) and forbids `shell=True`, `os.system`/`popen`/`exec*`/`spawn*`
+   and `asyncio.create_subprocess_*`. Children never see the session secret.
+5. **Machine ↔ network.** No dataset leaves the machine by default. Subject IDs and other
+   cell values never reach a log (ADR 0007): `core/redaction.py` filters every launcher
+   log record (table-like arguments become a row count; registered identifier values
+   and `token=` query values become `‹redacted›`) and every line of child output copied
+   into `logs/children/`. Workflows register identifier values when they read a dataset.
+   Job logs stay in the study workspace with the run; the diagnostic bundle (#38) must
+   redact them.
 
 ## Workspace contract
 

@@ -49,6 +49,7 @@ def main() -> int:
     parser.add_argument("--grandchild", action="store_true")
     parser.add_argument("--fail-first", help="Exit 3 once if this marker file is missing.")
     parser.add_argument("--never-ready", action="store_true")
+    parser.add_argument("--say", action="append", default=[], help="Print this line at start.")
     args = parser.parse_args()
 
     if args.fail_first and not Path(args.fail_first).exists():
@@ -133,6 +134,8 @@ def main() -> int:
             [sys.executable, "-c", "import time; time.sleep(600)"], **kwargs
         ).pid
     ready = {"url": f"http://127.0.0.1:{port}{base}", "pid": os.getpid(), "grandchild": grandchild}
+    for line in args.say:
+        print(line, flush=True)
     print("TOY_READY " + json.dumps(ready), flush=True)
     print("toy env keys: " + ",".join(sorted(os.environ)), flush=True)
     server.serve_forever()

@@ -11,9 +11,11 @@ import time
 import urllib.request
 import uuid
 import webbrowser
+from collections.abc import Callable
 from pathlib import Path
 
 from opncafyr import __version__
+from opncafyr.core.bootstrap import mint_open_token, open_url, tokens_dir
 from opncafyr.core.instance import CLAIM_WAIT, claim, clear_record, write_record
 from opncafyr.core.lifecycle import (
     MAX_IDLE_MINUTES,
@@ -47,13 +49,20 @@ def _bind_loopback(port: int) -> socket.socket:
     return sock
 
 
-def _open_when_healthy(url: str, timeout: float = 15.0) -> None:
+def _open_when_healthy(
+    url: str, timeout: float = 15.0, target: Callable[[], str] | None = None
+) -> None:
+    """Open the browser once ``url`` answers ``/health``.
+
+    ``target`` makes the URL to open (a fresh one-time ``/open`` link) only at that moment,
+    so the token's lifetime starts when the browser is about to use it.
+    """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
             with urllib.request.urlopen(f"{url}health", timeout=1) as resp:  # noqa: S310
                 if resp.status == 200:
-                    webbrowser.open(url)
+                    webbrowser.open(target() if target is not None else url)
                     return
         except OSError:
             time.sleep(0.2)
@@ -86,11 +95,12 @@ def run_controller(
         print(exc, file=sys.stderr)
         return 1
 
+    tokens = tokens_dir(state)
     claimed = claim(state, wait=claim_wait)
     if claimed.url is not None:
         print(f"opncafyr is already running at {claimed.url}", file=sys.stderr)
         if open_browser:
-            webbrowser.open(claimed.url)
+            webbrowser.open(open_url(claimed.url, mint_open_token(tokens)))
         return 0
     if claimed.lock is None:
         print(claimed.error, file=sys.stderr)
@@ -117,6 +127,7 @@ def run_controller(
             lifecycle=lifecycle,
             settings=Settings(state / SETTINGS_FILE),
             tools=tools,
+            open_tokens=tokens,
         )
         # log_config=None: uvicorn's loggers reach the root handlers set up above.
         server = uvicorn.Server(uvicorn.Config(app, log_level="info", log_config=None))
@@ -124,8 +135,19 @@ def run_controller(
         url = f"http://{LOOPBACK}:{port}/"
         write_record(state, instance_id=instance_id, port=port)
         print(f"opncafyr {__version__} listening on {url}", file=sys.stderr)
-        if open_browser:
-            threading.Thread(target=_open_when_healthy, args=(url,), daemon=True).start()
+        if not open_browser:
+            print(
+                "Run `opncafyr launch` again to open it in a browser "
+                "(the page needs a one-time link).",
+                file=sys.stderr,
+            )
+        else:
+            threading.Thread(
+                target=_open_when_healthy,
+                args=(url,),
+                kwargs={"target": lambda: open_url(url, mint_open_token(tokens))},
+                daemon=True,
+            ).start()
         server.run(sockets=[sock])
     finally:
         clear_record(state, instance_id)

@@ -39,6 +39,8 @@ class ToyAdapter:
             argv += ["--fail-first", str(session["fail_first"])]
         if session.get("never_ready"):
             argv.append("--never-ready")
+        for line in session.get("say", ()):
+            argv.append(f"--say={line}")
         env = {"TOY_TOKEN": ctx.token, **session.get("env", {})}
         return LaunchSpec(
             argv=argv,

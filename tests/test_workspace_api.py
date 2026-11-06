@@ -60,7 +60,11 @@ def study(tmp_path):
 
 def _client(security, jobs, recent, picker):
     app = create_app(security, jobs=jobs, picker=picker, recent=recent)
-    client = TestClient(app, base_url=f"http://127.0.0.1:{security.port}")
+    client = TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    )
     client.headers[SESSION_HEADER] = security.secret
     return client
 

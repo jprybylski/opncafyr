@@ -32,7 +32,6 @@ import os
 import re
 import secrets
 import shutil
-import subprocess  # noqa: S404 - argv arrays only, through proctree.spawn
 import threading
 import time
 from collections.abc import Callable, Mapping
@@ -45,7 +44,7 @@ import psutil
 
 from opncafyr.core.jobs import TERMINAL_STATES, JobState, transition
 from opncafyr.core.manifest import atomic_write_json, validate
-from opncafyr.core.proctree import OwnedProcess, child_env, kill_recorded_tree, spawn
+from opncafyr.core.proctree import PIPE, OwnedProcess, child_env, kill_recorded_tree, spawn
 from opncafyr.core.runtime import Runtime, RuntimeUnavailable
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
 from opncafyr.paths import WORKSPACE_META_DIR
@@ -596,7 +595,7 @@ class JobManager:
         env = child_env({**spec.env, "TMPDIR": tmp, "TMP": tmp, "TEMP": tmp}, spec.path_dirs)
         with (job.dir / "stderr.log").open("ab") as err:
             try:
-                proc = spawn(spec.argv, env=env, cwd=ctx.cwd, stdout=subprocess.PIPE, stderr=err)
+                proc = spawn(spec.argv, env=env, cwd=ctx.cwd, stdout=PIPE, stderr=err)
             except (OSError, ValueError) as exc:
                 log.error("job %s could not start: %s", job.id, type(exc).__name__)
                 raise _Stop(

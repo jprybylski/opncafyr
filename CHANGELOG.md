@@ -7,6 +7,27 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Local-origin hardening finished (#11).
+  - The browser gets the session cookie only from a one-time link: the launcher (and a
+    second launch that reopens it) opens `/open?token=…`. The token is stored as a
+    SHA-256 file name in `state/open-tokens/`, lives 120 s, and works once; `/open`
+    sets the cookie and redirects to `/`.
+  - The cookie (`HttpOnly; SameSite=Strict`) now covers the whole origin, not only
+    `/apps/`. Every request except `/health` and `/open` needs it, so another process
+    or user on the machine can no longer read the home page, its secret or the API.
+    `Sec-Fetch-Site` is checked everywhere. A page without a session explains how to
+    reopen opncafyr.
+  - `core/redaction.py`: launcher log records and child-app output in
+    `logs/children/` are redacted of registered identifier values and `token=` query
+    values; table-like log arguments become a row count. Workflows register values
+    when they read a dataset (#21, #25).
+  - The boundary test now allows `subprocess` only in `core/proctree.py` and
+    `core/picker.py`, and forbids `os.exec*`/`spawn*`/`startfile`, `pty` and
+    `asyncio.create_subprocess_*` as well as `shell=True` and `os.system`/`popen`.
+  - Tests: missing or invalid cookie or secret → 403, foreign Host → 400, cross-site
+    Origin or `Sec-Fetch-Site` → 403, no `Access-Control-*` header on any response,
+    more path-escape forms, and subject IDs from the two-analyte fixture never reaching
+    the launcher log or a child log.
 - Controller core finished (#9).
   - `launch --host` accepts only `127.0.0.1` and exits with an error for anything else,
     `::1` included.

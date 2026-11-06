@@ -14,6 +14,7 @@ import uvicorn
 
 from opncafyr.cli import _bind_loopback
 from opncafyr.core.app import create_app
+from opncafyr.core.bootstrap import mint_open_token, open_url
 from opncafyr.core.registry import load_descriptors, load_web_adapters
 from opncafyr.core.runtime import RUNTIME_FILE_ENV, Runtime, load_runtime
 from opncafyr.core.security import SecurityConfig
@@ -56,7 +57,8 @@ class Controller:
             log_root=self.root / "logs",
             ready_timeout=120.0,
         )
-        app = create_app(self.security, supervisor=self.supervisor)
+        self.tokens = self.root / "state" / "open-tokens"
+        app = create_app(self.security, supervisor=self.supervisor, open_tokens=self.tokens)
         self._server = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
         self._thread = threading.Thread(
             target=self._server.run, kwargs={"sockets": [sock]}, daemon=True
@@ -98,12 +100,13 @@ class PageRecord:
 
 
 def load_page(browser, controller: Controller, route: str, settle_ms: int = 1500) -> PageRecord:
-    """Open the launcher home (which sets the cookie), then the app; record every request."""
+    """Open the launcher with a one-time link (which sets the cookie), then the app; record
+    every request."""
     record = PageRecord()
     context = browser.new_context()
     page = context.new_page()
     try:
-        page.goto(controller.origin + "/")
+        page.goto(open_url(controller.origin + "/", mint_open_token(controller.tokens)))
         page.on("request", lambda r: record.requests.append(r.url))
         page.on("response", lambda r: record.responses.append((r.status, r.url)))
         page.on("requestfailed", lambda r: record.failures.append(r.url))

@@ -33,7 +33,11 @@ def jobs(tmp_path):
 @pytest.fixture
 def api(security, jobs):
     app = create_app(security, jobs=jobs)
-    with TestClient(app, base_url=f"http://127.0.0.1:{security.port}") as c:
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    ) as c:
         yield c
 
 
@@ -82,7 +86,11 @@ def test_there_is_no_submit_endpoint(api, security):
 
 def test_stopping_the_app_cancels_running_jobs(security, jobs):
     app = create_app(security, jobs=jobs)
-    with TestClient(app, base_url=f"http://127.0.0.1:{security.port}"):
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    ):
         job_id = jobs.submit(SLEEP)
         deadline = time.monotonic() + 20
         while jobs.get(job_id)["state"] != "running" and time.monotonic() < deadline:

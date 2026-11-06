@@ -21,6 +21,7 @@ from home_seed import BROKEN_RUN_ID, JOB_LABEL, RUN_ID
 
 from artifact_docs import publication, run_manifest, write_publication, write_run
 from opncafyr.core.app import create_app
+from opncafyr.core.bootstrap import mint_open_token, open_url
 from opncafyr.core.jobmanager import CommandSpec, JobManager, JobRequest
 from opncafyr.core.lifecycle import LifecycleConfig, Settings
 from opncafyr.core.security import SESSION_HEADER, SecurityConfig
@@ -47,6 +48,11 @@ class Home:
     jobs: JobManager
     job_id: str
     quits: list[str]
+    tokens: Path
+
+    def open_url(self) -> str:
+        """A fresh one-time link, as the launcher would open it."""
+        return open_url(self.url, mint_open_token(self.tokens))
 
 
 @pytest.fixture(scope="session")
@@ -76,6 +82,7 @@ def home(tmp_path: Path):
         recent=RecentWorkspaces(tmp_path / "state" / "recent.json"),
         settings=Settings(tmp_path / "state" / "settings.json"),
         lifecycle=LifecycleConfig(),
+        open_tokens=tmp_path / "state" / "open-tokens",
     )
     server = uvicorn.Server(
         uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning", lifespan="on")
@@ -89,7 +96,8 @@ def home(tmp_path: Path):
 
     base = f"http://127.0.0.1:{port}"
     headers = {SESSION_HEADER: security.secret, "origin": base}
-    with httpx.Client(base_url=base, headers=headers) as c:
+    cookies = {security.cookie_name: security.secret}
+    with httpx.Client(base_url=base, headers=headers, cookies=cookies) as c:
         folder = c.post("/api/workspace/pick").json()["folder"]
         c.post("/api/workspace/init", json={"path": folder["path"]}).raise_for_status()
     write_run(study, run_manifest(RUN_ID))
@@ -103,7 +111,13 @@ def home(tmp_path: Path):
         time.sleep(0.05)
 
     try:
-        yield Home(url=f"{base}/", jobs=jobs, job_id=job_id, quits=quits)
+        yield Home(
+            url=f"{base}/",
+            jobs=jobs,
+            job_id=job_id,
+            quits=quits,
+            tokens=tmp_path / "state" / "open-tokens",
+        )
     finally:
         server.should_exit = True
         thread.join(30)
@@ -116,7 +130,7 @@ def page(request, browser, home):
     pg.errors = []
     pg.on("pageerror", lambda exc: pg.errors.append(str(exc)))
     pg.on("console", lambda msg: msg.type == "error" and pg.errors.append(msg.text))
-    pg.goto(home.url)
+    pg.goto(home.open_url())
     # Wait until every panel has loaded its data.
     pg.get_by_role("link", name="Open toy").wait_for()
     pg.get_by_role("button", name=f"Cancel {JOB_LABEL}").wait_for()

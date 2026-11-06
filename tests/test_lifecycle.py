@@ -342,7 +342,11 @@ def api(security, jobs, tmp_path):
         jobs=jobs,
         settings=Settings(tmp_path / "state" / SETTINGS_FILE),
     )
-    with TestClient(app, base_url=f"http://127.0.0.1:{security.port}") as c:
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    ) as c:
         c.app_ref = app
         c.calls = calls
         c.session_headers = {SESSION_HEADER: security.secret}

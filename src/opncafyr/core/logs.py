@@ -1,8 +1,8 @@
 """The launcher's own log: JSON lines in the app log folder (#9).
 
 ``configure_logging`` sends the root logger, and so uvicorn's loggers, to a rotating
-``logs/launcher.log`` (one JSON object per line) and to a short stderr line. Filters
-passed in (the redaction filter, #11) run on both before anything is written.
+``logs/launcher.log`` (one JSON object per line) and to a short stderr line. The
+redaction filter (``core.redaction``, #11) runs on both before anything is written.
 """
 
 from __future__ import annotations
@@ -14,6 +14,8 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+
+from opncafyr.core.redaction import RedactionFilter
 
 LOG_FILE = "launcher.log"
 MAX_BYTES = 5 * 1024 * 1024
@@ -29,8 +31,8 @@ class JsonLineFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
         }
-        if record.exc_info:
-            doc["exception"] = self.formatException(record.exc_info)
+        if record.exc_text or record.exc_info:
+            doc["exception"] = record.exc_text or self.formatException(record.exc_info)
         return json.dumps(doc, ensure_ascii=False)
 
 
@@ -39,9 +41,13 @@ def configure_logging(
     *,
     level: int = logging.INFO,
     console: bool = True,
-    filters: Iterable[logging.Filter] = (),
+    filters: Iterable[logging.Filter] | None = None,
 ) -> Path:
-    """Install the launcher's handlers on the root logger. Returns the log file path."""
+    """Install the launcher's handlers on the root logger. Returns the log file path.
+
+    ``filters`` defaults to the redaction filter; tests may pass their own.
+    """
+    filters = [RedactionFilter()] if filters is None else list(filters)
     reset_logging()
     log_dir.mkdir(parents=True, exist_ok=True)
     path = log_dir / LOG_FILE

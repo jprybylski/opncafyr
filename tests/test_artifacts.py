@@ -138,7 +138,11 @@ def api(security, tmp_path):
     jobs = JobManager(poll_interval=0.05)
     recent = RecentWorkspaces(tmp_path / "state" / "recent.json")
     app = create_app(security, jobs=jobs, picker=lambda prompt, start: study, recent=recent)
-    with TestClient(app, base_url=f"http://127.0.0.1:{security.port}") as client:
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    ) as client:
         client.headers[SESSION_HEADER] = security.secret
         client.headers["origin"] = f"http://127.0.0.1:{security.port}"
         client.study = study

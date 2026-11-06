@@ -170,7 +170,11 @@ def test_descriptors_in_a_workspace_are_ignored(tmp_path, security, monkeypatch)
         security, jobs=jobs, picker=lambda prompt, start: study, recent=recent, runtime=Runtime()
     )
     try:
-        with TestClient(app, base_url=f"http://127.0.0.1:{security.port}") as api:
+        with TestClient(
+            app,
+            base_url=f"http://127.0.0.1:{security.port}",
+            cookies={security.cookie_name: security.secret},
+        ) as api:
             api.headers[SESSION_HEADER] = security.secret
             api.post("/api/workspace/pick")
             api.post("/api/workspace/init", json={"path": str(study)})
@@ -260,7 +264,11 @@ def test_api_tools_reports_health_and_missing_requirements(security):
         absent=_desc(executables=["py", "rscript"]),
     )
     app = create_app(security, tools=tools, runtime=Runtime(executables={"py": PY}))
-    with TestClient(app, base_url=f"http://127.0.0.1:{security.port}") as api:
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    ) as api:
         _wait(app.state.health)
         body = {t["id"]: t for t in api.get("/api/tools").json()["tools"]}
     assert body["good"]["health"] == {"state": "ok", "detail": "Health check passed."}
@@ -277,7 +285,11 @@ def test_api_tools_reports_health_and_missing_requirements(security):
 
 def test_api_tools_reports_every_bundled_stub(security):
     app = create_app(security, runtime=Runtime())
-    with TestClient(app, base_url=f"http://127.0.0.1:{security.port}") as api:
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    ) as api:
         _wait(app.state.health)
         body = {t["id"]: t for t in api.get("/api/tools").json()["tools"]}
     assert set(body) == {"opnca", "deckifyr", "quartifyr"}

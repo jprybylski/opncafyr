@@ -6,11 +6,13 @@ import contextlib
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
+import httpx
 import psutil
 
 from launcher_helpers import running_controller
@@ -63,7 +65,16 @@ def test_second_launch_reopens_the_healthy_instance(tmp_path, monkeypatch):
 
         monkeypatch.setattr(cli, "_bind_loopback", no_bind)
         assert cli.run_controller(state=tmp_path, claim_wait=5) == 0
-        assert opened == [f"http://127.0.0.1:{first['port']}/"]
+        base = f"http://127.0.0.1:{first['port']}/"
+        assert len(opened) == 1
+        assert re.fullmatch(re.escape(base) + r"open\?token=[A-Za-z0-9_-]+", opened[0])
+        # The link works once: it sets the session cookie and lands on the home page.
+        with httpx.Client() as browser:
+            resp = browser.get(opened[0])
+            assert resp.status_code == 303
+            assert browser.get(base).status_code == 200
+            assert browser.cookies
+        assert httpx.get(opened[0]).status_code == 403
         assert read_record(tmp_path)["instance_id"] == first["instance_id"]
 
     # A clean stop clears the record and frees the lock.

@@ -21,17 +21,19 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from html import escape
 from importlib import resources
+from pathlib import Path
 from typing import Literal
 
 import anyio.to_thread
 import httpx
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.types import Scope
 
 from opncafyr import __version__
+from opncafyr.core.bootstrap import OPEN_PATH, consume_open_token, tokens_dir
 from opncafyr.core.health import ToolHealth
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
 from opncafyr.core.lifecycle import (
@@ -47,7 +49,12 @@ from opncafyr.core.picker import pick_folder
 from opncafyr.core.proxy import mount_proxy
 from opncafyr.core.registry import ToolDescriptor, load_descriptors, load_web_adapters
 from opncafyr.core.runtime import Runtime, load_runtime
-from opncafyr.core.security import PROXY_PREFIX, LoopbackGuardMiddleware, SecurityConfig
+from opncafyr.core.security import (
+    REOPEN_PAGE,
+    LoopbackGuardMiddleware,
+    SecurityConfig,
+    reopen_page_headers,
+)
 from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
 from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
 from opncafyr.core.workspace_api import Picker, mount_workspace_api
@@ -138,6 +145,7 @@ def create_app(
     settings: Settings | None = None,
     tools: dict[str, ToolDescriptor] | None = None,
     runtime: Runtime | None = None,
+    open_tokens: Path | None = None,
 ) -> FastAPI:
     """Build the controller app.
 
@@ -148,6 +156,7 @@ def create_app(
     instance_id = instance_id or uuid.uuid4().hex
     lifecycle_config = lifecycle or LifecycleConfig()
     installed = tools if tools is not None else load_descriptors()
+    token_folder = open_tokens if open_tokens is not None else tokens_dir(state_dir())
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -319,23 +328,40 @@ def create_app(
             raise HTTPException(status_code=409, detail="The launcher is already stopping.")
         return {"ok": True}
 
-    @app.get("/", response_class=HTMLResponse)
-    def home() -> HTMLResponse:
-        page = resources.files("opncafyr.web").joinpath("static/index.html").read_text("utf-8")
-        # The secret is readable only by same-origin pages: no CORS headers are ever sent.
-        response = HTMLResponse(
-            page.replace(SESSION_PLACEHOLDER, escape(security.secret)),
-            headers={"cache-control": "no-store", "content-security-policy": HOME_CSP},
+    @app.get(OPEN_PATH)
+    def open_session(request: Request, token: str = "") -> Response:
+        """Trade a one-time token (core.bootstrap) for the session cookie."""
+        has_session = security.secret_matches(request.cookies.get(security.cookie_name))
+        if not consume_open_token(token_folder, token) and not has_session:
+            headers = {k.decode(): v.decode() for k, v in reopen_page_headers()}
+            return HTMLResponse(REOPEN_PAGE, status_code=403, headers=headers)
+        response = RedirectResponse(
+            "/",
+            status_code=303,
+            headers={"cache-control": "no-store", "referrer-policy": "no-referrer"},
         )
-        # Proxied child pages can't send the session header, so they carry this cookie.
         response.set_cookie(
             security.cookie_name,
             security.secret,
-            path=PROXY_PREFIX,
+            path="/",
             httponly=True,
             samesite="strict",
         )
         return response
+
+    @app.get("/", response_class=HTMLResponse)
+    def home() -> HTMLResponse:
+        page = resources.files("opncafyr.web").joinpath("static/index.html").read_text("utf-8")
+        # Only a browser holding the session cookie gets here, and no CORS headers are
+        # ever sent. The page sends the secret back as a header on state-changing calls.
+        return HTMLResponse(
+            page.replace(SESSION_PLACEHOLDER, escape(security.secret)),
+            headers={
+                "cache-control": "no-store",
+                "content-security-policy": HOME_CSP,
+                "referrer-policy": "no-referrer",
+            },
+        )
 
     mount_workspace_api(
         app,

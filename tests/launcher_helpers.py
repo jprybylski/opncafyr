@@ -15,8 +15,25 @@ import pytest
 
 from opncafyr import cli
 from opncafyr.core import instance
+from opncafyr.core.bootstrap import mint_open_token, tokens_dir
 from opncafyr.core.instance import read_record
 from opncafyr.core.security import SESSION_HEADER
+
+
+@contextlib.contextmanager
+def open_session(state: Path, url: str) -> Iterator[httpx.Client]:
+    """A browser stand-in that opened the launcher with a one-time token.
+
+    It holds the session cookie and sends the secret and our Origin on every request.
+    """
+    with httpx.Client(base_url=url, timeout=30) as browser:
+        token = mint_open_token(tokens_dir(state))
+        resp = browser.get(f"open?token={token}")
+        assert resp.status_code == 303, resp.text
+        page = browser.get("").text
+        secret = re.search(r'name="opncafyr-session" content="([^"]+)"', page).group(1)
+        browser.headers.update({SESSION_HEADER: secret, "origin": url.rstrip("/")})
+        yield browser
 
 
 @contextlib.contextmanager
@@ -43,9 +60,8 @@ def running_controller(state: Path, **kwargs: Any) -> Iterator[dict[str, Any]]:
     try:
         yield record
     finally:
-        page = httpx.get(url).text
-        secret = re.search(r'name="opncafyr-session" content="([^"]+)"', page).group(1)
-        httpx.post(f"{url}api/quit", headers={SESSION_HEADER: secret})
+        with open_session(state, url) as browser:
+            browser.post("api/quit")
         thread.join(30)
         assert not thread.is_alive()
         assert result["rc"] == 0
