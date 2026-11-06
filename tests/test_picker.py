@@ -28,9 +28,11 @@ class FakeRun:
 
 
 def test_macos_argv_is_fixed_and_user_text_is_data(tmp_path):
-    run = FakeRun(stdout=f"{tmp_path}/\n".encode())
+    # The start folder must exist; the dialog's answer is a fixed POSIX path so the test
+    # also runs on Windows.
+    run = FakeRun(stdout=b"/Users/a/Study/\n")
     chosen = pick_folder(PROMPT, tmp_path, platform="darwin", run=run)
-    assert chosen == tmp_path
+    assert chosen == Path("/Users/a/Study")
     ((argv, kwargs),) = run.calls
     assert argv[0] == "/usr/bin/osascript"
     script = [argv[i + 1] for i, a in enumerate(argv) if a == "-e"]
