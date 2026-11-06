@@ -67,6 +67,14 @@ scheduled first.
 ## Sequencing
 
 **Now (in parallel)**
+- **Gate 0 install proof is done (#5–#8).** Every runtime and package is pinned with a
+  SHA-256 ([dependency-graph.md](dependency-graph.md)). As a standard user with no admin
+  prompt, Windows 11 and macOS 15 (arm64 and Intel) installed the stack, ran opnca-r with
+  known answers, rendered a DOCX and built a PPTX, online and with the network blocked
+  ([spikes/windows-install.md](spikes/windows-install.md),
+  [spikes/macos-install.md](spikes/macos-install.md)). LibreOffice is an optional
+  per-user download for slide previews ([spikes/libreoffice.md](spikes/libreoffice.md)).
+  The redacted-diagnostics part of the exit evidence moves to the installer (#19).
 - **Offline audit (#44)** is done: [offline.md](offline.md) lists every network
   touchpoint and its resolution, and the `offline` CI job installs from local files and
   runs import, an opnca-r calculation, a report render and a deck build with the network
@@ -146,6 +154,7 @@ scheduled first.
 | Data conventions and warning-vs-blocking checks: exact-code analyte filter plus specimen role, declared units, explicit BLQ/LLOQ steps and BLQ rules, reasons for every exclusion, duplicates and undosed profiles blocking | **Accepted** (owner, 2026-11-05); provisional until checked on sponsor data | [ADR 0005](decisions/0005-data-conventions.md), #2 |
 | Generic quartifyr NCA report and deckifyr bundled default deck (both shipped, never fetched); all four artifact types pre-selected; coded subject IDs allowed in outputs, never in logs/URLs/diagnostics; direct identifiers need an explicit choice; source copied by default | **Accepted** (owner, 2026-11-06) | [ADR 0007](decisions/0007-templates-and-identifiable-data.md), #3 |
 | opnca-r from prebuilt binaries; vendored source tarball only as a repair/exception fallback (option C) | **Accepted** (owner, 2026-11-06) | [ADR 0004](decisions/0004-opnca-r-binaries-with-vendored-fallback.md), #4 |
+| LibreOffice: optional verified per-user download for deckifyr previews (optional in offline bundles); quartifyr field recalculation off until quartifyr#84/#86 | From spike #8 (2026-11-06) | [spikes/libreoffice.md](spikes/libreoffice.md), #8 |
 | Home UI: static HTML + vanilla JS ES modules, no build step, no third-party runtime JS; axe check in CI | **Accepted** (owner, 2026-11-05) | [ADR 0006](decisions/0006-home-ui-stack.md), #18; shell build #49 |
 | Cloud container mode in v1: supported environments, Docker vs Podman, storage types | Open | #42, #1 |
 | Redistributing image archives: audience, opncafyr license, GPL source obligations, PPM binaries | Open (needs legal) | #43 |

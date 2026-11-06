@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- LibreOffice decision (#8): an optional, verified per-user download for deckifyr slide
+  previews, pinned in `[optional.libreoffice]` (26.2.7.1, archive URLs). quartifyr's
+  field recalculation stays off until quartifyr#84/#86. Report:
+  `docs/spikes/libreoffice.md`.
 - macOS install spike (#7). `scripts/spikes/macos-install.sh` installs the pinned stack
   as a standard user on macOS 15 by relocating CRAN's R, online or offline, and runs the
   same checks; the `install-spike` workflow (manual, or `spike/**` branches) runs it on

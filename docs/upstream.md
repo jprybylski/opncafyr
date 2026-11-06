@@ -69,7 +69,9 @@ quick fixes, so pin a quartifyr release only after that window has passed.
 | [#81](https://github.com/jprybylski/quartifyr/issues/81) | No complete-looking DOCX after a strict rejection, partial pass-2 failure or kill; `.previous` keeps the last good render | Open; adapter renders in staging meanwhile (#32) | Gate 3 |
 | [#82](https://github.com/jprybylski/quartifyr/issues/82) | Pass-2 offline relabel; relative `reference_doc`/style paths; hash inputs before render; schema-check real output; venv mismatch | Open; adapter passes absolute paths and hashes inputs itself (#32) | Gate 3, offline |
 | [#83](https://github.com/jprybylski/quartifyr/issues/83) | `--soffice-bin` / `QUARTIFYR_SOFFICE_BIN` for the LibreOffice steps | Open; adapter controls `PATH` meanwhile (#32) | Gate 3 (#32), #8 |
+| [#84](https://github.com/jprybylski/quartifyr/issues/84) | Field recalculation always times out on macOS (LibreOffice 26.2) | Open; recalculation marked unavailable on macOS (#8) | Gate 3 (#32), #8 |
 | [#85](https://github.com/jprybylski/quartifyr/issues/85) | Offline report setup without pyro: one Python env for both passes | Open; adapter creates the project `.venv` from the wheelhouse and writes reportifyr's init marker (temporary, #32) | Gate 3 (#32), offline |
+| [#86](https://github.com/jprybylski/quartifyr/issues/86) | Field recalculation hangs and orphans soffice on Windows (malformed profile URL) | Open; recalculation off on Windows (#8) | Gate 3 (#32), #8 |
 
 Offline installation is a supported v1 use case (2026-11-04). pyro and reportifyr (A2-ai,
 external) also reach the network during project setup. opncafyr handles that in its

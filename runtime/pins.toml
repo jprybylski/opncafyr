@@ -303,4 +303,22 @@ sha256 = "231fcae47ee950621374725b5fc3b5441d2fbda2955ac45dd7dc816d8876cfe7"
 # --- Optional ---------------------------------------------------------------------------
 
 [optional.libreoffice]
-status = "unavailable"     # #8 decides: bundle, optional download or unavailable
+# Optional per-user download, offered on request and as an optional part of offline
+# bundles (#8, docs/spikes/libreoffice.md). Enables deckifyr slide previews only:
+# quartifyr's field recalculation fails on macOS and Windows (quartifyr#84, #86).
+# Permanent archive URLs: the stable/ directory changes with every release.
+status = "optional"
+version = "26.2.7.1"       # "still" branch
+license = "MPL-2.0"
+
+[optional.libreoffice.assets.macos-arm64]
+url = "https://downloadarchive.documentfoundation.org/libreoffice/old/26.2.7.1/mac/aarch64/LibreOffice_26.2.7.1_MacOS_aarch64.dmg"
+sha256 = "97430a2c13f4f76d2a82c438f61792fc937d0a3d8ddf1e65b33bbe8f39b8f335"
+
+[optional.libreoffice.assets.macos-x86_64]
+url = "https://downloadarchive.documentfoundation.org/libreoffice/old/26.2.7.1/mac/x86_64/LibreOffice_26.2.7.1_MacOS_x86-64.dmg"
+sha256 = "d6d1648a28b9b99020639ce707a13180691cd5352f98d7948202da767e964838"
+
+[optional.libreoffice.assets.windows-x86_64]
+url = "https://downloadarchive.documentfoundation.org/libreoffice/old/26.2.7.1/win/x86_64/LibreOffice_26.2.7.1_Win_x86-64.msi"
+sha256 = "82edb4c85605bf38420f461596c5e4eb625afbe6557bd6c7bfa2c470b430a8c7"

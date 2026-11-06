@@ -42,7 +42,7 @@ macOS) to build opnca_0.2.7-vendored.tar.gz
 | Quarto 1.11.9 | — | `[quarto]` macOS tarball (universal), Windows zip | `quarto add` is never run. |
 | Tools Python env | Python 3.13 | `[python_envs.tools]` (`runtime/python/tools/uv.lock`, 23 packages) | deckifyr `[web,preview]` + python-docx 1.1.2, PyYAML 6.0.2, Pillow 11.1.0 (pyro's pins, compatible with deckifyr's lower bounds), and pymupdf 1.28.2: pymupdf 2.x has no macOS x86_64 wheel. One env for deckifyr and for quartifyr/reportifyr, so pyro never creates one. |
 | Rust 1.99.1, Rtools45 | repair path only | `[rust]`, `[rtools]` | rustup-init (online) and standalone toolchain archives (offline). |
-| LibreOffice | optional | `[optional.libreoffice]` | Decided in #8. |
+| LibreOffice 26.2.7.1 | optional | `[optional.libreoffice]` | Optional per-user download for deckifyr previews only; quartifyr's field recalculation doesn't work with it yet ([spikes/libreoffice.md](spikes/libreoffice.md)). |
 
 ## The R package set
 
