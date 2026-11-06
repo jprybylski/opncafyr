@@ -18,6 +18,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from opncafyr import __version__
+from opncafyr.core.artifacts import list_publications, list_runs
 from opncafyr.core.jobmanager import JobManager, JobManagerError
 from opncafyr.core.picker import PickerError, PickerUnavailable
 from opncafyr.core.workspace import (
@@ -105,6 +106,17 @@ def mount_workspace_api(app: FastAPI, picker: Picker, recent: RecentWorkspaces) 
                 }
                 for entry in recent.load()
             ],
+        }
+
+    @app.get("/api/workspace/artifacts")
+    def artifacts() -> dict[str, Any]:
+        ws: Workspace | None = app.state.workspace
+        if ws is None:
+            return {"workspace_open": False, "runs": [], "publications": []}
+        return {
+            "workspace_open": True,
+            "runs": list_runs(ws.root),
+            "publications": list_publications(ws.root),
         }
 
     @app.post("/api/workspace/pick")

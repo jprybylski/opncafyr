@@ -28,6 +28,7 @@ class ToolDescriptor:
     web_route: str | None
     raw: dict[str, Any]
     max_body_bytes: int | None = None
+    display_name: str | None = None
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> ToolDescriptor:
@@ -41,6 +42,7 @@ class ToolDescriptor:
             web_route=web.get("route"),
             raw=data,
             max_body_bytes=web.get("max_body_bytes"),
+            display_name=data.get("display_name"),
         )
 
 

@@ -3,45 +3,89 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <meta name="opncafyr-session" content="{{OPNCAFYR_SESSION}}">
   <title>opncafyr</title>
-  <style>
-    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-    body { max-width: 48rem; margin: 3rem auto; padding: 0 1rem; line-height: 1.5; }
-    .notice { border-left: 4px solid #c90; padding: .5rem 1rem; }
-    .panel { border: 1px solid #8884; border-radius: .5rem; padding: .75rem 1rem; margin: .75rem 0; }
-    .path { font-family: ui-monospace, monospace; word-break: break-all; }
-    .error { color: #c33; }
-    dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: .5rem 0; }
-    dt { font-weight: 600; }
-    dd { margin: 0; }
-    button { font: inherit; padding: .35rem .9rem; margin-right: .5rem; }
-    ul.recent { padding-left: 1.2rem; }
-    dialog { max-width: 32rem; border: 1px solid #8888; border-radius: .5rem; }
-    dialog form { display: flex; flex-wrap: wrap; gap: .5rem; }
-    dialog form button { margin: 0; }
-  </style>
+  <link rel="stylesheet" href="static/app.css">
+  <script type="module" src="static/js/main.js"></script>
 </head>
 <body>
-  <header>
-    <h1>opncafyr</h1>
-    <p class="notice">Research use only. This workspace has not been validated for clinical or regulatory decisions.</p>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header">
+    <div class="wrap">
+      <p class="brand">opncafyr</p>
+      <p class="banner" role="note"><strong>Research use only.</strong> This workspace has not been validated for clinical or regulatory decisions.</p>
+      <nav aria-label="Sections">
+        <ul class="nav">
+          <li><a href="#workspace">Study folder</a></li>
+          <li><a href="#tools-section">Tools</a></li>
+          <li><a href="#runs-section">Runs and publications</a></li>
+          <li><a href="#jobs-section">Jobs</a></li>
+          <li><a href="#app-section">Application</a></li>
+        </ul>
+      </nav>
+    </div>
   </header>
-  <main>
-    <section aria-labelledby="ws-heading">
+
+  <main id="main" class="wrap" tabindex="-1">
+    <h1 class="visually-hidden">Workspace home</h1>
+
+    <section id="workspace" aria-labelledby="ws-heading">
       <h2 id="ws-heading">Study folder</h2>
       <p id="ws-current">No study folder is open.</p>
-      <button type="button" id="ws-pick">Choose study folder…</button>
+      <p><button type="button" id="ws-pick">Choose study folder…</button></p>
       <div id="ws-folder" class="panel" hidden></div>
-      <p id="ws-status" role="status" aria-live="polite"></p>
+      <p id="ws-status" class="status" role="status" aria-live="polite"></p>
       <h3>Recent study folders</h3>
       <ul id="ws-recent" class="recent"><li>None yet.</li></ul>
     </section>
-    <section aria-labelledby="tools-heading">
-      <h2 id="tools-heading">Installed tools</h2>
-      <ul id="tools"><li>Loading…</li></ul>
+
+    <section id="tools-section" aria-labelledby="tools-heading">
+      <h2 id="tools-heading">Tools</h2>
+      <ul id="tools" class="tiles"><li>Loading…</li></ul>
+      <p id="tools-status" class="status" role="status" aria-live="polite"></p>
     </section>
-    <section aria-labelledby="app-heading">
+
+    <section id="runs-section" aria-labelledby="runs-heading">
+      <h2 id="runs-heading">Runs and publications</h2>
+      <p id="runs-note">Open a study folder to see its runs.</p>
+      <div class="table-scroll">
+        <table id="runs-table" hidden>
+          <caption>Runs, newest first</caption>
+          <thead>
+            <tr><th scope="col">Run</th><th scope="col">Analyte</th><th scope="col">State</th><th scope="col">Created</th></tr>
+          </thead>
+          <tbody id="runs-body"></tbody>
+        </table>
+      </div>
+      <p id="pubs-note" hidden></p>
+      <div class="table-scroll">
+        <table id="pubs-table" hidden>
+          <caption>Publications</caption>
+          <thead>
+            <tr><th scope="col">Publication</th><th scope="col">Items</th><th scope="col">State</th><th scope="col">Created</th></tr>
+          </thead>
+          <tbody id="pubs-body"></tbody>
+        </table>
+      </div>
+      <p id="runs-status" class="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="jobs-section" aria-labelledby="jobs-heading">
+      <h2 id="jobs-heading">Jobs</h2>
+      <p id="jobs-live" class="status" role="status" aria-live="polite">Open a study folder to see its jobs.</p>
+      <div class="table-scroll">
+        <table id="jobs-table" hidden>
+          <caption>Jobs in this study folder, newest first</caption>
+          <thead>
+            <tr><th scope="col">Job</th><th scope="col">State</th><th scope="col">Details</th><th scope="col">Started</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+          </thead>
+          <tbody id="jobs-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="app-section" aria-labelledby="app-heading">
       <h2 id="app-heading">Application</h2>
       <p>
         <label for="idle">Close automatically when unused for</label>
@@ -55,15 +99,18 @@
         </select>
       </p>
       <p>It never closes while a job is running or an editor has unsaved changes.</p>
-      <p id="app-status" role="status" aria-live="polite"></p>
-      <button type="button" id="quit">Quit application</button>
-      <button type="button" id="keep-open" hidden>Keep the app open</button>
+      <p id="app-status" class="status" role="status" aria-live="polite"></p>
+      <p class="actions">
+        <button type="button" id="quit">Quit application</button>
+        <button type="button" id="keep-open" hidden>Keep the app open</button>
+      </p>
     </section>
   </main>
+
   <dialog id="jobs-dialog" aria-labelledby="jobs-title">
     <h2 id="jobs-title">Jobs are still running</h2>
     <p id="jobs-text"></p>
-    <form method="dialog">
+    <form method="dialog" class="actions">
       <button value="keep" autofocus>Keep running and quit when finished</button>
       <button value="cancel">Cancel jobs and quit</button>
       <button value="stay">Don't quit</button>
@@ -72,262 +119,10 @@
   <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
     <h2 id="unsaved-title">Unsaved changes</h2>
     <p id="unsaved-text"></p>
-    <form method="dialog">
+    <form method="dialog" class="actions">
       <button value="stay" autofocus>Go back and save</button>
       <button value="save">Save and quit</button>
     </form>
   </dialog>
-  <script>
-    // Minimal workspace UI for #17. The full shell (ES modules, /static/) is #49.
-    const SESSION = document.querySelector('meta[name="opncafyr-session"]').content;
-    const $ = (id) => document.getElementById(id);
-    const el = (tag, text) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; return e; };
-
-    async function post(url, body, method = "POST") {
-      const r = await fetch(url, {
-        method,
-        headers: { "content-type": "application/json", "x-opncafyr-session": SESSION },
-        body: JSON.stringify(body || {}),
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        const d = data.detail;
-        throw Object.assign(new Error(typeof d === "string" ? d : (d && d.message) || `Request failed (${r.status}).`), { code: d && d.code, tools: d && d.tools });
-      }
-      return data;
-    }
-
-    function status(text, isError) {
-      const s = $("ws-status");
-      s.textContent = text || "";
-      s.className = isError ? "error" : "";
-    }
-
-    function showCurrent(ws) {
-      const p = $("ws-current");
-      p.replaceChildren();
-      if (!ws) { p.textContent = "No study folder is open."; return; }
-      p.append("Open: ", el("strong", ws.name), " ", el("span", ws.path));
-      p.lastChild.className = "path";
-    }
-
-    function showFolder(folder) {
-      const box = $("ws-folder");
-      box.replaceChildren();
-      box.hidden = false;
-      const dl = el("dl");
-      const row = (k, v, cls) => { const dd = el("dd", v); if (cls) dd.className = cls; dl.append(el("dt", k), dd); };
-      row("Folder", folder.path, "path");
-      row("Can write here", folder.writable ? "Yes" : "No");
-      row("Items in folder", String(folder.entries));
-      if (folder.schema_version) row("Workspace format", `schema ${folder.schema_version}`);
-      box.append(dl, el("p", folder.message));
-      const actions = { new: "Create workspace here", incomplete: "Create workspace here",
-                        workspace: "Open workspace", needs_migration: "Upgrade (backup kept) and open" };
-      const label = actions[folder.state];
-      if (!label) return;
-      const b = el("button", label);
-      b.type = "button";
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        try {
-          const creating = folder.state === "new" || folder.state === "incomplete";
-          const res = creating
-            ? await post("api/workspace/init", { path: folder.path })
-            : await post("api/workspace/open", { path: folder.path, migrate: folder.state === "needs_migration" });
-          box.hidden = true;
-          let msg = `Opened ${res.workspace.name}.`;
-          if (res.migrated_from) msg += ` Upgraded from schema ${res.migrated_from}; the old file is in ${res.backups.join(", ")}.`;
-          if (res.swept_jobs.length) msg += ` ${res.swept_jobs.length} unfinished job(s) from an earlier session were marked failed.`;
-          status(msg);
-          await refresh();
-        } catch (e) {
-          status(e.message, true);
-          b.disabled = false;
-        }
-      });
-      box.append(b);
-    }
-
-    async function refresh() {
-      const d = await fetch("api/workspace").then(r => r.json());
-      showCurrent(d.workspace);
-      const ul = $("ws-recent");
-      if (!d.recent.length) { ul.replaceChildren(el("li", "None yet.")); return; }
-      ul.replaceChildren(...d.recent.map(r => {
-        const li = el("li");
-        const b = el("button", r.name);
-        b.type = "button";
-        b.disabled = !r.available;
-        b.addEventListener("click", async () => {
-          try { showFolder((await post("api/workspace/inspect", { path: r.path })).folder); status(""); }
-          catch (e) { status(e.message, true); }
-        });
-        const p = el("span", r.available ? r.path : `${r.path} (not found)`);
-        p.className = "path";
-        li.append(b, " ", p);
-        return li;
-      }));
-    }
-
-    $("ws-pick").addEventListener("click", async () => {
-      const b = $("ws-pick");
-      b.disabled = true;
-      status("Waiting for the folder picker…");
-      try {
-        const res = await post("api/workspace/pick");
-        if (res.cancelled) { status("No folder chosen."); return; }
-        status("");
-        showFolder(res.folder);
-      } catch (e) {
-        status(e.message, true);
-      } finally {
-        b.disabled = false;
-      }
-    });
-
-    refresh().catch(() => status("Could not load the workspace state.", true));
-
-    // --- Lifecycle (#14): heartbeats while visible, Quit, auto-close setting. ---
-    const PAGE_ID = (self.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)).replace(/[^A-Za-z0-9_-]/g, "");
-    let stopped = false;
-
-    function beat() {
-      if (stopped || document.visibilityState !== "visible") return;
-      post("api/session/heartbeat", { page_id: PAGE_ID }).catch(() => {});
-    }
-    setInterval(beat, 15000);
-    document.addEventListener("visibilitychange", beat);
-    window.addEventListener("pageshow", beat);
-    // A hint only: page-unload events are unreliable, so the idle timer doesn't rely on it.
-    window.addEventListener("pagehide", () => {
-      try {
-        fetch("api/session/leave", {
-          method: "POST",
-          keepalive: true,
-          headers: { "content-type": "application/json", "x-opncafyr-session": SESSION },
-          body: JSON.stringify({ page_id: PAGE_ID }),
-        }).catch(() => {});
-      } catch (e) { /* ignore */ }
-    });
-    beat();
-
-    function appStatus(text, isError) {
-      const s = $("app-status");
-      s.textContent = text || "";
-      s.className = isError ? "error" : "";
-    }
-
-    function showStopped() {
-      stopped = true;
-      $("quit").disabled = true;
-      $("idle").disabled = true;
-      $("keep-open").hidden = true;
-      appStatus("opncafyr has stopped. You can close this tab.");
-    }
-
-    function ask(dialog) {
-      return new Promise((resolve) => {
-        dialog.returnValue = "";
-        dialog.addEventListener("close", () => resolve(dialog.returnValue || "stay"), { once: true });
-        dialog.showModal();
-      });
-    }
-
-    async function lifecycle() {
-      return fetch("api/lifecycle").then(r => r.json());
-    }
-
-    let pendingTimer = null;
-    function watchPendingQuit() {
-      clearInterval(pendingTimer);
-      pendingTimer = setInterval(async () => {
-        try {
-          const st = await lifecycle();
-          if (!st.quit_pending && !st.stopping) { clearInterval(pendingTimer); return; }
-          if (st.jobs) appStatus(`Quitting when ${st.jobs} job(s) finish.`);
-        } catch (e) {
-          clearInterval(pendingTimer);
-          showStopped();
-        }
-      }, 5000);
-    }
-
-    async function quit(jobs, unsaved) {
-      try {
-        const res = await post("api/quit", { jobs, unsaved });
-        if (res.status === "stopping_after_jobs") {
-          const n = res.jobs || 0;
-          appStatus(n ? `Quitting when ${n} job(s) finish. New jobs can't be started.` : "Quitting when the running work finishes.");
-          $("keep-open").hidden = false;
-          watchPendingQuit();
-        } else {
-          showStopped();
-        }
-      } catch (e) {
-        if (e.code !== "needs_choice") { appStatus(e.message, true); return; }
-        $("unsaved-text").textContent = `There are unsaved changes in: ${(e.tools || []).join(", ") || "an editor"}. Go back and save them, or save them now and quit.`;
-        if (await ask($("unsaved-dialog")) === "save") await quit(jobs, "save");
-      }
-    }
-
-    $("quit").addEventListener("click", async () => {
-      appStatus("");
-      let jobs = "keep";
-      try {
-        const st = await lifecycle();
-        if (st.jobs || st.busy.length) {
-          const parts = [];
-          if (st.jobs) parts.push(`${st.jobs} job(s) are still running`);
-          if (st.busy.length) parts.push(`${st.busy.join(", ")} is still working`);
-          $("jobs-text").textContent = `${parts.join(" and ")}. You can keep them running and quit when they finish, or cancel them and quit now.`;
-          jobs = await ask($("jobs-dialog"));
-          if (jobs === "stay") return;
-        }
-      } catch (e) {
-        appStatus("Could not read the application state.", true);
-        return;
-      }
-      await quit(jobs, "refuse");
-    });
-
-    $("keep-open").addEventListener("click", async () => {
-      try {
-        await post("api/quit/abort");
-        clearInterval(pendingTimer);
-        $("keep-open").hidden = true;
-        appStatus("The app stays open.");
-      } catch (e) {
-        appStatus(e.message, true);
-      }
-    });
-
-    lifecycle().then(st => {
-      const sel = $("idle");
-      const value = st.idle_timeout_minutes === null ? "off" : String(st.idle_timeout_minutes);
-      if (![...sel.options].some(o => o.value === value)) sel.append(new Option(`${value} minutes`, value));
-      sel.value = value;
-      if (st.quit_pending) { $("keep-open").hidden = false; appStatus("Quitting when the running jobs finish."); watchPendingQuit(); }
-    }).catch(() => {});
-
-    $("idle").addEventListener("change", async (ev) => {
-      const v = ev.target.value;
-      try {
-        await post("api/settings", { idle_timeout_minutes: v === "off" ? null : Number(v) }, "PUT");
-        appStatus(v === "off" ? "The app will stay open until you quit it." : "Saved.");
-      } catch (e) {
-        appStatus(e.message, true);
-      }
-    });
-
-    fetch("api/tools").then(r => r.json()).then(d => {
-      const ul = document.getElementById("tools");
-      ul.replaceChildren(...d.tools.map(t => {
-        const li = document.createElement("li");
-        li.textContent = `${t.id}: ${t.capabilities.join(", ")}`;
-        return li;
-      }));
-    });
-  </script>
 </body>
 </html>

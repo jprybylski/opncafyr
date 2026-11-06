@@ -26,7 +26,9 @@ import anyio.to_thread
 import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.types import Scope
 
 from opncafyr import __version__
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
@@ -52,6 +54,32 @@ from opncafyr.paths import logs_dir, state_dir
 log = logging.getLogger(__name__)
 
 SESSION_PLACEHOLDER = "{{OPNCAFYR_SESSION}}"
+
+# The home page loads only its own files and talks only to its own origin (ADR 0006).
+HOME_CSP = "; ".join(
+    [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "connect-src 'self'",
+        "img-src 'self' data:",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+    ]
+)
+
+
+class HomeAssets(StaticFiles):
+    """The home page's files under ``/static/``. ``no-cache`` makes the browser revalidate,
+    so an upgraded launcher never pairs a new page with old scripts."""
+
+    async def get_response(self, path: str, scope: Scope):  # type: ignore[override]
+        response = await super().get_response(path, scope)
+        response.headers["cache-control"] = "no-cache"
+        return response
+
 
 # Children may take a while to answer (an NCA calculation, a deck build request), but a
 # connection to a local child either opens at once or not at all.
@@ -170,7 +198,12 @@ def create_app(
     def tools() -> dict[str, list[dict[str, object]]]:
         return {
             "tools": [
-                {"id": t.id, "capabilities": list(t.capabilities), "web_route": t.web_route}
+                {
+                    "id": t.id,
+                    "display_name": t.display_name or t.id,
+                    "capabilities": list(t.capabilities),
+                    "web_route": t.web_route,
+                }
                 for t in app.state.tools.values()
             ]
         }
@@ -264,7 +297,7 @@ def create_app(
         # The secret is readable only by same-origin pages: no CORS headers are ever sent.
         response = HTMLResponse(
             page.replace(SESSION_PLACEHOLDER, escape(security.secret)),
-            headers={"cache-control": "no-store"},
+            headers={"cache-control": "no-store", "content-security-policy": HOME_CSP},
         )
         # Proxied child pages can't send the session header, so they carry this cookie.
         response.set_cookie(
@@ -282,4 +315,5 @@ def create_app(
         recent=recent if recent is not None else RecentWorkspaces(state_dir() / RECENT_FILE),
     )
     mount_proxy(app)
+    app.mount("/static", HomeAssets(packages=[("opncafyr.web", "static")]), name="static")
     return app

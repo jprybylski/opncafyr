@@ -29,6 +29,22 @@ jobs:
       - name: Tests
         run: uv run pytest -v
 
+  # #49: the home page in headless Chromium (render, origin, keyboard walk, axe). No R and
+  # no child apps.
+  ui:
+    name: home page UI (Ubuntu, Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Sync locked environment with the ui group
+        run: uv sync --locked --group ui
+      - name: Install Chromium for Playwright
+        run: uv run --group ui playwright install --with-deps chromium
+      - name: UI checks
+        run: uv run --group ui pytest -m ui tests/ui -v
+
   # #16: opnca-r and deckifyr from their pinned releases behind the /apps/<tool>/ proxy.
   # macOS 15 because the opnca-r 0.2.7 binaries need it (opnca-r#45). opnca-r is private:
   # without the OPNCA_R_RELEASE_TOKEN secret its half is skipped with a warning.

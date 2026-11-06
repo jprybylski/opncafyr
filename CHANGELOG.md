@@ -7,6 +7,29 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Home page UI shell (#49, ADR 0006). The page is a static shell, plain ES modules and one
+  stylesheet in `web/static/`, served from a `/static/` mount. No build step and no
+  third-party code.
+  - Sections: study folder, tools, runs and publications, jobs, application (idle
+    setting and Quit). The research-use-only banner is in the shell header.
+  - Tool tiles come from `/api/tools` (now with `display_name`) and child-app state from
+    `/api/apps`; core static files never name a tool, and a test enforces it.
+  - The job panel polls `/api/jobs` only while the page is visible, announces state
+    changes in an `aria-live="polite"` region and has a Cancel button per live job.
+  - `api.js` adds `x-opncafyr-session` to every state-changing request.
+  - `/` sends a `self`-only Content-Security-Policy; static files send
+    `cache-control: no-cache`. Every asset URL is relative.
+  - Accessibility (WCAG 2.2 AA target): landmarks, skip link, native controls and
+    `<dialog>`, visible focus, states shown as a word and a symbol, light and dark
+    themes.
+- `GET /api/workspace/artifacts` (`core/artifacts.py`): a read-only list of the runs
+  (`.opncafyr/runs/*/manifest.json`) and publications in the open workspace. A run
+  without a valid manifest, or whose manifest names another run, shows as `incomplete`.
+  Symlinks are skipped and no file paths are returned.
+- Browser checks for the home page (`pytest -m ui`, dependency group `ui` with
+  Playwright and `axe-playwright-python`): it renders with stub adapters, makes no
+  request off its origin, a Tab walk reaches every control in order, and axe finds no
+  violations in light or dark mode. A new Ubuntu CI job runs them with Chromium.
 - Launcher lifecycle (#14). `core/lifecycle.py` decides when the launcher stops.
   - The home page sends a heartbeat every 15 s while it is visible
     (`POST /api/session/heartbeat`). Closing the tab sends a best-effort `leave` with

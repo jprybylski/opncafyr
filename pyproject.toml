@@ -28,6 +28,10 @@ dev = [
 integration = [
     "playwright>=1.48",
 ]
+ui = [
+    "axe-playwright-python>=0.1.8",
+    "playwright>=1.48",
+]
 
 [build-system]
 requires = ["hatchling>=1.25"]
@@ -39,8 +43,12 @@ packages = ["src/opncafyr"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # The proxy harness (#16) needs installed tools; run it with `pytest -m integration`.
-addopts = "-ra -m 'not integration'"
-markers = ["integration: needs the pinned child apps (see docs/spikes/basepath.md)"]
+# The browser checks of the home page (#49) need Chromium; run them with `pytest -m ui`.
+addopts = "-ra -m 'not integration and not ui'"
+markers = [
+    "integration: needs the pinned child apps (see docs/spikes/basepath.md)",
+    "ui: home page checks in headless Chromium (uv sync --group ui)",
+]
 # Dump every thread's stack if one test runs longer than this (diagnoses hangs in CI).
 faulthandler_timeout = 60
 

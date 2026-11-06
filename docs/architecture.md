@@ -49,7 +49,13 @@ and the API carry text written for a person.
 
 1. **Browser ↔ controller.** Host must be our loopback authority; state-changing requests
    need the per-launch session secret and a same-origin `Origin`. No CORS. Implemented in
-   `core/security.py`. Under `/apps/` the secret is a `HttpOnly; SameSite=Strict;
+   `core/security.py`. The home page (ADR 0006) is static HTML, ES modules and one CSS
+   file in `web/static/`, served under `/static/`; `/` sends a `self`-only
+   Content-Security-Policy, so the page runs no inline script and requests nothing from
+   another origin. Its data comes from JSON APIs (`/api/tools`, `/api/apps`, `/api/jobs`,
+   `/api/workspace/artifacts`, a read-only runs and publications listing in
+   `core/artifacts.py`), and its `api.js` adds the session header to every
+   state-changing request. Under `/apps/` the secret is a `HttpOnly; SameSite=Strict;
    Path=/apps/` cookie named after the port, required on every request, with
    `Sec-Fetch-Site` limited to `same-origin`/`none` and our `Origin` on state-changing
    requests.
