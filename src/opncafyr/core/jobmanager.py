@@ -429,21 +429,22 @@ class JobManager:
             job.thread.start()
 
     def _worker(self, job: _Job) -> None:
+        state, reason = JobState.COMPLETED, None
+        message = f"Completed: {job.label}."
         try:
             self._execute(job)
         except _Stop as stop:
-            self._finish(job, stop.state, stop.message, reason=stop.reason)
+            state, message, reason = stop.state, stop.message, stop.reason
         except Exception as exc:  # noqa: BLE001 - never leave a job non-terminal
             log.error("job %s internal error: %s", job.id, type(exc).__name__)
-            self._finish(
-                job,
-                JobState.FAILED,
-                f"The {job.label} job stopped because of an internal error in the launcher.",
-                reason="internal_error",
-            )
-        finally:
+            state, reason = JobState.FAILED, "internal_error"
+            message = f"The {job.label} job stopped because of an internal error in the launcher."
+        try:
+            # Clean up before the terminal state is written, so terminal means finished.
             for name in ("tmp", "work"):
                 _remove_tree(job.dir / name)
+        finally:
+            self._finish(job, state, message, reason=reason)
             with self._lock:
                 pool = job.record["pool"]
                 self._running[pool] = max(0, self._running.get(pool, 0) - 1)
@@ -517,7 +518,6 @@ class JobManager:
                     f"The {job.label} job finished, but its results could not be moved into "
                     f"{request.output}.",
                 ) from None
-        self._finish(job, JobState.COMPLETED, f"Completed: {job.label}.")
 
     def _prepare(
         self, job: _Job, request: JobRequest, workspace: Path

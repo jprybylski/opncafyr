@@ -339,7 +339,11 @@ def test_killing_the_launcher_mid_job(workspace, tmp_path):
         jobs = list((workspace / ".opncafyr" / "jobs").iterdir())
         assert len(jobs) == 1
         state = json.loads((jobs[0] / "state.json").read_text())
-        assert state["state"] == "running" and state["pid"] == child
+        assert state["state"] == "running"
+        # On Windows a venv python.exe is a small launcher that starts the real
+        # interpreter as its child, so the recorded pid may be the child's parent.
+        recorded = psutil.Process(state["pid"])
+        assert child in {recorded.pid, *(p.pid for p in recorded.children(recursive=True))}
     finally:
         launcher.kill()  # the launcher only, not its tree
         launcher.wait(10)
