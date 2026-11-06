@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- ADR 0006 records the home UI stack (#18). It is a static HTML shell with vanilla JS ES
+  modules and one CSS file, served from `/static/`. There is no build step, no Node and no
+  third-party runtime JS. The page uses WCAG 2.2 AA landmarks and controls, and an axe
+  check runs in CI. The shell itself is built in #49.
 - ADR 0005 records the data conventions (#2):
   - the analyte is filtered on the exact code value, with a separate specimen role;
   - units come from a column or a user declaration, never inferred;

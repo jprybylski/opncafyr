@@ -147,7 +147,7 @@ scheduled first.
 | Data conventions and warning-vs-blocking checks: exact-code analyte filter plus specimen role, declared units, explicit BLQ/LLOQ steps and BLQ rules, reasons for every exclusion, duplicates and undosed profiles blocking | **Accepted** (owner, 2026-11-05); provisional until checked on sponsor data | [ADR 0005](decisions/0005-data-conventions.md), #2 |
 | Report/deck templates; identifiable-data policy | Open | #3 |
 | opnca-r from prebuilt binaries; vendored source tarball only as a repair/exception fallback (option C) | **Accepted** (owner, 2026-11-06) | [ADR 0004](decisions/0004-opnca-r-binaries-with-vendored-fallback.md), #4 |
-| Home UI frontend stack | Open | #18 |
+| Home UI: static HTML + vanilla JS ES modules, no build step, no third-party runtime JS; axe check in CI | **Accepted** (owner, 2026-11-05) | [ADR 0006](decisions/0006-home-ui-stack.md), #18; shell build #49 |
 | Cloud container mode in v1: supported environments, Docker vs Podman, storage types | Open | #42, #1 |
 | Redistributing image archives: audience, opncafyr license, GPL source obligations, PPM binaries | Open (needs legal) | #43 |
 
@@ -195,7 +195,8 @@ makes this concrete with a guide and a toy adapter.
 | #15 | Reverse proxy for managed child apps under /apps/<tool>/ | #9, #11, #13 | — |
 | #16 | Spike + automated check: opnca-r and deckifyr behind the /apps/<tool>/ proxy | #15 | [opnca-r#24](https://github.com/mantra-opnca/opnca-r/issues/24), [deckifyr#82](https://github.com/jprybylski/deckifyr/issues/82) |
 | #17 | Workspace selection: native folder picker, .opncafyr/workspace.json, schema migrations | #9, #11 | — |
-| #18 | Home page UI shell and frontend stack decision | #9, #17 | — |
+| #18 | Home page UI shell and frontend stack decision (decided: ADR 0006) | #9, #17 | — |
+| #49 | Home page UI shell (ADR 0006) | #12, #14, #17 | — |
 | #19 | Installer v1: per-user staging, atomic activation, desktop icon, repair and uninstall | #5, #6, #7, #9 | — |
 | #36 | Offline installation (supported v1 use case): air-gapped bundles, bundle builder, and internal-mirror mode | #44, #5, #19 | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23), [opnca-r#28](https://github.com/mantra-opnca/opnca-r/issues/28), [deckifyr#86](https://github.com/jprybylski/deckifyr/issues/86), [quartifyr#72](https://github.com/jprybylski/quartifyr/issues/72) |
 
