@@ -7,6 +7,20 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Two-analyte scientific fixture (#20). `tests/fixtures/make_fixtures.py` is seeded and
+  stdlib-only, and writes three files:
+  - `two_analyte.csv`: PARENT and METAB on a shared subject × time grid;
+  - `two_analyte_mixed_units.csv`: the same rows with mixed PARENT units;
+  - `two_analyte.expected.json`: row counts, each planted case with its line numbers,
+    the full list of blocking and warning findings under a standard setup, and mapping
+    scenarios.
+
+  Each blocking and warning check in ADR 0005 Q7 is planted in the data, triggered by a
+  scenario, or marked not plantable (`session_exclusion_no_reason`). The planted cases
+  include BLQ as a flag and as `<LLOQ` text, exclusions with and without reasons, exact
+  and conflicting duplicates, an invalid row, a subject with no dose, and a second
+  specimen. `tests/test_fixtures.py` fails when the committed files differ from a fresh
+  run. `.gitattributes` keeps their line endings unchanged on Windows checkouts.
 - ADR 0006 records the home UI stack (#18). It is a static HTML shell with vanilla JS ES
   modules and one CSS file, served from `/static/`. There is no build step, no Node and no
   third-party runtime JS. The page uses WCAG 2.2 AA landmarks and controls, and an axe

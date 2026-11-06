@@ -1,0 +1,1505 @@
+{
+  "fixture": "two-analyte",
+  "generator": "tests/fixtures/make_fixtures.py",
+  "seed": 20261106,
+  "rules": [
+    "Line numbers are physical lines; the header is line 1. No field contains a newline.",
+    "Findings are per analyte, after the exact-value analyte filter and the PCSPEC=PLASMA specimen filter.",
+    "'findings' is complete for blocking and warning checks under standard_setup. Info checks are listed only where planted.",
+    "Scenario 'includes' lists findings that must appear; others may appear too.",
+    "route_varies and dose_varies count distinct non-blank values in a profile.",
+    "duplicate_key uses USUBJID x ACTUAL_TIME within the analyte, over non-excluded rows (ADR 0005 Q5).",
+    "A blank CONC is classified by BLQ or MISSING first; CONC text matching the BLQ pattern is BLQ, not conc_not_numeric (ADR 0005 Q3).",
+    "lloq_varies is an analyte-level finding; its lines are the minority LLOQ rows.",
+    "profile_no_dose fires once per profile; its lines are the whole profile."
+  ],
+  "standard_setup": {
+    "mapping": {
+      "SUBJECT_ID": "USUBJID",
+      "ANALYTE": "PCTESTCD",
+      "ANALYTE_LABEL": "PCTEST",
+      "SPECIMEN": "PCSPEC",
+      "ACTUAL_TIME": "AFRLT",
+      "NOMINAL_TIME": "NFRLT",
+      "CONC": "CONC",
+      "CONC_UNIT": "PCSTRESU",
+      "LLOQ": "LLOQ",
+      "BLQ": "BLQFL",
+      "MISSING": "MISSFL",
+      "EXCLUDED": "EXCLFL",
+      "EXCLUSION_REASON": "EXCLREAS",
+      "DOSE": "DOSE",
+      "DOSE_UNIT": "DOSEU",
+      "ROUTE": "ROUTE"
+    },
+    "specimen_value": "PLASMA",
+    "analyte_values": [
+      "PARENT",
+      "METAB"
+    ],
+    "blq": {
+      "flag_column": "BLQFL",
+      "flag_table": {
+        "Y": true,
+        "": false
+      },
+      "text_column": "CONC",
+      "text_pattern": "^<"
+    },
+    "missing": {
+      "column": "MISSFL",
+      "table": {
+        "Y": true,
+        "": false
+      }
+    },
+    "excluded": {
+      "column": "EXCLFL",
+      "table": {
+        "Y": true,
+        "": false
+      },
+      "reason": "EXCLREAS"
+    },
+    "units": {
+      "time": "h",
+      "conc": "from PCSTRESU",
+      "dose": "from DOSEU"
+    },
+    "recipe": []
+  },
+  "files": {
+    "two_analyte.csv": {
+      "rows": 168,
+      "columns": [
+        "STUDYID",
+        "USUBJID",
+        "SUBJID",
+        "PCTESTCD",
+        "PCTEST",
+        "PCSPEC",
+        "AFRLT",
+        "NFRLT",
+        "PCDTC",
+        "EXSTDTC",
+        "PCTM",
+        "CONC",
+        "PCSTRESU",
+        "BLQFL",
+        "LLOQ",
+        "MISSFL",
+        "EXCLFL",
+        "EXCLREAS",
+        "DOSE",
+        "DOSEU",
+        "ROUTE"
+      ],
+      "analytes": {
+        "column": "PCTESTCD",
+        "values": {
+          "METAB": {
+            "rows": 81,
+            "by_specimen": {
+              "PLASMA": 81
+            },
+            "subjects": 10
+          },
+          "METAB ": {
+            "rows": 1,
+            "by_specimen": {
+              "PLASMA": 1
+            },
+            "subjects": 1
+          },
+          "PARENT": {
+            "rows": 86,
+            "by_specimen": {
+              "PLASMA": 82,
+              "URINE": 4
+            },
+            "subjects": 10
+          }
+        },
+        "shared_plasma_keys": 79
+      }
+    },
+    "two_analyte_mixed_units.csv": {
+      "rows": 168,
+      "columns": [
+        "STUDYID",
+        "USUBJID",
+        "SUBJID",
+        "PCTESTCD",
+        "PCTEST",
+        "PCSPEC",
+        "AFRLT",
+        "NFRLT",
+        "PCDTC",
+        "EXSTDTC",
+        "PCTM",
+        "CONC",
+        "PCSTRESU",
+        "BLQFL",
+        "LLOQ",
+        "MISSFL",
+        "EXCLFL",
+        "EXCLREAS",
+        "DOSE",
+        "DOSEU",
+        "ROUTE"
+      ],
+      "analytes": {
+        "column": "PCTESTCD",
+        "values": {
+          "METAB": {
+            "rows": 81,
+            "by_specimen": {
+              "PLASMA": 81
+            },
+            "subjects": 10
+          },
+          "METAB ": {
+            "rows": 1,
+            "by_specimen": {
+              "PLASMA": 1
+            },
+            "subjects": 1
+          },
+          "PARENT": {
+            "rows": 86,
+            "by_specimen": {
+              "PLASMA": 82,
+              "URINE": 4
+            },
+            "subjects": 10
+          }
+        },
+        "shared_plasma_keys": 79
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "blq_flag_lloq",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "BLQ as a flag plus an LLOQ column: CONC blank, BLQFL Y (all predose samples, and METAB at 24 h for TA-009 and TA-010).",
+      "lines": [
+        2,
+        3,
+        20,
+        21,
+        38,
+        39,
+        54,
+        55,
+        70,
+        71,
+        87,
+        88,
+        104,
+        105,
+        121,
+        122,
+        137,
+        138,
+        153,
+        154,
+        155,
+        169
+      ],
+      "values": {
+        "BLQFL": "Y",
+        "CONC": ""
+      }
+    },
+    {
+      "id": "blq_text",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "BLQ written as text: TA-003 METAB from 2 h has CONC '<LLOQ' and no flag. Only the text-pattern BLQ step classifies it.",
+      "lines": [
+        45,
+        47,
+        49,
+        51,
+        53
+      ],
+      "values": {
+        "CONC": "<LLOQ",
+        "BLQFL": ""
+      }
+    },
+    {
+      "id": "exclusion_with_reason",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "Excluded samples with a reason (EXCLFL Y, EXCLREAS filled).",
+      "lines": [
+        9,
+        72
+      ],
+      "values": {
+        "EXCLFL": "Y"
+      }
+    },
+    {
+      "id": "exclusion_no_reason",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "An excluded sample with no reason (TA-002 PARENT 1 h).",
+      "lines": [
+        24
+      ],
+      "values": {
+        "EXCLFL": "Y",
+        "EXCLREAS": ""
+      }
+    },
+    {
+      "id": "duplicate_exact",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "An exact copy of a row (TA-005 PARENT 2 h), on adjacent lines.",
+      "lines": [
+        76,
+        77
+      ],
+      "values": {}
+    },
+    {
+      "id": "duplicate_conflicting",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "Two rows with the same key and different CONC (TA-006 METAB 4 h).",
+      "lines": [
+        96,
+        97
+      ],
+      "values": {}
+    },
+    {
+      "id": "invalid_row",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A deliberately invalid extra sample (TA-007 PARENT, nominal 6 h): CONC '12,4' (decimal comma) and ROUTE 'EXTRAVASULAR' (misspelt, unknown).",
+      "lines": [
+        114
+      ],
+      "values": {
+        "CONC": "12,4",
+        "ROUTE": "EXTRAVASULAR"
+      }
+    },
+    {
+      "id": "no_dose",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A subject with no dose record (TA-008: DOSE and DOSEU blank). The profile is kept, never dropped.",
+      "lines": [
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136
+      ],
+      "values": {
+        "DOSE": ""
+      }
+    },
+    {
+      "id": "second_specimen",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "URINE rows for PARENT (TA-001, TA-002 at 3 h and 6 h, off the plasma grid). Filtered out by PCSPEC=PLASMA; counted, not rejected.",
+      "lines": [
+        10,
+        13,
+        28,
+        31
+      ],
+      "values": {
+        "PCSPEC": "URINE"
+      }
+    },
+    {
+      "id": "analyte_value_variant",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "An analyte code with a trailing space ('METAB '). The exact-value filter does not match it to METAB; it counts as another analyte.",
+      "lines": [
+        147
+      ],
+      "values": {
+        "PCTESTCD": "METAB "
+      }
+    },
+    {
+      "id": "missing_sample",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A sample not analysed: MISSFL Y, CONC blank (TA-004 METAB 12 h). Missing, not BLQ.",
+      "lines": [
+        69
+      ],
+      "values": {
+        "MISSFL": "Y",
+        "CONC": ""
+      }
+    },
+    {
+      "id": "time_not_numeric",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "Actual time written as '~8' (TA-005 METAB 8 h).",
+      "lines": [
+        82
+      ],
+      "values": {
+        "AFRLT": "~8"
+      }
+    },
+    {
+      "id": "conc_unclassified_blank",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A blank CONC with no BLQ or missing flag (TA-001 PARENT 12 h).",
+      "lines": [
+        16
+      ],
+      "values": {
+        "CONC": "",
+        "BLQFL": "",
+        "MISSFL": ""
+      }
+    },
+    {
+      "id": "conc_negative",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A negative concentration (TA-004 PARENT 24 h).",
+      "lines": [
+        66
+      ],
+      "values": {
+        "CONC": "-0.020"
+      }
+    },
+    {
+      "id": "route_missing",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A blank route on one row (TA-002 METAB 12 h).",
+      "lines": [
+        35
+      ],
+      "values": {
+        "ROUTE": ""
+      }
+    },
+    {
+      "id": "blq_and_missing",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A row flagged both BLQ and missing (TA-007 METAB 24 h).",
+      "lines": [
+        120
+      ],
+      "values": {
+        "BLQFL": "Y",
+        "MISSFL": "Y"
+      }
+    },
+    {
+      "id": "flag_value_unmapped",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "BLQFL 'N', outside the confirmed table {Y, blank} (TA-001 METAB 8 h).",
+      "lines": [
+        15
+      ],
+      "values": {
+        "BLQFL": "N"
+      }
+    },
+    {
+      "id": "conc_zero_not_blq",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A post-dose CONC of 0 with no BLQ flag (TA-005 METAB 24 h).",
+      "lines": [
+        86
+      ],
+      "values": {
+        "CONC": "0",
+        "BLQFL": ""
+      }
+    },
+    {
+      "id": "blq_above_lloq",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "A BLQ-flagged sample whose CONC (0.080) is above the LLOQ (0.05) (TA-006 PARENT 24 h).",
+      "lines": [
+        102
+      ],
+      "values": {
+        "BLQFL": "Y",
+        "CONC": "0.080"
+      }
+    },
+    {
+      "id": "lloq_varies",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "TA-002 PARENT plasma rows carry LLOQ 0.10; every other PARENT plasma row carries 0.05.",
+      "lines": [
+        20,
+        22,
+        24,
+        26,
+        29,
+        32,
+        34,
+        36
+      ],
+      "values": {
+        "LLOQ": "0.10"
+      }
+    },
+    {
+      "id": "time_negative",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "Predose samples taken 15 minutes before the dose (TA-003, both analytes, AFRLT -0.2500).",
+      "lines": [
+        38,
+        39
+      ],
+      "values": {
+        "AFRLT": "-0.2500"
+      }
+    },
+    {
+      "id": "time_not_sorted",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "TA-004's 24 h samples are written before its 12 h samples.",
+      "lines": [
+        66,
+        67,
+        68,
+        69
+      ],
+      "values": {}
+    },
+    {
+      "id": "too_few_points",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "TA-003 METAB has two measurable post-dose samples (0.5 h, 1 h) once the text BLQ rows are classified.",
+      "lines": [
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53
+      ],
+      "values": {
+        "USUBJID": "TA-003",
+        "PCTESTCD": "METAB"
+      }
+    },
+    {
+      "id": "dose_varies",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "TA-009 PARENT 12 h records DOSE 200; the rest of the profile says 100.",
+      "lines": [
+        150
+      ],
+      "values": {
+        "DOSE": "200"
+      }
+    },
+    {
+      "id": "subjid_typo",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "SUBJID '040' on one TA-004 row (all its other rows say '004').",
+      "lines": [
+        62
+      ],
+      "values": {
+        "SUBJID": "040"
+      }
+    },
+    {
+      "id": "partial_dose_date",
+      "files": [
+        "two_analyte.csv",
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "TA-006 EXSTDTC is a date with no time, so elapsed time can't be derived from PCDTC - EXSTDTC.",
+      "lines": [
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103
+      ],
+      "values": {
+        "EXSTDTC": "2026-01-10"
+      }
+    },
+    {
+      "id": "mixed_units",
+      "files": [
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "Variant only: TA-001 and TA-002 PARENT plasma rows in ug/L, the rest in ng/mL. Equivalent units, still blocking.",
+      "lines": [
+        2,
+        4,
+        6,
+        8,
+        11,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        29,
+        32,
+        34,
+        36
+      ],
+      "values": {
+        "PCSTRESU": "ug/L"
+      }
+    },
+    {
+      "id": "unit_spelling",
+      "files": [
+        "two_analyte_mixed_units.csv"
+      ],
+      "description": "Variant only: TA-003 PARENT plasma rows in 'ng/ml'. The spelling table normalises this to ng/mL; not a finding on its own.",
+      "lines": [
+        38,
+        40,
+        42,
+        44,
+        46,
+        48,
+        50,
+        52
+      ],
+      "values": {
+        "PCSTRESU": "ng/ml"
+      }
+    }
+  ],
+  "findings": {
+    "two_analyte.csv": [
+      {
+        "check": "conc_unclassified_blank",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-001",
+        "lines": [
+          16
+        ]
+      },
+      {
+        "check": "flag_value_unmapped",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-001",
+        "lines": [
+          15
+        ],
+        "column": "BLQFL",
+        "value": "N"
+      },
+      {
+        "check": "lloq_varies",
+        "level": "warning",
+        "analyte": "PARENT",
+        "scope": "analyte",
+        "subject": "TA-002",
+        "lines": [
+          20,
+          22,
+          24,
+          26,
+          29,
+          32,
+          34,
+          36
+        ],
+        "values": "0.05, 0.10"
+      },
+      {
+        "check": "exclusion_no_reason",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-002",
+        "lines": [
+          24
+        ]
+      },
+      {
+        "check": "route_missing",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-002",
+        "lines": [
+          35
+        ]
+      },
+      {
+        "check": "time_negative",
+        "level": "warning",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-003",
+        "lines": [
+          38
+        ]
+      },
+      {
+        "check": "time_negative",
+        "level": "warning",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-003",
+        "lines": [
+          39
+        ]
+      },
+      {
+        "check": "too_few_points",
+        "level": "info",
+        "analyte": "METAB",
+        "scope": "profile",
+        "subject": "TA-003",
+        "lines": [
+          39,
+          41,
+          43,
+          45,
+          47,
+          49,
+          51,
+          53
+        ]
+      },
+      {
+        "check": "conc_negative",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-004",
+        "lines": [
+          66
+        ]
+      },
+      {
+        "check": "time_not_sorted",
+        "level": "info",
+        "analyte": "PARENT",
+        "scope": "profile",
+        "subject": "TA-004",
+        "lines": [
+          66,
+          68
+        ]
+      },
+      {
+        "check": "time_not_sorted",
+        "level": "info",
+        "analyte": "METAB",
+        "scope": "profile",
+        "subject": "TA-004",
+        "lines": [
+          67,
+          69
+        ]
+      },
+      {
+        "check": "duplicate_key",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "key",
+        "subject": "TA-005",
+        "lines": [
+          76,
+          77
+        ],
+        "kind": "exact"
+      },
+      {
+        "check": "time_not_numeric",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-005",
+        "lines": [
+          82
+        ]
+      },
+      {
+        "check": "conc_zero_not_blq",
+        "level": "warning",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-005",
+        "lines": [
+          86
+        ]
+      },
+      {
+        "check": "duplicate_key",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "key",
+        "subject": "TA-006",
+        "lines": [
+          96,
+          97
+        ],
+        "kind": "conflicting"
+      },
+      {
+        "check": "blq_above_lloq",
+        "level": "warning",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-006",
+        "lines": [
+          102
+        ]
+      },
+      {
+        "check": "conc_not_numeric",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-007",
+        "lines": [
+          114
+        ]
+      },
+      {
+        "check": "route_unrecognised",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-007",
+        "lines": [
+          114
+        ]
+      },
+      {
+        "check": "route_varies",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "profile",
+        "subject": "TA-007",
+        "lines": [
+          104,
+          106,
+          108,
+          110,
+          112,
+          114,
+          115,
+          117,
+          119
+        ],
+        "values": "extravascular, EXTRAVASULAR"
+      },
+      {
+        "check": "blq_and_missing",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-007",
+        "lines": [
+          120
+        ]
+      },
+      {
+        "check": "profile_no_dose",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "profile",
+        "subject": "TA-008",
+        "lines": [
+          121,
+          123,
+          125,
+          127,
+          129,
+          131,
+          133,
+          135
+        ]
+      },
+      {
+        "check": "profile_no_dose",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "profile",
+        "subject": "TA-008",
+        "lines": [
+          122,
+          124,
+          126,
+          128,
+          130,
+          132,
+          134,
+          136
+        ]
+      },
+      {
+        "check": "dose_varies",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "profile",
+        "subject": "TA-009",
+        "lines": [
+          137,
+          139,
+          141,
+          143,
+          145,
+          148,
+          150,
+          152
+        ],
+        "values": "100, 200"
+      }
+    ],
+    "two_analyte_mixed_units.csv": [
+      {
+        "check": "conc_unclassified_blank",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-001",
+        "lines": [
+          16
+        ]
+      },
+      {
+        "check": "flag_value_unmapped",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-001",
+        "lines": [
+          15
+        ],
+        "column": "BLQFL",
+        "value": "N"
+      },
+      {
+        "check": "lloq_varies",
+        "level": "warning",
+        "analyte": "PARENT",
+        "scope": "analyte",
+        "subject": "TA-002",
+        "lines": [
+          20,
+          22,
+          24,
+          26,
+          29,
+          32,
+          34,
+          36
+        ],
+        "values": "0.05, 0.10"
+      },
+      {
+        "check": "exclusion_no_reason",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-002",
+        "lines": [
+          24
+        ]
+      },
+      {
+        "check": "route_missing",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-002",
+        "lines": [
+          35
+        ]
+      },
+      {
+        "check": "time_negative",
+        "level": "warning",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-003",
+        "lines": [
+          38
+        ]
+      },
+      {
+        "check": "time_negative",
+        "level": "warning",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-003",
+        "lines": [
+          39
+        ]
+      },
+      {
+        "check": "too_few_points",
+        "level": "info",
+        "analyte": "METAB",
+        "scope": "profile",
+        "subject": "TA-003",
+        "lines": [
+          39,
+          41,
+          43,
+          45,
+          47,
+          49,
+          51,
+          53
+        ]
+      },
+      {
+        "check": "conc_negative",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-004",
+        "lines": [
+          66
+        ]
+      },
+      {
+        "check": "time_not_sorted",
+        "level": "info",
+        "analyte": "PARENT",
+        "scope": "profile",
+        "subject": "TA-004",
+        "lines": [
+          66,
+          68
+        ]
+      },
+      {
+        "check": "time_not_sorted",
+        "level": "info",
+        "analyte": "METAB",
+        "scope": "profile",
+        "subject": "TA-004",
+        "lines": [
+          67,
+          69
+        ]
+      },
+      {
+        "check": "duplicate_key",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "key",
+        "subject": "TA-005",
+        "lines": [
+          76,
+          77
+        ],
+        "kind": "exact"
+      },
+      {
+        "check": "time_not_numeric",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-005",
+        "lines": [
+          82
+        ]
+      },
+      {
+        "check": "conc_zero_not_blq",
+        "level": "warning",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-005",
+        "lines": [
+          86
+        ]
+      },
+      {
+        "check": "duplicate_key",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "key",
+        "subject": "TA-006",
+        "lines": [
+          96,
+          97
+        ],
+        "kind": "conflicting"
+      },
+      {
+        "check": "blq_above_lloq",
+        "level": "warning",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-006",
+        "lines": [
+          102
+        ]
+      },
+      {
+        "check": "conc_not_numeric",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-007",
+        "lines": [
+          114
+        ]
+      },
+      {
+        "check": "route_unrecognised",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "row",
+        "subject": "TA-007",
+        "lines": [
+          114
+        ]
+      },
+      {
+        "check": "route_varies",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "profile",
+        "subject": "TA-007",
+        "lines": [
+          104,
+          106,
+          108,
+          110,
+          112,
+          114,
+          115,
+          117,
+          119
+        ],
+        "values": "extravascular, EXTRAVASULAR"
+      },
+      {
+        "check": "blq_and_missing",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "row",
+        "subject": "TA-007",
+        "lines": [
+          120
+        ]
+      },
+      {
+        "check": "profile_no_dose",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "profile",
+        "subject": "TA-008",
+        "lines": [
+          121,
+          123,
+          125,
+          127,
+          129,
+          131,
+          133,
+          135
+        ]
+      },
+      {
+        "check": "profile_no_dose",
+        "level": "blocking",
+        "analyte": "METAB",
+        "scope": "profile",
+        "subject": "TA-008",
+        "lines": [
+          122,
+          124,
+          126,
+          128,
+          130,
+          132,
+          134,
+          136
+        ]
+      },
+      {
+        "check": "dose_varies",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "profile",
+        "subject": "TA-009",
+        "lines": [
+          137,
+          139,
+          141,
+          143,
+          145,
+          148,
+          150,
+          152
+        ],
+        "values": "100, 200"
+      },
+      {
+        "check": "units_mixed",
+        "level": "blocking",
+        "analyte": "PARENT",
+        "scope": "analyte",
+        "subject": null,
+        "lines": [
+          2,
+          4,
+          6,
+          8,
+          11,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24,
+          26,
+          29,
+          32,
+          34,
+          36
+        ],
+        "values": "ng/mL, ug/L"
+      }
+    ]
+  },
+  "scenarios": {
+    "two_analyte.csv": [
+      {
+        "id": "dose_unmapped",
+        "analytes": [
+          "PARENT",
+          "METAB"
+        ],
+        "change": {
+          "mapping": {
+            "DOSE": null
+          }
+        },
+        "includes": [
+          {
+            "check": "role_unmapped",
+            "level": "blocking",
+            "role": "DOSE"
+          }
+        ]
+      },
+      {
+        "id": "analyte_value_case",
+        "analytes": [
+          "Parent"
+        ],
+        "change": {
+          "analyte_value": "Parent"
+        },
+        "includes": [
+          {
+            "check": "analyte_no_rows",
+            "level": "blocking"
+          }
+        ]
+      },
+      {
+        "id": "conc_unit_undeclared",
+        "analytes": [
+          "PARENT",
+          "METAB"
+        ],
+        "change": {
+          "units": {
+            "CONC": null
+          }
+        },
+        "includes": [
+          {
+            "check": "units_undeclared",
+            "level": "blocking",
+            "role": "CONC"
+          }
+        ]
+      },
+      {
+        "id": "specimen_unmapped",
+        "change": {
+          "mapping": {
+            "SPECIMEN": null
+          }
+        },
+        "analytes": [
+          "PARENT"
+        ],
+        "includes": [
+          {
+            "check": "specimen_mixed",
+            "level": "blocking",
+            "values": "PLASMA, URINE",
+            "lines": [
+              10,
+              13,
+              28,
+              31
+            ]
+          }
+        ],
+        "note": "METAB has only PLASMA rows, so it has no specimen_mixed finding."
+      },
+      {
+        "id": "nominal_as_actual",
+        "analytes": [
+          "PARENT",
+          "METAB"
+        ],
+        "change": {
+          "mapping": {
+            "ACTUAL_TIME": "NFRLT"
+          }
+        },
+        "includes": [
+          {
+            "check": "time_nominal_as_actual",
+            "level": "blocking"
+          }
+        ]
+      },
+      {
+        "id": "clock_as_actual",
+        "analytes": [
+          "PARENT",
+          "METAB"
+        ],
+        "change": {
+          "mapping": {
+            "ACTUAL_TIME": "PCTM"
+          }
+        },
+        "includes": [
+          {
+            "check": "time_clock_format",
+            "level": "blocking"
+          }
+        ]
+      },
+      {
+        "id": "derive_elapsed_time",
+        "analytes": [
+          "PARENT",
+          "METAB"
+        ],
+        "change": {
+          "recipe": [
+            {
+              "step": "derive_elapsed_time",
+              "from": "PCDTC",
+              "reference": "EXSTDTC",
+              "unit": "h",
+              "time_zone": "all local, none given"
+            }
+          ]
+        },
+        "includes": [
+          {
+            "check": "time_derivation_failed",
+            "level": "blocking",
+            "subject": "TA-006",
+            "analyte": "PARENT",
+            "lines": [
+              87,
+              89,
+              91,
+              93,
+              95,
+              98,
+              100,
+              102
+            ]
+          },
+          {
+            "check": "time_derivation_failed",
+            "level": "blocking",
+            "subject": "TA-006",
+            "analyte": "METAB",
+            "lines": [
+              88,
+              90,
+              92,
+              94,
+              96,
+              97,
+              99,
+              101,
+              103
+            ]
+          }
+        ],
+        "note": "TA-006 EXSTDTC has no time. Every other row derives to its AFRLT."
+      },
+      {
+        "id": "secondary_id_mapped",
+        "change": {
+          "mapping": {
+            "SECONDARY_ID": "SUBJID"
+          }
+        },
+        "analytes": [
+          "PARENT"
+        ],
+        "includes": [
+          {
+            "check": "id_usubjid_not_one_to_one",
+            "level": "warning",
+            "subject": "TA-004",
+            "lines": [
+              62
+            ]
+          }
+        ]
+      },
+      {
+        "id": "analyte_code_trimmed",
+        "change": {
+          "recipe": [
+            {
+              "step": "trim",
+              "columns": [
+                "PCTESTCD"
+              ]
+            }
+          ]
+        },
+        "analytes": [
+          "METAB"
+        ],
+        "includes": [
+          {
+            "check": "duplicate_key",
+            "level": "blocking",
+            "kind": "exact",
+            "subject": "TA-009",
+            "lines": [
+              146,
+              147
+            ]
+          }
+        ],
+        "note": "Trimming makes the 'METAB ' row a METAB row with the same key as the TA-009 METAB 4 h sample. Only differences in PCTESTCD make it a copy."
+      }
+    ]
+  },
+  "not_plantable": {
+    "session_exclusion_no_reason": "Comes from exclusions made inside an opnca-r session, which records no reason. No input file can plant it."
+  }
+}

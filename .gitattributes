@@ -1,0 +1,4 @@
+# Generated fixtures are compared byte for byte (tests/test_fixtures.py); never convert
+# their line endings on checkout.
+tests/fixtures/*.csv -text
+tests/fixtures/*.json -text
