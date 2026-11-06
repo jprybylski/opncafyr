@@ -2,24 +2,65 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "opncafyr/tool-descriptor-v1",
   "title": "Trusted tool descriptor",
-  "description": "Shipped with an installed adapter. Never read from a study workspace.",
+  "description": "Shipped with an installed adapter. Never read from a study workspace. Executables are symbolic names looked up in the installed runtime record (runtime-v1), never paths.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "version", "runtime", "capabilities", "health"],
+  "required": ["schema_version", "id", "version", "runtime", "capabilities", "executables", "health"],
+  "$defs": {
+    "executable_name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "capability": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+  },
   "properties": {
+    "schema_version": {"const": "1.0"},
     "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
     "version": {"type": "integer", "minimum": 1},
-    "display_name": {"type": "string"},
-    "runtime": {"enum": ["python", "r"]},
-    "capabilities": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "display_name": {"type": "string", "minLength": 1},
+    "runtime": {"enum": ["python", "r", "binary"]},
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/capability"}
+    },
+    "executables": {
+      "description": "Runtime executables the tool cannot work without.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/executable_name"}
+    },
     "health": {
+      "description": "Startup probe. The launcher builds the command from kind and target; nothing here is run verbatim.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind"],
+      "required": ["kind", "executable"],
       "properties": {
-        "kind": {"enum": ["import", "rscript", "http"]},
+        "kind": {"enum": ["python_import", "r_package", "version_flag"]},
+        "executable": {"$ref": "#/$defs/executable_name"},
         "target": {"type": "string"}
-      }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "python_import"}}},
+          "then": {
+            "required": ["target"],
+            "properties": {
+              "target": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"kind": {"const": "r_package"}}},
+          "then": {
+            "required": ["target"],
+            "properties": {"target": {"pattern": "^[A-Za-z][A-Za-z0-9.]*[A-Za-z0-9]$"}}
+          }
+        },
+        {
+          "if": {"properties": {"kind": {"const": "version_flag"}}},
+          "then": {"not": {"required": ["target"]}}
+        }
+      ]
     },
     "web_app": {
       "type": "object",
@@ -32,17 +73,34 @@
       }
     },
     "jobs": {
+      "description": "Job contracts. Every schema name must be a schema bundled with the launcher.",
       "type": "object",
+      "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"},
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
         "required": ["input_schema", "output_schema"],
         "properties": {
-          "input_schema": {"type": "string"},
-          "output_schema": {"type": "string"}
+          "input_schema": {"type": "string", "pattern": "^[a-z][a-z0-9-]*-v[0-9]+$"},
+          "output_schema": {"type": "string", "pattern": "^[a-z][a-z0-9-]*-v[0-9]+$"},
+          "timeout_s": {"type": "integer", "minimum": 1}
         }
       }
     },
-    "optional_requirements": {"type": "array", "items": {"type": "string"}}
+    "optional_requirements": {
+      "description": "Runtime executables that enable extra features. When one is missing the tool still works and the listed capabilities are reported unavailable.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "executable", "message"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+          "executable": {"$ref": "#/$defs/executable_name"},
+          "capabilities": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/capability"}},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    }
   }
 }

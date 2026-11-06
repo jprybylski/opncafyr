@@ -62,7 +62,14 @@ def run_controller(
     import uvicorn
 
     from opncafyr.core.app import create_app
+    from opncafyr.core.registry import DescriptorError, load_descriptors
     from opncafyr.core.security import SecurityConfig
+
+    try:
+        tools = load_descriptors()
+    except DescriptorError as exc:
+        print(exc, file=sys.stderr)
+        return 1
 
     claimed = claim(state, wait=claim_wait)
     if claimed.url is not None:
@@ -92,6 +99,7 @@ def run_controller(
             instance_id=instance_id,
             lifecycle=lifecycle,
             settings=Settings(state / SETTINGS_FILE),
+            tools=tools,
         )
         server = uvicorn.Server(uvicorn.Config(app, log_level="info"))
 
@@ -136,13 +144,31 @@ def cmd_launch(args: argparse.Namespace) -> int:
 
 
 def cmd_doctor(_: argparse.Namespace) -> int:
+    from opncafyr.core.health import ToolHealth
+    from opncafyr.core.registry import DescriptorError, load_descriptors
+    from opncafyr.core.runtime import load_runtime
+
     print(f"opncafyr {__version__}")
     print(f"python   {sys.version.split()[0]}")
     print(f"app root {app_root()}")
     # The installed product uses app-owned runtimes from runtime/pins.toml, not PATH.
-    # This report only shows what a development machine has available.
+    # This part only shows what a development machine has available.
     for tool in ("uv", "Rscript", "quarto", "cargo", "soffice"):
         print(f"{tool:<8} {shutil.which(tool) or 'not found'}")
+    try:
+        tools = load_descriptors()
+        runtime = load_runtime()
+    except (DescriptorError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"runtime  {runtime.source or 'none installed'}")
+    health = ToolHealth(tools, runtime)
+    health.check_all()
+    for tool_id in tools:
+        status = health.status(tool_id)
+        print(f"tool {tool_id:<10} {status.state}: {status.detail}")
+        for req in status.missing:
+            print(f"     {'':<10} {req.message}")
     return 0
 
 

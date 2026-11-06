@@ -28,6 +28,10 @@ const STATES = {
   cancelled: ["■", "Cancelled"],
   incomplete: ["!", "Incomplete"],
   recorded: ["✓", "Recorded"],
+  // Tool health (/api/tools)
+  checking: ["◌", "Checking"],
+  ok: ["✓", "Available"],
+  unavailable: ["✕", "Unavailable"],
 };
 
 // A state as a symbol and a word, so it never depends on colour.

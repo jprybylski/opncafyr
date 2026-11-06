@@ -1,12 +1,14 @@
+schema_version: "1.0"
 id: opnca
 version: 1
 display_name: opnca-r
 runtime: r
 capabilities: [analyze_nca, replay_nca]
-health: {kind: rscript, target: "library(opnca)"}
+executables: [rscript]
+health: {kind: r_package, executable: rscript, target: opnca}
 web_app:
   route: /apps/opnca/
   readiness: /api/v1/health
   max_body_bytes: 25165824
 jobs:
-  replay_nca: {input_schema: run-manifest-v1, output_schema: run-manifest-v1}
+  replay_nca: {input_schema: run-manifest-v1, output_schema: run-manifest-v1, timeout_s: 1800}

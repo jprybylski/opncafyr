@@ -18,6 +18,20 @@ A future tool is added by shipping `adapters/<tool>/descriptor.yaml` (validated 
 `core.adapter.Adapter`. A future workflow (e.g. a non-NCA analysis) is a new package under
 `workflows/` that composes existing adapters. Neither requires changes to `core/`.
 
+The registry (`core/registry.py`) reads descriptors only from the installed
+`opncafyr.adapters` package, never from a workspace or the working directory. A descriptor
+names its format (`schema_version: "1.0"`), the adapter's own `version`, its capabilities,
+the runtime executables it needs (symbolic names from `runtime-v1`, never paths), a health
+probe, an optional web app, job contracts (each schema must be bundled) and optional
+requirements (an executable that enables some capabilities, e.g. LibreOffice for
+previews). Descriptors ship with the launcher, so there are no migrations: an unknown
+format or any invalid field stops startup with an error naming the file and field.
+`core/health.py` runs each probe once in the background at startup; the command is built
+by core from the probe kind (`python_import`, `r_package`, `version_flag`) and a
+pattern-checked target. `/api/tools` and `opncafyr doctor` report each tool as
+`checking`, `ok` or `unavailable` with a short reason, plus the features its missing
+optional requirements disable.
+
 ## Process model
 
 ```

@@ -75,8 +75,8 @@ scheduled first.
 - **All Gate 0 decisions are made:** #1, #2, #3 and #4 (ADR 0003, ADR 0005, ADR 0007,
   ADR 0004).
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
-  already implements part of #9, #11 and #13. Each of those issues has a comment saying
-  what is left. The job manager (#12) is done. The run, status and cancel methods of
+  already implements part of #9 and #11. Each of those issues has a comment saying
+  what is left. The job manager (#12) and the tool registry (#13) are done. The run, status and cancel methods of
   `core.adapter.Adapter` will move onto `JobRequest` when the first job adapter lands
   (#22, #32).
 - **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and

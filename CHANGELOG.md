@@ -7,6 +7,20 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Tool registry and finalized `tool-descriptor-v1` (#13).
+  - Descriptors now state `schema_version`, the runtime `executables` they need
+    (symbolic names, never paths) and a structured `health` probe; `runtime` may be
+    `binary`; jobs may set `timeout_s`; `optional_requirements` name an executable, the
+    capabilities it enables and a message for when it is missing.
+  - An invalid descriptor stops `opncafyr launch` before it binds a port, with an error
+    naming the file and field (`DescriptorError`). Job schema names must be bundled
+    schemas, so the deckifyr and quartifyr job entries wait for #32 and #33.
+  - `core/health.py` probes each tool once at startup in the background (argv only,
+    through `proctree.spawn`). `/api/tools` adds `version`, `health` and
+    `missing_requirements`; the home page shows them on each tool tile, and
+    `opncafyr doctor` prints them.
+  - Tests: invalid fields are named, descriptors inside a workspace are ignored, and
+    every bundled stub reports its health.
 - ADR 0007 records the templates and the identifiable-data policy (#3).
   - v1 ships one generic NCA report (quartifyr 0.3.2 `examples/demo-report` and
     `org-reference.docx`) and deckifyr's bundled default deck, with an auto-built "NCA

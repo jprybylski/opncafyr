@@ -27,6 +27,12 @@ import psutil
 
 IS_WINDOWS = os.name == "nt"
 
+# Re-exported so other modules start processes only through this one.
+PIPE = subprocess.PIPE
+STDOUT = subprocess.STDOUT
+DEVNULL = subprocess.DEVNULL
+TimeoutExpired = subprocess.TimeoutExpired
+
 # Variables a child may inherit from the launcher's environment.
 _KEEP_POSIX = frozenset({"HOME", "USER", "LOGNAME", "LANG", "TZ"})
 _KEEP_WINDOWS = frozenset(

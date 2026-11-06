@@ -2,7 +2,7 @@
 // names a tool, so a new adapter appears here without a change to core files.
 
 import { getJSON } from "./api.js";
-import { $, el, pollWhileVisible, setStatus } from "./dom.js";
+import { $, el, pollWhileVisible, setStatus, stateBadge } from "./dom.js";
 
 const APP_STATES = {
   not_started: "Not running.",
@@ -20,6 +20,13 @@ const relative = (route) => route.replace(/^\/+/, "");
 function tile(tool, app) {
   const li = el("li", null, "tile");
   li.append(el("h3", tool.display_name || tool.id));
+  if (tool.health) {
+    const p = el("p");
+    p.append(stateBadge(tool.health.state));
+    if (tool.health.state !== "ok") p.append(` ${tool.health.detail}`);
+    li.append(p);
+  }
+  for (const req of tool.missing_requirements || []) li.append(el("p", req.message, "muted"));
   if (tool.capabilities.length) {
     li.append(el("p", `Can: ${tool.capabilities.map(humanize).join(", ")}.`, "muted"));
   }

@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 from starlette.types import Scope
 
 from opncafyr import __version__
+from opncafyr.core.health import ToolHealth
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
 from opncafyr.core.lifecycle import (
     MAX_IDLE_MINUTES,
@@ -44,7 +45,7 @@ from opncafyr.core.lifecycle import (
 from opncafyr.core.picker import pick_folder
 from opncafyr.core.proxy import mount_proxy
 from opncafyr.core.registry import ToolDescriptor, load_descriptors, load_web_adapters
-from opncafyr.core.runtime import load_runtime
+from opncafyr.core.runtime import Runtime, load_runtime
 from opncafyr.core.security import PROXY_PREFIX, LoopbackGuardMiddleware, SecurityConfig
 from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
 from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
@@ -109,7 +110,7 @@ async def _monitor(lifecycle: Lifecycle, tick_s: float) -> None:
             log.exception("Lifecycle check failed")
 
 
-def build_supervisor(tools: dict[str, ToolDescriptor]) -> Supervisor:
+def build_supervisor(tools: dict[str, ToolDescriptor], runtime: Runtime) -> Supervisor:
     adapters = load_web_adapters(tools)
     apps = {
         tool_id: WebAppConfig(
@@ -120,7 +121,7 @@ def build_supervisor(tools: dict[str, ToolDescriptor]) -> Supervisor:
         for tool_id, adapter in adapters.items()
     }
     return Supervisor(
-        apps, runtime=load_runtime(), state_root=state_dir(), log_root=logs_dir() / "children"
+        apps, runtime=runtime, state_root=state_dir(), log_root=logs_dir() / "children"
     )
 
 
@@ -134,18 +135,30 @@ def create_app(
     instance_id: str | None = None,
     lifecycle: LifecycleConfig | None = None,
     settings: Settings | None = None,
+    tools: dict[str, ToolDescriptor] | None = None,
+    runtime: Runtime | None = None,
 ) -> FastAPI:
+    """Build the controller app.
+
+    Descriptors are loaded here, before anything listens, so an invalid one stops the
+    launch with a ``DescriptorError`` naming the file and field.
+    """
     # Lets a second launch confirm that /health on the recorded port is this instance.
     instance_id = instance_id or uuid.uuid4().hex
     lifecycle_config = lifecycle or LifecycleConfig()
+    installed = tools if tools is not None else load_descriptors()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        app.state.tools = load_descriptors()
-        sup = supervisor if supervisor is not None else build_supervisor(app.state.tools)
+        app.state.tools = installed
+        rt = runtime if runtime is not None else load_runtime()
+        health = ToolHealth(installed, rt)
+        app.state.health = health
+        health.start()
+        sup = supervisor if supervisor is not None else build_supervisor(installed, rt)
         app.state.supervisor = sup
         # Opening a workspace (/api/workspace/open) runs the job sweep.
-        manager = jobs if jobs is not None else JobManager(runtime=load_runtime())
+        manager = jobs if jobs is not None else JobManager(runtime=rt)
         app.state.jobs = manager
         app.state.workspace = None
         store = settings if settings is not None else Settings(state_dir() / SETTINGS_FILE)
@@ -164,6 +177,7 @@ def create_app(
         )
         app.state.lifecycle = life
         # In case the server dies without running shutdown (atexit runs these in reverse).
+        atexit.register(health.stop)
         atexit.register(sup.stop_all)
         atexit.register(manager.shutdown)
         async with httpx.AsyncClient(timeout=PROXY_TIMEOUT, follow_redirects=False) as client:
@@ -177,8 +191,10 @@ def create_app(
                     await monitor
                 await anyio.to_thread.run_sync(manager.shutdown)
                 await anyio.to_thread.run_sync(sup.stop_all)
+                await anyio.to_thread.run_sync(health.stop)
                 atexit.unregister(manager.shutdown)
                 atexit.unregister(sup.stop_all)
+                atexit.unregister(health.stop)
 
     app = FastAPI(
         title="opncafyr",
@@ -195,14 +211,17 @@ def create_app(
         return {"status": "ok", "version": __version__, "instance_id": instance_id}
 
     @app.get("/api/tools")
-    def tools() -> dict[str, list[dict[str, object]]]:
+    def list_tools() -> dict[str, list[dict[str, object]]]:
+        health: ToolHealth = app.state.health
         return {
             "tools": [
                 {
                     "id": t.id,
                     "display_name": t.display_name or t.id,
+                    "version": t.version,
                     "capabilities": list(t.capabilities),
                     "web_route": t.web_route,
+                    **health.status(t.id).as_json(),
                 }
                 for t in app.state.tools.values()
             ]

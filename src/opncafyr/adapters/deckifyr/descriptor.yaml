@@ -1,14 +1,21 @@
+schema_version: "1.0"
 id: deckifyr
 version: 1
 display_name: deckifyr
 runtime: python
 capabilities: [edit_deck, validate_deck, build_deck, preview_deck]
-health: {kind: import, target: deckifyr}
+executables: [deckifyr_python]
+health: {kind: python_import, executable: deckifyr_python, target: deckifyr}
 web_app:
   route: /apps/deckifyr/
   readiness: /api/health
   max_body_bytes: 67108864
-jobs:
-  validate_deck: {input_schema: deck-project-v1, output_schema: validation-v1}
-  build_deck: {input_schema: deck-project-v1, output_schema: deck-build-v1}
-optional_requirements: [libreoffice]
+# Job contracts (validate_deck, build_deck) land with their schemas in #33.
+optional_requirements:
+  - name: libreoffice
+    executable: soffice
+    capabilities: [preview_deck]
+    message: "Slide previews unavailable: LibreOffice is not installed."
+  - name: quarto
+    executable: quarto
+    message: "Quarto elements unavailable: Quarto is not installed."

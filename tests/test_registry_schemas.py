@@ -4,7 +4,7 @@ import pytest
 from jsonschema import ValidationError
 
 from opncafyr.core.manifest import atomic_write_json, load_schema, validate
-from opncafyr.core.registry import ToolDescriptor, load_descriptors
+from opncafyr.core.registry import DescriptorError, ToolDescriptor, load_descriptors
 
 SCHEMAS = [
     "tool-descriptor-v1",
@@ -32,14 +32,16 @@ def test_bundled_descriptors_load():
 
 
 def test_descriptor_cannot_smuggle_an_executable():
-    with pytest.raises(ValidationError):
+    with pytest.raises(DescriptorError, match="field 'executable'"):
         ToolDescriptor.from_mapping(
             {
+                "schema_version": "1.0",
                 "id": "evil",
                 "version": 1,
                 "runtime": "python",
                 "capabilities": ["run"],
-                "health": {"kind": "import"},
+                "executables": ["python"],
+                "health": {"kind": "version_flag", "executable": "python"},
                 "executable": "/bin/sh",
             }
         )
