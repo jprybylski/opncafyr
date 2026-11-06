@@ -22,6 +22,7 @@ import hashlib
 import os
 import re
 import secrets
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -30,6 +31,10 @@ TOKENS_DIR = "open-tokens"
 TOKEN_TTL_S = 120.0
 OPEN_PATH = "/open"
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{20,128}$")
+# Only the server consumes tokens. On Windows, concurrent renames of one file can all fail
+# with a sharing violation, so requests in this process take turns; the rename still
+# makes a token single-use across processes.
+_CONSUME_LOCK = threading.Lock()
 
 
 def tokens_dir(state_dir: Path) -> Path:
@@ -58,10 +63,11 @@ def consume_open_token(folder: Path, token: str | None, *, now: float | None = N
         return False
     path = Path(folder) / _digest(token)
     claimed = path.with_name(f".{path.name}.{uuid.uuid4().hex}.used")
-    try:
-        os.replace(path, claimed)  # only one caller wins the rename
-    except OSError:
-        return False
+    with _CONSUME_LOCK:
+        try:
+            os.replace(path, claimed)  # only one caller wins the rename
+        except OSError:
+            return False
     try:
         minted = float(claimed.read_text("ascii"))
     except (OSError, ValueError):
