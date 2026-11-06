@@ -41,11 +41,22 @@ WINDOWS_SCRIPT = "\n".join(
     (
         "$ErrorActionPreference = 'Stop'",
         "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
-        "Add-Type -AssemblyName System.Windows.Forms",
+        "Add-Type -AssemblyName System.Windows.Forms, System.Drawing",
         "[System.Windows.Forms.Application]::EnableVisualStyles()",
+        # The dialog's owner must be a shown, top-most window: a dialog owned by a top-most
+        # window is top-most too. A hidden owner left the dialog behind other windows
+        # (manual test, Windows 11). The owner is invisible and 1x1 at screen centre, so the
+        # dialog centres on screen.
         "$owner = New-Object System.Windows.Forms.Form",
         "$owner.TopMost = $true",
         "$owner.ShowInTaskbar = $false",
+        "$owner.FormBorderStyle = 'None'",
+        "$owner.StartPosition = 'CenterScreen'",
+        "$owner.MinimumSize = [System.Drawing.Size]::new(1, 1)",
+        "$owner.Size = [System.Drawing.Size]::new(1, 1)",
+        "$owner.Opacity = 0",
+        "$owner.Show()",
+        "$owner.Activate()",
         "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog",
         "$dialog.Description = $env:PICKER_PROMPT",
         "$dialog.ShowNewFolderButton = $true",
