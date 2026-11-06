@@ -6,22 +6,18 @@ import contextlib
 import json
 import logging
 import os
-import re
 import subprocess
 import sys
-import threading
 import time
 from pathlib import Path
 
-import httpx
 import psutil
-import pytest
 
+from launcher_helpers import running_controller
 from opncafyr import cli
 from opncafyr.core import instance
 from opncafyr.core.instance import InstanceLock, claim, clear_record, read_record, write_record
 from opncafyr.core.proctree import free_loopback_port
-from opncafyr.core.security import SESSION_HEADER
 
 HOLDER = Path(__file__).with_name("instance_holder.py")
 
@@ -55,38 +51,6 @@ def holder(state: Path, seconds: float):
             proc.kill()
         proc.wait(10)
         proc.stdout.close()
-
-
-@contextlib.contextmanager
-def running_controller(state: Path):
-    """Run a real launcher in a thread; stop it through the API on exit."""
-    result: dict[str, int] = {}
-    thread = threading.Thread(
-        target=lambda: result.setdefault(
-            "rc", cli.run_controller(state=state, open_browser=False, claim_wait=5)
-        ),
-        daemon=True,
-    )
-    thread.start()
-    deadline = time.monotonic() + 30
-    record = None
-    while time.monotonic() < deadline:
-        record = read_record(state)
-        if record and instance.probe(record["port"], record["instance_id"]):
-            break
-        time.sleep(0.05)
-    else:
-        pytest.fail("the launcher did not become healthy")
-    url = instance.instance_url(record["port"])
-    try:
-        yield record
-    finally:
-        page = httpx.get(url).text
-        secret = re.search(r'name="opncafyr-session" content="([^"]+)"', page).group(1)
-        httpx.post(f"{url}api/quit", headers={SESSION_HEADER: secret})
-        thread.join(30)
-        assert not thread.is_alive()
-        assert result["rc"] == 0
 
 
 def test_second_launch_reopens_the_healthy_instance(tmp_path, monkeypatch):

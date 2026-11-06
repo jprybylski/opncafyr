@@ -15,6 +15,7 @@ import asyncio
 import atexit
 import contextlib
 import logging
+import time
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -206,9 +207,17 @@ def create_app(
     )
     app.add_middleware(LoopbackGuardMiddleware, config=security)
 
+    started = time.monotonic()
+
     @app.get("/health")
-    def health() -> dict[str, str]:
-        return {"status": "ok", "version": __version__, "instance_id": instance_id}
+    def health() -> dict[str, object]:
+        # No paths, workspace names or data: anyone on this machine can read this.
+        return {
+            "status": "ok",
+            "version": __version__,
+            "instance_id": instance_id,
+            "uptime_s": round(time.monotonic() - started, 3),
+        }
 
     @app.get("/api/tools")
     def list_tools() -> dict[str, list[dict[str, object]]]:

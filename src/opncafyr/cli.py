@@ -23,10 +23,20 @@ from opncafyr.core.lifecycle import (
     Settings,
     minutes_to_seconds,
 )
-from opncafyr.paths import app_root, state_dir
+from opncafyr.paths import app_root, logs_dir, state_dir
 
 LOOPBACK = "127.0.0.1"
 _SAVED = object()  # --idle-timeout not given: use the saved setting
+
+
+def _loopback_host(value: str) -> str:
+    """``--host`` exists only to refuse anything but loopback, loudly."""
+    if value != LOOPBACK:
+        raise argparse.ArgumentTypeError(
+            f"opncafyr listens only on {LOOPBACK}; refusing {value!r}. Other hosts, "
+            "addresses and interfaces could expose the launcher to other machines or users."
+        )
+    return value
 
 
 def _bind_loopback(port: int) -> socket.socket:
@@ -57,11 +67,16 @@ def run_controller(
     open_browser: bool = True,
     claim_wait: float = CLAIM_WAIT,
     lifecycle: LifecycleConfig | None = None,
+    log_dir: Path | None = None,
 ) -> int:
-    """Start the controller, or reopen the one already running for this user."""
+    """Start the controller, or reopen the one already running for this user.
+
+    ``log_dir`` turns on the launcher log (``core.logs``); tests may leave it off.
+    """
     import uvicorn
 
     from opncafyr.core.app import create_app
+    from opncafyr.core.logs import configure_logging, reset_logging
     from opncafyr.core.registry import DescriptorError, load_descriptors
     from opncafyr.core.security import SecurityConfig
 
@@ -82,6 +97,8 @@ def run_controller(
         return 1
 
     instance_id = uuid.uuid4().hex
+    if log_dir is not None:
+        configure_logging(log_dir)
     try:
         sock = _bind_loopback(port)
         port = sock.getsockname()[1]
@@ -101,7 +118,8 @@ def run_controller(
             settings=Settings(state / SETTINGS_FILE),
             tools=tools,
         )
-        server = uvicorn.Server(uvicorn.Config(app, log_level="info"))
+        # log_config=None: uvicorn's loggers reach the root handlers set up above.
+        server = uvicorn.Server(uvicorn.Config(app, log_level="info", log_config=None))
 
         url = f"http://{LOOPBACK}:{port}/"
         write_record(state, instance_id=instance_id, port=port)
@@ -112,6 +130,8 @@ def run_controller(
     finally:
         clear_record(state, instance_id)
         claimed.lock.release()
+        if log_dir is not None:
+            reset_logging()
     return 0
 
 
@@ -140,6 +160,7 @@ def cmd_launch(args: argparse.Namespace) -> int:
         port=args.port,
         open_browser=not args.no_browser,
         lifecycle=lifecycle,
+        log_dir=logs_dir(),
     )
 
 
@@ -183,6 +204,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     launch = sub.add_parser("launch", help="Start the local workspace controller.")
     launch.add_argument("--port", type=int, default=0, help="Loopback port (0 = ephemeral).")
+    launch.add_argument(
+        "--host",
+        type=_loopback_host,
+        default=LOOPBACK,
+        help=f"Only {LOOPBACK} is accepted; anything else is refused.",
+    )
     launch.add_argument("--no-browser", action="store_true", help="Do not open a browser.")
     launch.add_argument(
         "--idle-timeout",

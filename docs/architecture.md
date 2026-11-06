@@ -43,6 +43,13 @@ launcher (uvicorn, 127.0.0.1:<ephemeral>)
        python -m deckifyr --json …  (validate, build, preview)
 ```
 
+`opncafyr launch` binds its own socket on `127.0.0.1:0` and hands it to uvicorn, so the
+ephemeral port is known before anything listens; `--host` accepts only `127.0.0.1` (not
+`0.0.0.0`, `::1` or a LAN address). `/health` reports status, version, instance id and
+uptime and nothing else; the browser opens only after it answers. The launcher logs to
+`logs/launcher.log` in the app folder as JSON lines (`core/logs.py`, rotated at 5 MB),
+uvicorn's own loggers included.
+
 The controller owns child lifetimes (FastAPI lifespan), the single-instance lock, idle
 shutdown and the job state machine `queued → preparing → running → reviewing →
 completed` (+ `failed`, `cancelled`). The job manager (`core/jobmanager.py`) runs each job

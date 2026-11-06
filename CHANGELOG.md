@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Controller core finished (#9).
+  - `launch --host` accepts only `127.0.0.1` and exits with an error for anything else,
+    `::1` included.
+  - `/health` adds `uptime_s`; it still carries no paths or data.
+  - The launcher log: JSON lines in `logs/launcher.log` (rotated), with uvicorn's
+    loggers routed to the same handlers and a filter hook for redaction.
+  - Tests: `launch --no-browser` serves `/health`, two launchers in parallel get
+    different ports, and the browser opens exactly once, only after `/health` answers.
 - Tool registry and finalized `tool-descriptor-v1` (#13).
   - Descriptors now state `schema_version`, the runtime `executables` they need
     (symbolic names, never paths) and a structured `health` probe; `runtime` may be
