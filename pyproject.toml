@@ -41,6 +41,8 @@ testpaths = ["tests"]
 # The proxy harness (#16) needs installed tools; run it with `pytest -m integration`.
 addopts = "-ra -m 'not integration'"
 markers = ["integration: needs the pinned child apps (see docs/spikes/basepath.md)"]
+# Dump every thread's stack if one test runs longer than this (diagnoses hangs in CI).
+faulthandler_timeout = 60
 
 [tool.ruff]
 line-length = 100

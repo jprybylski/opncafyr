@@ -12,6 +12,7 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -26,7 +27,7 @@ jobs:
       - name: Format check
         run: uv run ruff format --check
       - name: Tests
-        run: uv run pytest
+        run: uv run pytest -v
 
   # #16: opnca-r and deckifyr from their pinned releases behind the /apps/<tool>/ proxy.
   # macOS 15 because the opnca-r 0.2.7 binaries need it (opnca-r#45). opnca-r is private:
