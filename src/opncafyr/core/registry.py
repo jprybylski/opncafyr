@@ -13,6 +13,7 @@ incompatibly.
 from __future__ import annotations
 
 import importlib
+import pkgutil
 from dataclasses import dataclass
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -23,10 +24,12 @@ import yaml
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import best_match
 
+from opncafyr.core.datasets import DatasetAnnotator, Importer
 from opncafyr.core.manifest import load_schema
 
 DESCRIPTOR_SCHEMA = "tool-descriptor-v1"
 ADAPTERS_PACKAGE = "opncafyr.adapters"
+WORKFLOWS_PACKAGE = "opncafyr.workflows"
 
 
 class DescriptorError(ValueError):
@@ -200,3 +203,37 @@ def load_web_adapters(descriptors: dict[str, ToolDescriptor]) -> dict[str, Any]:
             raise ValueError(f"Adapter {tool_id!r} declares a web_app but has no web_app().")
         adapters[tool_id] = factory()
     return adapters
+
+
+# --- Workflow packs ----------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class WorkflowPack:
+    """What a workflow package adds to core: dataset importers and preview annotators."""
+
+    id: str
+    importers: tuple[Importer, ...] = ()
+    annotators: tuple[DatasetAnnotator, ...] = ()
+
+
+def load_workflows() -> list[WorkflowPack]:
+    """Every installed workflow pack, in package-name order.
+
+    Packs are found by package scan (``opncafyr.workflows.<name>``), never imported by
+    name from core. A package that has no ``workflow()`` adds nothing.
+    """
+    package = importlib.import_module(WORKFLOWS_PACKAGE)
+    packs: list[WorkflowPack] = []
+    for info in sorted(pkgutil.iter_modules(package.__path__), key=lambda m: m.name):
+        if not info.ispkg:
+            continue
+        module = importlib.import_module(f"{WORKFLOWS_PACKAGE}.{info.name}")
+        factory = getattr(module, "workflow", None)
+        if factory is None:
+            continue
+        pack = factory()
+        if not isinstance(pack, WorkflowPack):
+            raise ValueError(f"Workflow {info.name!r}: workflow() must return a WorkflowPack.")
+        packs.append(pack)
+    return packs

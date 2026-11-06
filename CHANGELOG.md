@@ -7,6 +7,22 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Dataset scan, preview and import (#21).
+  - `GET /api/datasets` lists data files directly in the study folder and in
+    `source-data/`, with size, rows, columns and candidate analytes. Nothing deeper is
+    read.
+  - `POST /api/datasets/preview` returns columns, inferred types with up to three
+    counterexamples, missing counts, the row count (estimated and labelled for files
+    over 50 MB), the first rows, and the size and SHA-256 of the file. Source files are
+    opened read-only and never changed.
+  - `POST /api/datasets/import` records the file's path, size and SHA-256 in
+    `workspace.json` `sources`, giving later recipes a `source_id`.
+  - Formats plug in through workflow packs: `core.datasets.Importer` and
+    `DatasetAnnotator`, found by `core.registry.load_workflows()`. The NCA pack adds a
+    CSV importer (delimiter sniffing, UTF-8 BOM, `"", NA, ., NaN, NULL` as missing,
+    readr-like types, ported from makecoolplots) and an analyte annotator that lists
+    exact raw values and flags values differing only by spaces or case.
+  - A Data view (`#/data`) in the launcher lists the files, previews one and imports it.
 - Launcher visual design (#50), approved by the owner on 2026-11-06.
   - Approved design and screenshots: `docs/design/home-v1/`. Teal accent, a dark
     slate top bar and a light sidebar, the reverse of the tools' own layout. Status

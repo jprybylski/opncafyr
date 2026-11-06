@@ -634,3 +634,11 @@ dialog p { margin: 0 0 var(--space-4); color: var(--muted); }
   .pill, .chip, .nav-link[aria-current="page"], .btn-primary { border: 1px solid CanvasText; }
   .bar span { background: Highlight; }
 }
+
+/* Data view (#21): dataset list and preview */
+.preview h3 { margin: 0; font-size: var(--text-sm); font-weight: 650; }
+.preview section { display: grid; gap: var(--space-2); min-width: 0; }
+.preview section > p { margin: 0; font-size: var(--text-sm); }
+.preview .panel ul { margin: 0; padding-left: 1.2em; font-size: var(--text-sm); }
+.raw { font-family: var(--mono); font-size: 0.92em; white-space: pre; color: var(--fg); }
+.rows-table td { white-space: nowrap; }

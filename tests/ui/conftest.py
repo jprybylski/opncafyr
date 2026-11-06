@@ -7,6 +7,7 @@ from ``tests/toy_child.py``.
 
 from __future__ import annotations
 
+import shutil
 import socket
 import sys
 import threading
@@ -27,6 +28,8 @@ from opncafyr.core.lifecycle import LifecycleConfig, Settings
 from opncafyr.core.security import SESSION_HEADER, SecurityConfig
 from opncafyr.core.workspace import RecentWorkspaces
 from toy_adapter import toy_supervisor
+
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 SLEEP = JobRequest(
     kind="toy.sleep",
@@ -67,7 +70,8 @@ def browser():
 @pytest.fixture
 def home(tmp_path: Path):
     study = tmp_path / "Study A"
-    study.mkdir()
+    (study / "source-data").mkdir(parents=True)
+    shutil.copyfile(FIXTURES / "two_analyte.csv", study / "source-data" / "two_analyte.csv")
     port = _free_port()
     security = SecurityConfig(port=port)
     sup, _ = toy_supervisor(tmp_path)

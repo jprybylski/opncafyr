@@ -18,6 +18,12 @@ A future tool is added by shipping `adapters/<tool>/descriptor.yaml` (validated 
 `core.adapter.Adapter`. A future workflow (e.g. a non-NCA analysis) is a new package under
 `workflows/` that composes existing adapters. Neither requires changes to `core/`.
 
+A workflow package exposes `workflow()` returning a `core.registry.WorkflowPack`: its
+dataset importers (`core.datasets.Importer`, one per file format) and preview annotators
+(`core.datasets.DatasetAnnotator`). Core finds packs by package scan
+(`load_workflows()`), as it finds web adapters, and never imports a workflow by name. A
+new file format is a new importer in a pack.
+
 The registry (`core/registry.py`) reads descriptors only from the installed
 `opncafyr.adapters` package, never from a workspace or the working directory. A descriptor
 names its format (`schema_version: "1.0"`), the adapter's own `version`, its capabilities,
@@ -130,7 +136,7 @@ Study folder/
   source-data/                  optional immutable copies or references
   .opncafyr/
     workspace.json              schemas/workspace-v1 (core/workspace.py, migrations in
-                                core/migrations/)
+                                core/migrations/); `sources` lists imported files
     backups/                    copies made before a schema migration
     recipes/<recipe-id>.yaml    schemas/recipe-v1
     runs/<run-id>/
@@ -146,3 +152,23 @@ Study folder/
   report/                       quartifyr / Quarto project
   deck/                         deckifyr project
 ```
+
+## Datasets (#21)
+
+`/api/datasets` (`core/datasets_api.py`, `core/datasets.py`) lists importable files
+**directly** in the study folder and in `source-data/`. Nothing deeper, nothing under a
+dot-folder and no other file type is listed or read. A preview may name only a file the
+scan could list; every path goes through `resolve_in_root`. Files are opened read-only
+(`rb`), never locked or written. Results are cached in memory by path, mtime and size.
+
+A preview gives columns, inferred types (with up to three counterexamples), missing
+counts, exact or estimated row count, the first rows and the annotations. Files over
+50 MB are sampled (first 100 000 rows) and labelled so; the SHA-256 always covers the
+whole file. The NCA pack's CSV importer (`workflows/nca/importers/csv.py`) sniffs the
+delimiter, strips a UTF-8 BOM and treats `"", NA, ., NaN, NULL` as missing; its analyte
+annotator lists exact raw values of the analyte code columns of ADR 0005 Q1.
+
+`POST /api/datasets/import` re-hashes the file and records `{id, path, sha256,
+size_bytes}` in `workspace.json` `sources` (the id a recipe's `source_id` names). The same
+bytes at the same path keep their entry; changed bytes get a new one. Data values travel
+only to the page on this origin and are never logged.

@@ -18,8 +18,9 @@ import contextlib
 import json
 import logging
 import os
+import re
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
@@ -309,6 +310,59 @@ def open_workspace(path: str | Path, allow_migrate: bool = False) -> Workspace:
             backups=tuple(result.backups),
         )
     raise WorkspaceError(state, message)
+
+
+# --- imported sources --------------------------------------------------------------------
+
+_sources_lock = threading.Lock()
+
+
+def _source_id(rel_path: str, sha256: str, taken: set[str]) -> str:
+    stem = PurePosixPath(rel_path).stem
+    base = re.sub(r"[^a-z0-9]+", "-", stem.lower()).strip("-")[:40] or "source"
+    candidate = f"{base}-{sha256[:8]}"
+    n = 2
+    while candidate in taken:
+        candidate = f"{base}-{sha256[:8]}-{n}"
+        n += 1
+    return candidate
+
+
+def add_source(
+    workspace: Workspace, rel_path: str, size_bytes: int, sha256: str
+) -> tuple[Workspace, dict[str, Any], bool]:
+    """Record an imported source file (#21) in ``workspace.json``.
+
+    Returns the updated workspace, the entry and whether it is new. The same path with
+    the same bytes returns the existing entry. A changed file gets a new entry, so a
+    recipe that names the old ``source_id`` still describes the bytes it was made for.
+    """
+    meta = workspace.root / WORKSPACE_META_DIR
+    with _sources_lock:
+        doc = _read_document(meta)
+        state, message = _classify(doc)
+        if state != WORKSPACE:
+            raise WorkspaceError(state, message)
+        sources: list[dict[str, Any]] = doc["sources"]
+        for entry in sources:
+            if entry["path"] == rel_path and entry["sha256"] == sha256:
+                return replace(workspace, document=doc), entry, False
+        entry = {
+            "id": _source_id(rel_path, sha256, {e["id"] for e in sources}),
+            "path": rel_path,
+            "sha256": sha256,
+            "size_bytes": size_bytes,
+        }
+        sources.append(entry)
+        try:
+            atomic_write_json(meta / WORKSPACE_FILE, doc, WORKSPACE_SCHEMA)
+        except PermissionError:
+            raise WorkspaceError(
+                "permission", "You don't have permission to update this workspace."
+            ) from None
+        except OSError:
+            raise WorkspaceError("io", "The workspace file could not be updated.") from None
+        return replace(workspace, document=doc), entry, True
 
 
 # --- recently used workspaces -------------------------------------------------------------

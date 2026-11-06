@@ -69,3 +69,15 @@ def test_spawn_needs_an_absolute_executable(tmp_path):
         except ValueError:
             continue
         raise AssertionError(f"spawn accepted {argv!r}")
+
+
+def test_core_finds_workflow_packs_by_package_scan():
+    # Core never imports a workflow by name; the NCA pack is found by scanning.
+    from opncafyr.core.datasets import DatasetAnnotator, Importer
+    from opncafyr.core.registry import load_workflows
+
+    packs = {p.id: p for p in load_workflows()}
+    assert "nca" in packs
+    assert all(isinstance(i, Importer) for i in packs["nca"].importers)
+    assert all(isinstance(a, DatasetAnnotator) for a in packs["nca"].annotators)
+    assert ".csv" in {ext for i in packs["nca"].importers for ext in i.extensions}

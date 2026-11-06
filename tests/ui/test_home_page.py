@@ -99,7 +99,9 @@ def test_axe_finds_no_violations(page):
     _axe(page)
 
 
-@pytest.mark.parametrize(("view", "heading"), [("jobs", "Jobs"), ("settings", "Settings")])
+@pytest.mark.parametrize(
+    ("view", "heading"), [("data", "Data"), ("jobs", "Jobs"), ("settings", "Settings")]
+)
 def test_views_from_the_sidebar(page, view, heading):
     nav = page.get_by_role("navigation", name="Main")
     nav.get_by_role("link", name=heading, exact=False).first.click()
@@ -209,4 +211,25 @@ def test_a_tool_link_works_on_a_fresh_load(page, home):
     page.goto(home.url + "#/apps/nope")
     page.get_by_text('No installed tool has a web app called "nope".').wait_for()
     assert page.get_by_role("button", name="Reload").is_disabled()
+    assert page.errors == []
+
+
+def test_preview_and_import_a_dataset(page):
+    page.goto(page.url.split("#")[0] + "#/data")
+    page.get_by_role("heading", level=1, name="Data").wait_for()
+    path = "source-data/two_analyte.csv"
+    row = page.locator("#datasets-body tr", has_text=path)
+    row.wait_for()
+    assert "168" in row.inner_text()
+    row.get_by_role("button", name=f"Preview {path}").click()
+    page.get_by_role("heading", name=f"Preview: {path}").wait_for()
+    values = page.get_by_role("table", name="Values of PCTESTCD").inner_text()
+    for value in ('"PARENT"', '"METAB"', '"METAB "'):
+        assert value in values
+    assert page.get_by_role("table", name="Columns, types and missing values").is_visible()
+    assert page.locator(".rows-table tbody tr").count() == 20
+    _axe(page)
+    page.get_by_role("button", name="Import", exact=True).click()
+    page.locator("#preview-status").get_by_text("Imported as source").wait_for()
+    row.locator(".state", has_text="Recorded").wait_for()
     assert page.errors == []

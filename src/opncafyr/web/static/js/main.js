@@ -1,6 +1,7 @@
 // Home page entry point (ADR 0006): plain ES modules, no build step, no third-party code.
 
 import { initArtifacts } from "./artifacts.js";
+import { initDatasets } from "./datasets.js";
 import { initJobs } from "./jobs.js";
 import { initLifecycle } from "./lifecycle.js";
 import { initRouter } from "./router.js";
@@ -15,5 +16,6 @@ initToolView();
 initWorkspace();
 initTools();
 initArtifacts();
+initDatasets();
 initJobs();
 initLifecycle();

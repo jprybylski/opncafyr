@@ -6,7 +6,8 @@ and jobs are started by workflows and adapters, and all of them are stopped when
 controller exits. The lifespan also runs the lifecycle monitor (``core.lifecycle``): page
 heartbeats, idle shutdown and the explicit Quit flow. The user picks the study workspace
 through ``/api/workspace/*`` (``core.workspace_api``); opening one points the job manager
-at it.
+at it. ``/api/datasets/*`` (``core.datasets_api``) scans and previews its data files with
+the importers of the installed workflow packs.
 """
 
 from __future__ import annotations
@@ -34,6 +35,8 @@ from starlette.types import Scope
 
 from opncafyr import __version__
 from opncafyr.core.bootstrap import OPEN_PATH, consume_open_token, tokens_dir
+from opncafyr.core.datasets import DatasetService
+from opncafyr.core.datasets_api import mount_datasets_api
 from opncafyr.core.health import ToolHealth
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
 from opncafyr.core.lifecycle import (
@@ -49,7 +52,13 @@ from opncafyr.core.lifecycle import (
 )
 from opncafyr.core.picker import pick_folder
 from opncafyr.core.proxy import mount_proxy
-from opncafyr.core.registry import ToolDescriptor, load_descriptors, load_web_adapters
+from opncafyr.core.registry import (
+    ToolDescriptor,
+    WorkflowPack,
+    load_descriptors,
+    load_web_adapters,
+    load_workflows,
+)
 from opncafyr.core.runtime import Runtime, load_runtime
 from opncafyr.core.security import (
     REOPEN_PAGE,
@@ -151,6 +160,7 @@ def create_app(
     tools: dict[str, ToolDescriptor] | None = None,
     runtime: Runtime | None = None,
     open_tokens: Path | None = None,
+    workflows: list[WorkflowPack] | None = None,
 ) -> FastAPI:
     """Build the controller app.
 
@@ -161,6 +171,11 @@ def create_app(
     instance_id = instance_id or uuid.uuid4().hex
     lifecycle_config = lifecycle or LifecycleConfig()
     installed = tools if tools is not None else load_descriptors()
+    packs = workflows if workflows is not None else load_workflows()
+    datasets = DatasetService(
+        importers=[i for p in packs for i in p.importers],
+        annotators=[a for p in packs for a in p.annotators],
+    )
     token_folder = open_tokens if open_tokens is not None else tokens_dir(state_dir())
 
     @asynccontextmanager
@@ -387,6 +402,7 @@ def create_app(
         picker=picker if picker is not None else pick_folder,
         recent=recent if recent is not None else RecentWorkspaces(state_dir() / RECENT_FILE),
     )
+    mount_datasets_api(app, datasets)
     mount_proxy(app)
     app.mount("/static", HomeAssets(packages=[("opncafyr.web", "static")]), name="static")
     return app

@@ -58,6 +58,7 @@
     <nav class="sidenav" aria-label="Main">
       <ul>
         <li><a class="nav-link" href="#/" data-view="home" title="Home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span class="nav-label">Home</span></a></li>
+        <li><a class="nav-link" href="#/data" data-view="data" title="Data"><svg class="icon" aria-hidden="true"><use href="#i-table"/></svg><span class="nav-label">Data</span></a></li>
         <li><a class="nav-link" href="#/jobs" data-view="jobs" title="Jobs"><svg class="icon" aria-hidden="true"><use href="#i-jobs"/></svg><span class="nav-label">Jobs</span><span class="count" id="nav-jobs-count" hidden></span></a></li>
         <li><a class="nav-link" href="#/settings" data-view="settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-label">Settings</span></a></li>
       </ul>
@@ -135,6 +136,31 @@
             <a class="card-link" href="#/jobs">All jobs →</a>
           </section>
         </div>
+      </div>
+
+      <!-- Data: files in the study folder (#21). Previewing reads a file, never changes it. -->
+      <div class="view" id="view-data" data-title="Data" hidden>
+        <div class="page-head"><h1 id="data-heading" tabindex="-1">Data</h1><p>Data files in the study folder and its source-data folder. Previewing a file never changes it.</p></div>
+        <section class="card" aria-labelledby="datasets-heading">
+          <div class="card-head"><h2 id="datasets-heading">Datasets</h2><span class="aside"><button type="button" class="btn btn-ghost btn-sm" id="datasets-rescan">Scan again</button></span></div>
+          <p id="datasets-note" class="card-note">Open a study folder to see its data files.</p>
+          <div class="table-scroll">
+            <table id="datasets-table" hidden>
+              <caption class="visually-hidden">Data files in the study folder</caption>
+              <thead>
+                <tr><th scope="col">File</th><th scope="col">Size</th><th scope="col">Rows</th><th scope="col">Columns</th><th scope="col">Candidate analytes</th><th scope="col">Imported</th><th scope="col"><span class="visually-hidden">Preview</span></th></tr>
+              </thead>
+              <tbody id="datasets-body"></tbody>
+            </table>
+          </div>
+          <p id="datasets-status" class="status card-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="card" id="preview-section" aria-labelledby="preview-heading" hidden>
+          <div class="card-head"><h2 id="preview-heading" tabindex="-1">Preview</h2><span class="aside"><button type="button" class="btn btn-primary btn-sm" id="preview-import">Import</button></span></div>
+          <p id="preview-status" class="status card-status" role="status" aria-live="polite"></p>
+          <div class="card-body preview" id="preview-body"></div>
+        </section>
       </div>
 
       <!-- Jobs -->

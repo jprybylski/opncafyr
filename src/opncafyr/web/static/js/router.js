@@ -1,12 +1,12 @@
-// Views in one page (#50): "#/" Home, "#/jobs", "#/settings", and "#/apps/<id>" for a
+// Views in one page (#50): "#/" Home, "#/data", "#/jobs", "#/settings", and "#/apps/<id>" for a
 // tool's web app embedded in the launcher. Other hashes, such as the skip link's
 // "#main", leave the current view alone.
 
 import { emit } from "./dom.js";
 
-const VIEWS = { "": "home", jobs: "jobs", settings: "settings" };
+const VIEWS = { "": "home", data: "data", jobs: "jobs", settings: "settings" };
 
-let current = null; // "home", "jobs", "settings" or "tool:<id>"
+let current = null; // "home", "data", "jobs", "settings" or "tool:<id>"
 let currentRoute = { name: "home" };
 
 export const route = () => currentRoute;
