@@ -9,10 +9,13 @@ import sys
 import threading
 import time
 import urllib.request
+import uuid
 import webbrowser
+from pathlib import Path
 
 from opncafyr import __version__
-from opncafyr.paths import app_root
+from opncafyr.core.instance import CLAIM_WAIT, claim, clear_record, write_record
+from opncafyr.paths import app_root, state_dir
 
 LOOPBACK = "127.0.0.1"
 
@@ -38,31 +41,58 @@ def _open_when_healthy(url: str, timeout: float = 15.0) -> None:
     print("Launcher did not become healthy; not opening a browser.", file=sys.stderr)
 
 
-def cmd_launch(args: argparse.Namespace) -> int:
+def run_controller(
+    *,
+    state: Path,
+    port: int = 0,
+    open_browser: bool = True,
+    claim_wait: float = CLAIM_WAIT,
+) -> int:
+    """Start the controller, or reopen the one already running for this user."""
     import uvicorn
 
     from opncafyr.core.app import create_app
     from opncafyr.core.security import SecurityConfig
 
-    sock = _bind_loopback(args.port)
-    port = sock.getsockname()[1]
-    security = SecurityConfig(port=port)
+    claimed = claim(state, wait=claim_wait)
+    if claimed.url is not None:
+        print(f"opncafyr is already running at {claimed.url}", file=sys.stderr)
+        if open_browser:
+            webbrowser.open(claimed.url)
+        return 0
+    if claimed.lock is None:
+        print(claimed.error, file=sys.stderr)
+        return 1
 
-    server: uvicorn.Server | None = None
+    instance_id = uuid.uuid4().hex
+    try:
+        sock = _bind_loopback(port)
+        port = sock.getsockname()[1]
+        security = SecurityConfig(port=port)
 
-    def request_shutdown() -> None:
-        if server is not None:
-            server.should_exit = True
+        server: uvicorn.Server | None = None
 
-    app = create_app(security, request_shutdown=request_shutdown)
-    server = uvicorn.Server(uvicorn.Config(app, log_level="info"))
+        def request_shutdown() -> None:
+            if server is not None:
+                server.should_exit = True
 
-    url = f"http://{LOOPBACK}:{port}/"
-    print(f"opncafyr {__version__} listening on {url}", file=sys.stderr)
-    if not args.no_browser:
-        threading.Thread(target=_open_when_healthy, args=(url,), daemon=True).start()
-    server.run(sockets=[sock])
+        app = create_app(security, request_shutdown=request_shutdown, instance_id=instance_id)
+        server = uvicorn.Server(uvicorn.Config(app, log_level="info"))
+
+        url = f"http://{LOOPBACK}:{port}/"
+        write_record(state, instance_id=instance_id, port=port)
+        print(f"opncafyr {__version__} listening on {url}", file=sys.stderr)
+        if open_browser:
+            threading.Thread(target=_open_when_healthy, args=(url,), daemon=True).start()
+        server.run(sockets=[sock])
+    finally:
+        clear_record(state, instance_id)
+        claimed.lock.release()
     return 0
+
+
+def cmd_launch(args: argparse.Namespace) -> int:
+    return run_controller(state=state_dir(), port=args.port, open_browser=not args.no_browser)
 
 
 def cmd_doctor(_: argparse.Namespace) -> int:

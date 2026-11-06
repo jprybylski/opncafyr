@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/instance-v1",
+  "title": "Running launcher state record (app state dir; no secrets)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "instance_id",
+    "pid",
+    "pid_create_time",
+    "port",
+    "started_at",
+    "version"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "instance_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "pid": {"type": "integer", "minimum": 1},
+    "pid_create_time": {"type": "number", "description": "psutil start time, to spot pid reuse."},
+    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "started_at": {"type": "string", "format": "date-time"},
+    "version": {"type": "string", "minLength": 1}
+  }
+}

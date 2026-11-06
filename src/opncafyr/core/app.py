@@ -10,6 +10,7 @@ controller exits. The user picks the study workspace through ``/api/workspace/*`
 from __future__ import annotations
 
 import atexit
+import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from html import escape
@@ -61,7 +62,11 @@ def create_app(
     jobs: JobManager | None = None,
     picker: Picker | None = None,
     recent: RecentWorkspaces | None = None,
+    instance_id: str | None = None,
 ) -> FastAPI:
+    # Lets a second launch confirm that /health on the recorded port is this instance.
+    instance_id = instance_id or uuid.uuid4().hex
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.tools = load_descriptors()
@@ -96,7 +101,7 @@ def create_app(
 
     @app.get("/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "version": __version__}
+        return {"status": "ok", "version": __version__, "instance_id": instance_id}
 
     @app.get("/api/tools")
     def tools() -> dict[str, list[dict[str, object]]]:

@@ -35,7 +35,10 @@ completed` (+ `failed`, `cancelled`). The job manager (`core/jobmanager.py`) run
 on a worker thread with a required timeout and a per-pool concurrency limit (default 1).
 Outputs go to `<target>.staging/` and are renamed into place only after a clean exit and
 a passing review. Opening a workspace marks jobs left behind by a dead launcher `failed`
-and kills their recorded process tree. Raw output stays in the job's log files; messages
+and kills their recorded process tree. The single-instance lock (`core/instance.py`) is an
+OS file lock in the app state dir, plus a state record (`instance-v1`) naming the port and
+instance id; a second launch reopens the browser on the healthy instance and never kills
+a process because a record names it. Raw output stays in the job's log files; messages
 and the API carry text written for a person.
 
 ## Trust boundaries

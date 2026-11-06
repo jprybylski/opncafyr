@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Single-instance launcher (#10). `core/instance.py` holds an OS lock on
+  `state/instance.lock` (`flock` on macOS/Linux, `msvcrt.locking` on Windows) for the
+  life of the launcher and writes `state/instance.json` (`instance-v1`: pid, pid start
+  time, port, instance id, start time, version; no session secret, user-only on POSIX).
+  - A second launch that finds the lock held probes `/health` on the recorded port and
+    checks the instance id, then opens the browser there and exits 0 without binding.
+  - A launch that gets the lock treats any old record as stale and starts. It logs
+    whether the recorded pid was dead or alive (a reused pid).
+  - A lock holder that does not answer is waited for (20 s), then reported with its pid.
+    Nothing is ever killed because a record names it.
+  - A clean stop removes the record. `/health` now returns `instance_id` (part of #9).
 - Workspace selection (#17).
   - `core/picker.py` shows the native folder dialog from the controller: AppleScript
     `choose folder` on macOS, `FolderBrowserDialog` in Windows PowerShell. Both scripts
