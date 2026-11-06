@@ -6,7 +6,14 @@ from jsonschema import ValidationError
 from opncafyr.core.manifest import atomic_write_json, load_schema, validate
 from opncafyr.core.registry import ToolDescriptor, load_descriptors
 
-SCHEMAS = ["tool-descriptor-v1", "workspace-v1", "run-manifest-v1", "publication-v1", "recipe-v1"]
+SCHEMAS = [
+    "tool-descriptor-v1",
+    "workspace-v1",
+    "run-manifest-v1",
+    "publication-v1",
+    "recipe-v1",
+    "runtime-v1",
+]
 SHA = "0" * 64
 
 

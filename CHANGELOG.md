@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Child process supervision (#12, #9). `core/proctree.py` spawns argv arrays only, with an
+  allow-listed environment (it always drops `OPNCAFYR_*` and the variables that widen
+  opnca-r's Host check), and kills whole process trees: freeze-and-walk on POSIX, a Job
+  Object on Windows. `core/supervisor.py` starts one child per tool:
+  - with a per-child token, a fixed loopback port (retried after a port race) and a
+    launcher-owned cwd and TMPDIR;
+  - waits for the adapter's readiness probe;
+  - stops through the adapter's orderly stop, then a tree kill.
+- `core/runtime.py` and `schemas/runtime-v1.schema.json`: the installed runtime record that
+  names the absolute paths of the pinned executables.
+- Descriptors can set `web_app.max_body_bytes`. The registry finds web-app adapters by
+  package scan, and a test checks that `core/` never imports adapters or workflows.
 - Project scaffold: loopback FastAPI controller with `/health`, Host/Origin and
   session-secret checks, workspace path canonicalization, job state machine, trusted tool
   descriptor registry, JSON Schemas (tool descriptor, workspace, run manifest,

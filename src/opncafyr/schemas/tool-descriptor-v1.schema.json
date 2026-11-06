@@ -27,7 +27,8 @@
       "required": ["route", "readiness"],
       "properties": {
         "route": {"type": "string", "pattern": "^/apps/[a-z][a-z0-9_-]*/$"},
-        "readiness": {"type": "string", "pattern": "^/"}
+        "readiness": {"type": "string", "pattern": "^/"},
+        "max_body_bytes": {"type": "integer", "minimum": 1}
       }
     },
     "jobs": {

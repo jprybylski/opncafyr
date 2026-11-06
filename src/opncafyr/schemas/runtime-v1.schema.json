@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/runtime-v1",
+  "title": "Installed runtime record",
+  "description": "Written by the installer under the app root (never in a study workspace). Names the absolute paths of the pinned executables the launcher may start.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "executables"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "executables": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"},
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "r_library": {"type": "string", "minLength": 1}
+  }
+}
