@@ -67,11 +67,10 @@ scheduled first.
 ## Sequencing
 
 **Now (in parallel)**
-- **Offline audit (#44).** Map every point where install or runtime reaches the network.
-  The biggest known one: quartifyr and reportifyr project setup goes through pyro, which
-  can `curl` uv and run `uv lock`/`uv sync`. opnca-r#23 (vendored crates) and
-  quartifyr#72 (offline project setup) are done, and quartifyr#76 (offline-safe render)
-  shipped in 0.3.2 as an opt-in `--offline` flag, which our adapter must always pass.
+- **Offline audit (#44)** is done: [offline.md](offline.md) lists every network
+  touchpoint and its resolution, and the `offline` CI job installs from local files and
+  runs import, an opnca-r calculation, a report render and a deck build with the network
+  cut. #51 routes the job through the adapters as they land.
 - **All Gate 0 decisions are made:** #1, #2, #3 and #4 (ADR 0003, ADR 0005, ADR 0007,
   ADR 0004).
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
@@ -142,7 +141,7 @@ scheduled first.
 | Tool-agnostic core; trusted descriptors and adapters; workflow packs | Accepted | [ADR 0002](decisions/0002-tool-agnostic-core.md) |
 | Workspace metadata folder is `.opncafyr/`, with a versioned schema | Accepted | spec allowed a rename |
 | No reportifyr changes; sidecar validation lives in the launcher | Accepted | #30 |
-| Offline installation supported in v1 alongside the default online install (native and container) | **Accepted** (owner, 2026-11-04) | #1, #36, #44 |
+| Offline installation supported in v1 alongside the default online install (native and container) | **Accepted** (owner, 2026-11-04) | #1, #36, #44, [offline.md](offline.md) |
 | v1 matrix: Windows 11 x86_64, macOS arm64/x86_64 (macOS 15 until opnca-r#45), R 4.6.2; 30-min configurable idle timeout; no native Linux | **Accepted** (owner, 2026-11-06) | [ADR 0003](decisions/0003-platform-matrix.md), #1 |
 | Data conventions and warning-vs-blocking checks: exact-code analyte filter plus specimen role, declared units, explicit BLQ/LLOQ steps and BLQ rules, reasons for every exclusion, duplicates and undosed profiles blocking | **Accepted** (owner, 2026-11-05); provisional until checked on sponsor data | [ADR 0005](decisions/0005-data-conventions.md), #2 |
 | Generic quartifyr NCA report and deckifyr bundled default deck (both shipped, never fetched); all four artifact types pre-selected; coded subject IDs allowed in outputs, never in logs/URLs/diagnostics; direct identifiers need an explicit choice; source copied by default | **Accepted** (owner, 2026-11-06) | [ADR 0007](decisions/0007-templates-and-identifiable-data.md), #3 |

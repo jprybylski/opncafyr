@@ -1,0 +1,12 @@
+# Connection attempts the offline CI job tolerates (#44, scripts/offline/check_trace.py).
+# Add a rule only for an attempt that is non-fatal for the tool and can't be switched
+# off. Each rule matches a substring of the command line that made the attempt; matched
+# attempts are still printed and recorded. See docs/offline.md.
+
+[[allow]]
+# openssl 2.5.0's configure runs tools/cacert.R, which tries to download curl.se's CA
+# bundle and, when that fails, uses only the system bundle. Source builds only: the
+# Linux CI job and the container (#42). Desktop installs use binaries, which don't run it.
+command_contains = "--file=tools/cacert.R"
+reason = "openssl source build: optional CA bundle download, falls back to the system bundle"
+issue = "#44"

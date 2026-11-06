@@ -45,6 +45,7 @@ were reviewed. Remaining gaps are handled in our adapter (#33).
 | [#89](https://github.com/jprybylski/deckifyr/issues/89) | Forbid project-file executables and paths outside the project | Done (v0.3.5) as opt-in `--trusted-binaries-only`; Quarto fragments still run code by design (#33) | Gate 3 |
 | [#90](https://github.com/jprybylski/deckifyr/issues/90) | Atomic PPTX, previews and manifest; JSON for every `--json` failure | Done (v0.3.5); argparse errors and signals print no JSON; stale preview files can remain | Gate 3 |
 | [#91](https://github.com/jprybylski/deckifyr/issues/91) | Releases can't change after publishing; small contract gaps | Done (v0.3.5); GitHub's immutable-releases setting is still off | Gate 0 pins |
+| [#93](https://github.com/jprybylski/deckifyr/issues/93) | Offline mode for the R wrappers (`uv run --no-sync`) and `init --from-repo` | Open; the launcher calls the Python CLI directly, so not blocking | Gate 3 (#33), offline (#44) |
 
 ## jprybylski/quartifyr (public)
 
@@ -65,6 +66,7 @@ quick fixes, so pin a quartifyr release only after that window has passed.
 | [#78](https://github.com/jprybylski/quartifyr/issues/78) | Result `schema_version`, input hashes, tool versions; `check.R`; small fixes | Done (v0.3.2); inputs hashed after render and incomplete (#82) | Gate 3 |
 | [#81](https://github.com/jprybylski/quartifyr/issues/81) | No complete-looking DOCX after a strict rejection, partial pass-2 failure or kill; `.previous` keeps the last good render | Open; adapter renders in staging meanwhile (#32) | Gate 3 |
 | [#82](https://github.com/jprybylski/quartifyr/issues/82) | Pass-2 offline relabel; relative `reference_doc`/style paths; hash inputs before render; schema-check real output; venv mismatch | Open; adapter passes absolute paths and hashes inputs itself (#32) | Gate 3, offline |
+| [#83](https://github.com/jprybylski/quartifyr/issues/83) | `--soffice-bin` / `QUARTIFYR_SOFFICE_BIN` for the LibreOffice steps | Open; adapter controls `PATH` meanwhile (#32) | Gate 3 (#32), #8 |
 
 Offline installation is a supported v1 use case (2026-11-04). pyro and reportifyr (A2-ai,
 external) also reach the network during project setup. opncafyr handles that in its
@@ -75,4 +77,6 @@ adapter (#44) rather than through upstream issues.
 - **mantra-opnca/opnca (core).** No changes needed: the launcher filters to one analyte
   before opnca-r sees the data, so the core's deferred multi-analyte axis is not required.
 - **A2-ai/reportifyr.** External. Sidecar validation lives in the opncafyr publishing
-  adapter instead of a reportifyr change.
+  adapter instead of a reportifyr change. pyro project setup
+  (`initialize_report_project()`) and the global git identity it requires are handled in
+  the quartifyr adapter ([offline.md](offline.md) R1, R4).

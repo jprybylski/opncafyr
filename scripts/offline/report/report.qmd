@@ -1,0 +1,29 @@
+---
+title: "Offline smoke report"
+subtitle: "Synthetic data, research use only"
+report-type: "Offline CI check"
+document-status: "draft"
+date: "2026-11-06"
+project: "OFFLINE-CI"
+report_number: "CI-0001"
+header-format: "{project} - {report_number}"
+format: docx
+filters:
+  - quarto-plus
+  - quartifyr
+---
+
+{{< body-start >}}
+
+# Results
+
+{{< tbl_caption "TblSummary" "Summary of the synthetic profile" >}}
+
+{rpfy}:summary.csv
+
+{{< fig_caption "FigProfile" "Synthetic concentration-time profile" >}}
+
+{rpfy}:profile.png
+
+This report checks that a render completes with no network. It proves artifact
+assembly only, not any scientific result.

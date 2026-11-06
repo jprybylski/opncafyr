@@ -115,3 +115,83 @@ jobs:
           echo "OPNCAFYR_RUNTIME_FILE=$(uv run --group integration python tests/integration/proxy/prepare_runtime.py "${args[@]}")" >> "$GITHUB_ENV"
       - name: Proxy harness
         run: uv run --group integration pytest -m integration tests/integration/proxy -rs
+
+  # #44: the whole stack installs from local files and runs with the network cut. The
+  # online phase fetches every pinned file (runtime/pins.toml [ci.linux-x86_64], the R
+  # lock, both uv locks); the offline phase runs in its own network namespace under
+  # strace, and any connection attempt that leaves the machine fails the job
+  # (docs/offline.md). opnca-r is private: without OPNCA_R_RELEASE_TOKEN its build and
+  # calculation are skipped with a warning.
+  offline:
+    name: offline install and run (Ubuntu 24.04, network blocked)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read pins
+        run: |
+          python3 - >> "$GITHUB_ENV" <<'PY'
+          import tomllib
+          p = tomllib.load(open("runtime/pins.toml", "rb"))
+          print(f"UV_VERSION={p['uv']['version']}")
+          print(f"OPNCA_VERSION={p['packages']['opnca-r']['version']}")
+          PY
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+      - name: Check for the opnca-r release token
+        id: opnca
+        env:
+          TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=opnca-r skipped::OPNCA_R_RELEASE_TOKEN is not set, so the offline job did not build opnca-r or run the calculation."
+          fi
+      - name: Download the opnca-r vendored source tarball
+        if: steps.opnca.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          gh release download "v$OPNCA_VERSION" -R mantra-opnca/opnca-r \
+            -p "opnca_${OPNCA_VERSION}-vendored.tar.gz" -D dl
+      - name: Fetch and verify every pinned asset (online phase)
+        run: |
+          args=(--out assets)
+          if [ "${{ steps.opnca.outputs.enabled }}" = "true" ]; then
+            args+=(--opnca-vendored "dl/opnca_${OPNCA_VERSION}-vendored.tar.gz")
+          fi
+          python3 scripts/offline/fetch.py "${args[@]}"
+      - name: Install the pinned R and the system libraries (online prerequisites)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            ./assets/runtime/r-4.6.2_1_amd64.deb strace \
+            libcurl4-openssl-dev libssl-dev libxml2-dev libgit2-dev libsodium-dev \
+            libfontconfig1-dev libfreetype-dev libharfbuzz-dev libfribidi-dev \
+            libpng-dev libjpeg-dev libtiff-dev libwebp-dev libcairo2-dev libuv1-dev
+      - name: Offline phase (network namespace, traced)
+        run: |
+          sudo -E unshare --net sh -c '
+            ip link set lo up
+            exec setpriv --reuid="$1" --regid="$2" --init-groups \
+              env HOME="$3" PATH=/usr/bin:/bin JOBS=4 \
+              strace -f -qq -s 200 -e trace=%network,%process -o trace.txt \
+              bash scripts/offline/offline_phase.sh assets work
+          ' sh "$(id -u)" "$(id -g)" "$HOME"
+      - name: No connection attempts left the machine
+        if: always()
+        run: |
+          python3 scripts/offline/check_trace.py trace.txt \
+            --allow scripts/offline/allowed_attempts.toml --json work/results/trace-report.json
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-results
+          path: |
+            work/results/
+            assets/fetch-manifest.json
+          if-no-files-found: ignore

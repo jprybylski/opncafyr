@@ -94,6 +94,8 @@ analytical systems) are common, though, so offline has to work too.
   bundled Quarto extensions).
 - A step that needs the network and has no offline equivalent is a bug. Add it to #44
   with a resolution.
+- Every known network touchpoint and its resolution is listed in `docs/offline.md`; the
+  `offline` CI job installs and runs with the network cut and fails on any attempt.
 
 **Files.** Manifests and workspace JSON are schema-validated and written with
 `core.manifest.atomic_write_json`. Incomplete output directories must never look complete.

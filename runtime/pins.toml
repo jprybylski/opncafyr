@@ -257,6 +257,49 @@ platforms = ["windows-x86_64"]
 url = "https://cran.r-project.org/bin/windows/Rtools/rtools45/files/rtools45-6768-6492.exe"
 sha256 = "614c7378150a012e70b16edcfe5236dcead47f491f1f54203ea8d451c7743a75"
 
+# --- CI only ------------------------------------------------------------------------------
+# Linux x86_64 is not a supported desktop platform (ADR 0003). These pins serve the
+# network-blocked CI job (#44, scripts/offline/) and, later, the container image (#42).
+# Same versions as the desktop pins above.
+
+[ci.linux-x86_64.uv]
+platforms = ["linux-x86_64"]
+
+[ci.linux-x86_64.uv.assets.linux-x86_64]
+url = "https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-unknown-linux-gnu.tar.gz"
+sha256 = "c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83"
+
+[ci.linux-x86_64.python]
+platforms = ["linux-x86_64"]
+
+[ci.linux-x86_64.python.assets.linux-x86_64]
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+sha256 = "df15fe60d3ff55bf9dcf25824b5572756bb8816ff93865a273d3301d7066a8b7"
+
+[ci.linux-x86_64.quarto]
+platforms = ["linux-x86_64"]
+
+[ci.linux-x86_64.quarto.assets.linux-x86_64]
+url = "https://github.com/quarto-dev/quarto-cli/releases/download/v1.11.9/quarto-1.11.9-linux-amd64.tar.gz"
+sha256 = "9d037baa3b38ffac7217edca1d2e53760b0fab4d5749220740a32056e03a1530"
+
+[ci.linux-x86_64.r]
+# Posit's R build for Ubuntu 24.04 (installs to /opt/R/4.6.2). Installed with apt in the
+# online phase, because its system libraries come from the distribution.
+platforms = ["linux-x86_64"]
+
+[ci.linux-x86_64.r.assets.linux-x86_64]
+url = "https://cdn.posit.co/r/ubuntu-2404/pkgs/r-4.6.2_1_amd64.deb"
+sha256 = "9cd22ded77ab8097a939ef4d8205f23404657879b30ef6ab8ceaedbb761bc4d7"
+
+[ci.linux-x86_64.rust]
+# Standalone toolchain, same version as [rust], for the vendored opnca-r build.
+platforms = ["linux-x86_64"]
+
+[ci.linux-x86_64.rust.assets.linux-x86_64]
+url = "https://static.rust-lang.org/dist/rust-1.99.1-x86_64-unknown-linux-gnu.tar.xz"
+sha256 = "231fcae47ee950621374725b5fc3b5441d2fbda2955ac45dd7dc816d8876cfe7"
+
 # --- Optional ---------------------------------------------------------------------------
 
 [optional.libreoffice]

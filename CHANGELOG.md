@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Offline audit (#44). `docs/offline.md` lists every network touchpoint at install and
+  run time with its resolution, including those found by the install spikes. A new
+  `offline` CI job installs the whole stack from local files
+  (`scripts/offline/fetch.py`, `offline_phase.sh`) and runs the dataset import, an
+  opnca-r calculation, a quartifyr render and a deckifyr build in a network namespace
+  under strace; `scripts/offline/check_trace.py` fails the job on any attempt to leave
+  the machine. Linux CI pins are in `runtime/pins.toml` `[ci.linux-x86_64]`.
 - Runtime pins and dependency graph (#5).
   - `runtime/pins.toml` pins uv 0.13.7, Python 3.13.18, R 4.6.2, Quarto 1.11.9, opnca-r
     0.2.7, deckifyr 0.3.5, quartifyr 0.3.2, reportifyr 0.4.0, pyro 0.1.1, Rust 1.99.1 and
