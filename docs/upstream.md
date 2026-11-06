@@ -28,20 +28,20 @@ Select v0.2.6 assets by `manifest.json` fields, never by file name. The Windows 
 
 ## jprybylski/deckifyr (public)
 
-All five were released in v0.3.4 (PR #87, 2026-11-05) and reviewed. The follow-ups
-#88–#91 cover the gaps.
+#82–#86 were released in v0.3.4 (PR #87) and #88–#91 in v0.3.5 (PR #92, 2026-11-06). Both
+were reviewed. Remaining gaps are handled in our adapter (#33).
 
 | Issue | What | Status | Needed by |
 |---|---|---|---|
 | [#82](https://github.com/jprybylski/deckifyr/issues/82) | Serve the web editor under a path prefix | Done (v0.3.4) | Gate 1 proxy / Gate 3 |
 | [#83](https://github.com/jprybylski/deckifyr/issues/83) | `serve` launcher mode: dirty state on `/api/health`, orderly stop | Done (v0.3.4); SIGTERM still loses unsaved edits, so use `POST /api/shutdown` | Gate 1 lifecycle / Gate 3 |
-| [#84](https://github.com/jprybylski/deckifyr/issues/84) | Job timeouts, cancellation, isolated LibreOffice profile | Done (v0.3.4); Windows tree kill untested (#91) | Gate 3 |
-| [#85](https://github.com/jprybylski/deckifyr/issues/85) | Versioned `--json` result schema with full warnings | Done (v0.3.4); unexpected errors print no JSON (#90) | Gate 3 |
-| [#86](https://github.com/jprybylski/deckifyr/issues/86) | Versioned Python wheel with SHA-256 | Done (v0.3.4); the release can be re-uploaded under the same version (#91) | Gate 0 pins; offline wheelhouse (#36) |
-| [#88](https://github.com/jprybylski/deckifyr/issues/88) | **Security:** Host allow-list, cross-site rejection, launcher token (a cross-site form POST built the deck; reproduced) | Open, blocks opncafyr #33 | Gate 3 |
-| [#89](https://github.com/jprybylski/deckifyr/issues/89) | Forbid project-file executables (`binary` fields) and paths outside the project | Open; adapter rejects them meanwhile (#33) | Gate 3 |
-| [#90](https://github.com/jprybylski/deckifyr/issues/90) | Atomic PPTX, previews and manifest; JSON for every `--json` failure | Open; adapter builds in staging meanwhile (#33) | Gate 3 |
-| [#91](https://github.com/jprybylski/deckifyr/issues/91) | Releases can't change after publishing; small contract gaps | Open; pin by SHA-256 and mirror the wheel | Gate 0 pins |
+| [#84](https://github.com/jprybylski/deckifyr/issues/84) | Job timeouts, cancellation, isolated LibreOffice profile | Done (v0.3.4; Windows tree-kill tests run since v0.3.5) | Gate 3 |
+| [#85](https://github.com/jprybylski/deckifyr/issues/85) | Versioned `--json` result schema with full warnings | Done (v0.3.4) | Gate 3 |
+| [#86](https://github.com/jprybylski/deckifyr/issues/86) | Versioned Python wheel with SHA-256 | Done (v0.3.4) | Gate 0 pins; offline wheelhouse (#36) |
+| [#88](https://github.com/jprybylski/deckifyr/issues/88) | **Security:** Host allow-list, cross-site rejection, launcher token | Done (v0.3.5); verified against a running server | Gate 3 |
+| [#89](https://github.com/jprybylski/deckifyr/issues/89) | Forbid project-file executables and paths outside the project | Done (v0.3.5) as opt-in `--trusted-binaries-only`; Quarto fragments still run code by design (#33) | Gate 3 |
+| [#90](https://github.com/jprybylski/deckifyr/issues/90) | Atomic PPTX, previews and manifest; JSON for every `--json` failure | Done (v0.3.5); argparse errors and signals print no JSON; stale preview files can remain | Gate 3 |
+| [#91](https://github.com/jprybylski/deckifyr/issues/91) | Releases can't change after publishing; small contract gaps | Done (v0.3.5); GitHub's immutable-releases setting is still off | Gate 0 pins |
 
 ## jprybylski/quartifyr (public)
 

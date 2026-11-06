@@ -43,16 +43,18 @@ r_minor = "4.6"
 "opnca_0.2.6-vendored.tar.gz" = "472f8bdf8b15ef25bfccbbd12c5a60c716a73d4b327ad887d6592f4c209e5184"  # offline source fallback
 
 [packages.deckifyr]
-version = "0.3.4"
+version = "0.3.5"
 source = "github:jprybylski/deckifyr"
 extras = ["web", "preview"]
 # Install the wheel; R users can install the R tarball. The wheel's dependencies are
 # lower bounds only, so the offline wheelhouse pins the exact transitive versions (#36).
-wheel = "deckifyr-0.3.4-py3-none-any.whl"
-wheel_sha256 = "8e280a5a52b6789ba26b7cc2565d399119c56e2f6ef21b440e1520a8a3a2751c"
-sdist_sha256 = "13467e96b531257088beb53519d53b12884c60c513cef58f4a8010d60a206fe6"
-r_tarball_sha256 = "6120deb1c72775a66ac757b6f3c4917a5f840af4d1ca67ddc6c78410c2600322"
-sha256sums_sha256 = "b67d971ee306a747f7a26fb2bd710fd53b401d8f6b26c4b30ccc485553976ed6"
+# v0.3.5 (2026-11-06, tag e35a4fa) adds the request guard, trust policy and atomic builds
+# (#88-#91). Its release workflow no longer re-tags or replaces a published release.
+wheel = "deckifyr-0.3.5-py3-none-any.whl"
+wheel_sha256 = "0faea61387b0d7a8d8d698807bd07f96007e43a6ebee07af9f900768e17c6186"
+sdist_sha256 = "19030dba30dcf9192ac1b8db5b42adea280d22d3e21e663e858f29800c2de8b3"
+r_tarball_sha256 = "d29e58b6a40dfb89a3eb970078c61c2cab41b7059a415e5c99be3012f5c12b2c"
+sha256sums_sha256 = "18ed32bf7bb5392f89f23629f5a942b711488bb264af00628c6c508c53f1d83b"
 
 [packages.quartifyr]
 version = "0.3.2"

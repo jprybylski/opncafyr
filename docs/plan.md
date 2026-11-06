@@ -45,7 +45,7 @@ leaving it to the final release.
    ─► #25 snapshot ─► #26 bundle ─► #27 opnca launch ◄── opnca-r#40 (#25 done)
    ─► #28 durable save (opnca-r#26/#27 done) ─► #29 replay check
    ─► #31 curator ─► #32 quartifyr (quartifyr#69-72, #75-78 done in 0.3.2; #81-82 follow-ups)
-                  └► #33 deckifyr  ◄── deckifyr#88 (#82-86 done)
+                  └► #33 deckifyr  (deckifyr#82-86, #88-91 done in 0.3.5)
 ```
 
 The three riskiest boundaries come straight from the spec's conclusion. They are
@@ -57,8 +57,9 @@ scheduled first.
    unverified upstream: clean-account installs, renv cellar restore, and the 1.87 MSRV
    (opnca-r#43).
 2. **Child apps behind a prefix** (#15, #16): opnca-r has supported a base path and
-   allowed hosts since v0.2.5. deckifyr has supported a path prefix since v0.3.4. Both
-   child ports still accept cross-site POSTs (opnca-r#40, deckifyr#88).
+   allowed hosts since v0.2.5. deckifyr has supported a path prefix since v0.3.4, and
+   rejects foreign Hosts and cross-site requests (with an optional launcher token) since
+   v0.3.5. The opnca-r child port still accepts cross-site POSTs (opnca-r#40).
 3. **Durable opnca-r export** (#27, #28, #29): `opnca_serve()`, atomic server-side save
    and replayable `analysis.R` landed in v0.2.5. A saved run can still be overwritten from
    the UI (opnca-r#41).
@@ -78,8 +79,8 @@ scheduled first.
   what is left.
 - **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and
   deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
-  [upstream.md](upstream.md). Next: opnca-r#40 (security; blocks #27) and deckifyr#88
-  (security; blocks #33).
+  [upstream.md](upstream.md). Next: opnca-r#40 (security; blocks #27). deckifyr#88–#91
+  shipped in 0.3.5.
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
   CI and the Gate 2/3 integration tests a working runtime while the native install spikes
@@ -118,7 +119,8 @@ scheduled first.
 | Child apps break behind `/apps/<tool>/` | Embedded editors don't work | Configurable base path upstream; a proxy rewrite only as a tested temporary measure | #15, #16, opnca-r#24, deckifyr#82 |
 | Saved opnca-r run replaced or half-written | Runs aren't reproducible or immutable | Upstream atomic save (done); only `COMPLETE` plus re-verified `artifacts.json` counts; block `overwrite` until upstream adds `--no-overwrite` | #27, #28, #29, opnca-r#26, opnca-r#41 |
 | A cross-site page drives a child's loopback port directly | Exclusions, results or decks changed without the session secret | Upstream Host allow-list, API token injected by the proxy, and rejection of cross-site requests; negative test in the harness | #16, #27, #33, opnca-r#40, deckifyr#88 |
-| A deck project file names an executable or a path outside the project | Breaks the rule that workspace files never name an executable | The adapter rejects non-default `binary` values and paths outside the project before every job; upstream flag | #33, deckifyr#89 |
+| A deck project file names an executable or a path outside the project | Breaks the rule that workspace files never name an executable | Pass `--trusted-binaries-only` with absolute pinned `--rscript-bin`/`--quarto-bin`/`--soffice-bin` (done upstream in 0.3.5) | #33, deckifyr#89 |
+| A deck project's Quarto fragments (code chunks, filters) or reportifyr `.rds` files run code | Workspace files execute code despite the trusted-binaries rule | Open decision: the launcher writes every fragment itself, and/or ask deckifyr for a mode that refuses executable fragments | #33 |
 | Partial or stale report renders look complete | Silent incomplete deliverables | `render.R --strict --json` (done upstream); render in staging; trust only hashes in the result | #32, quartifyr#69, quartifyr#77, quartifyr#81 |
 | Unsaved deck edits lost on stop | Data loss | `POST /api/shutdown` refuses while there are unsaved edits (done); SIGTERM only as a fallback | #14, #33, deckifyr#83 |
 | Cloud users reach the app through an SSH tunnel or IDE proxy (different Host/Origin, URL prefix) | App unreachable, or security checks loosened ad hoc | Explicit base-path and allow-list settings with tested presets; the session token is always required; the port is published to VM loopback only | #42, #15, #16, opnca-r#24, deckifyr#82 |

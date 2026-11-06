@@ -22,3 +22,5 @@ All notable changes to this project are documented here. The format follows
   pins the deckifyr 0.3.4 wheel, sdist and R tarball by SHA-256.
 - Reviewed quartifyr 0.3.2 (#75-#78) and filed follow-ups #81-#82. `runtime/pins.toml`
   now pins the quartifyr 0.3.2 tag commit, tarball and `SHA256SUMS` by SHA-256.
+- Reviewed deckifyr 0.3.5 (#88-#91) and pinned its wheel, sdist and R tarball by SHA-256.
+  `upstream-blocked` removed from #33.
