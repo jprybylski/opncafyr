@@ -7,6 +7,21 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Proxy compatibility harness (#16) in `tests/integration/proxy/`, run with
+  `pytest -m integration`. It runs opnca-r 0.2.7 and deckifyr 0.3.5 from their pinned
+  releases behind the proxy and checks:
+  - that every page request stays under the prefix (Playwright);
+  - an API round trip for each app: opnca-r schema plus calculate, and deckifyr save,
+    build and PPTX download;
+  - the attacks reproduced in the upstream reviews, both through the proxy and straight to
+    the child port;
+  - that an orderly stop and a tree kill both leave no processes behind.
+
+  Results are in `docs/spikes/basepath.md`. CI runs the harness in a new macOS 15 job.
+  The opnca-r half needs the `OPNCA_R_RELEASE_TOKEN` secret and is skipped with a
+  warning without it.
+- `opncafyr.adapters.opnca.release` selects an opnca-r asset from `manifest.json` by its
+  fields and verifies it against `runtime/pins.toml`, with no network. #34 reuses it.
 - Reverse proxy for child apps under `/apps/<tool>/` (#15).
   - Request and response bodies are streamed, with a per-descriptor body limit (413).
   - `/apps/<tool>` redirects to `/apps/<tool>/` with a 308.

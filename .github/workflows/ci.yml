@@ -27,3 +27,70 @@ jobs:
         run: uv run ruff format --check
       - name: Tests
         run: uv run pytest
+
+  # #16: opnca-r and deckifyr from their pinned releases behind the /apps/<tool>/ proxy.
+  # macOS 15 because the opnca-r 0.2.7 binaries need it (opnca-r#45). opnca-r is private:
+  # without the OPNCA_R_RELEASE_TOKEN secret its half is skipped with a warning.
+  integration-proxy:
+    name: proxy harness (macOS 15 arm64)
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Sync locked environment with the integration group
+        run: uv sync --locked --group integration
+      - name: Install Chromium for Playwright
+        run: uv run --group integration playwright install chromium
+      - name: Read pins
+        run: |
+          uv run --group integration python - >> "$GITHUB_ENV" <<'PY'
+          import tomllib
+          p = tomllib.load(open("runtime/pins.toml", "rb"))
+          print(f"R_VERSION={p['r']['version']}")
+          print(f"OPNCA_VERSION={p['packages']['opnca-r']['version']}")
+          print(f"DECKIFYR_VERSION={p['packages']['deckifyr']['version']}")
+          print(f"DECKIFYR_WHEEL={p['packages']['deckifyr']['wheel']}")
+          PY
+      - name: Check for the opnca-r release token
+        id: opnca
+        env:
+          TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=opnca-r skipped::OPNCA_R_RELEASE_TOKEN is not set, so the opnca-r half of the proxy harness did not run. Add a read-only token for mantra-opnca/opnca-r as a repository secret."
+          fi
+      - uses: r-lib/actions/setup-r@v2
+        if: steps.opnca.outputs.enabled == 'true'
+        with:
+          r-version: ${{ env.R_VERSION }}
+          use-public-rspm: true
+      - name: Install opnca-r's server packages into the private library
+        if: steps.opnca.outputs.enabled == 'true'
+        run: |
+          mkdir -p rt/rlib
+          Rscript -e 'install.packages(c("plumber2", "httpuv", "reqres", "jsonlite", "processx", "R6"), lib = "rt/rlib")'
+      - name: Download and verify opnca-r (selected by manifest fields)
+        if: steps.opnca.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          mkdir -p dl/opnca
+          gh release download "v$OPNCA_VERSION" -R mantra-opnca/opnca-r -p manifest.json -D dl/opnca
+          asset=$(uv run --group integration python -m opncafyr.adapters.opnca.release select --pins runtime/pins.toml --manifest dl/opnca/manifest.json)
+          gh release download "v$OPNCA_VERSION" -R mantra-opnca/opnca-r -p "$asset" -D dl/opnca
+          uv run --group integration python -m opncafyr.adapters.opnca.release verify --pins runtime/pins.toml --manifest dl/opnca/manifest.json --asset "dl/opnca/$asset"
+      - name: Download the deckifyr wheel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "v$DECKIFYR_VERSION" -R jprybylski/deckifyr -p "$DECKIFYR_WHEEL" -D dl/deckifyr
+      - name: Build the runtime record
+        run: |
+          args=(--out rt --deckifyr-wheel "dl/deckifyr/$DECKIFYR_WHEEL")
+          if [ "${{ steps.opnca.outputs.enabled }}" = "true" ]; then args+=(--opnca-dir dl/opnca); fi
+          echo "OPNCAFYR_RUNTIME_FILE=$(uv run --group integration python tests/integration/proxy/prepare_runtime.py "${args[@]}")" >> "$GITHUB_ENV"
+      - name: Proxy harness
+        run: uv run --group integration pytest -m integration tests/integration/proxy -rs

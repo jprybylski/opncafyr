@@ -80,8 +80,9 @@ scheduled first.
 - **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and
   deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
   [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7 and deckifyr#88–#91 in 0.3.5,
-  so no opncafyr issue is blocked upstream. Next: #15/#16 (proxy slice), with owner
-  decision #2 in parallel.
+  so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
+  children run behind `/apps/<tool>/` with no rewriting ([spike result](spikes/basepath.md)).
+  Owner decision #2 is next in parallel.
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
   CI and the Gate 2/3 integration tests a working runtime while the native install spikes

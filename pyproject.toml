@@ -25,6 +25,9 @@ dev = [
     "pytest>=8.2",
     "ruff>=0.6",
 ]
+integration = [
+    "playwright>=1.48",
+]
 
 [build-system]
 requires = ["hatchling>=1.25"]
@@ -35,7 +38,9 @@ packages = ["src/opncafyr"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+# The proxy harness (#16) needs installed tools; run it with `pytest -m integration`.
+addopts = "-ra -m 'not integration'"
+markers = ["integration: needs the pinned child apps (see docs/spikes/basepath.md)"]
 
 [tool.ruff]
 line-length = 100
