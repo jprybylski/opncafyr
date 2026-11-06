@@ -4,7 +4,7 @@ Changes opncafyr needs in the tools it drives. The first round was filed in each
 on 2026-11-04. Merged work was reviewed against those issues on 2026-11-05, and the gaps
 found were filed as follow-ups. The opncafyr issues that depend on them carry the
 `upstream-blocked` label, and adapter-side requirements from the review are recorded as
-comments on #15/#16, #27, #28, #32 and #34.
+comments on #15/#16, #27, #28, #32, #33 and #34.
 
 ## mantra-opnca/opnca-r (private)
 
@@ -28,29 +28,40 @@ Select v0.2.6 assets by `manifest.json` fields, never by file name. The Windows 
 
 ## jprybylski/deckifyr (public)
 
-Work is in progress on `feature/launcher-infra-82-86`. The #82 direction (page-relative
-URLs, `--root-path`) matches our intent.
+#82–#86 were released in v0.3.4 (PR #87) and #88–#91 in v0.3.5 (PR #92, 2026-11-06). Both
+were reviewed. Remaining gaps are handled in our adapter (#33).
 
 | Issue | What | Status | Needed by |
 |---|---|---|---|
-| [#82](https://github.com/jprybylski/deckifyr/issues/82) | Serve the web editor under a path prefix | In progress | Gate 1 proxy / Gate 3 |
-| [#83](https://github.com/jprybylski/deckifyr/issues/83) | `serve` launcher mode: dirty state on `/api/health`, orderly stop | Open | Gate 1 lifecycle / Gate 3 |
-| [#84](https://github.com/jprybylski/deckifyr/issues/84) | Job timeouts, cancellation, isolated LibreOffice profile | Open | Gate 3 |
-| [#85](https://github.com/jprybylski/deckifyr/issues/85) | Versioned `--json` result schema with full warnings | Open | Gate 3 |
-| [#86](https://github.com/jprybylski/deckifyr/issues/86) | Versioned Python wheel with SHA-256 | Open | Gate 0 pins; offline wheelhouse (#36) |
+| [#82](https://github.com/jprybylski/deckifyr/issues/82) | Serve the web editor under a path prefix | Done (v0.3.4) | Gate 1 proxy / Gate 3 |
+| [#83](https://github.com/jprybylski/deckifyr/issues/83) | `serve` launcher mode: dirty state on `/api/health`, orderly stop | Done (v0.3.4); SIGTERM still loses unsaved edits, so use `POST /api/shutdown` | Gate 1 lifecycle / Gate 3 |
+| [#84](https://github.com/jprybylski/deckifyr/issues/84) | Job timeouts, cancellation, isolated LibreOffice profile | Done (v0.3.4; Windows tree-kill tests run since v0.3.5) | Gate 3 |
+| [#85](https://github.com/jprybylski/deckifyr/issues/85) | Versioned `--json` result schema with full warnings | Done (v0.3.4) | Gate 3 |
+| [#86](https://github.com/jprybylski/deckifyr/issues/86) | Versioned Python wheel with SHA-256 | Done (v0.3.4) | Gate 0 pins; offline wheelhouse (#36) |
+| [#88](https://github.com/jprybylski/deckifyr/issues/88) | **Security:** Host allow-list, cross-site rejection, launcher token | Done (v0.3.5); verified against a running server | Gate 3 |
+| [#89](https://github.com/jprybylski/deckifyr/issues/89) | Forbid project-file executables and paths outside the project | Done (v0.3.5) as opt-in `--trusted-binaries-only`; Quarto fragments still run code by design (#33) | Gate 3 |
+| [#90](https://github.com/jprybylski/deckifyr/issues/90) | Atomic PPTX, previews and manifest; JSON for every `--json` failure | Done (v0.3.5); argparse errors and signals print no JSON; stale preview files can remain | Gate 3 |
+| [#91](https://github.com/jprybylski/deckifyr/issues/91) | Releases can't change after publishing; small contract gaps | Done (v0.3.5); GitHub's immutable-releases setting is still off | Gate 0 pins |
 
 ## jprybylski/quartifyr (public)
 
+#69–#72 (PR #74) and #75–#78 (PR #79) were released in v0.3.2 (2026-11-05) and reviewed.
+The follow-ups #81–#82 cover the gaps. The release workflow may still refresh a release
+(move the tag, replace the tarball) within 24 hours of publishing; that is intentional, for
+quick fixes, so pin a quartifyr release only after that window has passed.
+
 | Issue | What | Status | Needed by |
 |---|---|---|---|
-| [#69](https://github.com/jprybylski/quartifyr/issues/69) | Noninteractive job contract; fail loudly on partial renders | Done (PR #74); exits non-zero only with `--strict` | Gate 3 |
-| [#70](https://github.com/jprybylski/quartifyr/issues/70) | `check_report_project()` render-free preflight | Done (PR #74); no script entry point, see #78 | Gate 3 |
-| [#71](https://github.com/jprybylski/quartifyr/issues/71) | Quarto render timeout and process-tree cleanup | Done (PR #74); `quarto render` only; Windows untested | Gate 3 |
-| [#72](https://github.com/jprybylski/quartifyr/issues/72) | Offline / pre-provisioned project setup | Done for init (PR #74); render, see #76 | Gate 0 offline audit, Gate 3 |
-| [#75](https://github.com/jprybylski/quartifyr/issues/75) | Release #69–#72 as a new version (the v0.3.1 tag and tarball were replaced) | Open; we pin the commit and tarball SHA-256 meanwhile | Gate 0 pins |
-| [#76](https://github.com/jprybylski/quartifyr/issues/76) | Offline-safe render (no venv re-sync or index access) | Open; adapter sets `UV_*` env meanwhile (#32) | Gate 3, offline |
-| [#77](https://github.com/jprybylski/quartifyr/issues/77) | A failed render leaves the previous draft/final looking complete | Open; adapter renders in staging meanwhile (#32) | Gate 3 |
-| [#78](https://github.com/jprybylski/quartifyr/issues/78) | Result `schema_version`, input hashes, tool versions; `check.R`; small fixes | Open; adapter hashes inputs itself meanwhile (#32) | Gate 3 |
+| [#69](https://github.com/jprybylski/quartifyr/issues/69) | Noninteractive job contract; fail loudly on partial renders | Done (v0.3.2); exits non-zero only with `--strict` | Gate 3 |
+| [#70](https://github.com/jprybylski/quartifyr/issues/70) | `check_report_project()` render-free preflight | Done (v0.3.2); `scripts/check.R --json` added by #78 | Gate 3 |
+| [#71](https://github.com/jprybylski/quartifyr/issues/71) | Quarto render timeout and process-tree cleanup | Done (v0.3.2); `quarto render` only; Windows test skipped (documented) | Gate 3 |
+| [#72](https://github.com/jprybylski/quartifyr/issues/72) | Offline / pre-provisioned project setup | Done (v0.3.2) | Gate 0 offline audit, Gate 3 |
+| [#75](https://github.com/jprybylski/quartifyr/issues/75) | Release #69–#72 as a new version; stop rewriting releases | Done (v0.3.2, with `SHA256SUMS`); refreshes allowed for 24 hours by design | Gate 0 pins |
+| [#76](https://github.com/jprybylski/quartifyr/issues/76) | Offline-safe render (no venv re-sync or index access) | Done (v0.3.2) as opt-in `--offline`; pass-2 error relabel doesn't fire (#82) | Gate 3, offline |
+| [#77](https://github.com/jprybylski/quartifyr/issues/77) | A failed render leaves the previous draft/final looking complete | Done (v0.3.2) for timeouts and early failures; strict rejections and partial pass-2 failures still leave a DOCX in place (#81) | Gate 3 |
+| [#78](https://github.com/jprybylski/quartifyr/issues/78) | Result `schema_version`, input hashes, tool versions; `check.R`; small fixes | Done (v0.3.2); inputs hashed after render and incomplete (#82) | Gate 3 |
+| [#81](https://github.com/jprybylski/quartifyr/issues/81) | No complete-looking DOCX after a strict rejection, partial pass-2 failure or kill; `.previous` keeps the last good render | Open; adapter renders in staging meanwhile (#32) | Gate 3 |
+| [#82](https://github.com/jprybylski/quartifyr/issues/82) | Pass-2 offline relabel; relative `reference_doc`/style paths; hash inputs before render; schema-check real output; venv mismatch | Open; adapter passes absolute paths and hashes inputs itself (#32) | Gate 3, offline |
 
 Offline installation is a supported v1 use case (2026-11-04). pyro and reportifyr (A2-ai,
 external) also reach the network during project setup. opncafyr handles that in its

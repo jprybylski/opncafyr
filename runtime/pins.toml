@@ -43,18 +43,29 @@ r_minor = "4.6"
 "opnca_0.2.6-vendored.tar.gz" = "472f8bdf8b15ef25bfccbbd12c5a60c716a73d4b327ad887d6592f4c209e5184"  # offline source fallback
 
 [packages.deckifyr]
-version = "0.3.3"          # Python wheel pending (deckifyr #86)
+version = "0.3.5"
 source = "github:jprybylski/deckifyr"
 extras = ["web", "preview"]
+# Install the wheel; R users can install the R tarball. The wheel's dependencies are
+# lower bounds only, so the offline wheelhouse pins the exact transitive versions (#36).
+# v0.3.5 (2026-11-06, tag e35a4fa) adds the request guard, trust policy and atomic builds
+# (#88-#91). Its release workflow no longer re-tags or replaces a published release.
+wheel = "deckifyr-0.3.5-py3-none-any.whl"
+wheel_sha256 = "0faea61387b0d7a8d8d698807bd07f96007e43a6ebee07af9f900768e17c6186"
+sdist_sha256 = "19030dba30dcf9192ac1b8db5b42adea280d22d3e21e663e858f29800c2de8b3"
+r_tarball_sha256 = "d29e58b6a40dfb89a3eb970078c61c2cab41b7059a415e5c99be3012f5c12b2c"
+sha256sums_sha256 = "18ed32bf7bb5392f89f23629f5a942b711488bb264af00628c6c508c53f1d83b"
 
 [packages.quartifyr]
-version = "0.3.1"
+version = "0.3.2"
 source = "github:jprybylski/quartifyr"
-# The v0.3.1 tag and tarball were replaced on 2026-11-05 to add the job contract, preflight,
-# timeout and offline support (#69-#72). Pin the commit and tarball hash until a new
-# version is released (quartifyr #75).
-commit = "56578761f02aba53c741571969f11b9c03f2e358"
-tarball_sha256 = "d1548029118c792f36f670f92b32d299a79acc45701d58bf480e3f4b376e1a63"
+# v0.3.2 (2026-11-05) is the first real release of #69-#72 and #75-#78. Tag v0.3.2 points
+# at 5f3b0f5. quartifyr's release workflow may refresh a release (re-tag, replace the
+# tarball) within 24 hours of publishing, by design. Pin only releases older than that;
+# 0.3.2 was published 2026-11-05T22:52Z, so re-verify these hashes after 2026-11-06T22:52Z.
+commit = "5f3b0f51b31d46b42f36d6cdd265722e6215c22f"
+tarball_sha256 = "cb29f01bbf417dd494c510c85b5635d8f1a16350ce39a96ca04b4ee2cb2d3a03"
+sha256sums_sha256 = "bde43fd33280a42537f8ece25d5d34b6edde93d2a36fa9223475340f1b8d08ae"
 
 [packages.reportifyr]
 version = "TBD"            # external (A2-ai); pinned, not modified
