@@ -88,6 +88,7 @@ NEWER = "newer"  # made by a newer opncafyr: refused
 INCOMPLETE = "incomplete"  # .opncafyr/ without workspace.json: can be initialized
 INVALID = "invalid"  # unreadable or damaged metadata: refused
 MISSING = "missing"  # not an existing folder
+UNREADABLE = "unreadable"  # exists, but this user may not open it
 
 
 @dataclass(frozen=True)
@@ -186,6 +187,10 @@ def inspect_folder(path: str | Path) -> FolderInfo:
     raw = Path(path)
     try:
         root = raw.resolve(strict=True)
+    except PermissionError:
+        return FolderInfo(
+            str(raw), raw.name, UNREADABLE, "You don't have permission to open this folder."
+        )
     except OSError:
         return FolderInfo(str(raw), raw.name, MISSING, "This folder does not exist.")
     if not root.is_dir():
@@ -278,7 +283,7 @@ def open_workspace(path: str | Path, allow_migrate: bool = False) -> Workspace:
         raise WorkspaceError("not_workspace", "This folder is not a workspace yet.")
     if info.state == INCOMPLETE:
         raise WorkspaceError("not_workspace", info.message)
-    if info.state in (MISSING, INVALID, NEWER):
+    if info.state in (MISSING, UNREADABLE, INVALID, NEWER):
         raise WorkspaceError(info.state, info.message)
     root = Path(info.path)
     meta = root / WORKSPACE_META_DIR

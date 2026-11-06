@@ -112,6 +112,30 @@ def test_inspect_states(tmp_path):
     assert (info.state, info.schema_version, info.app_version) == ("workspace", "1.0", "1.2.3")
 
 
+def test_an_unreadable_folder_is_not_reported_as_missing(tmp_path, monkeypatch):
+    # Windows: a deny rule can block opening a folder that exists (WinError 5).
+    folder = tmp_path / "locked"
+    folder.mkdir()
+    real_resolve = Path.resolve
+
+    def resolve(self, strict=False):
+        if self.name == "locked":
+            raise PermissionError(5, "Access is denied")
+        return real_resolve(self, strict=strict)
+
+    monkeypatch.setattr(Path, "resolve", resolve)
+    info = inspect_folder(folder)
+    assert info.state == "unreadable"
+    assert "permission" in info.message
+    with pytest.raises(WorkspaceError) as err:
+        open_workspace(folder)
+    assert err.value.code == "unreadable"
+    with pytest.raises(WorkspaceError) as err:
+        init_workspace(folder, "1")
+    assert err.value.code == "unreadable"
+    assert not (folder / META).exists()
+
+
 def test_inspect_reports_an_enclosing_workspace(tmp_path):
     init_workspace(tmp_path, "1")
     inner = tmp_path / "study" / "sub"
