@@ -25,5 +25,5 @@ error handling. This checklist covers the part a mock can't: the real dialog on 
 ## Results
 | Date | OS / version | Tester | Result | Notes |
 |---|---|---|---|---|
-| 2026-11-06 | macOS 26 (arm64) | Claude (automated, partial) | Partial | The controller started `/usr/bin/osascript` with the fixed script and the prompt as argv, and the dialog stayed open waiting for input. Killing it returned `picker_failed`; an unpicked path got `not_approved`. Checks 1–10 still need a person to click. |
+| 2026-11-06 | macOS 26 (arm64), Chrome | Owner (dialog) + Claude in Chrome (page) | Pass, 10/10 | 1: dialog opened in front of Chrome. 2: cancel → "No folder chosen.", nothing created. 3: path, writable, 2 items, nothing written. 4: only `.opncafyr/` added (workspace.json, jobs/). 5: New Folder in the dialog worked; the dialog started in the last workspace's parent. 6: `Étude 研究` shown and opened. 7: recent list survives reload and opens without the picker. 8: second pick → 409 `picker_busy` (sent to the API; the button is disabled during a pick). 9: "Can write here: No", create refused, nothing created. 10: newer schema explained, no open button; forced API open with `migrate: true` → 409 `newer`, file untouched. Finding: `workspace.json` is written 0600 by `atomic_write_json` (mkstemp). |
 | | Windows 11 | | Not run | |
