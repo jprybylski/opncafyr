@@ -175,8 +175,9 @@ source = "github:jprybylski/quartifyr"
 release_url = "https://github.com/jprybylski/quartifyr/releases/download/v0.3.2/"
 # v0.3.2 (2026-11-05) is the first real release of #69-#72 and #75-#78. Tag v0.3.2 points
 # at 5f3b0f5. quartifyr's release workflow may refresh a release (re-tag, replace the
-# tarball) within 24 hours of publishing, by design. Pin only releases older than that;
-# 0.3.2 was published 2026-11-05T22:52Z, so re-verify these hashes after 2026-11-06T22:52Z.
+# tarball) within 24 hours of publishing, by design. Pin only releases older than that.
+# 0.3.2 was published 2026-11-05T22:52Z; its tarball and SHA256SUMS were re-verified on
+# 2026-11-06T20:00Z (tag still at 5f3b0f5), and the owner confirmed it won't change.
 commit = "5f3b0f51b31d46b42f36d6cdd265722e6215c22f"
 
 [packages.quartifyr.assets]
