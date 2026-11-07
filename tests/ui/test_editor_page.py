@@ -158,3 +158,25 @@ def test_editor_assets_load_only_from_the_origin(editor, home):
     page.get_by_role("textbox", name="Source of Report").wait_for()
     page.get_by_role("button", name="Preview").click()
     assert all(url.startswith(home.url) for url in seen), seen
+
+
+def test_new_fragment_from_the_page(page, home):
+    (home.study / "deck").mkdir()
+    page.goto(page.url.split("#")[0] + "#/tools/deckifyr/files")
+    page.get_by_role("heading", level=1, name="Deck fragments").wait_for()
+    name = page.get_by_label("New quarto fragment name")
+    name.fill("intro")
+    page.get_by_text("Saved as fragments/intro.qmd").wait_for()
+    page.get_by_role("button", name="Create").click()
+    page.locator("#files-status", has_text="Created fragments/intro.qmd.").wait_for()
+    area = page.get_by_role("textbox", name="Source of fragments/intro.qmd")
+    area.wait_for()
+    assert (home.study / "deck" / "fragments" / "intro.qmd").read_text("utf-8") == (
+        area.input_value()
+    )
+    # The same name again is refused, and nothing is overwritten.
+    name.fill("intro")
+    page.get_by_role("button", name="Create").click()
+    page.locator("#files-status", has_text="already exists").wait_for()
+    _axe(page)
+    assert [e for e in page.errors if "409 (Conflict)" not in e] == []

@@ -3,7 +3,7 @@ id: deckifyr
 version: 1
 display_name: deckifyr
 runtime: python
-capabilities: [edit_deck, validate_deck, build_deck, preview_deck]
+capabilities: [edit_deck, validate_deck, build_deck, preview_deck, edit_deck_sources]
 executables: [deckifyr_python]
 health: {kind: python_import, executable: deckifyr_python, target: deckifyr}
 web_app:
@@ -14,6 +14,12 @@ web_app:
 jobs:
   validate_deck: {input_schema: publication-v1, output_schema: preflight-v1, timeout_s: 300}
   build_deck: {input_schema: publication-v1, output_schema: publish-build-v1, timeout_s: 1200}
+# The launcher's project-file editor opens and creates the deck's Quarto fragments (#52,
+# editor.py). deckifyr's own editor keeps presentation.yaml.
+project_editor:
+  capability: edit_deck_sources
+  project_root: deck
+  file_profile: deck-fragments-v1
 optional_requirements:
   - name: libreoffice
     executable: soffice

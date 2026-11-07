@@ -1,9 +1,17 @@
 // Deck (#33): a deckifyr project in deck/, bound to one publication. The editor runs under
 // this origin; checks and builds are jobs whose results land in deck/builds/ with a
 // manifest of the exact runs and file hashes they used.
+//
+// Fragments (#52): "Edit fragments" opens the deck's Quarto fragments in the launcher's
+// project-file editor, where new ones can be made too. Check and Build wait while that
+// editor holds unsaved text.
 
 import { button, el, field, getJSON, post, section, send, setStatus, waitForJob } from "./common.js";
-import { emit } from "../../js/dom.js";
+import { emit, on } from "../../js/dom.js";
+import { anyUnsaved } from "../../js/unsaved.js";
+
+const EDITOR_TOOL = "deckifyr";
+const unsavedNote = "The fragment editor has unsaved changes. Save or discard them first.";
 import { buildsTable, findingsTable, publicationChoice } from "./report.js";
 
 export function initDeck(stack, state) {
@@ -71,7 +79,11 @@ export function initDeck(stack, state) {
     setStatus(sec.status, "The deck editor is closed; its edits were saved.");
     refresh();
   }), "btn btn-ghost btn-sm");
+  const fragments = el("a", "Edit fragments", "btn btn-sm");
+  fragments.href = `#/tools/${EDITOR_TOOL}/files`;
+  fragments.title = "Quarto fragments (.qmd) that slides can show; make new ones there too.";
   const check = button("Check", () => act(async () => {
+    if (anyUnsaved(EDITOR_TOOL)) return setStatus(sec.status, unsavedNote, true);
     const { job_id } = await post("api/nca/deck/check");
     await job(job_id, "The check");
   }), "btn btn-sm");
@@ -80,6 +92,7 @@ export function initDeck(stack, state) {
   const previewLabel = el("label", null, "nca-row");
   previewLabel.append(withPreviews, "with slide previews");
   const build = button("Build", () => act(async () => {
+    if (anyUnsaved(EDITOR_TOOL)) return setStatus(sec.status, unsavedNote, true);
     if (withPreviews.checked) setStatus(sec.status, "Checking that LibreOffice can make previews…");
     const { job_id } = await post("api/nca/deck/build", { previews: withPreviews.checked });
     await job(job_id, "The build");
@@ -98,6 +111,8 @@ export function initDeck(stack, state) {
     setUp.textContent = status?.project ? "Use this publication" : "Set up deck";
     pick.replaceChildren(field("Publication", select), setUp);
     run.replaceChildren(editing ? close : open, check, previewLabel, build);
+    if (status?.project) run.append(fragments);
+    if (bound && anyUnsaved(EDITOR_TOOL)) info.append(el("p", unsavedNote, "hint"));
     const previews = status?.previews || {};
     withPreviews.disabled = !previews.installed;
     previewLabel.title = previews.installed ? (previews.message || "") : "LibreOffice is not installed.";
@@ -124,6 +139,7 @@ export function initDeck(stack, state) {
     draw();
   }
 
+  on("unsaved-changed", () => draw());
   state.onChange((what) => {
     if (["workspace", "shown", "publications-listed"].includes(what)) refresh();
   });

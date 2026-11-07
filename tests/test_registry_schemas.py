@@ -62,7 +62,7 @@ EDITOR_BASE = {
 }
 
 
-def test_the_report_opts_into_the_project_editor():
+def test_the_report_and_deck_opt_into_the_project_editor():
     from opncafyr.core.registry import load_project_editors
 
     tools = load_descriptors()
@@ -72,8 +72,13 @@ def test_the_report_opts_into_the_project_editor():
         "report-source-v1",
         "report-settings-v1",
     )
-    assert set(load_project_editors(tools)) == {"quartifyr"}
-    assert tools["deckifyr"].project_editor is None
+    assert set(load_project_editors(tools)) == {"quartifyr", "deckifyr"}
+    deck = tools["deckifyr"].project_editor
+    assert (deck.project_root, deck.file_profile, deck.settings_schema) == (
+        "deck",
+        "deck-fragments-v1",
+        None,
+    )
 
 
 @pytest.mark.parametrize(

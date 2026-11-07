@@ -30,7 +30,14 @@ All notable changes to this project are documented here. The format follows
   - Descriptor format: `project_editor` is a new optional key of `tool-descriptor-v1`.
     The adapter supplies a `ProjectEditor` (`core/adapter.py`).
   - A test-only second tool (`toy_notes`) uses the editor without core changes.
-  - `docs/architecture.md` describes how deckifyr's Quarto fragments could opt in.
+  - **New file**, when the tool's adapter allows it. You type a name; the tool sets the
+    folder, the suffix and the starting text. An existing file is never replaced.
+  - The deck uses it for its Quarto fragments: **Edit fragments** on the deck card opens
+    every `.qmd` in `deck/`, and **New fragment** makes `deck/fragments/<name>.qmd`.
+    - A save warns about slide breaks or a second top-level heading, which deckifyr's
+      strict check rejects.
+    - Deck check, build and re-binding wait for unsaved fragment text.
+    - A deck build copies the project under the editor's lock.
 - The offline CI job and the Installer workflow's bundle install now run the Gate 2 flow
   through the launcher, with the network blocked (#51). `scripts/offline/flow_check.py`
   drives the launcher app in-process, the way the home page does:

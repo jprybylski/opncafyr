@@ -16,6 +16,10 @@ knows what a tool's files mean. It owns the rules that keep the editor inside th
   hashed again; a different hash is a conflict (409) and nothing is written. The new
   bytes go through a synced temp file and a rename in the same folder, keep the file's
   permissions, and are read back and hashed before the save counts.
+- **New files** (when the adapter supplies ``new_file_rules``). The user types a name
+  only (letters, digits, ``-``, ``_``); the adapter's rule gives the folder, suffix and
+  starter text. The file is written to a synced temp file and hard-linked into place, so
+  an existing file is never overwritten, and it must then be on the adapter's list.
 - **Snapshots.** Workflows that copy a project for a job hold ``lock(root, tool)`` while
   copying, so a save never lands half-way through a copy.
 - **Privacy.** Logs name the tool, the relative path and byte counts, never the text.
@@ -38,8 +42,10 @@ from typing import Any
 from opncafyr.core.adapter import (
     SYNTAXES,
     EditableFile,
+    NewFileRule,
     ProjectEditor,
     SettingsInvalid,
+    SupportsNewFiles,
 )
 from opncafyr.core.manifest import atomic_write_bytes, atomic_write_json
 from opncafyr.core.registry import ProjectEditorSpec, ToolDescriptor
@@ -51,6 +57,9 @@ BOM = b"\xef\xbb\xbf"
 MAX_PATH_CHARS = 240
 MAX_SETTINGS_BYTES = 64 * 1024
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
+NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+SUFFIX_RE = re.compile(r"^\.[a-z0-9]{1,8}$")
+NEW_FILE_MODE = 0o644
 # Folders no editor path may pass through, whatever the adapter lists.
 FORBIDDEN_PARTS = frozenset({"outputs"})
 
@@ -266,6 +275,10 @@ class ProjectFiles:
             out["files"].append(doc)
         if spec.settings_schema is not None:
             out["settings"] = self.settings(root, tool)
+        out["new_files"] = [
+            {"rule": i, "folder": r.folder, "suffix": r.suffix, "label": r.label}
+            for i, r in enumerate(self._rules(tool))
+        ]
         return out
 
     def read(self, root: Path, tool: str, rel: str) -> dict[str, Any]:
@@ -305,6 +318,69 @@ class ProjectFiles:
         log.info("Saved %s project file %s (%d bytes)", tool, rel, len(data))
         warnings = [str(w) for w in editor.check_text(spec.file_profile, rel, plain)][:20]
         return {"path": rel, "sha256": saved.sha256, "bytes": len(data), "warnings": warnings}
+
+    # --- new files ---------------------------------------------------------------------
+
+    def _rules(self, tool: str) -> list[NewFileRule]:
+        spec, editor = self._get(tool)
+        if not isinstance(editor, SupportsNewFiles):
+            return []
+        rules = []
+        for rule in editor.new_file_rules(spec.file_profile):
+            try:
+                if rule.folder:
+                    check_relpath(rule.folder)
+            except ProjectFileError:
+                log.warning("Project editor %s offered an unsafe folder; skipped", tool)
+                continue
+            if SUFFIX_RE.match(rule.suffix) and rule.syntax in SYNTAXES:
+                rules.append(rule)
+        return rules
+
+    def create(self, root: Path, tool: str, rule_index: int, name: str) -> dict[str, Any]:
+        """Create a file from rule ``rule_index`` named ``name`` (+ the rule's suffix)."""
+        rules = self._rules(tool)
+        if not 0 <= rule_index < len(rules):
+            raise ProjectFileError(403, "not_allowed", "New files can't be made here.")
+        rule = rules[rule_index]
+        if name.lower().endswith(rule.suffix):
+            name = name[: -len(rule.suffix)]
+        if not NAME_RE.match(name):
+            raise ProjectFileError(
+                422,
+                "bad_name",
+                "Use letters, digits, - and _ only (at most 64), starting with a letter or digit.",
+            )
+        rel = check_relpath(f"{rule.folder}/{name}{rule.suffix}".lstrip("/"))
+        data = rule.starter.replace("\r\n", "\n").encode("utf-8")
+        if len(data) > rule.max_bytes:
+            raise ProjectFileError(500, "bad_rule", "The tool's starter text is too large.")
+        spec = self.specs[tool]
+        with self.lock(root, tool):
+            project = self.project_folder(root, tool)
+            if project is None:
+                raise ProjectFileError(409, "no_project", "There is no project to edit yet.")
+            try:
+                resolve_in_root(root, f"{spec.project_root}/{rel}")
+            except WorkspaceAccessError:
+                raise _not_allowed() from None
+            parts = rel.split("/")
+            folder = project
+            for part in parts[:-1]:  # the rule's folder: create it, never through a link
+                folder = _no_links(folder, [part])
+                if not folder.exists():
+                    folder.mkdir()
+                elif not folder.is_dir():
+                    raise _not_allowed()
+            target = folder / parts[-1]
+            if os.path.lexists(target):
+                raise ProjectFileError(409, "exists", f"{rel} already exists.")
+            _write_new(target, data)
+            if rel not in self._listed(root, tool)[1]:
+                target.unlink()
+                raise ProjectFileError(500, "not_listed", "The tool doesn't offer that file.")
+        log.info("Created %s project file %s (%d bytes)", tool, rel, len(data))
+        return self.read(root, tool, rel)
 
     # --- settings ----------------------------------------------------------------------
 
@@ -383,3 +459,35 @@ class ProjectFiles:
             atomic_write_json(path, document)
         log.info("Saved %s project settings %s", tool, rel)
         return self.settings(root, tool) or {}
+
+
+def _write_new(target: Path, data: bytes) -> None:
+    """Write ``data`` to a new file at ``target``; never replace an existing one.
+
+    The bytes go to a synced temp file, which is then hard-linked to ``target`` (the link
+    fails if ``target`` exists). Without hard links (some network or FAT drives) it falls
+    back to an exclusive create.
+    """
+    import tempfile
+
+    fd, tmp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.chmod(tmp, NEW_FILE_MODE)
+        try:
+            os.link(tmp, target)
+        except FileExistsError:
+            raise ProjectFileError(409, "exists", "That file already exists.") from None
+        except OSError:
+            try:
+                with open(target, "xb") as fh:  # exclusive: fails if it exists
+                    fh.write(data)
+                    fh.flush()
+                    os.fsync(fh.fileno())
+            except FileExistsError:
+                raise ProjectFileError(409, "exists", "That file already exists.") from None
+    finally:
+        Path(tmp).unlink(missing_ok=True)

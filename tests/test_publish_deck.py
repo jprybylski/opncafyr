@@ -333,3 +333,80 @@ def test_rebinding_an_edited_deck_asks_first(api, ready):
     assert api.post("/api/nca/deck", json={**body, "source": "replace"}).status_code == 200
     doc = yaml.safe_load(path.read_text("utf-8"))
     assert len(doc["slides"]) == 2 and "# my note" not in path.read_text("utf-8")
+
+
+# --- Quarto fragments in the launcher's editor (#52) ---------------------------------------
+
+FRAGMENTS = "/api/tools/deckifyr/project"
+
+
+def new_fragment(api, name):
+    r = api.post(f"{FRAGMENTS}/create", json={"rule": 0, "name": name})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_fragments_can_be_made_and_edited_but_nothing_else(api, ready):
+    project = api.study / "deck"
+    doc = api.get(FRAGMENTS).json()
+    assert doc["title"] == "Deck fragments" and doc["files"] == []
+    assert doc["new_files"] == [
+        {"rule": 0, "folder": "fragments", "suffix": ".qmd", "label": "Quarto fragment"}
+    ]
+    made = new_fragment(api, "interpretation")
+    assert made["path"] == "fragments/interpretation.qmd" and made["syntax"] == "qmd"
+    assert (project / "fragments" / "interpretation.qmd").read_text("utf-8") == made["text"]
+    # Fragments elsewhere in the project are offered; output, copies and the deck are not.
+    for rel in ("notes.qmd", "build/x.qmd", "builds/b/x.qmd", "OUTPUTS/x.qmd", ".hid/x.qmd"):
+        (project / rel).parent.mkdir(parents=True, exist_ok=True)
+        (project / rel).write_bytes(b"x\n")
+    listed = [f["path"] for f in api.get(FRAGMENTS).json()["files"]]
+    assert listed == ["notes.qmd", "fragments/interpretation.qmd"]
+    for rel in ("presentation.yaml", "build/x.qmd", "OUTPUTS/x.qmd"):
+        assert api.post(f"{FRAGMENTS}/read", json={"path": rel}).status_code == 403, rel
+
+
+def test_saving_a_fragment_warns_about_deckifyrs_limits(api, ready):
+    made = new_fragment(api, "two")
+    save = lambda text, sha: api.post(  # noqa: E731
+        f"{FRAGMENTS}/save",
+        json={"path": made["path"], "text": text, "expected_sha256": sha},
+    ).json()
+    fine = "---\ntitle: x\n---\n\n# One\n\n```{r}\n# a comment\n---\n```\n"
+    out = save(fine, made["sha256"])
+    assert out["warnings"] == []
+    out = save("# One\n\ntext\n\n---\n\n# Two\n", out["sha256"])
+    assert len(out["warnings"]) == 2
+    assert "slide break" in out["warnings"][0] and "heading" in out["warnings"][1]
+
+
+def test_unsaved_fragment_text_blocks_check_build_and_rebinding(api, ready):
+    pub, a, _ = ready
+    api.post("/api/session/heartbeat", json={"page_id": "p1", "unsaved": ["deckifyr"]})
+    other = publish(api, a, artifacts=("listing",))
+    for path, body in (
+        ("/api/nca/deck/check", None),
+        ("/api/nca/deck/build", {"previews": False}),
+        ("/api/nca/deck", {"publication_id": other["publication_id"]}),
+    ):
+        r = api.post(path, json=body)
+        assert r.status_code == 409 and r.json()["detail"]["code"] == "editor_unsaved", path
+    api.post("/api/session/heartbeat", json={"page_id": "p1", "unsaved": []})
+    assert build(api)[1]["state"] == "completed"
+
+
+def test_a_build_copies_the_deck_under_the_editor_lock(api, ready, monkeypatch):
+    from opncafyr.workflows.nca.publish import projects
+
+    held = []
+    real = projects.copy_project
+
+    def watched(project, dest, skip):
+        held.append(api.app.state.project_files.lock(api.study, "deckifyr").locked())
+        real(project, dest, skip)
+
+    monkeypatch.setattr(projects, "copy_project", watched)
+    new_fragment(api, "kept")
+    _, job = build(api)
+    assert job["state"] == "completed", job["message"]
+    assert held == [True]

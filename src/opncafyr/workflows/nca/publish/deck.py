@@ -18,12 +18,19 @@
 
 Decks are trusted user-authored projects: Quarto fragments and ``.rds`` flextables may
 run R, through the pinned binaries only (``--trusted-binaries-only``).
+
+Fragments (#52). The launcher's project-file editor opens and creates the deck's ``.qmd``
+fragments (``adapters/deckifyr/editor.py``). The staging copy is taken under the
+editor's project lock, and check, build and re-binding wait while a page reports unsaved
+fragment text.
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -141,6 +148,9 @@ class DeckService(projects.ProjectJobs):
     def __init__(self) -> None:
         super().__init__()
         self.preview: tuple[bool, str] | None = None
+        # Set by mount(): the fragment editor's project lock and unsaved flag (#52).
+        self.project_lock: Callable[[Path], Any] = lambda root: contextlib.nullcontext()
+        self.page_unsaved: Callable[[], bool] = lambda: False
 
     # --- editor ----------------------------------------------------------------------------
 
@@ -155,6 +165,11 @@ class DeckService(projects.ProjectJobs):
         )
 
     def refuse_if_unsaved(self, supervisor: Any) -> None:
+        if self.page_unsaved():
+            raise PublishError(
+                "editor_unsaved",
+                "The fragment editor has unsaved changes. Save or discard them first.",
+            )
         if not self.editor_running(supervisor):
             return
         activity = supervisor.activity().get(APP)
@@ -213,6 +228,7 @@ class DeckService(projects.ProjectJobs):
             publication, sha = projects.load_publication(root, publication_id)
             project = self.project(root)
             if project.exists():
+                self.refuse_if_unsaved(supervisor)
                 return {"binding": self._rebind(root, project, publication, sha, source)}
             job_id = manager.submit(self._setup(root, publication, sha))
             self.jobs["setup"] = job_id
@@ -288,7 +304,8 @@ class DeckService(projects.ProjectJobs):
         self, root: Path, publication: dict[str, Any], dest: Path
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         """Stage the deck plus the publication's files; return its YAML and sidecar findings."""
-        projects.copy_project(self.project(root), dest, _skip)
+        with self.project_lock(root):
+            projects.copy_project(self.project(root), dest, _skip)
         listed = projects.copy_publication(root, publication, dest)
         doc = read_presentation(dest)
         rel = _inside(dest, footnotes_path(doc), "standard_footnotes file")
@@ -589,6 +606,17 @@ class BuildBody(BaseModel):
 def mount(app: FastAPI, ctx: Context, failure) -> DeckService:
     service = DeckService()
     app.state.deck = service
+
+    def project_lock(root: Path):
+        files = getattr(app.state, "project_files", None)
+        return files.lock(root, APP) if files is not None else contextlib.nullcontext()
+
+    def page_unsaved() -> bool:
+        life = getattr(app.state, "lifecycle", None)
+        return life is not None and life.page_unsaved(APP)
+
+    service.project_lock = project_lock
+    service.page_unsaved = page_unsaved
 
     def manager() -> JobManager:
         jobs = getattr(app.state, "jobs", None)

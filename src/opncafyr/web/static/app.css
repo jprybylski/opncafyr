@@ -687,3 +687,10 @@ dialog p { margin: 0 0 var(--space-4); color: var(--muted); }
 .pill-stale { margin-left: var(--space-2); }
 #files-settings-form .field { max-width: none; min-width: 0; }
 #files-settings-form select { width: 100%; min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+.files-new { border-top: 1px solid var(--border); padding: var(--space-3); }
+.files-new[hidden] { display: none; }
+.files-new-form { display: grid; gap: var(--space-1); }
+.files-new-form label { font-weight: 600; font-size: var(--text-sm); }
+.files-new-form input, .files-new-form select { font: inherit; padding: var(--space-1) var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); min-width: 0; width: 100%; }
+.files-new-form .btn { justify-self: start; margin-top: var(--space-1); }
+.files-new-form .files-meta { padding: 0; }

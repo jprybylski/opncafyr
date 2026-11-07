@@ -9,6 +9,8 @@ checks to every route here. ``core.projectfiles`` holds the file rules.
 - ``POST /api/tools/{tool}/project/save`` ``{path, text, expected_sha256}``: 409
   ``conflict`` (with ``current_sha256``) when the file changed since it was opened.
 - ``POST /api/tools/{tool}/project/settings`` ``{values, expected_sha256}``.
+- ``POST /api/tools/{tool}/project/create`` ``{rule, name}``: a new file from one of the
+  adapter's rules (listed as ``new_files``); 409 ``exists`` rather than overwrite.
 """
 
 from __future__ import annotations
@@ -34,6 +36,11 @@ class ReadBody(BaseModel):
 class SaveBody(ReadBody):
     text: str = Field(max_length=MAX_TEXT_CHARS)
     expected_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class CreateBody(BaseModel):
+    rule: int = Field(ge=0, le=31)
+    name: str = Field(min_length=1, max_length=80)
 
 
 class SettingsBody(BaseModel):
@@ -73,3 +80,7 @@ def mount_project_files_api(app: FastAPI, service: ProjectFiles) -> None:
     @app.post("/api/tools/{tool}/project/settings")
     def settings(body: SettingsBody, tool: str = tool_param) -> dict[str, Any]:
         return run(lambda: service.save_settings(root(), tool, body.values, body.expected_sha256))
+
+    @app.post("/api/tools/{tool}/project/create")
+    def create(body: CreateBody, tool: str = tool_param) -> dict[str, Any]:
+        return run(lambda: service.create(root(), tool, body.rule, body.name))

@@ -178,6 +178,23 @@ class SettingsField:
     required: bool = False
 
 
+@dataclass(frozen=True)
+class NewFileRule:
+    """Where the editor may create a file, and what a new one starts as.
+
+    ``folder`` is POSIX and project-relative ("" for the project root); core creates it if
+    it is missing. The user only types a name: letters, digits, ``-`` and ``_``; core adds
+    ``suffix`` and never overwrites a file.
+    """
+
+    folder: str
+    suffix: str  # e.g. ".qmd"
+    label: str
+    syntax: str = "text"
+    starter: str = ""
+    max_bytes: int = DEFAULT_MAX_EDIT_BYTES
+
+
 class SettingsInvalid(ValueError):
     """Settings values (or a settings file) the adapter's schema rejects."""
 
@@ -223,3 +240,13 @@ class ProjectEditor(Protocol):
     def settings_document(self, settings_schema: str, values: Mapping[str, Any]) -> dict:
         """The versioned document to save. Raises ``SettingsInvalid``."""
         ...
+
+
+@runtime_checkable
+class SupportsNewFiles(Protocol):
+    """Optional for project editors: let the user create files (#52).
+
+    A created file must then be on the editor's own ``files()`` list.
+    """
+
+    def new_file_rules(self, file_profile: str) -> list[NewFileRule]: ...

@@ -11,6 +11,8 @@
 //   loads anything; the tool's own output is the authority.
 // - A save sends the revision it opened. If the file changed on disk, both versions are
 //   kept on screen until the user chooses.
+// New file: when the tool allows it, the user types a name only; the tool's rule gives
+// the folder, the suffix and the starting text, and an existing file is never replaced.
 // Unsaved text is reported with the page's heartbeat (unsaved.js), so the launcher won't
 // close by itself and Quit asks first.
 
@@ -53,6 +55,7 @@ function noteDirty() {
     state.wasDirty = now;
     changed();
     drawList();
+    drawNew();
   }
 }
 
@@ -80,6 +83,65 @@ function drawList() {
     if (f.readonly) li.append(el("span", `Read-only: ${f.reason}`, "files-meta"));
     list.append(li);
   }
+}
+
+function drawNew() {
+  const box = $("files-new");
+  box.replaceChildren();
+  const rules = state.overview?.new_files || [];
+  box.hidden = !rules.length;
+  if (!rules.length) return;
+  const where = (r) => `${r.folder ? `${r.folder}/` : ""}…${r.suffix}`;
+  const form = el("form", null, "files-new-form");
+  let pick = null;
+  if (rules.length > 1) {
+    pick = el("select");
+    pick.id = "files-new-rule";
+    for (const r of rules) pick.append(new Option(`${r.label} (${where(r)})`, String(r.rule)));
+    const label = el("label", "Kind");
+    label.htmlFor = pick.id;
+    form.append(label, pick);
+  }
+  const rule = () => rules.find((r) => String(r.rule) === (pick ? pick.value : String(rules[0].rule)));
+  const label = el("label", `New ${rules.length > 1 ? "file" : rules[0].label.toLowerCase()} name`);
+  const input = el("input");
+  input.id = "files-new-name";
+  input.required = true;
+  input.maxLength = 64;
+  input.pattern = "[A-Za-z0-9][A-Za-z0-9_\\-]*";
+  input.autocomplete = "off";
+  label.htmlFor = input.id;
+  const hint = el("p", "", "files-meta");
+  hint.id = "files-new-hint";
+  input.setAttribute("aria-describedby", hint.id);
+  const showWhere = () => {
+    const r = rule();
+    hint.textContent = `Saved as ${r.folder ? `${r.folder}/` : ""}${input.value || "name"}${r.suffix}. Letters, digits, - and _.`;
+  };
+  input.addEventListener("input", showWhere);
+  if (pick) pick.addEventListener("change", showWhere);
+  const create = el("button", "Create", "btn btn-sm");
+  create.type = "submit";
+  create.disabled = dirty();
+  create.title = create.disabled ? "Save or discard your changes first." : "";
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (dirty()) return status(`Save or discard your changes to ${state.file.label} first.`, true);
+    try {
+      const doc = await post(api("/create"), { rule: rule().rule, name: input.value.trim() });
+      input.value = "";
+      showWhere();
+      await loadOverview();
+      await openFile(doc.path);
+      status(`Created ${doc.path}.`);
+      emit("project-files-changed", { tool: state.tool, path: doc.path });
+    } catch (e) {
+      status(e.message, true);
+    }
+  });
+  form.append(label, input, create, hint);
+  box.append(form);
+  showWhere();
 }
 
 function drawSettings() {
@@ -125,6 +187,7 @@ async function loadOverview() {
   state.overview = await getJSON(api(""));
   $("files-heading").textContent = state.overview.title;
   drawList();
+  drawNew();
   drawSettings();
 }
 

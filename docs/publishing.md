@@ -159,10 +159,14 @@ The **Deck (PPTX)** card sets up `deck/`, a deckifyr project for one publication
    - **Use this publication** binds the deck to another publication. You must close the
      editor first, and if you edited `presentation.yaml` you choose whether to replace or
      keep it.
-3. **Check** runs `deckifyr validate --strict` on a copy of the deck holding exactly the
+3. **Edit fragments** opens the deck's Quarto fragments (`.qmd`) in the launcher's
+   project-file editor (#52). **New fragment** makes `deck/fragments/<name>.qmd`; then add
+   a Quarto element in the deck editor and choose it. A save warns when a fragment has a
+   slide break (`---`) or more than one top-level heading, which deckifyr's check rejects.
+4. **Check** runs `deckifyr validate --strict` on a copy of the deck holding exactly the
    publication's files, after the launcher's sidecar checks. A validation error is shown
    as the check's failure; deckifyr's warnings are listed.
-4. **Build** (optionally with slide previews) builds that copy. The build counts only when
+5. **Build** (optionally with slide previews) builds that copy. The build counts only when
    all of these hold:
    - deckifyr reports success;
    - its manifest exists;
@@ -176,8 +180,8 @@ The **Deck (PPTX)** card sets up `deck/`, a deckifyr project for one publication
 
    **Download PPTX** serves it only while it still matches.
 
-Check and Build wait while the editor has unsaved edits: save them in the editor, or close
-it. Slide previews are offered only when LibreOffice is installed and a short test
+Check and Build wait while the deck editor or the fragment editor has unsaved edits:
+save them, or close the deck editor (which saves). Slide previews are offered only when LibreOffice is installed and a short test
 conversion finishes in time.
 
 Decks and reports are your own projects, and they are trusted. Quarto blocks and flextable

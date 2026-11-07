@@ -356,3 +356,13 @@ def preview_probe(runtime: Runtime, timeout_s: float = 60.0) -> tuple[bool, str]
         if code != 0 or not (base / "out" / "probe.pdf").is_file():
             return False, f"LibreOffice could not convert a test file (exit code {code})."
     return True, "LibreOffice converted a test file."
+
+
+# --- project-file editor (#52) -------------------------------------------------------------
+
+
+def project_editor():
+    """The deck's Quarto fragments for the launcher's editor (``editor.py``)."""
+    from opncafyr.adapters.deckifyr.editor import DeckEditor
+
+    return DeckEditor()

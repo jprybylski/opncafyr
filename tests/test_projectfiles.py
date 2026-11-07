@@ -18,6 +18,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from opncafyr.core import manifest
+from opncafyr.core.adapter import NewFileRule
 from opncafyr.core.app import create_app
 from opncafyr.core.jobmanager import JobManager
 from opncafyr.core.projectfiles import sha256_bytes
@@ -53,7 +54,8 @@ def make_client(security, tmp_path, study, editor=None, open_study=True):
     client.headers[SESSION_HEADER] = security.secret
     if open_study:
         folder = client.post("/api/workspace/pick").json()["folder"]
-        client.post("/api/workspace/init", json={"path": folder["path"]}).raise_for_status()
+        if client.post("/api/workspace/init", json={"path": folder["path"]}).status_code != 200:
+            client.post("/api/workspace/open", json={"path": folder["path"]}).raise_for_status()
     client.jobs = jobs
     return client
 
@@ -353,3 +355,113 @@ def test_the_editor_names_no_tool(path):
 def test_os_replace_is_what_the_atomic_write_uses():
     # The interrupted-save test patches it there; keep them in step.
     assert manifest.os is os
+
+
+# --- new files -----------------------------------------------------------------------------
+
+
+def create(api, rule, name):
+    return api.post("/api/tools/toy_notes/project/create", json={"rule": rule, "name": name})
+
+
+def test_new_files_follow_the_adapters_rules(api, study):
+    rules = api.get("/api/tools/toy_notes/project").json()["new_files"]
+    assert rules == [
+        {"rule": 0, "folder": "", "suffix": ".md", "label": "Note"},
+        {"rule": 1, "folder": "drafts", "suffix": ".md", "label": "Draft"},
+    ]
+    out = create(api, 0, "ideas")
+    assert out.status_code == 200, out.text
+    doc = out.json()
+    assert (doc["path"], doc["text"]) == ("ideas.md", "# New note\n")
+    assert (study / "notes" / "ideas.md").read_bytes() == b"# New note\n"
+    # The folder of a rule is made when missing; a typed suffix isn't doubled.
+    assert create(api, 1, "first.md").json()["path"] == "drafts/first.md"
+    listed = [f["path"] for f in api.get("/api/tools/toy_notes/project").json()["files"]]
+    assert {"ideas.md", "drafts/first.md"} <= set(listed)
+    # The new file saves like any other.
+    assert save(api, "ideas.md", "# Ideas\n", doc["sha256"]).status_code == 200
+    assert not [p for p in (study / "notes").rglob("*.tmp")]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permissions")
+def test_a_new_file_is_readable_by_its_owner_and_group(api, study):
+    create(api, 0, "perm")
+    assert stat.S_IMODE((study / "notes" / "perm.md").stat().st_mode) == 0o644
+
+
+def test_a_new_file_never_replaces_one(api, study):
+    resp = create(api, 0, "intro")
+    assert resp.status_code == 409 and resp.json()["detail"]["code"] == "exists"
+    assert (study / "notes" / "intro.md").read_bytes() == b"# Intro\n\nHello.\n"
+
+
+def test_without_hard_links_creation_still_refuses_to_overwrite(api, study, monkeypatch):
+    def no_links(src, dst):
+        raise OSError("hard links not supported")
+
+    monkeypatch.setattr(os, "link", no_links)
+    assert create(api, 0, "fallback").status_code == 200
+    assert (study / "notes" / "fallback.md").read_bytes() == b"# New note\n"
+    # A file that appears between the check and the write is still never replaced.
+    from opncafyr.core import projectfiles
+
+    with pytest.raises(projectfiles.ProjectFileError):
+        projectfiles._write_new(study / "notes" / "intro.md", b"x")
+    assert (study / "notes" / "intro.md").read_bytes() == b"# Intro\n\nHello.\n"
+
+
+@pytest.mark.parametrize(
+    "name", ["", "../up", "a/b", ".hidden", "-dash", "a b", "x" * 65, "C:x", "näme", "a\\b"]
+)
+def test_new_file_names_are_plain(api, study, name):
+    resp = create(api, 0, name)
+    assert resp.status_code == 422
+    assert sorted(p.name for p in (study / "notes").iterdir()) == ["intro.md", "sub"]
+
+
+def test_only_the_adapters_rules_can_create(security, tmp_path, study, api):
+    assert create(api, 2, "x").status_code == 403
+    unsafe = ToyNotesEditor(
+        rules=(
+            NewFileRule("../out", ".md", "Out", "md"),
+            NewFileRule("OUTPUTS", ".md", "Outputs", "md"),
+            NewFileRule("", "md", "No dot", "md"),
+        )
+    )
+    client = make_client(security, tmp_path, study, unsafe)
+    try:
+        assert client.get("/api/tools/toy_notes/project").json()["new_files"] == []
+        assert create(client, 0, "x").status_code == 403
+    finally:
+        client.__exit__(None, None, None)
+        client.jobs.shutdown()
+
+
+def test_a_created_file_the_adapter_doesnt_list_is_removed(security, tmp_path, study):
+    client = make_client(security, tmp_path, study, ToyNotesEditor(hide=("ghost.md",)))
+    try:
+        resp = create(client, 0, "ghost")
+        assert resp.status_code == 500 and resp.json()["detail"]["code"] == "not_listed"
+        assert not (study / "notes" / "ghost.md").exists()
+    finally:
+        client.__exit__(None, None, None)
+        client.jobs.shutdown()
+
+
+@needs_links
+def test_a_new_file_never_goes_through_a_linked_folder(api, study, tmp_path):
+    (tmp_path / "elsewhere").mkdir()
+    (study / "notes" / "drafts").symlink_to(tmp_path / "elsewhere")
+    assert create(api, 1, "x").status_code == 403
+    assert list((tmp_path / "elsewhere").iterdir()) == []
+
+
+def test_editors_without_rules_offer_no_new_files(security, tmp_path, study):
+    client = make_client(security, tmp_path, study, ToyNotesEditor(rules=()))
+    try:
+        assert client.get("/api/tools/toy_notes/project").json()["new_files"] == []
+        assert create(client, 0, "x").status_code == 403
+    finally:
+        client.__exit__(None, None, None)
+        client.jobs.shutdown()

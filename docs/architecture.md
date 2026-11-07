@@ -494,6 +494,15 @@ tool's project sources. Core knows files, revisions and locks, never what the fi
   - **preview** built from DOM nodes: no `innerHTML`, inert links, nothing run.
 
   A conflict keeps the user's text in the editor and shows the disk version next to it.
+- **New files** (optional, `SupportsNewFiles.new_file_rules()`). Each rule gives a folder,
+  a suffix, a label and starter text. The user types only a name: letters, digits, `-`
+  and `_`, up to 64. Core then:
+  - checks the path with the same rules as for editing, and creates the rule's folder
+    if it is missing (never through a link);
+  - writes a synced temp file and hard-links it into place, so an existing file is
+    never replaced (409 `exists`). Without hard links it falls back to an exclusive
+    create;
+  - removes the file again if the adapter doesn't then list it.
 - **Unsaved text** (`unsaved.js`) goes with every heartbeat (`unsaved: [tool ids]`), and
   the page keeps beating while hidden. The lifecycle counts it like a child's unsaved
   edits (blocks idle shutdown for up to 15 minutes without a heartbeat) and
@@ -519,23 +528,22 @@ workflow:
 - lists each build's `stale_inputs` in its status, so the screen marks a build out of
   date without rewriting it.
 
-**How deckifyr would opt in (not enabled yet).** deckifyr decks can place a Quarto
-fragment on a slide (`type: quarto`, `source: fragments/<name>.qmd`). deckifyr's own
-editor can choose an existing fragment but not edit its text, and the generated NCA deck
-has none. The deckifyr adapter would add `project_editor: {capability: edit_deck_sources,
-project_root: deck, file_profile: deck-fragments-v1}` and a `ProjectEditor` that:
-- lists `.qmd` files under the deck project, leaving out `build/`, `builds/` and
-  `OUTPUTS/`; subfolders such as `fragments/` already work in core;
-- warns in `check_text()` when a fragment has a slide break (`---`) or other content
-  deckifyr's strict validation rejects (deckifyr spec §8.1). `deckifyr validate
-  --strict` stays the authority.
+**The deck** (deckifyr adapter, `adapters/deckifyr/editor.py`) offers its Quarto
+fragments. deckifyr places one on a slide with a `type: quarto` element whose `source` is
+a `.qmd` file in the project (deckifyr spec §8.1). deckifyr's own editor can choose an
+existing fragment but can't edit its text.
+- Every `.qmd` in `deck/` is offered, except under `build/`, `builds/`, `previews/`,
+  `OUTPUTS/`, `_extensions/` and hidden folders. `presentation.yaml` stays with deckifyr's
+  editor, which holds the deck in memory while it runs.
+- **New fragment** creates `deck/fragments/<name>.qmd` from short starter text. A
+  `quarto` element in deckifyr's editor can then use it.
+- `check_text()` warns about what deckifyr's strict check rejects: a slide break
+  (`---`, `***`, `___`) or more than one top-level `#` heading, outside front matter and
+  code fences. `deckifyr validate --strict` stays the authority.
+- The deck workflow copies `deck/` under the editor lock, and refuses check, build and
+  re-binding while a page reports unsaved fragment text, as it already does for unsaved
+  edits in deckifyr's editor.
 
-The deck workflow would then:
-- hold the editor lock while it copies `deck/` for check and build;
-- add `page_unsaved("deckifyr")` to its existing refusal while the deckifyr editor holds
-  unsaved edits.
-
-Creating a new fragment needs a "new file" operation, which the editor doesn't have yet:
-an adapter-supplied folder, name pattern and starter text. The test-only `toy_notes`
+The test-only `toy_notes`
 tool (`tests/toy_notes.py`) shows a second tool using the editor with no change to core
 or the generic page.
