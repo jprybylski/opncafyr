@@ -126,6 +126,13 @@ scheduled first.
   server-side export (#28). The earlier temporary paths are no longer needed.
 - Never read browser downloads. #29 checks the saved `analysis.R` against the UI's
   results.
+- Gate 2's exit evidence is automated (2026-11-07):
+  `tests/integration/nca/test_replay_r.py::test_gate_2_two_analytes_two_independent_runs`
+  takes the two-analyte fixture through cleaning, mapping, checks, two snapshots, two
+  opnca-r sessions and saves, two replays and two sealed runs, with no cross-analyte rows.
+  It runs with the CI proxy harness job. Points excluded inside an opnca-r session wait on
+  [opnca-r#49](https://github.com/mantra-opnca/opnca-r/issues/49); until then such a save
+  fails.
 
 **Gate 3**
 - Starts once #29 proves runs can be replayed. The quartifyr adapter calls quartifyr
@@ -235,7 +242,7 @@ makes this concrete with a guide and a toy adapter.
 | #25 | Exact-value analyte filter and frozen one-analyte input snapshot | #22, #24 | — |
 | #26 | Run bundle layout and run-manifest-v1: atomic writes, schema validation, immutability | #25, #12 | — |
 | #27 | opnca adapter: launch an opnca-r session from a one-analyte snapshot | #25, #15, #13 | [opnca-r#25](https://github.com/mantra-opnca/opnca-r/issues/25), [opnca-r#24](https://github.com/mantra-opnca/opnca-r/issues/24), [opnca-r#30](https://github.com/mantra-opnca/opnca-r/issues/30), [opnca-r#29](https://github.com/mantra-opnca/opnca-r/issues/29) |
-| #28 | opnca adapter: durable, atomic save of an analysis into the run directory | #27, #26 | [opnca-r#26](https://github.com/mantra-opnca/opnca-r/issues/26), [opnca-r#27](https://github.com/mantra-opnca/opnca-r/issues/27) |
+| #28 | opnca adapter: durable, atomic save of an analysis into the run directory | #27, #26 | [opnca-r#26](https://github.com/mantra-opnca/opnca-r/issues/26), [opnca-r#27](https://github.com/mantra-opnca/opnca-r/issues/27), [opnca-r#49](https://github.com/mantra-opnca/opnca-r/issues/49) |
 | #29 | Script replay verification job: re-run analysis.R and compare to the UI results within tolerance | #28 | [opnca-r#26](https://github.com/mantra-opnca/opnca-r/issues/26) |
 
 ### Gate 3 – Publishing path

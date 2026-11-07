@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Replay verification of saved runs (#29).
+  - A verified save is replayed at once: `analysis.R` runs with the pinned R and opnca-r
+    in a copy of the run, and its tables are compared with the saved results. IDs,
+    counts, flags and status must be equal; other numbers agree within a relative
+    tolerance (default 1e-10, recorded). The report (`replay-v1`, with a readable list
+    of differences) is kept in the run's `logs/`.
+  - A run can be completed, and so published, only after a passed replay; "Replay again"
+    reruns it. The Analysis page shows the result and the differences.
+  - Gate 2's exit test runs both analytes of the two-analyte fixture end to end, through
+    real opnca-r sessions and saves, to two sealed, replayed runs with no cross-analyte
+    rows.
 - Durable save of an analysis into its run folder (#28).
   - The launcher watches the run folder for opnca-r's server-side save (never a browser
     download). A save counts only when `COMPLETE` matches `artifacts.json`, every artifact

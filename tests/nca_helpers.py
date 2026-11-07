@@ -326,3 +326,16 @@ def save_status(client: TestClient, run_id: str) -> dict[str, Any]:
     r = client.post(f"/api/nca/runs/{run_id}/save-status")
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def review_and_replay(client: TestClient, study: Path, run_id: str) -> dict[str, Any]:
+    """Save in opnca-r, let the launcher accept it and replay it. Returns save-status."""
+    data = save_in_opnca(client, study, run_id)
+    out = save_status(client, run_id)
+    assert out["run"]["state"] == "reviewing", out
+    job_id = client.app.state.nca.replays[run_id]
+    job = wait_job(client, job_id, timeout=600)
+    assert job["state"] == "completed", job["message"]
+    out = save_status(client, run_id)
+    out["calculate"] = data
+    return out

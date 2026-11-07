@@ -22,7 +22,7 @@ export function initRuns(stack, state) {
       sec.body.append(el("p", "No runs yet.", "muted"));
       return;
     }
-    open = data.runs.filter((r) => r.state === "running").map((r) => r.run_id);
+    open = data.runs.filter((r) => r.state === "running" || r.state === "reviewing").map((r) => r.run_id);
     const rows = data.runs.map((run) => {
       const actions = el("td");
       for (const make of runActions) for (const node of make(run, refresh)) actions.append(node, " ");
@@ -97,7 +97,15 @@ export function initRuns(stack, state) {
       refresh();
     }, "btn btn-primary btn-sm");
     done.setAttribute("aria-label", `Confirm and complete run ${run.run_id}`);
-    return [done];
+    const again = button("Replay again", async () => {
+      try {
+        await post(`api/nca/runs/${encodeURIComponent(run.run_id)}/replay`, {});
+        if (!open.includes(run.run_id)) open.push(run.run_id);
+        setStatus(sec.status, `Replaying run ${run.run_id}…`);
+      } catch (e) { setStatus(sec.status, e.message, true); }
+    }, "btn btn-ghost btn-sm");
+    again.setAttribute("aria-label", `Replay run ${run.run_id} again`);
+    return [done, again];
   });
 
   let open = [];
@@ -106,6 +114,22 @@ export function initRuns(stack, state) {
       try {
         const out = await post(`api/nca/runs/${encodeURIComponent(runId)}/save-status`);
         if (out.save.state === "saving") setStatus(sec.status, `opnca-r is saving run ${runId}…`);
+        if (out.run.state === "reviewing") {
+          const replay = out.replay || {};
+          if (replay.job && !["completed", "failed", "cancelled"].includes(replay.job.state)) {
+            setStatus(sec.status, `Replaying run ${runId}: ${replay.job.message}`);
+          } else if (replay.job && replay.job.state === "failed") {
+            setStatus(sec.status, `Run ${runId}: ${replay.job.message}`, true);
+            open = open.filter((id) => id !== runId);
+          } else if (replay.status) {
+            setStatus(sec.status, replay.status === "passed"
+              ? `Run ${runId} replayed and matches its saved results. Confirm it to complete the run.`
+              : `Run ${runId} did not replay to the same results:\n${replay.differences}`, replay.status !== "passed");
+            open = open.filter((id) => id !== runId);
+            refresh();
+          }
+          continue;
+        }
         if (out.run.state !== "running" && out.run.state !== "preparing") {
           setStatus(sec.status, out.save.state === "complete"
             ? `Run ${runId} was saved by opnca-r and is ready for review.`

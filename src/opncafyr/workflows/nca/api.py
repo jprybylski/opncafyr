@@ -45,6 +45,12 @@ Save and completion (#28):
   (the page polls it while a run is open). On ``COMPLETE`` it stops the session and
   checks the save; the run moves to ``reviewing`` or ``failed``.
 - ``POST /api/nca/runs/{id}/complete``: the user confirms a reviewed run; it is sealed.
+
+Replay (#29):
+- A verified save starts the replay job (``replay.py``): ``analysis.R`` re-run in a
+  copy and compared with ``results/``. ``POST /api/nca/runs/{id}/replay {rtol}`` runs it
+  again. ``save-status`` on a run in review records the newest finished replay in the
+  manifest and returns its differences; ``complete`` needs a passed replay.
 """
 
 from __future__ import annotations
@@ -68,6 +74,7 @@ from opncafyr.core.workspace import Workspace, resolve_in_root
 from opncafyr.workflows.nca import checks as checks_mod
 from opncafyr.workflows.nca import mapping as mappings
 from opncafyr.workflows.nca import recipe as recipes
+from opncafyr.workflows.nca import replay as replay_mod
 from opncafyr.workflows.nca import save as save_mod
 from opncafyr.workflows.nca.cleaning import (
     PREVIEW_ROWS,
@@ -149,6 +156,10 @@ class SelectionBody(BaseModel):
         return checks_mod.Selection(self.analyte_value, self.specimen_value)
 
 
+class ReplayBody(BaseModel):
+    rtol: float = Field(default=1e-10, gt=0, le=1e-3)
+
+
 class StartRun(SelectionBody):
     recipe_id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")
     analyte_label: str | None = Field(default=None, max_length=200)
@@ -166,6 +177,7 @@ class Context:
         self.cleaning = CleaningService()
         self.format_checks = FormatChecks()
         self.sessions = Sessions()
+        self.replays: dict[str, str] = {}
 
     def workspace(self) -> Workspace:
         ws: Workspace | None = self.app.state.workspace
@@ -553,6 +565,12 @@ def mount(app: FastAPI) -> Context:
         folder = run_folder(run_id)
         with ctx.lock:
             manifest = read_run(folder)
+            if manifest["state"] == "reviewing":
+                return {
+                    "save": {"state": "complete", "problems": []},
+                    "run": replay_mod.sync(folder),
+                    "replay": replay_state(folder),
+                }
             if manifest["state"] not in ("preparing", "running"):
                 return {"save": {"state": manifest["state"], "problems": []}, "run": manifest}
             sup = app.state.supervisor
@@ -569,7 +587,53 @@ def mount(app: FastAPI) -> Context:
         return {"save": status.to_dict(), "run": manifest}
 
     def after_save(folder: Path, manifest: dict[str, Any]) -> None:
-        """Hook for what follows a verified save (the replay job, #29)."""
+        """A verified save is replayed at once (#29)."""
+        if manifest["state"] == "reviewing":
+            start_replay(folder, ReplayBody())
+
+    def replay_timeout() -> float:
+        tool = (app.state.tools or {}).get("opnca")
+        contract = tool.jobs.get("replay_nca") if tool is not None else None
+        if contract is not None and contract.timeout_s:
+            return float(contract.timeout_s)
+        return replay_mod.DEFAULT_TIMEOUT_S
+
+    def start_replay(folder: Path, body: ReplayBody) -> str:
+        try:
+            job_id = replay_mod.start(
+                app.state.jobs, folder, rtol=body.rtol, timeout_s=replay_timeout()
+            )
+        except runs_core.RunError as exc:
+            raise error(exc.code, exc.message) from None
+        except JobManagerError as exc:
+            raise error("jobs_unavailable", str(exc)) from None
+        ctx.replays[folder.name] = job_id
+        return job_id
+
+    def replay_state(folder: Path) -> dict[str, Any]:
+        job_id = ctx.replays.get(folder.name)
+        job = None
+        if job_id:
+            try:
+                job = app.state.jobs.get(job_id)
+            except KeyError:
+                job = None
+        found = replay_mod.latest(folder)
+        report = found[1] if found else None
+        return {
+            "job": {"job_id": job_id, "state": job["state"], "message": job["message"]}
+            if job
+            else None,
+            "status": report["status"] if report else None,
+            "differences": report["differences"] if report else "",
+        }
+
+    @app.post("/api/nca/runs/{run_id}/replay")
+    def replay_again(run_id: str, body: ReplayBody | None = None) -> dict[str, Any]:
+        folder = run_folder(run_id)
+        with ctx.lock:
+            job_id = start_replay(folder, body or ReplayBody())
+        return {"job_id": job_id}
 
     ctx.after_save = after_save
 
@@ -578,6 +642,8 @@ def mount(app: FastAPI) -> Context:
         folder = run_folder(run_id)
         with ctx.lock:
             manifest = read_run(folder)
+            if manifest["state"] == "reviewing":
+                manifest = replay_mod.sync(folder)
             if manifest["state"] != "reviewing":
                 raise error(
                     "bad_state",
@@ -587,8 +653,8 @@ def mount(app: FastAPI) -> Context:
             if replay.get("status") != "passed":
                 raise error(
                     "replay_required",
-                    "The saved analysis must replay and match first (#29); only then can "
-                    "the run be completed.",
+                    "The saved analysis must replay and match its results first; only then "
+                    "can the run be completed.",
                 )
             try:
                 sealed = runs_core.seal_run(folder)

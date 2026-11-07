@@ -336,3 +336,21 @@ reason and add a warning). If the session replaced the launcher's exclusion colu
 its own (opnca-r#49), the save fails. A failed save moves the run to `failed`; "New run
 from this" starts again. `POST /api/nca/runs/{id}/complete` seals a reviewed run once its
 replay has passed (#29).
+
+## Replay verification (#29)
+
+A verified save starts `workflows/nca/replay.py` as a job (`nca.replay`, timeout from the
+opnca descriptor's `replay_nca` contract). It copies the run's `analysis.R` and
+`input/analysis.csv` into the job's own work folder and runs `Rscript --vanilla
+analysis.R` there, so nothing is written into the run while R runs; `analysis.R` checks
+the input's MD5 and writes `replay/`. The review compares every table of `results/` with
+`replay/` (`replay_compare.py`): same columns and rows in the same order; identifiers,
+labels, counts, flags and status equal as text; other numbers within a relative tolerance
+(default 1e-10, recorded). It writes `replay.json` (`replay-v1`, with a readable list of
+differences) and the replayed tables to `runs/<id>/logs/replay-<n>/`. The job fails only
+if R fails; a difference is a finished replay with `status: failed`, kept with the run.
+
+The newest finished replay is recorded in the manifest's `replay`. Completing a run needs
+a passed replay, so every sealed run holds its own replay evidence, and only completed
+runs can be published. Against opnca-r's own `analysis/calculate` response the replay
+matches to the 4 decimal places that API writes numbers with.
