@@ -19,18 +19,26 @@ pytestmark = pytest.mark.skipif(NODE is None, reason="needs Node.js")
 
 
 def _node(expr: str, text: str):
-    script = (
-        f"import * as m from {json.dumps(MODULE.as_uri())};"
-        "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>"
-        f"process.stdout.write(JSON.stringify(({expr})(s))));"
-    )
-    out = subprocess.run(  # noqa: S603 - fixed argv, test only
-        [NODE, "--input-type=module", "-e", script],
-        input=text,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    """``expr(text)`` under Node. The text goes through a UTF-8 file, not stdin or argv:
+    Windows' default code page can't carry every character, and a long stdin can stall."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / "input.md"
+        src.write_text(text, "utf-8")
+        script = (
+            f"import * as m from {json.dumps(MODULE.as_uri())};"
+            "import { readFileSync } from 'node:fs';"
+            "const text = readFileSync(process.argv[1], 'utf8');"
+            f"process.stdout.write(JSON.stringify(({expr})(text)));"
+        )
+        out = subprocess.run(  # noqa: S603 - fixed argv, test only
+            [NODE, "--input-type=module", "-e", script, str(src)],
+            capture_output=True,
+            encoding="utf-8",
+            check=True,
+            timeout=60,
+        )
     return json.loads(out.stdout)
 
 
