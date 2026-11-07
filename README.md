@@ -1,3 +1,7 @@
+> [!WARNING]
+> **Under development.** opncafyr and opnca are not yet released. Public installation is
+> not supported.
+
 # opncafyr
 
 A local, per-user workspace for noncompartmental analysis and reporting. You click an
