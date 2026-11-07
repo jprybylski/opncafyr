@@ -4,6 +4,7 @@
 import { el, on } from "./common.js";
 import { initCleaning } from "./cleaning.js";
 import { initMapping } from "./mapping.js";
+import { initChecks } from "./checks.js";
 
 // Page state shared by the sections. `changed(what)` tells the others to refresh.
 export const state = {
@@ -43,5 +44,6 @@ export function init(container) {
   container.append(head, stack);
   initCleaning(stack, state);
   initMapping(stack, state);
+  initChecks(stack, state);
   on("workspace-changed", () => state.changed("workspace"));
 }

@@ -129,3 +129,98 @@ def apply(client: TestClient, recipe_id: str, kind: str = "apply") -> dict[str, 
     r = client.get(f"/api/nca/recipes/{recipe_id}/result", params={"kind": result_kind})
     assert r.status_code == 200, r.text
     return r.json()
+
+
+FINDING_KEYS = (
+    "check",
+    "level",
+    "analyte",
+    "scope",
+    "subject",
+    "lines",
+    "column",
+    "value",
+    "values",
+    "kind",
+)
+
+
+def fixture_table(name: str = SOURCE) -> tuple[list[str], list[list[str]]]:
+    """A fixture as the cleaning step would hand it on with no steps: every value as
+    text, plus ``opncafyr_line`` (the physical line)."""
+    import csv
+
+    with (FIXTURES / name).open(newline="", encoding="utf-8") as fh:
+        rows = list(csv.reader(fh))
+    header = ["opncafyr_line", *rows[0]]
+    return header, [[str(i), *r] for i, r in enumerate(rows[1:], start=2)]
+
+
+def project(finding: dict[str, Any]) -> dict[str, Any]:
+    """A finding with only the keys the fixture's expected findings use."""
+    return {k: finding[k] for k in FINDING_KEYS if k in finding}
+
+
+def case(case_id: str) -> dict[str, Any]:
+    return next(c for c in EXPECTED["cases"] if c["id"] == case_id)
+
+
+def resolving_steps() -> list[dict[str, Any]]:
+    """Recipe steps that clear every blocking finding of the standard setup, built from the
+    fixture's own findings and cases. Each is an explicit step with a reason: bad rows go
+    to the rejected-row log; the reason-less exclusion and the no-dose profile are
+    excluded (they stay in the data, marked)."""
+    findings = EXPECTED["findings"][SOURCE]
+
+    def lines(check, **match):
+        return sorted(
+            {
+                n
+                for f in findings
+                if f["check"] == check and all(f.get(k) == v for k, v in match.items())
+                for n in f["lines"]
+            }
+        )
+
+    def remove(rows, reason):
+        return {
+            "op": "filter_rows",
+            "args": {
+                "where": {"column": "opncafyr_line", "in": [str(n) for n in rows]},
+                "reason": reason,
+            },
+        }
+
+    def exclude(rows, reason):
+        return {
+            "op": "exclude",
+            "args": {
+                "where": {"column": "opncafyr_line", "in": [str(n) for n in rows]},
+                "reason": reason,
+            },
+        }
+
+    steps = [
+        remove(lines("conc_unclassified_blank"), "blank concentration, neither BLQ nor missing"),
+        remove(lines("route_missing"), "route not recorded"),
+        remove(lines("conc_negative"), "negative concentration"),
+        remove(lines("time_not_numeric"), "actual time not recorded as a number"),
+        remove(lines("conc_not_numeric"), "invalid extra sample (decimal comma, misspelt route)"),
+        remove(lines("blq_and_missing"), "flagged both BLQ and missing"),
+        remove(case("dose_varies")["lines"], "dose differs from the rest of the profile"),
+    ]
+    for f in findings:
+        if f["check"] == "duplicate_key":
+            steps.append(remove(f["lines"][1:], f"duplicate of line {f['lines'][0]}"))
+    steps.append(exclude(lines("exclusion_no_reason"), "excluded at site; reason added here"))
+    steps.append(exclude(lines("profile_no_dose"), "no dose record for this subject"))
+    return steps
+
+
+def resolving_mapping() -> dict[str, Any]:
+    """The standard mapping, with the fixture's stray BLQ flag value confirmed as FALSE."""
+    mapping = standard_mapping()
+    for f in EXPECTED["findings"][SOURCE]:
+        if f["check"] == "flag_value_unmapped":
+            mapping["flags"]["BLQ"]["table"][f["value"]] = False
+    return mapping

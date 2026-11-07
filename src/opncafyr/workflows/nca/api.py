@@ -18,6 +18,14 @@ Mapping (#23), on the full cleaned data:
   for every role, each column's distinct values (for flag tables and units), the route
   values with opnca-r's reading of each, and what still blocks the saved mapping.
 - ``PUT  /api/nca/recipes/{id}/mapping {mapping}``: check and save the mapping block.
+
+Checks (#24), for one analyte (and specimen) of the full cleaned data:
+- ``GET  /api/nca/recipes/{id}/analytes``: the exact analyte values, with rows and specimens.
+- ``POST /api/nca/recipes/{id}/checks {analyte_value, specimen_value}``: every finding,
+  with a ``key`` on each warning for its acknowledgement; also starts opnca-r's own data
+  check, whose issues come back from ``POST .../format-check`` as info.
+- ``POST /api/nca/runs``: refuses with 409 and the findings while anything blocks or a
+  warning is not acknowledged.
 """
 
 from __future__ import annotations
@@ -34,7 +42,9 @@ from pydantic import BaseModel, Field
 
 from opncafyr.core.jobmanager import JobManagerError
 from opncafyr.core.manifest import atomic_write_text
+from opncafyr.core.redaction import REDACTOR
 from opncafyr.core.workspace import Workspace, resolve_in_root
+from opncafyr.workflows.nca import checks as checks_mod
 from opncafyr.workflows.nca import mapping as mappings
 from opncafyr.workflows.nca import recipe as recipes
 from opncafyr.workflows.nca.cleaning import (
@@ -46,6 +56,7 @@ from opncafyr.workflows.nca.cleaning import (
     plan,
     read_cleaned,
 )
+from opncafyr.workflows.nca.format_check import FormatChecks
 from opncafyr.workflows.nca.roles import (
     BY_ID,
     ROLES,
@@ -67,6 +78,10 @@ STATUS = {
     "source_changed": 409,
     "not_ready": 404,
     "jobs_unavailable": 409,
+    "checks_blocking": 409,
+    "warnings_unacknowledged": 409,
+    "needs_choice": 409,
+    "not_implemented": 501,
 }
 
 
@@ -88,6 +103,22 @@ class SaveMapping(BaseModel):
     mapping: dict[str, Any]
 
 
+class SelectionBody(BaseModel):
+    analyte_value: str = Field(max_length=1000)
+    specimen_value: str | None = Field(default=None, max_length=1000)
+
+    def selection(self) -> checks_mod.Selection:
+        return checks_mod.Selection(self.analyte_value, self.specimen_value)
+
+
+class StartRun(SelectionBody):
+    recipe_id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")
+    analyte_label: str | None = Field(default=None, max_length=200)
+    acknowledged: list[str] = Field(default_factory=list, max_length=1000)
+    blq_rules: dict[str, str] | None = None
+    blq_method: str | None = None
+
+
 class Context:
     """What the routes share: the app (for the open workspace and job manager)."""
 
@@ -95,6 +126,7 @@ class Context:
         self.app = app
         self.lock = threading.Lock()
         self.cleaning = CleaningService()
+        self.format_checks = FormatChecks()
 
     def workspace(self) -> Workspace:
         ws: Workspace | None = self.app.state.workspace
@@ -147,6 +179,30 @@ class Context:
         target = self.plan(doc)
         atomic_write_text(path, recipes.dumps(doc))
         return target
+
+    def checked(self, recipe_id: str, selection: checks_mod.Selection) -> dict[str, Any]:
+        """Every finding for one selection, keyed for acknowledgement."""
+        doc = self.load_recipe(recipe_id)
+        folder = self.require_cleaned(doc)
+        target = self.plan(doc)
+        header, rows = read_cleaned(folder)
+        steps = load_result(folder, head_rows=0)["summary"]
+        lineage = recipes.check(doc, target.header).lineage
+        mapping = doc.get("mapping") or {}
+        ids = [c for r in ("SUBJECT_ID", "SECONDARY_ID") if (c := mappings.role(mapping, r))]
+        if ids:
+            # Subject IDs are data: keep them out of every log line from here on.
+            idx = [header.index(c) for c in ids if c in header]
+            REDACTOR.register_values(row[i] for row in rows for i in idx if i < len(row))
+        result = checks_mod.run_checks(
+            header, rows, doc.get("mapping"), selection, lineage=lineage, steps=steps
+        )
+        digest = recipes.recipe_hash(doc)
+        for finding in result["findings"]:
+            if finding["level"] == checks_mod.WARNING:
+                finding["key"] = checks_mod.finding_key(finding, digest)
+        result.update(recipe=doc, recipe_sha256=digest, cleaned=folder, header=header, rows=rows)
+        return result
 
     def cleaned_folder(self, doc: dict[str, Any], sample_rows: int = 0) -> Path | None:
         """The folder of a valid result for ``doc`` as it is now, if there is one."""
@@ -300,5 +356,80 @@ def mount(app: FastAPI) -> Context:
             "problems": mappings.problems(doc["mapping"]),
             "labels": {r: BY_ID[r].label for r in BY_ID},
         }
+
+    @app.get("/api/nca/recipes/{recipe_id}/analytes")
+    def analytes(recipe_id: str = RECIPE_ID) -> dict[str, Any]:
+        doc = ctx.load_recipe(recipe_id)
+        mapping = doc.get("mapping") or {}
+        column = mappings.role(mapping, "ANALYTE")
+        if not column:
+            raise error("needs_choice", "Map the analyte column first.")
+        header, rows = read_cleaned(ctx.require_cleaned(doc))
+        a = header.index(column)
+        specimen = mappings.role(mapping, "SPECIMEN")
+        s = header.index(specimen) if specimen in header else None
+        label = mappings.role(mapping, "ANALYTE_LABEL")
+        lab = header.index(label) if label in header else None
+        values: dict[str, dict[str, Any]] = {}
+        for r in rows:
+            entry = values.setdefault(
+                r[a], {"value": r[a], "rows": 0, "specimens": {}, "labels": {}}
+            )
+            entry["rows"] += 1
+            if s is not None:
+                entry["specimens"][r[s]] = entry["specimens"].get(r[s], 0) + 1
+            if lab is not None:
+                entry["labels"][r[lab]] = entry["labels"].get(r[lab], 0) + 1
+        return {
+            "column": column,
+            "specimen_column": specimen,
+            "values": sorted(values.values(), key=lambda v: v["value"]),
+        }
+
+    def public(result: dict[str, Any]) -> dict[str, Any]:
+        return {k: result[k] for k in ("findings", "summary", "accounting", "recipe_sha256")}
+
+    @app.post("/api/nca/recipes/{recipe_id}/checks")
+    def run_checks(body: SelectionBody, recipe_id: str = RECIPE_ID) -> dict[str, Any]:
+        result = ctx.checked(recipe_id, body.selection())
+        out = public(result)
+        out["format"] = format_check(result, body)
+        if out["format"]["findings"]:
+            out["findings"] = out["findings"] + out["format"]["findings"]
+        return out
+
+    def format_check(result: dict[str, Any], body: SelectionBody) -> dict[str, Any]:
+        mapping = result["recipe"].get("mapping") or {}
+        if not mappings.role(mapping, "ANALYTE"):
+            return {"job_id": None, "findings": []}
+        try:
+            return ctx.format_checks.start(
+                app.state.jobs,
+                ctx.workspace().root,
+                result["cleaned"],
+                mapping,
+                body.selection(),
+            )
+        except JobManagerError as exc:
+            raise error("jobs_unavailable", str(exc)) from None
+
+    @app.post("/api/nca/recipes/{recipe_id}/format-check")
+    def format_check_result(body: SelectionBody, recipe_id: str = RECIPE_ID) -> dict[str, Any]:
+        return format_check(ctx.checked(recipe_id, body.selection()), body)
+
+    @app.post("/api/nca/runs")
+    def start_run(body: StartRun) -> dict[str, Any]:
+        result = ctx.checked(body.recipe_id, body.selection())
+        verdict, concerned = checks_mod.gate(
+            result["findings"], body.acknowledged, result["recipe_sha256"]
+        )
+        if verdict != "ok":
+            message = (
+                "Fix the blocking findings first."
+                if verdict == "checks_blocking"
+                else "Acknowledge every warning first."
+            )
+            raise error(verdict, message, findings=concerned)
+        raise error("not_implemented", "Starting a run comes with the analyte snapshot (#25).")
 
     return ctx

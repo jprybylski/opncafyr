@@ -239,3 +239,22 @@ Q2); a unit in a header is a hint to confirm. `routes.py` reads routes exactly a
 does and lists any other value for an explicit recode. `mapping.problems()` blocks on an
 unmapped required role, a missing or unknown unit, a flag column without a value table
 and a column used for two roles.
+
+## Pre-analysis checks (#24)
+
+`workflows/nca/checks.py` runs every check of ADR 0005 Q7 on the full cleaned data for one
+selection: the exact analyte value, then the exact specimen value. A finding is
+`{check, level, analyte, scope, subject, lines, message, fix_hint}` plus `column`,
+`value`, `values`, `kind` or `role` where they apply; `lines` are physical source lines.
+Value checks apply to every selected row (excluded rows still reach opnca-r's
+`read.csv`); duplicate keys and profile checks use the rows that are not excluded;
+analyte-level checks count every row. An exclusion is the mapped flag table or a recipe
+`exclude` step; its reason is the step's, else the reason column, else the one mapped
+reason. The fixture's expected findings are the test oracle.
+
+opnca-r's `check_data_format()` also runs on the selection as an R job
+(`r/nca_format_check.R`); its issues are merged as info. Blocking findings make
+`POST /api/nca/runs` answer 409 `checks_blocking` with the findings; every warning needs
+its own acknowledgement (a key over the check, analyte, subject, lines and recipe hash),
+or the answer is 409 `warnings_unacknowledged`. Subject IDs read by the checks are
+registered with the log redactor.

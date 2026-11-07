@@ -14,3 +14,5 @@ only. These programs use base R and jsonlite, nothing else.
 
 - `nca_clean_lib.R`: the cleaning library (#22). `clean_compile.py` inlines it into each
   generated `clean.R`, followed by one call per recipe step.
+- `nca_format_check.R`: `opnca::check_data_format()` on one analyte selection (#24); writes
+  roles, column names and opnca-r's issue texts, never a value.

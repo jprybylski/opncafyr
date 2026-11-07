@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Pre-analysis checks (#24).
+  - `workflows/nca/checks.py` runs every ADR 0005 Q7 check (21 blocking, 6 warnings, 4
+    info) on one exact analyte and specimen selection of the cleaned data. Findings carry
+    physical source lines, never values in logs; subject IDs are registered with the log
+    redactor.
+  - opnca-r's `check_data_format()` runs on the same selection as an R job; its issues are
+    added as info.
+  - `POST /api/nca/runs` answers 409 with the findings while anything blocks or a
+    warning is not acknowledged. The Analysis page lists findings by level, asks for each
+    acknowledgement and keeps "Start analysis" disabled until then.
+  - Each planted case of the two-analyte fixture gives exactly its expected findings,
+    with and without R.
 - Column-role mapping (#23).
   - The recipe gains a `mapping` block: the column for each role, the units of time,
     concentration and dose (a unit column or one declared value, never inferred) and what
