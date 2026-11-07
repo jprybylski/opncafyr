@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/run-settings-v1",
+  "title": "A run's analysis settings (.opncafyr/runs/<run-id>/settings.json)",
+  "description": "Everything the user chose for one run (#25): the analyte and specimen values, the mapping and units, the BLQ rules and method, and the warnings acknowledged. Written once, read-only afterwards. Holds no row data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "created_at",
+    "recipe",
+    "source",
+    "analyte",
+    "specimen",
+    "mapping",
+    "blq",
+    "acknowledgements",
+    "snapshot",
+    "row_accounting"
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4,}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "parent_run_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "recipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sha256",
+        "steps_sha256"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "steps_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "analyte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "column",
+        "value",
+        "label"
+      ],
+      "properties": {
+        "column": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "specimen": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "column",
+        "value"
+      ],
+      "properties": {
+        "column": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "mapping": {
+      "type": "object",
+      "description": "The recipe's mapping block (recipe-v1 $defs/mapping)."
+    },
+    "blq": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rules",
+        "method"
+      ],
+      "properties": {
+        "rules": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "blq_predose",
+            "blq_postdose",
+            "blq_terminal"
+          ],
+          "properties": {
+            "blq_predose": {
+              "enum": [
+                "exclude",
+                "zero",
+                "half-lloq",
+                "lloq-over-sqrt2"
+              ]
+            },
+            "blq_postdose": {
+              "enum": [
+                "exclude",
+                "zero",
+                "half-lloq",
+                "lloq-over-sqrt2"
+              ]
+            },
+            "blq_terminal": {
+              "enum": [
+                "exclude",
+                "zero",
+                "half-lloq",
+                "lloq-over-sqrt2"
+              ]
+            }
+          }
+        },
+        "method": {
+          "enum": [
+            "conventional",
+            "censored_lognormal"
+          ]
+        }
+      }
+    },
+    "acknowledgements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "check",
+          "acknowledged_at"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "check": {
+            "type": "string"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "acknowledged_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "rows",
+        "columns"
+      ],
+      "properties": {
+        "path": {
+          "const": "input/analysis.csv"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "columns": {
+          "type": "object",
+          "description": "The columns the launcher added: role -> column name.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "row_accounting": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  }
+}

@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Frozen one-analyte input snapshots (#25).
+  - `POST /api/nca/runs` checks and gates the selection, then writes
+    `.opncafyr/runs/<run-id>/` through a staging folder and one rename: the rows whose
+    analyte (then specimen) value equals the chosen text exactly, with `NCA_CONC`,
+    `NCA_BLQ`, `NCA_MISSING`, `NCA_EXCLUDED` and the exclusion reason added. BLQ text never
+    becomes 0; excluded rows stay.
+  - `input/source-fingerprint.json`, the opnca-r preset (`input/opnca-mapping.json`) and
+    `settings.json` (new schema `run-settings-v1`) are written with it; the input and
+    settings are read-only. `run-manifest-v1` gains specimen, units, acknowledgements,
+    row accounting and the settings file hash.
+  - BLQ rules and method must be chosen (409 `needs_choice` otherwise). Values that differ
+    only in spaces or case are other analytes. The Analysis page lists runs.
 - Pre-analysis checks (#24).
   - `workflows/nca/checks.py` runs every ADR 0005 Q7 check (21 blocking, 6 warnings, 4
     info) on one exact analyte and specimen selection of the cleaned data. Findings carry

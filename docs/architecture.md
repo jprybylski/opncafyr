@@ -258,3 +258,24 @@ opnca-r's `check_data_format()` also runs on the selection as an R job
 its own acknowledgement (a key over the check, analyte, subject, lines and recipe hash),
 or the answer is 409 `warnings_unacknowledged`. Subject IDs read by the checks are
 registered with the log redactor.
+
+## Analyte snapshot (#25)
+
+`POST /api/nca/runs` checks and gates the selection, then `workflows/nca/snapshot.py`
+writes the run in `.opncafyr/runs/.<run-id>.staging/` and renames it into place
+(`<run-id>` is `YYYYMMDDTHHMMSSZ-<4 hex>`):
+
+- `input/analysis.csv`: the rows whose analyte value equals the chosen text exactly,
+  then the specimen value; every cleaned column as written, plus `NCA_CONC` (the
+  concentration when it is a number, else empty: never 0), `NCA_BLQ`, `NCA_MISSING`,
+  `NCA_EXCLUDED` (TRUE/FALSE) and `NCA_EXCLUSION_REASON`. Excluded rows stay. Headers that
+  R's `read.csv` would rename, and subject IDs that R would merge as numbers, are refused.
+- `input/source-fingerprint.json` (path, size, SHA-256), `input/opnca-mapping.json` (the
+  opnca-r preset: every role it knows, `""` for unmapped optional ones, the BLQ rules and
+  method the user chose), `settings.json` (`run-settings-v1`: analyte, specimen, mapping,
+  units, BLQ choices, acknowledged warnings, row accounting) and `manifest.json`
+  (`preparing`).
+
+The input files and `settings.json` are read-only. Row accounting runs from the source
+through the recipe, the analyte and specimen filters to the snapshot; other analytes and
+specimens are counted, never rejected.

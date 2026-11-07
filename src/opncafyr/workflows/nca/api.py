@@ -26,6 +26,12 @@ Checks (#24), for one analyte (and specimen) of the full cleaned data:
   check, whose issues come back from ``POST .../format-check`` as info.
 - ``POST /api/nca/runs``: refuses with 409 and the findings while anything blocks or a
   warning is not acknowledged.
+
+Runs (#25):
+- ``POST /api/nca/runs {recipe_id, analyte_value, specimen_value, analyte_label,
+  acknowledged, blq_rules, blq_method}``: checks, gates, and writes the run's frozen
+  one-analyte snapshot (``snapshot.py``). 201 with the manifest.
+- ``GET  /api/nca/runs``: every run with its analyte and state; ``GET /api/nca/runs/{id}``.
 """
 
 from __future__ import annotations
@@ -38,6 +44,7 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi import Path as PathParam
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from opncafyr.core.jobmanager import JobManagerError
@@ -57,6 +64,7 @@ from opncafyr.workflows.nca.cleaning import (
     read_cleaned,
 )
 from opncafyr.workflows.nca.format_check import FormatChecks
+from opncafyr.workflows.nca.preset import PresetError
 from opncafyr.workflows.nca.roles import (
     BY_ID,
     ROLES,
@@ -65,6 +73,7 @@ from opncafyr.workflows.nca.roles import (
     suggest,
 )
 from opncafyr.workflows.nca.routes import route_values
+from opncafyr.workflows.nca.snapshot import RUN_ID_RE, RUNS_DIR, SnapshotError, create_run
 from opncafyr.workflows.nca.units import UNIT_ROLES, header_hint
 
 RECIPE_ID = PathParam(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")
@@ -82,6 +91,11 @@ STATUS = {
     "warnings_unacknowledged": 409,
     "needs_choice": 409,
     "not_implemented": 501,
+    "column_clash": 409,
+    "column_names": 409,
+    "occasion_unsupported": 409,
+    "ids_collide": 409,
+    "preset_invalid": 409,
 }
 
 
@@ -201,7 +215,14 @@ class Context:
         for finding in result["findings"]:
             if finding["level"] == checks_mod.WARNING:
                 finding["key"] = checks_mod.finding_key(finding, digest)
-        result.update(recipe=doc, recipe_sha256=digest, cleaned=folder, header=header, rows=rows)
+        result.update(
+            recipe=doc,
+            recipe_sha256=digest,
+            cleaned=folder,
+            header=header,
+            rows=rows,
+            steps=steps,
+        )
         return result
 
     def cleaned_folder(self, doc: dict[str, Any], sample_rows: int = 0) -> Path | None:
@@ -430,6 +451,56 @@ def mount(app: FastAPI) -> Context:
                 else "Acknowledge every warning first."
             )
             raise error(verdict, message, findings=concerned)
-        raise error("not_implemented", "Starting a run comes with the analyte snapshot (#25).")
+        ws = ctx.workspace()
+        try:
+            with ctx.lock:
+                manifest = create_run(
+                    ws.root,
+                    ws.document,
+                    result,
+                    body.selection(),
+                    label=body.analyte_label,
+                    acknowledged=body.acknowledged,
+                    blq=body.blq_rules,
+                    blq_method=body.blq_method,
+                )
+        except SnapshotError as exc:
+            raise error(exc.code, exc.message, **exc.extra) from None
+        except PresetError as exc:
+            raise error("preset_invalid", str(exc)) from None
+        return JSONResponse(status_code=201, content={"run": manifest})
+
+    def run_folder(run_id: str) -> Path:
+        if not RUN_ID_RE.match(run_id):
+            raise error("not_found", "There is no such run.")
+        folder = resolve_in_root(ctx.workspace().root, f"{RUNS_DIR}/{run_id}")
+        if not folder.is_dir():
+            raise error("not_found", "There is no such run.")
+        return folder
+
+    def read_run(folder: Path) -> dict[str, Any]:
+        import json
+
+        from opncafyr.core.manifest import validate
+
+        try:
+            manifest = json.loads((folder / "manifest.json").read_text("utf-8"))
+            validate(manifest, "run-manifest-v1")
+        except (OSError, ValueError) as exc:
+            raise error("not_found", f"The run's manifest can't be read: {exc}") from None
+        return manifest
+
+    @app.get("/api/nca/runs")
+    def list_runs() -> dict[str, Any]:
+        ws: Workspace | None = app.state.workspace
+        if ws is None:
+            return {"workspace_open": False, "runs": []}
+        from opncafyr.core.artifacts import list_runs as core_list
+
+        return {"workspace_open": True, "runs": core_list(ws.root)}
+
+    @app.get("/api/nca/runs/{run_id}")
+    def get_run(run_id: str) -> dict[str, Any]:
+        return {"run": read_run(run_folder(run_id))}
 
     return ctx

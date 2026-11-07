@@ -168,7 +168,7 @@ export function initChecks(stack, state) {
 
   async function startRun() {
     try {
-      const run = await post("api/nca/runs", {
+      const { run } = await post("api/nca/runs", {
         recipe_id: state.recipe.id,
         ...result.selection,
         analyte_label: labelInput.value || null,

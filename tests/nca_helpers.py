@@ -224,3 +224,34 @@ def resolving_mapping() -> dict[str, Any]:
         if f["check"] == "flag_value_unmapped":
             mapping["flags"]["BLQ"]["table"][f["value"]] = False
     return mapping
+
+
+BLQ_CHOICE = {
+    "blq_rules": {"blq_predose": "zero", "blq_postdose": "exclude", "blq_terminal": "exclude"},
+    "blq_method": "conventional",
+}
+
+
+def ready_recipe(client: TestClient, steps=None, mapping=None) -> str:
+    """A recipe with the resolving steps applied and the resolving mapping saved."""
+    doc = new_recipe(client, steps=resolving_steps() if steps is None else steps)
+    apply(client, doc["id"])
+    r = client.put(
+        f"/api/nca/recipes/{doc['id']}/mapping", json={"mapping": mapping or resolving_mapping()}
+    )
+    assert r.status_code == 200, r.text
+    return doc["id"]
+
+
+def start_run(
+    client: TestClient, recipe_id: str, analyte: str, specimen: str | None = "PLASMA", **extra
+) -> dict[str, Any]:
+    """Check, acknowledge every warning, and create the run. Returns its manifest."""
+    sel = {"analyte_value": analyte, "specimen_value": specimen}
+    out = client.post(f"/api/nca/recipes/{recipe_id}/checks", json=sel)
+    assert out.status_code == 200, out.text
+    keys = [f["key"] for f in out.json()["findings"] if f["level"] == "warning"]
+    body = {"recipe_id": recipe_id, **sel, "acknowledged": keys, **BLQ_CHOICE, **extra}
+    r = client.post("/api/nca/runs", json=body)
+    assert r.status_code == 201, r.text
+    return r.json()["run"]
