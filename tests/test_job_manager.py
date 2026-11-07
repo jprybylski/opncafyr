@@ -178,6 +178,23 @@ def test_ok_exit_codes_run_the_review(manager, workspace):
         py_job("pass", ok_exit_codes=()).check()
 
 
+def test_tmpdir_never_has_a_space(tmp_path):
+    # R won't start with a temp folder whose path has a space; study folders often do.
+    root = tmp_path / "PK Study"
+    (root / ".opncafyr").mkdir(parents=True)
+    jm = JobManager(poll_interval=0.05)
+    jm.open(root)
+    try:
+        code = "import os; t = os.environ['TMPDIR']; print(t); print(os.path.isdir(t))"
+        job_id = jm.submit(py_job(code))
+        assert jm.wait(job_id, 20) is JobState.COMPLETED
+        out = (job_dir(root, job_id) / "stdout.log").read_text("utf-8").split()
+        assert out[1] == "True" and " " not in out[0]
+        assert not Path(out[0]).exists()  # removed with the job
+    finally:
+        jm.shutdown(timeout=20)
+
+
 def test_failed_review_is_not_promoted(manager, workspace):
     request = py_job(
         WRITE_RESULT,

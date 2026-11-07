@@ -595,3 +595,11 @@ All notable changes to this project are documented here. The format follows
 - Reviewed opnca-r 0.2.7 (#40-#43) and filed follow-ups #45-#46. `runtime/pins.toml` now
   pins the 0.2.7 binaries, vendored tarball, `manifest.json` and `SHA256SUMS` by SHA-256.
   `upstream-blocked` removed from #27.
+
+### Fixed
+- R jobs in a study folder whose path has a space (for example "PK Study") stopped at
+  once with "'R_TempDir' contains space". Their temp folder was inside the study folder.
+  Such a job now gets a private temp folder in the system temp folder instead, which is
+  removed with the job (#12). This affected cleaning, the data-format check, replay and
+  report jobs.
+

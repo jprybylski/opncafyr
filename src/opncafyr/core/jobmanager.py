@@ -32,6 +32,7 @@ import os
 import re
 import secrets
 import shutil
+import tempfile
 import threading
 import time
 from collections.abc import Callable, Mapping
@@ -172,6 +173,7 @@ class _Job:
     cancel_message: str | None = None
     thread: threading.Thread | None = None
     seq: int = 0
+    tmpdir: Path | None = None  # set when the job's tmp is outside its folder (see _tmpdir)
 
     @property
     def id(self) -> str:
@@ -466,6 +468,8 @@ class JobManager:
             # Clean up before the terminal state is written, so terminal means finished.
             for name in ("tmp", "work"):
                 _remove_tree(job.dir / name)
+            if job.tmpdir is not None:
+                _remove_tree(job.tmpdir)
         finally:
             self._finish(job, state, message, reason=reason)
             with self._lock:
@@ -573,8 +577,7 @@ class JobManager:
             staging = target.with_name(target.name + STAGING_SUFFIX)
             self._claim_staging(job, staging, request.output or "")
         cwd.mkdir(parents=True, exist_ok=True)
-        tmpdir = job.dir / "tmp"
-        tmpdir.mkdir(exist_ok=True)
+        tmpdir = self._tmpdir(job)
         ctx = JobContext(
             job_id=job.id,
             workspace=workspace,
@@ -585,6 +588,24 @@ class JobManager:
             runtime=self.runtime,
         )
         return ctx, target
+
+    def _tmpdir(self, job: _Job) -> Path:
+        """The job's TMPDIR: ``<job>/tmp``, unless its path has whitespace.
+
+        R refuses to start when its temp folder's path contains a space ("'R_TempDir'
+        contains space"), and study folders often have one ("PK Study"). Such a job gets a
+        private folder in the system temp folder instead, removed with the job's own.
+        """
+        own = job.dir / "tmp"
+        if not any(ch.isspace() for ch in str(own)):
+            own.mkdir(exist_ok=True)
+            return own
+        system = Path(tempfile.gettempdir())
+        if any(ch.isspace() for ch in str(system)):
+            own.mkdir(exist_ok=True)
+            return own  # nothing better; R jobs report their own error
+        job.tmpdir = Path(tempfile.mkdtemp(prefix=f"opncafyr-job-{job.id}-", dir=system))
+        return job.tmpdir
 
     def _claim_staging(self, job: _Job, staging: Path, output: str) -> None:
         if staging.exists():
