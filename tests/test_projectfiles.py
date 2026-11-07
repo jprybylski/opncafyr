@@ -58,12 +58,14 @@ def make_client(security, tmp_path, study, editor=None, open_study=True):
     return client
 
 
+# Fixture files are written as bytes: write_text would give them CRLF line ends on
+# Windows, which the editor (rightly) keeps.
 @pytest.fixture
 def study(tmp_path):
     root = tmp_path / "study"
     (root / "notes" / "sub").mkdir(parents=True)
-    (root / "notes" / "intro.md").write_text("# Intro\n\nHello.\n", "utf-8")
-    (root / "notes" / "sub" / "more.md").write_text("More.\n", "utf-8")
+    (root / "notes" / "intro.md").write_bytes(b"# Intro\n\nHello.\n")
+    (root / "notes" / "sub" / "more.md").write_bytes(b"More.\n")
     return root
 
 
@@ -150,7 +152,7 @@ def test_a_save_over_the_size_cap_is_refused(api, study):
 def test_a_stale_save_is_a_conflict_and_changes_nothing(api, study):
     doc = read(api, "intro.md").json()
     path = study / "notes" / "intro.md"
-    path.write_text("Changed elsewhere.\n", "utf-8")
+    path.write_bytes(b"Changed elsewhere.\n")
     resp = save(api, "intro.md", "My edit.\n", doc["sha256"])
     assert resp.status_code == 409
     detail = resp.json()["detail"]
@@ -204,11 +206,11 @@ def test_a_save_keeps_the_file_permissions(api, study):
     ],
 )
 def test_unsafe_or_unlisted_paths_are_denied(security, tmp_path, study, path):
-    (study / "notes" / ".hidden.md").write_text("x", "utf-8")
+    (study / "notes" / ".hidden.md").write_bytes(b"x")
     (study / "notes" / "OUTPUTS").mkdir()
-    (study / "notes" / "OUTPUTS" / "table.md").write_text("x", "utf-8")
-    (study / "notes" / "unlisted.txt").write_text("x", "utf-8")
-    (study / "secret.md").write_text("x", "utf-8")
+    (study / "notes" / "OUTPUTS" / "table.md").write_bytes(b"x")
+    (study / "notes" / "unlisted.txt").write_bytes(b"x")
+    (study / "secret.md").write_bytes(b"x")
     # The adapter offers the unsafe paths itself; "unlisted.txt" it never offers.
     offered = () if path == "unlisted.txt" else (path,)
     client = make_client(security, tmp_path, study, ToyNotesEditor(extra=offered))
@@ -227,11 +229,11 @@ def test_unsafe_or_unlisted_paths_are_denied(security, tmp_path, study, path):
 @needs_links
 def test_links_are_never_followed(api, study, tmp_path):
     outside = tmp_path / "outside.md"
-    outside.write_text("outside", "utf-8")
+    outside.write_bytes(b"outside")
     (study / "notes" / "link.md").symlink_to(outside)
     (study / "notes" / "inner.md").symlink_to(study / "notes" / "intro.md")
     (tmp_path / "elsewhere").mkdir()
-    (tmp_path / "elsewhere" / "deep.md").write_text("deep", "utf-8")
+    (tmp_path / "elsewhere" / "deep.md").write_bytes(b"deep")
     (study / "notes" / "linkdir").symlink_to(tmp_path / "elsewhere")
     listed = [f["path"] for f in api.get("/api/tools/toy_notes/project").json()["files"]]
     for path in ("link.md", "inner.md", "linkdir/deep.md"):
@@ -246,7 +248,7 @@ def test_a_linked_project_folder_is_not_a_project(security, tmp_path):
     study = tmp_path / "study"
     study.mkdir()
     (tmp_path / "real").mkdir()
-    (tmp_path / "real" / "a.md").write_text("a", "utf-8")
+    (tmp_path / "real" / "a.md").write_bytes(b"a")
     (study / "notes").symlink_to(tmp_path / "real")
     client = make_client(security, tmp_path, study)
     try:
@@ -260,7 +262,7 @@ def test_a_linked_project_folder_is_not_a_project(security, tmp_path):
 def test_run_folders_and_metadata_are_out_of_reach(api, study):
     runs = study / ".opncafyr" / "runs" / "r1"
     runs.mkdir(parents=True)
-    (runs / "notes.md").write_text("sealed", "utf-8")
+    (runs / "notes.md").write_bytes(b"sealed")
     for path in ("../.opncafyr/runs/r1/notes.md", ".opncafyr/runs/r1/notes.md"):
         assert read(api, path).status_code == 403
     assert (runs / "notes.md").read_text("utf-8") == "sealed"
@@ -314,7 +316,7 @@ def test_settings_save_validate_and_conflict(api, study):
     assert api.post(
         url, json={"values": {"audience": "external"}, "expected_sha256": sha}
     ).is_success
-    (study / "notes" / "notes-settings.json").write_text('{"version": 9}', "utf-8")
+    (study / "notes" / "notes-settings.json").write_bytes(b'{"version": 9}')
     settings = api.get("/api/tools/toy_notes/project").json()["settings"]
     assert settings["error"] and settings["values"] == {}
 
