@@ -22,8 +22,10 @@ def runtime(tmp_path):
 
 
 def test_vanilla_pinned_library_and_path(runtime):
-    spec = rscript_command(runtime, Path("/x/clean.R"), args=["a"], env={"CLEAN_INPUT": "f"})
-    assert spec.argv == [str(runtime.executables["rscript"]), "--vanilla", "/x/clean.R", "a"]
+    script = Path("/x/clean.R")
+    spec = rscript_command(runtime, script, args=["a"], env={"CLEAN_INPUT": "f"})
+    # str(), not a literal: Windows spells the same path "\x\clean.R".
+    assert spec.argv == [str(runtime.executables["rscript"]), "--vanilla", str(script), "a"]
     assert spec.env["R_LIBS"] == spec.env["R_LIBS_USER"] == str(runtime.r_library)
     assert spec.env["CLEAN_INPUT"] == "f"
     assert spec.path_dirs == [runtime.executables["rscript"].parent]
