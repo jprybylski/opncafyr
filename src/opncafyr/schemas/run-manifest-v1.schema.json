@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "opncafyr/run-manifest-v1",
   "title": "Analysis run manifest (.opncafyr/runs/<run-id>/manifest.json)",
-  "description": "One analyte per run. Completed runs are immutable. No row data in this file.",
+  "description": "One analyte per run (#26). Written atomically and validated on every read and write (core/runs.py). Holds hashes and settings, never row data. A completed run is sealed: every file is listed with its SHA-256 and made read-only; any change makes a new run.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,8 +11,11 @@
     "created_at",
     "state",
     "source",
+    "recipe",
     "analysis_input",
     "analyte",
+    "mapping",
+    "units",
     "tools"
   ],
   "$defs": {
@@ -88,12 +91,35 @@
         "id",
         "sha256"
       ],
+      "description": "The cleaning recipe and mapping the input came from (recipe-v1, canonical JSON hash).",
       "properties": {
         "id": {
           "type": "string"
         },
         "sha256": {
           "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recipe_sha256",
+        "steps_sha256"
+      ],
+      "properties": {
+        "recipe_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "steps_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "parent_run_id": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
@@ -138,65 +164,6 @@
         }
       }
     },
-    "mapping": {
-      "type": "object",
-      "description": "Role -> source column, plus declared units."
-    },
-    "nca_settings": {
-      "type": "object"
-    },
-    "exclusions": {
-      "type": "object"
-    },
-    "tools": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      }
-    },
-    "script": {
-      "$ref": "#/$defs/file"
-    },
-    "warnings": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "artifacts": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "path",
-          "sha256",
-          "kind",
-          "media_type"
-        ],
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "sha256": {
-            "$ref": "#/$defs/sha256"
-          },
-          "kind": {
-            "enum": [
-              "table",
-              "figure",
-              "record",
-              "script",
-              "log",
-              "other"
-            ]
-          },
-          "media_type": {
-            "type": "string"
-          }
-        }
-      }
-    },
     "specimen": {
       "type": [
         "object",
@@ -216,6 +183,10 @@
           "description": "Exact raw value used for the specimen filter."
         }
       }
+    },
+    "mapping": {
+      "type": "object",
+      "description": "The recipe's mapping block: role -> column, units, flag value tables."
     },
     "units": {
       "type": "object",
@@ -266,6 +237,17 @@
         }
       }
     },
+    "settings": {
+      "$ref": "#/$defs/file"
+    },
+    "row_accounting": {
+      "type": "object",
+      "description": "Rows from the source to the snapshot.",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
     "acknowledgements": {
       "type": "array",
       "description": "Warnings the user acknowledged before the run (ADR 0005 Q7).",
@@ -303,16 +285,249 @@
         }
       }
     },
-    "row_accounting": {
+    "nca_settings": {
       "type": "object",
-      "description": "Rows from the source to the snapshot.",
+      "description": "The BLQ choices made at the start and, once saved, opnca-r's settings and effective settings from its analysis record."
+    },
+    "exclusions": {
+      "type": "object",
+      "description": "Exclusions: launcher rows (with reasons) and in-session opnca-r exclusions (no reason recorded)."
+    },
+    "tools": {
+      "type": "object",
+      "description": "Versions of the launcher, opnca-r and R that made the run.",
       "additionalProperties": {
-        "type": "integer",
-        "minimum": 0
+        "type": "string"
+      },
+      "required": [
+        "opncafyr"
+      ]
+    },
+    "script": {
+      "$ref": "#/$defs/file"
+    },
+    "record": {
+      "$ref": "#/$defs/file",
+      "description": "opnca-r's analysis-record.json."
+    },
+    "export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "saved_at",
+        "artifacts_sha256"
+      ],
+      "description": "opnca-r's server-side save: COMPLETE's time and the SHA-256 of its artifacts.json.",
+      "properties": {
+        "saved_at": {
+          "type": "string"
+        },
+        "artifacts_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
       }
     },
-    "settings": {
-      "$ref": "#/$defs/file"
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256",
+          "kind",
+          "media_type"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "kind": {
+            "enum": [
+              "table",
+              "figure",
+              "record",
+              "script",
+              "log",
+              "input",
+              "settings",
+              "other"
+            ]
+          },
+          "media_type": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "replay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "rtol",
+        "path",
+        "sha256",
+        "at"
+      ],
+      "description": "Replay of analysis.R compared with the saved results (#29).",
+      "properties": {
+        "status": {
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        },
+        "rtol": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Warnings raised after the start, such as in-session exclusions without a reason."
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "message",
+        "at"
+      ],
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "sealed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "at",
+        "files"
+      ],
+      "description": "Every file of the completed run except manifest.json, with its hash. The run is read-only from then on.",
+      "properties": {
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "reviewing",
+              "completed"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "required": [
+          "script",
+          "record",
+          "export",
+          "artifacts",
+          "nca_settings"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "completed"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "required": [
+          "replay",
+          "sealed"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "failed"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "required": [
+          "failure"
+        ]
+      }
+    }
+  ]
 }

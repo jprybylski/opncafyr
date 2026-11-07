@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Run bundles and the final run-manifest-v1 (#26).
+  - `run-manifest-v1` is finalised in place: the spec's minimum fields are required, a
+    reviewing or completed run must name its script, record, export and artifacts, a
+    completed run its replay and seal, a failed run its failure. Lineage records the
+    recipe hashes and parent run. The spec's example manifest now validates.
+  - `core/runs.py` stages and publishes runs, validates every manifest read and write
+    (atomic), moves runs through the job states, and seals completed runs: every file
+    hashed into the manifest, then read-only. A sealed run can't change; "New run from
+    this" (`POST /api/nca/runs/{id}/rerun`) makes a linked one.
+  - `opncafyr runs verify <study> [--run ID]` and `GET /api/runs/{id}/verify` report
+    changed, missing and added files.
 - Frozen one-analyte input snapshots (#25).
   - `POST /api/nca/runs` checks and gates the selection, then writes
     `.opncafyr/runs/<run-id>/` through a staging folder and one rename: the rows whose

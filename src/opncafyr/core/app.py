@@ -59,6 +59,7 @@ from opncafyr.core.registry import (
     load_web_adapters,
     load_workflows,
 )
+from opncafyr.core.runs_api import mount_runs_api
 from opncafyr.core.runtime import Runtime, load_runtime
 from opncafyr.core.security import (
     REOPEN_PAGE,
@@ -403,6 +404,7 @@ def create_app(
         recent=recent if recent is not None else RecentWorkspaces(state_dir() / RECENT_FILE),
     )
     mount_datasets_api(app, datasets)
+    mount_runs_api(app)
 
     @app.get("/api/workflows")
     def workflow_views() -> dict[str, Any]:

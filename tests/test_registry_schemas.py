@@ -48,18 +48,9 @@ def test_descriptor_cannot_smuggle_an_executable():
 
 
 def _manifest(**overrides):
-    doc = {
-        "schema_version": "1.0",
-        "run_id": "20261103T142512Z-7c4e",
-        "created_at": "2026-11-03T14:25:12Z",
-        "state": "completed",
-        "source": {"path": "source-data/pk.csv", "sha256": SHA, "size_bytes": 10},
-        "analysis_input": {"path": "input/analysis.csv", "sha256": SHA, "rows": 128},
-        "analyte": {"column": "analyte", "value": "Example A"},
-        "tools": {"opnca_r": "0.2.4", "R": "4.5.2"},
-    }
-    doc.update(overrides)
-    return doc
+    from artifact_docs import run_manifest
+
+    return run_manifest(**overrides)
 
 
 def test_run_manifest_example_validates():

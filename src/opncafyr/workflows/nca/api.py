@@ -32,6 +32,8 @@ Runs (#25):
   acknowledged, blq_rules, blq_method}``: checks, gates, and writes the run's frozen
   one-analyte snapshot (``snapshot.py``). 201 with the manifest.
 - ``GET  /api/nca/runs``: every run with its analyte and state; ``GET /api/nca/runs/{id}``.
+- ``POST /api/nca/runs/{id}/rerun``: a new run with the same choices (#26); a run itself
+  never changes. The integrity check is core's ``GET /api/runs/{id}/verify``.
 """
 
 from __future__ import annotations
@@ -47,6 +49,7 @@ from fastapi import Path as PathParam
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from opncafyr.core import runs as runs_core
 from opncafyr.core.jobmanager import JobManagerError
 from opncafyr.core.manifest import atomic_write_text
 from opncafyr.core.redaction import REDACTOR
@@ -73,7 +76,7 @@ from opncafyr.workflows.nca.roles import (
     suggest,
 )
 from opncafyr.workflows.nca.routes import route_values
-from opncafyr.workflows.nca.snapshot import RUN_ID_RE, RUNS_DIR, SnapshotError, create_run
+from opncafyr.workflows.nca.snapshot import SnapshotError, create_run
 from opncafyr.workflows.nca.units import UNIT_ROLES, header_hint
 
 RECIPE_ID = PathParam(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")
@@ -96,6 +99,9 @@ STATUS = {
     "occasion_unsupported": 409,
     "ids_collide": 409,
     "preset_invalid": 409,
+    "run_invalid": 409,
+    "run_sealed": 409,
+    "bad_state": 409,
 }
 
 
@@ -439,7 +445,10 @@ def mount(app: FastAPI) -> Context:
         return format_check(ctx.checked(recipe_id, body.selection()), body)
 
     @app.post("/api/nca/runs")
-    def start_run(body: StartRun) -> dict[str, Any]:
+    def start_run_route(body: StartRun) -> Any:
+        return start_run(body)
+
+    def start_run(body: StartRun, parent_run_id: str | None = None) -> Any:
         result = ctx.checked(body.recipe_id, body.selection())
         verdict, concerned = checks_mod.gate(
             result["findings"], body.acknowledged, result["recipe_sha256"]
@@ -463,6 +472,7 @@ def mount(app: FastAPI) -> Context:
                     acknowledged=body.acknowledged,
                     blq=body.blq_rules,
                     blq_method=body.blq_method,
+                    parent_run_id=parent_run_id,
                 )
         except SnapshotError as exc:
             raise error(exc.code, exc.message, **exc.extra) from None
@@ -471,24 +481,19 @@ def mount(app: FastAPI) -> Context:
         return JSONResponse(status_code=201, content={"run": manifest})
 
     def run_folder(run_id: str) -> Path:
-        if not RUN_ID_RE.match(run_id):
-            raise error("not_found", "There is no such run.")
-        folder = resolve_in_root(ctx.workspace().root, f"{RUNS_DIR}/{run_id}")
-        if not folder.is_dir():
-            raise error("not_found", "There is no such run.")
-        return folder
+        try:
+            return runs_core.run_dir(ctx.workspace().root, run_id)
+        except runs_core.RunError as exc:
+            raise error("not_found", exc.message) from None
 
     def read_run(folder: Path) -> dict[str, Any]:
-        import json
-
-        from opncafyr.core.manifest import validate
-
         try:
-            manifest = json.loads((folder / "manifest.json").read_text("utf-8"))
-            validate(manifest, "run-manifest-v1")
-        except (OSError, ValueError) as exc:
-            raise error("not_found", f"The run's manifest can't be read: {exc}") from None
-        return manifest
+            return runs_core.read_manifest(folder)
+        except runs_core.RunError as exc:
+            raise error("run_invalid", exc.message) from None
+
+    ctx.run_folder = run_folder
+    ctx.read_run = read_run
 
     @app.get("/api/nca/runs")
     def list_runs() -> dict[str, Any]:
@@ -502,5 +507,28 @@ def mount(app: FastAPI) -> Context:
     @app.get("/api/nca/runs/{run_id}")
     def get_run(run_id: str) -> dict[str, Any]:
         return {"run": read_run(run_folder(run_id))}
+
+    @app.post("/api/nca/runs/{run_id}/rerun")
+    def rerun(run_id: str) -> Any:
+        """A new run with this run's choices, on the recipe as it is now (#26).
+
+        A run never changes once started; changing anything means a new run, linked to
+        this one by ``lineage.parent_run_id``. Warnings acknowledged for the same recipe
+        stay acknowledged; a changed recipe asks again.
+        """
+        import json
+
+        folder = run_folder(run_id)
+        settings = json.loads((folder / "settings.json").read_text("utf-8"))
+        body = StartRun(
+            recipe_id=settings["recipe"]["id"],
+            analyte_value=settings["analyte"]["value"],
+            specimen_value=(settings.get("specimen") or {}).get("value"),
+            analyte_label=settings["analyte"]["label"],
+            acknowledged=[a["key"] for a in settings["acknowledgements"]],
+            blq_rules=settings["blq"]["rules"],
+            blq_method=settings["blq"]["method"],
+        )
+        return start_run(body, parent_run_id=run_id)
 
     return ctx

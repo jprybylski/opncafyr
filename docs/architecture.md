@@ -159,12 +159,14 @@ Study folder/
     backups/                    copies made before a schema migration
     recipes/<recipe-id>.yaml    schemas/recipe-v1
     cleaned/<recipe-id>-<key>/  clean.R, cleaned.csv, rejected.csv, steps.json (#22)
-    runs/<run-id>/
-      input/source-fingerprint.json
-      input/analysis.csv        frozen, one analyte
-      analysis.R                replayable, relative input path
-      settings.json  analysis-record.json  results/  artifacts/  logs/
-      manifest.json             schemas/run-manifest-v1
+    runs/<run-id>/              one analyte per run (core/runs.py, #25, #26)
+      input/source-fingerprint.json  input/opnca-mapping.json
+      input/analysis.csv        frozen, one analyte, read-only
+      settings.json             schemas/run-settings-v1, read-only
+      analysis.R  analysis-record.json  artifacts.json  COMPLETE  results/
+                                written by opnca-r's server-side save (#28)
+      logs/                     launcher logs, such as the replay report (#29)
+      manifest.json             schemas/run-manifest-v1, sealed when completed
     publications/<id>.json      schemas/publication-v1
     jobs/<job-id>/              schemas/job-v1 state.json, events.jsonl, stdout/stderr
                                 logs, diagnostic.json (core/jobmanager.py)
@@ -279,3 +281,22 @@ writes the run in `.opncafyr/runs/.<run-id>.staging/` and renames it into place
 The input files and `settings.json` are read-only. Row accounting runs from the source
 through the recipe, the analyte and specimen filters to the snapshot; other analytes and
 specimens are counted, never rejected.
+
+## Run bundles (#26)
+
+`core/runs.py` is the only code that writes a run manifest. Every write is validated
+against `run-manifest-v1` and atomic (temp file, fsync, rename): a crash leaves the old
+manifest or the new one. The schema requires the spec's minimum fields (source, recipe,
+input, analyte, mapping, units, tools); a `reviewing` or `completed` run must also name its
+script, opnca-r record, export and artifacts, a completed one its replay and seal, a failed
+one its failure. A run is staged in `.<run-id>.staging/` and renamed into place only with
+a valid manifest. Its state follows the job states; staying in a state is allowed, other
+changes must be legal transitions.
+
+`seal_run` completes a run: every file except the manifest is listed with its SHA-256
+and size in `sealed.files`, the manifest is written, then every file (and, on POSIX, every
+folder) is made read-only. A sealed manifest can't be written again (`RunSealedError`,
+409 `run_sealed`); a change means a new run (`POST /api/nca/runs/{id}/rerun`, linked by
+`lineage.parent_run_id`). `verify_run`, `opncafyr runs verify <study> [--run ID]` and
+`GET /api/runs/{id}/verify` recompute the hashes and report changed, missing and added
+files.

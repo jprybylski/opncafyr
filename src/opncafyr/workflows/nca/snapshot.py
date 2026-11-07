@@ -13,9 +13,10 @@
 - ``settings.json`` (``run-settings-v1``) and ``manifest.json`` (``run-manifest-v1``,
   state ``preparing``).
 
-Everything is written in ``.opncafyr/runs/.<run-id>.staging/``, the input files are made
-read-only, and the folder is renamed into place in one step, so a half-written run never
-appears under its id. Nothing here logs a value.
+Everything is written in the run's staging folder (``core.runs.stage_run``), the input
+files are made read-only, and the folder is renamed into place in one step
+(``core.runs.publish_run``), so a half-written run never appears under its id. Nothing
+here logs a value.
 """
 
 from __future__ import annotations
@@ -23,17 +24,15 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
-import os
 import re
-import secrets
 import stat
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from opncafyr import __version__
 from opncafyr.core.datasets import fingerprint
 from opncafyr.core.manifest import atomic_write_json, atomic_write_text
+from opncafyr.core.runs import RUN_ID_RE, RUNS_DIR, now, publish_run, stage_run
 from opncafyr.core.workspace import resolve_in_root
 from opncafyr.workflows.nca import mapping as M
 from opncafyr.workflows.nca.checks import (
@@ -49,7 +48,6 @@ from opncafyr.workflows.nca.checks import (
 from opncafyr.workflows.nca.preset import build_preset
 from opncafyr.workflows.nca.recipe import NUMBER_RE, steps_hash
 
-RUNS_DIR = ".opncafyr/runs"
 INPUT = "input/analysis.csv"
 FINGERPRINT = "input/source-fingerprint.json"
 PRESET = "input/opnca-mapping.json"
@@ -65,7 +63,7 @@ SNAPSHOT_COLUMNS = {
 BLQ_RULES = ("blq_predose", "blq_postdose", "blq_terminal")
 RULE_VALUES = ("exclude", "zero", "half-lloq", "lloq-over-sqrt2")
 METHODS = ("conventional", "censored_lognormal")
-RUN_ID_RE = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$")
+__all__ = ["RUN_ID_RE", "RUNS_DIR", "SnapshotError", "create_run"]
 
 # R's reserved words: read.csv would rename a column called one of these.
 _R_RESERVED = {
@@ -98,18 +96,6 @@ class SnapshotError(ValueError):
         self.code = code
         self.message = message
         self.extra = extra
-
-
-def now() -> str:
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def new_run_id(runs: Path) -> str:
-    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    while True:
-        run_id = f"{stamp}-{secrets.token_hex(2)}"
-        if not (runs / run_id).exists() and not (runs / f".{run_id}.staging").exists():
-            return run_id
 
 
 def r_safe_name(name: str) -> bool:
@@ -234,11 +220,8 @@ def create_run(
             "source_changed", f"{source['path']} changed since it was imported. Import it again."
         )
 
-    runs = resolve_in_root(root, RUNS_DIR)
-    runs.mkdir(parents=True, exist_ok=True)
-    run_id = new_run_id(runs)
-    staging = runs / f".{run_id}.staging"
-    (staging / "input").mkdir(parents=True)
+    run_id, staging = stage_run(root)
+    (staging / "input").mkdir()
     (staging / "logs").mkdir()
     created = now()
 
@@ -322,6 +305,11 @@ def create_run(
         "state": "preparing",
         "source": {"path": source["path"], "sha256": sha, "size_bytes": size},
         "recipe": {"id": recipe["id"], "sha256": checked["recipe_sha256"]},
+        "lineage": {
+            "recipe_sha256": checked["recipe_sha256"],
+            "steps_sha256": steps_hash(recipe),
+            "parent_run_id": parent_run_id,
+        },
         "analysis_input": {"path": INPUT, "sha256": snapshot_sha, "rows": len(out_rows)},
         "analyte": analyte,
         "specimen": specimen,
@@ -336,5 +324,5 @@ def create_run(
     atomic_write_json(staging / MANIFEST, manifest, "run-manifest-v1")
     for name in (INPUT, FINGERPRINT, PRESET, SETTINGS):
         read_only(staging / name)
-    os.replace(staging, runs / run_id)
+    publish_run(staging, run_id)
     return manifest

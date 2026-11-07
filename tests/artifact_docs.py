@@ -18,9 +18,34 @@ def run_manifest(run_id: str = "20261103T142512Z-7c4e", **overrides: Any) -> dic
         "source": {"path": "source-data/pk.csv", "sha256": SHA, "size_bytes": 10},
         "analysis_input": {"path": "input/analysis.csv", "sha256": SHA, "rows": 128},
         "analyte": {"column": "analyte", "value": "Example A"},
-        "tools": {"engine": "0.0.0", "R": "4.5.2"},
+        "recipe": {"id": "pk-1", "sha256": SHA},
+        "mapping": {"roles": {}},
+        "units": {},
+        "tools": {"opncafyr": "0.0.1", "opnca-r": "0.0.0", "R": "4.5.2"},
     }
     doc.update(overrides)
+    if doc["state"] in ("reviewing", "completed"):
+        doc.setdefault("script", {"path": "analysis.R", "sha256": SHA})
+        doc.setdefault("record", {"path": "analysis-record.json", "sha256": SHA})
+        doc.setdefault("export", {"saved_at": "2026-11-03T14:30:00Z", "artifacts_sha256": SHA})
+        doc.setdefault("artifacts", [])
+        doc.setdefault("nca_settings", {})
+    if doc["state"] == "completed":
+        doc.setdefault(
+            "replay",
+            {
+                "status": "passed",
+                "rtol": 1e-10,
+                "path": "logs/replay.json",
+                "sha256": SHA,
+                "at": "2026-11-03T14:31:00Z",
+            },
+        )
+        doc.setdefault("sealed", {"at": "2026-11-03T14:32:00Z", "files": []})
+    if doc["state"] == "failed":
+        doc.setdefault(
+            "failure", {"reason": "save_failed", "message": "x", "at": "2026-11-03T14:32:00Z"}
+        )
     return doc
 
 

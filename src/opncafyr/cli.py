@@ -236,6 +236,46 @@ def cmd_bundle(args: argparse.Namespace) -> int:
     return installer_cli.main(["bundle", *args.bundle_args], payload_dir=payload)
 
 
+def cmd_runs_verify(args: argparse.Namespace) -> int:
+    """``opncafyr runs verify``: recompute every run's hashes and report any drift."""
+    from opncafyr.core.runs import RunError, run_dir, runs_root, verify_run
+
+    root = Path(args.workspace).resolve()
+    if not (root / ".opncafyr").is_dir():
+        print(f"{root} is not a study folder (no .opncafyr/).", file=sys.stderr)
+        return 2
+    try:
+        if args.run:
+            folders = [run_dir(root, args.run)]
+        else:
+            base = runs_root(root)
+            folders = (
+                sorted(p for p in base.iterdir() if p.is_dir() and not p.name.startswith("."))
+                if base.is_dir()
+                else []
+            )
+    except RunError as exc:
+        print(exc.message, file=sys.stderr)
+        return 2
+    drift = False
+    for folder in folders:
+        report = verify_run(folder)
+        if report["ok"]:
+            how = "sealed, every file matches" if report["sealed"] else "named files match"
+            print(f"{report['run_id']}  ok        {report.get('state', '')}: {how}")
+            continue
+        drift = True
+        print(f"{report['run_id']}  DRIFT     {report.get('state', '')}")
+        if "error" in report:
+            print(f"    {report['error']}")
+        for kind in ("changed", "missing", "added"):
+            for path in report[kind]:
+                print(f"    {kind:<8} {path}")
+    if not folders:
+        print("No runs.")
+    return 1 if drift else 0
+
+
 def cmd_version(_: argparse.Namespace) -> int:
     print(__version__)
     return 0
@@ -274,6 +314,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     bundle.add_argument("bundle_args", nargs=argparse.REMAINDER)
     bundle.set_defaults(func=cmd_bundle)
+
+    runs = sub.add_parser("runs", help="Check analysis runs in a study folder.")
+    runs_sub = runs.add_subparsers(dest="runs_command", required=True)
+    verify = runs_sub.add_parser(
+        "verify", help="Recompute run hashes and report changed, missing or added files."
+    )
+    verify.add_argument("workspace", help="The study folder.")
+    verify.add_argument("--run", help="Only this run id.")
+    verify.set_defaults(func=cmd_runs_verify)
 
     version = sub.add_parser("version", help="Print the version.")
     version.set_defaults(func=cmd_version)

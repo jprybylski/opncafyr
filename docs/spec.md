@@ -107,18 +107,36 @@ Study folder/
   deck/                                 deckifyr YAML, assets, and output PPTX
 ```
 
-The run manifest should be JSON Schema validated and written atomically. Minimum fields are `schema_version`, `run_id`, `created_at`, `state`, `source` path and SHA-256, `analysis_input` SHA-256 and row count, `analyte` column/raw value/display label, cleaning recipe hash, field mapping and units, NCA settings/exclusions, tool and runtime versions, generated script path/hash, warnings, and artifact entries with path/media type/hash. The publication manifest records exact run IDs and artifact hashes, never a moving `latest` directory. This extends information `opnca-r` already places in its browser-created analysis record, while making the provenance durable and available to downstream jobs. ([opnca-r export implementation](https://github.com/mantra-opnca/opnca-r/blob/main/inst/www/export-view.js))
+The run manifest should be JSON Schema validated and written atomically (`schemas/run-manifest-v1.schema.json`, `core/runs.py`; `<digest>` stands for a SHA-256). Minimum fields are `schema_version`, `run_id`, `created_at`, `state`, `source` path and SHA-256, `analysis_input` SHA-256 and row count, `analyte` column/raw value/display label, cleaning recipe hash, field mapping and units, NCA settings/exclusions, tool and runtime versions, generated script path/hash, warnings, and artifact entries with path/media type/hash. The publication manifest records exact run IDs and artifact hashes, never a moving `latest` directory. This extends information `opnca-r` already places in its browser-created analysis record, while making the provenance durable and available to downstream jobs. ([opnca-r export implementation](https://github.com/mantra-opnca/opnca-r/blob/main/inst/www/export-view.js))
 
 ```json
 {
   "schema_version": "1.0",
   "run_id": "20261103T142512Z-7c4e",
+  "created_at": "2026-11-03T14:25:12Z",
   "state": "completed",
-  "analyte": {"column": "analyte", "value": "Example A"},
+  "source": {"path": "source-data/pk.csv", "sha256": "<digest>", "size_bytes": 23268},
+  "recipe": {"id": "pk-csv-1a2b", "sha256": "<digest>"},
+  "lineage": {"recipe_sha256": "<digest>", "steps_sha256": "<digest>", "parent_run_id": null},
   "analysis_input": {"path": "input/analysis.csv", "sha256": "<digest>", "rows": 128},
+  "analyte": {"column": "PCTESTCD", "value": "PARENT", "label": "Parent drug"},
+  "specimen": {"column": "PCSPEC", "value": "PLASMA"},
+  "mapping": {"roles": {"SUBJECT_ID": "USUBJID", "ACTUAL_TIME": "AFRLT", "CONC": "CONC"}},
+  "units": {"ACTUAL_TIME": {"value": "h"}, "CONC": {"column": "PCSTRESU"}},
+  "settings": {"path": "settings.json", "sha256": "<digest>"},
+  "nca_settings": {"blq": {"rules": {"blq_predose": "zero"}, "method": "conventional"}},
+  "exclusions": {"launcher": [], "session": []},
+  "tools": {"opncafyr": "<version>", "opnca-r": "<pinned version>", "R": "<pinned version>"},
   "script": {"path": "analysis.R", "sha256": "<digest>"},
-  "tools": {"opnca_r": "<pinned version>", "R": "<pinned version>"},
-  "artifacts": [{"path": "artifacts/table-1.csv", "sha256": "<digest>", "kind": "table"}]
+  "record": {"path": "analysis-record.json", "sha256": "<digest>"},
+  "export": {"saved_at": "2026-11-03T14:30:00Z", "artifacts_sha256": "<digest>"},
+  "artifacts": [{"path": "results/opnca-parameters-long.csv", "sha256": "<digest>",
+                 "kind": "table", "media_type": "text/csv", "bytes": 4096}],
+  "replay": {"status": "passed", "rtol": 1e-10, "path": "logs/replay-1/replay.json",
+             "sha256": "<digest>", "at": "2026-11-03T14:31:00Z"},
+  "warnings": [],
+  "sealed": {"at": "2026-11-03T14:32:00Z",
+             "files": [{"path": "analysis.R", "sha256": "<digest>", "bytes": 2048}]}
 }
 ```
 
