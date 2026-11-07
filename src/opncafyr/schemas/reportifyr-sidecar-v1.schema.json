@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/reportifyr-sidecar-v1",
+  "title": "reportifyr artifact metadata sidecar (OUTPUTS/<figures|tables>/<stem>_<ext>_metadata.json)",
+  "description": "The format reportifyr 0.4.0 writes (R/write_object_metadata.R) and reads (inst/python/reportipyr/footnotes.py), as observed at the pinned version (#30). reportifyr owns the format; this schema records only what its readers need, so extra keys are allowed. object_meta.hash is BLAKE3 (hex) over the file's bytes. Re-check this schema when the reportifyr pin changes.",
+  "type": "object",
+  "required": ["system_meta", "source_meta", "object_meta", "addl_meta"],
+  "properties": {
+    "system_meta": {"type": "object"},
+    "source_meta": {
+      "type": "object",
+      "properties": {
+        "type": {"type": "string"},
+        "path": {"type": "string"},
+        "latest_time": {"type": "string"}
+      }
+    },
+    "object_meta": {
+      "type": "object",
+      "required": [
+        "author",
+        "path",
+        "creation_time",
+        "file_type",
+        "meta_type",
+        "hash",
+        "table1",
+        "footnotes"
+      ],
+      "properties": {
+        "author": {"type": "string"},
+        "path": {"type": "string", "minLength": 1},
+        "creation_time": {"type": "string"},
+        "file_type": {"type": "string", "minLength": 1},
+        "meta_type": {"type": "string", "minLength": 1},
+        "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "table1": {"type": "boolean"},
+        "footnotes": {
+          "type": "object",
+          "required": ["equations", "notes", "abbreviations"],
+          "properties": {
+            "equations": {"type": "array", "items": {"type": "string"}},
+            "notes": {"type": "array", "items": {"type": "string"}},
+            "abbreviations": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "addl_meta": {"type": ["array", "object"]}
+  }
+}

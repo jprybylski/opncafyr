@@ -16,6 +16,8 @@ SCHEMAS = [
     "job-v1",
     "instance-v1",
     "settings-v1",
+    "reportifyr-sidecar-v1",
+    "preflight-v1",
 ]
 SHA = "0" * 64
 

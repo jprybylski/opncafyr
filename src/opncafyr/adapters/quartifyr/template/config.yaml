@@ -1,0 +1,30 @@
+report_dir_name: report
+outputs_dir_name: OUTPUTS
+strict: false
+# Match inst/python/styles/default.yaml's fonts.body/fonts.sizes.footnote --
+# reportifyr doesn't read quartifyr's style YAML, so these two are only
+# kept in sync by hand. Left at reportifyr's own scaffolded defaults
+# (Arial Narrow/10) they visually clash with the reference-doc's font.
+footnotes_font: Times New Roman
+footnotes_font_size: 9
+use_object_path_as_source: false
+add_hash_to_footnotes: false
+wrap_path_in_[]: true
+combine_duplicate_footnotes: true
+abbreviation_delimiter: ','
+footnote_order:
+- Source
+- Object
+- Notes
+- Abbreviations
+- Hash
+save_table_rtf: false
+keep_caption_next: true
+add_alt_text: true
+skip_unchanged: true
+fig_alignment: center
+use_artifact_size: true
+default_fig_width: 6
+use_embedded_dimensions: true
+label_multi_figures: false
+add_path_overlay: none

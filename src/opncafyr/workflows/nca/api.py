@@ -685,4 +685,7 @@ def mount(app: FastAPI) -> Context:
         )
         return start_run(body, parent_run_id=run_id)
 
+    from opncafyr.workflows.nca.publish import api as publish_api
+
+    publish_api.mount(app, ctx)
     return ctx

@@ -84,7 +84,7 @@ def test_core_finds_workflow_packs_by_package_scan():
     assert ".csv" in {ext for i in packs["nca"].importers for ext in i.extensions}
     # The pack brings its own routes and page; core only lists and mounts them.
     assert callable(packs["nca"].mount)
-    assert [v.id for v in packs["nca"].views] == ["analysis"]
+    assert [v.id for v in packs["nca"].views] == ["analysis", "publish"]
 
 
 def test_workflow_views_are_checked():

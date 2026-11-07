@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/preflight-v1",
+  "title": "Findings of a check before a publish, render or build",
+  "description": "The same shape as quartifyr's check-result-v1, so launcher checks (#30) and a tool's own preflight can be listed together. Messages name files and checks, never data values.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "findings"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "severity", "path", "message"],
+        "properties": {
+          "check": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+          "severity": {"enum": ["error", "warning"]},
+          "path": {"type": ["string", "null"]},
+          "message": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -34,5 +34,12 @@ def workflow() -> WorkflowPack:
                 icon="table",
                 summary="Clean, map, choose one analyte and run opnca-r.",
             ),
+            WorkflowView(
+                id="publish",
+                title="Publish",
+                module="publish.js",
+                icon="doc",
+                summary="Publish completed runs' tables and figures for reports and decks.",
+            ),
         ),
     )

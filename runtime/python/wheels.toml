@@ -33,6 +33,13 @@ url = "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e0
 sha256 = "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309"
 
 [[launcher.windows-x86_64]]
+name = "blake3"
+version = "1.0.11"
+file = "blake3-1.0.11-cp313-cp313-win_amd64.whl"
+url = "https://files.pythonhosted.org/packages/8d/4e/5887683437805ce26bbfd9bcc16c6dadcf4b31941779cb8e9f37b1b072f4/blake3-1.0.11-cp313-cp313-win_amd64.whl"
+sha256 = "a7ff972740c02b3abc89048f27b90bc875412df04d7432d5e7ae64486ad43315"
+
+[[launcher.windows-x86_64]]
 name = "certifi"
 version = "2026.10.23"
 file = "certifi-2026.10.23-py3-none-any.whl"
@@ -208,6 +215,13 @@ url = "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e0
 sha256 = "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309"
 
 [[launcher.macos-arm64]]
+name = "blake3"
+version = "1.0.11"
+file = "blake3-1.0.11-cp313-cp313-macosx_11_0_arm64.whl"
+url = "https://files.pythonhosted.org/packages/72/ce/63a20a9e3e215224b0c0cf3c213c64d757eb0d302e4231ee1f57b3b6a68c/blake3-1.0.11-cp313-cp313-macosx_11_0_arm64.whl"
+sha256 = "c43adf6fc6a051f9267550615bac6acdebdd9c3eab64debf0fb1e67e235f8814"
+
+[[launcher.macos-arm64]]
 name = "certifi"
 version = "2026.10.23"
 file = "certifi-2026.10.23-py3-none-any.whl"
@@ -381,6 +395,13 @@ version = "26.1.0"
 file = "attrs-26.1.0-py3-none-any.whl"
 url = "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl"
 sha256 = "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309"
+
+[[launcher.macos-x86_64]]
+name = "blake3"
+version = "1.0.11"
+file = "blake3-1.0.11-cp313-cp313-macosx_10_12_x86_64.whl"
+url = "https://files.pythonhosted.org/packages/78/9f/2de41c02f6c6c3bd8322ca50a62fa354a1f1262af51b841229e7d88d2429/blake3-1.0.11-cp313-cp313-macosx_10_12_x86_64.whl"
+sha256 = "0865231cb616e0c2b9b8c6279a85776de056b475036d2c32cb1bef751b3eb44b"
 
 [[launcher.macos-x86_64]]
 name = "certifi"

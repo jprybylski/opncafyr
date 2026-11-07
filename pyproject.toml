@@ -15,6 +15,7 @@ dependencies = [
     "pyyaml>=6.0",
     "platformdirs>=4.2",
     "psutil>=6.0",
+    "blake3>=1.0",
 ]
 
 [project.scripts]

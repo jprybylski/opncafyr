@@ -7,6 +7,23 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Checks of reportifyr metadata sidecars before anything is published or rendered (#30).
+  - reportifyr only logs a missing or broken sidecar, and the report still succeeds. So the
+    launcher checks each table and figure in `OUTPUTS/` first
+    (`workflows/nca/publish/sidecars.py`):
+    - the sidecar exists, is valid JSON, and matches reportifyr 0.4.0's format (new
+      schema `reportifyr-sidecar-v1`);
+    - its `object_meta.path` and file type match the file;
+    - its BLAKE3 `hash` matches the file's bytes;
+    - its `meta_type` and abbreviations are defined in `standard_footnotes.yaml`.
+  - Findings use the new `preflight-v1` shape (quartifyr's check-result shape) and name
+    files and checks only, never data values.
+  - The new Publish page lists them ("Check published files"; `GET
+    /api/nca/outputs/check`).
+  - The report template's `standard_footnotes.yaml` and `config.yaml` (quartifyr v0.3.3
+    demo-report, ADR 0007) are bundled in `adapters/quartifyr/template/`.
+  - New launcher dependency `blake3` 1.0.11, pinned per platform in
+    `runtime/python/wheels.toml`.
 - Replay verification of saved runs (#29).
   - A verified save is replayed at once: `analysis.R` runs with the pinned R and opnca-r
     in a copy of the run, and its tables are compared with the saved results. IDs,

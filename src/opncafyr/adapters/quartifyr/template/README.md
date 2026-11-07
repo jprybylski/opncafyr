@@ -1,0 +1,21 @@
+# Bundled report template
+
+The generic NCA report the launcher sets up (ADR 0007 §1). The owner maintains these files;
+they ship with the app, so setting up a report needs no network.
+
+| File | Source |
+|---|---|
+| `standard_footnotes.yaml` | quartifyr v0.3.3 (`7bc7eb1`), `examples/demo-report/report/standard_footnotes.yaml` |
+| `config.yaml` | quartifyr v0.3.3 (`7bc7eb1`), `examples/demo-report/report/config.yaml` |
+
+`standard_footnotes.yaml` defines the abbreviations and footnote types (`meta_type`) that a
+published artifact's sidecar may name. The publication curator checks its sidecars against
+it (#30, #31), and report and deck projects get a copy.
+
+Its `figure_footnotes` and `table_footnotes` texts are generic examples. Some state units,
+such as `conc-time-trajectories`, which says hours and ng/mL. The curator therefore gives
+every artifact `meta_type: "NA"`, so no canned text with assumed units is added to a
+footnote.
+
+When the quartifyr pin changes, compare these files with the new demo-report and update
+them on purpose. They are never refreshed automatically.
