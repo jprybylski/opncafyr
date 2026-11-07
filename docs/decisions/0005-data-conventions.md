@@ -40,8 +40,8 @@ opnca-r is the calculation authority. What it expects:
   `crates/mcp-inspect/src/nca_input.rs` drops undosed subjects with a warning and
   defaults an unknown route to extravascular. **We do neither.**
 - Upstream: opnca-r#29 (app maps LLOQ/BLQ/missing, done), opnca-r#42
-  (`--require-blq-rules`, done), opnca-r#46 (`blq_method` still defaults when not preset,
-  open; our adapter always presets it).
+  (`--require-blq-rules`, done), opnca-r#46 (`--require-explicit-settings` also requires
+  `blq_method`, done in 0.2.8; our adapter always presets it).
 
 ### Reference datasets
 None is committed. Each is named by package or path and version.

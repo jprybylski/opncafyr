@@ -100,7 +100,7 @@ def test_malformed_sha_is_rejected(tree):
 
 
 def test_opnca_needs_a_binary_per_platform(tree):
-    _edit(tree, "runtime/pins.toml", '"opnca_0.2.7_R4.6_windows-x86_64.zip" = ', '"x.zip" = ')
+    _edit(tree, "runtime/pins.toml", '"opnca_0.2.8_R4.6_windows-x86_64.zip" = ', '"x.zip" = ')
     errors, _ = _check(tree)
     assert "[packages.opnca-r] has no binary for windows-x86_64" in errors
 

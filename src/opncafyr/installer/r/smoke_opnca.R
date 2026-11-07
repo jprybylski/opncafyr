@@ -5,7 +5,7 @@
 # Two synthetic profiles (no study data); P2 is P1 doubled. The points at 2, 4 and 8 h lie
 # on one exponential with half-life 2 h, so lambda_z = ln(2)/2 and t1/2 = 2 h exactly; Cmax
 # and Tmax are read off the data; AUClast is the linear-up/log-down value 24.837056812223246
-# (opnca-r 0.2.7's default; 26.25 with the linear trapezoid), P2 twice that. The same
+# (opnca-r's default in 0.2.7 and 0.2.8; 26.25 with the linear trapezoid), P2 twice that. The same
 # reference values as the install spikes (docs/spikes/macos-install.md).
 suppressPackageStartupMessages(library(opnca))
 pk <- data.frame(

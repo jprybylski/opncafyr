@@ -1,4 +1,4 @@
-"""#16: opnca-r 0.2.7 behind /apps/opnca/, including the attacks from the upstream review."""
+"""#16: opnca-r 0.2.8 behind /apps/opnca/, including the attacks from the upstream review."""
 
 from __future__ import annotations
 

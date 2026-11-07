@@ -50,7 +50,7 @@ jobs:
         run: uv run --group ui pytest -m ui tests/ui -v
 
   # #16: opnca-r and deckifyr from their pinned releases behind the /apps/<tool>/ proxy.
-  # macOS 15 because the opnca-r 0.2.7 binaries need it (opnca-r#45). opnca-r is private:
+  # macOS 15, the supported minimum (ADR 0003). opnca-r is private:
   # without the OPNCA_R_RELEASE_TOKEN secret its half is skipped with a warning.
   integration-proxy:
     name: proxy harness (macOS 15 arm64)

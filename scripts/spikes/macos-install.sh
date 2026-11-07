@@ -233,7 +233,7 @@ s_r_repo() {
   awk -F'\t' '$1=="r-binary"{print $3}' "$ASSETS/assets.tsv" | while read -r f; do ln -sf "$(asset_file "$f")" "$contrib/"; done
   "$ROOT/bin/Rscript" -e 'tools::write_PACKAGES(commandArgs(TRUE)[1], type = "mac.binary"); tools::write_PACKAGES(commandArgs(TRUE)[2], type = "source")' "$contrib" "$RREPO/src/contrib"
   # Cellar: opnca-r binary under the name renv expects, and the pure-R tarballs.
-  cp "$(asset_file "opnca_0.2.7_R4.6_${PLATFORM}.tgz")" "$CELLAR/opnca_0.2.7.tgz"
+  cp "$(asset_file "opnca_0.2.8_R4.6_${PLATFORM}.tgz")" "$CELLAR/opnca_0.2.8.tgz"
   for p in quartifyr reportifyr pyro; do cp "$(asset "package:$p")" "$CELLAR/"; done
   ls "$CELLAR"; echo "binaries: $(find "$contrib" -name '*.tgz' | wc -l | tr -d ' ')"
 }
@@ -282,7 +282,7 @@ s_r_install() {
     from_repo <- names(Filter(function(e) identical(e$Source, "Repository"), lock))
     install.packages(setdiff(from_repo, "jsonlite"), lib = lib, repos = repo, type = "binary",
                      dependencies = FALSE, quiet = TRUE)
-    install.packages(file.path(cellar, "opnca_0.2.7.tgz"), lib = lib, repos = NULL, type = "binary")
+    install.packages(file.path(cellar, "opnca_0.2.8.tgz"), lib = lib, repos = NULL, type = "binary")
     for (f in c("pyro_0.1.1.tar.gz", "reportifyr_0.4.0.tar.gz", "quartifyr_0.3.3.tar.gz"))
       install.packages(file.path(cellar, f), lib = lib, repos = NULL, type = "source")
     bad <- Filter(function(p) !identical(tryCatch(packageDescription(p, lib.loc = lib, fields = "Version"),
@@ -304,7 +304,7 @@ s_opnca_calc() {
                     CONC = c(0, 10, 5, 2.5, 0.625, 0, 20, 10, 5, 1.25), DOSE = rep(100, 10),
                     ROUTE = rep("extravascular", 10))
     x <- as.data.frame(opnca(d, metrics = c("cmax", "tmax", "auclast", "lambda_z", "half_life")))
-    # Reference: opnca-r 0.2.7 on the dev machine (and the tests in opnca-r test-basic-nca.R).
+    # Reference: opnca-r 0.2.7 and 0.2.8 on the dev machine (and the tests in opnca-r test-basic-nca.R).
     ref <- c(P1.cmax = 10, P1.tmax = 1, P1.auclast = 24.837056812223246, P1.lambda_z = 0.346573590279973,
              P1.half_life = 2, P2.cmax = 20, P2.tmax = 1, P2.auclast = 49.674113624446498,
              P2.lambda_z = 0.346573590279973, P2.half_life = 2)
@@ -327,12 +327,10 @@ s_opnca_serve() {
   for i in $(seq 1 120); do grep -q OPNCA_READY "$ROOT/tmp/serve.out" && break; sleep 1; done
   echo "ready after ${i}s: $(cat "$ROOT/tmp/serve.out")"
   curl -fsS -H "X-Opnca-Api-Token: $a" "http://127.0.0.1:$port/apps/opnca/api/v1/health"; echo
-  # opnca-r 0.2.7 sometimes stops before the 202's body is sent (curl exit 18).
-  local rc=0
+  # Since opnca-r 0.2.8 the whole 202 body arrives before the server stops (opnca-r#47),
+  # so a truncated response (curl exit 18) is a failure again.
   curl -fsS -o /dev/null -w 'shutdown %{http_code}\n' -X POST -H "X-Opnca-Api-Token: $a" \
-    -H "X-Opnca-Shutdown-Token: $b" "http://127.0.0.1:$port/apps/opnca/api/v1/shutdown" || rc=$?
-  if [ "$rc" -ne 0 ] && [ "$rc" -ne 18 ]; then return "$rc"; fi
-  [ "$rc" -eq 18 ] && echo "shutdown response truncated (curl 18)"
+    -H "X-Opnca-Shutdown-Token: $b" "http://127.0.0.1:$port/apps/opnca/api/v1/shutdown"
   for i in $(seq 1 30); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
   if kill -0 "$pid" 2>/dev/null; then echo "server still running after shutdown"; kill "$pid"; return 1; fi
   echo "server stopped"
@@ -414,7 +412,7 @@ s_quarantine() {
 }
 
 s_vendored() {
-  # Repair path only (ADR 0004): build opnca_0.2.7-vendored.tar.gz. Needs a C toolchain.
+  # Repair path only (ADR 0004): build opnca_0.2.8-vendored.tar.gz. Needs a C toolchain.
   echo "CLT: $(xcode-select -p 2>&1)"; echo "clang: $(/usr/bin/clang --version 2>&1 | head -1)"
   local rs; rs="$(asset rust-standalone)"
   [ -n "$rs" ] || { echo "no rust standalone asset in assets.tsv"; return 1; }
@@ -426,7 +424,7 @@ s_vendored() {
   "$rust/bin/cargo" --version; "$rust/bin/rustc" --version
   mkdir -p "$ROOT/tmp/vlib"
   PATH="$rust/bin:$PATH" NOT_CRAN="" R_LIBS="$RLIB" "$ROOT/bin/R" CMD INSTALL --library="$ROOT/tmp/vlib" \
-    "$(asset_file opnca_0.2.7-vendored.tar.gz)"
+    "$(asset_file opnca_0.2.8-vendored.tar.gz)"
 }
 
 s_libreoffice() {

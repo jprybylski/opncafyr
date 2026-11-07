@@ -55,7 +55,8 @@ scheduled first.
    R 4.6 binaries for macOS arm64/x86_64 and Windows x86_64, plus a vendored source
    tarball that builds offline. Each release has a SHA-256 `manifest.json`. Since v0.2.7
    the 1.87 MSRV is checked in CI. Clean-account installs and a renv cellar restore are
-   ours to prove (#6, #7, #34). The macOS binaries need macOS 15 until opnca-r#45 lands.
+   ours to prove (#6, #7, #34). Since v0.2.8 the macOS binaries load on macOS 13 (arm64) and
+   11 (x86_64) (opnca-r#45); our minimum stays macOS 15 until the rest of the stack is rechecked.
 2. **Child apps behind a prefix** (#15, #16): opnca-r has supported a base path and
    allowed hosts since v0.2.5. deckifyr has supported a path prefix since v0.3.4, and
    rejects foreign Hosts and cross-site requests (with an optional launcher token) since
@@ -102,8 +103,8 @@ scheduled first.
   (#22, #32).
 - **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and
   deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
-  [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7 and deckifyr#88–#91 in 0.3.5,
-  so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
+  [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7, opnca-r#45–#47 in 0.2.8
+  and deckifyr#88–#91 in 0.3.5, so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
   children run behind `/apps/<tool>/` with no rewriting ([spike result](spikes/basepath.md)).
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
@@ -121,7 +122,7 @@ scheduled first.
   opnca-r changes land.
 
 **opnca adapter (#27, #28)**
-- Use opnca-r 0.2.7 directly: `scripts/serve.R` with the launcher flags (#27) and the
+- Use opnca-r 0.2.8 directly: `scripts/serve.R` with the launcher flags (#27) and the
   server-side export (#28). The earlier temporary paths are no longer needed.
 - Never read browser downloads. #29 checks the saved `analysis.R` against the UI's
   results.
@@ -149,7 +150,7 @@ scheduled first.
 | Unsaved deck edits lost on stop | Data loss | `POST /api/shutdown` refuses while there are unsaved edits (done); the launcher's idle timer and Quit check deckifyr's `dirty` flag and ask before saving (done, #14); SIGTERM only as a fallback | #14, #33, deckifyr#83 |
 | Cloud users reach the app through an SSH tunnel or IDE proxy (different Host/Origin, URL prefix) | App unreachable, or security checks loosened ad hoc | Explicit base-path and allow-list settings with tested presets; the session token is always required; the port is published to VM loopback only | #42, #15, #16, opnca-r#24, deckifyr#82 |
 | Shared-origin localStorage leaks a mapping between analytes | Wrong column mapping | Scope or disable it upstream; the launcher always passes an explicit mapping | #27, opnca-r#30 |
-| BLQ semantics lost or defaulted on hand-off | Wrong NCA | opnca-r maps LLOQ/BLQ (done); the launcher asks for all three BLQ rules and passes a full preset; upstream `--require-blq-rules` (done); the adapter also presets `blq_method` (opnca-r#46) | #23, #27, opnca-r#29, opnca-r#42 |
+| BLQ semantics lost or defaulted on hand-off | Wrong NCA | opnca-r maps LLOQ/BLQ (done); the launcher asks for all three BLQ rules and passes a full preset; upstream `--require-blq-rules` (done); the adapter also presets `blq_method`; upstream `--require-explicit-settings` (opnca-r#46, done) | #23, #27, opnca-r#29, opnca-r#42 |
 | LibreOffice can't be packaged per user | No slide previews or field recalculation | Mark the features unavailable; never required for a build | #8, deckifyr#84 |
 | Organisational application controls block user-local binaries | Install fails despite no-admin design | Detect it in preflight; signing and notarization; clear diagnostics | #19, #38, #39 |
 | Scientific rules decided ad hoc in code | Inconsistent analyses | `decision-needed` issue #2 must be answered first; checks are configurable but never silent | #2, #22, #24 |

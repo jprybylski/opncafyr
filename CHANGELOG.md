@@ -397,6 +397,12 @@ All notable changes to this project are documented here. The format follows
 - deckifyr is pinned at 0.3.6, which releases deckifyr#93 (offline mode for the R
   wrappers, `init --from-repo` refused offline) and #94 (project files that start with a
   UTF-8 BOM, and no locale-encoding fallback on Windows). Its dependencies are unchanged.
+- opnca-r is pinned at 0.2.8 (PR #48), which releases opnca-r#45 (macOS binaries built
+  for R's own minimum: `macos_min` 13.0 on arm64, 11.0 on x86_64), #46 (save lock,
+  `INCOMPLETE_SAVE`, `--require-explicit-settings`, `--no-guess-roles`,
+  `effective_settings` in the record) and #47 (the shutdown reply always arrives whole).
+  Its dependencies are unchanged. The macOS install spike now fails on a truncated
+  shutdown reply. Our macOS minimum stays 15 and the adapter flags are unchanged for now.
 - The README says opncafyr and opnca are under development and that public installation
   is not yet supported.
 - Recorded the v1 platform matrix (ADR 0003, #1): Windows 11 x86_64, macOS arm64/x86_64

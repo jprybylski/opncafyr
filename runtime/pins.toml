@@ -18,7 +18,8 @@ schema_version = 1
 # Windows, no Windows 10, no native Linux (Linux only through the container, #42).
 supported = ["windows-x86_64", "macos-arm64", "macos-x86_64"]
 windows_min = "11"
-macos_min = "15"           # opnca-r 0.2.7 binaries target macOS 15; 13 once opnca-r#45 lands
+macos_min = "15"           # opnca-r 0.2.8 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
+                           # this waits on Quarto, uv Python, wheel and CRAN-binary checks (ADR 0003, #1)
 
 # --- Python ---------------------------------------------------------------------------
 
@@ -74,7 +75,7 @@ deckifyr = true
 
 [r]
 license = "GPL-2.0-or-later"
-version = "4.6.2"          # ADR 0003. opnca-r 0.2.7 binaries are built on R 4.6.2.
+version = "4.6.2"          # ADR 0003. opnca-r 0.2.8 binaries are built on R 4.6.2.
 # CRAN installers, used as pinned files only (rig's user mode downloads its own copy).
 # Windows: the Inno Setup installer in /CURRENTUSER mode (#6). macOS: the .pkg payload is
 # expanded and R.framework relocated, editing only text files, to an R root whose path
@@ -137,25 +138,28 @@ sha256 = "eda220a2f39c392f622049de013ddf7b4dfdf019ba877f251be14ce43e5734d1"
 
 [packages.opnca-r]
 license = "Apache-2.0"
-version = "0.2.7"
+version = "0.2.8"
 source = "github:mantra-opnca/opnca-r"
 private = true             # verify_pins.py --network needs GH_TOKEN
-release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.2.7/"
-# v0.2.7 (2026-11-06, commit 0b547d0) adds the launcher API token, --no-overwrite and
-# --require-blq-rules (#40-#43). Select assets by manifest.json fields (kind/platform/arch/
-# r_minor), never by file name. manifest.json (schema_version 1) is not in SHA256SUMS,
-# so pin its hash here.
-manifest_sha256 = "4e3616cddaad5e3f9d9da3b3781c66548e072363ed794af4a4b6b77b849ddd2e"
-sha256sums_sha256 = "9d6d429ad999c4c88fff1a5d621a932f30e1b36c513465b66420cc9f3cc55700"
-source_commit = "0b547d05793e1bdbe7a00eac78b87fdcb58f80fa"
+release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.2.8/"
+# v0.2.7 (2026-11-06) added the launcher API token, --no-overwrite and --require-blq-rules
+# (#40-#43). v0.2.8 (2026-11-07, commit 0448cd1) sends the whole shutdown response (#47),
+# builds macOS binaries for R's own minimum (manifest macos_min: arm64 13.0, x86_64 11.0;
+# #45), and adds the save lock, INCOMPLETE_SAVE, --require-explicit-settings,
+# --no-guess-roles and effective_settings (#46). Select assets by manifest.json fields
+# (kind/platform/arch/r_minor), never by file name. manifest.json (schema_version 1) is
+# not in SHA256SUMS, so pin its hash here.
+manifest_sha256 = "87e5b4a3360f0d76a06f2932dc4c7c553849323204ca8c8e6621ea3814c63f2d"
+sha256sums_sha256 = "4d2d88deac7908f2900b5e00120a781b133d0a9e7b909847807fa8c8eeb2f989"
+source_commit = "0448cd189b43bef67cdfe85a2242ee11ea8fc538"
 r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.opnca-r.assets]
-"manifest.json" = "4e3616cddaad5e3f9d9da3b3781c66548e072363ed794af4a4b6b77b849ddd2e"
-"opnca_0.2.7_R4.6_macos-arm64.tgz" = "1766cd2152f2c8398c5b57e6084e2624cb30167046ec2a0cdec4430a18b15cb5"
-"opnca_0.2.7_R4.6_macos-x86_64.tgz" = "8aabe38f1ce5069a87d80a08504904d3745b35673a0b8c302bad9775c290a46d"
-"opnca_0.2.7_R4.6_windows-x86_64.zip" = "a9cae57fe894f7d7c7e6e831023bd0b7346ab45ba7bd1693298822f5fde3fcb8"
-"opnca_0.2.7-vendored.tar.gz" = "4a6f3fc9306833a98c260eb9b5ca18c660b36625cbb2b63cd617c067113a892c"  # offline source fallback
+"manifest.json" = "87e5b4a3360f0d76a06f2932dc4c7c553849323204ca8c8e6621ea3814c63f2d"
+"opnca_0.2.8_R4.6_macos-arm64.tgz" = "3b3d817fdb69d9850be4f130e06ff2e3da75e302990784d972d9a5a8752e43b2"
+"opnca_0.2.8_R4.6_macos-x86_64.tgz" = "b75b76e1b7a1550e0f369cea749a9ffadbb652418d8742e4d8e774816e790689"
+"opnca_0.2.8_R4.6_windows-x86_64.zip" = "83496ec015f045a85795bc5895077fe20e03853ce84014792980013fcd731920"
+"opnca_0.2.8-vendored.tar.gz" = "b310280d80b97b5763bd15e4f3ad13eaa85c29d8b0e02e441f1016119eb9a9f0"  # offline source fallback
 
 [packages.deckifyr]
 license = "GPL-3.0-or-later"
@@ -221,7 +225,7 @@ commit = "66065c19a9aad1cf2cc4718aee9da013e6a3209f"
 "manifest.json" = "1b7f258fe0ea1103c6f55a72f4c2c18310a1a71a2218587b472be1e08e4a1528"
 
 # --- Repair path only (ADR 0004) ---------------------------------------------------------
-# Never installed on a normal install. Only to build opnca_0.2.7-vendored.tar.gz when a
+# Never installed on a normal install. Only to build opnca_0.2.8-vendored.tar.gz when a
 # binary can't be used (e.g. macOS below the binary's minimum). macOS also needs the
 # Command Line Tools for this path (#7).
 
