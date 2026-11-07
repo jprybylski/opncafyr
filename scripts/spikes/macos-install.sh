@@ -21,8 +21,8 @@
 #                     `R CMD config`, i.e. make with R_HOME/etc/Makeconf, which breaks on
 #                     one). Default: ~/.opncafyr-spike/r
 #   --repo DIR        opncafyr checkout (runtime/python/tools); default: this script's repo
-#   --fixture FILE    quartifyr v0.3.2 source archive (for examples/demo-report);
-#                     default: DIR/quartifyr-v0.3.2-src.tar.gz
+#   --fixture FILE    quartifyr v0.3.3 source archive (for examples/demo-report);
+#                     default: DIR/quartifyr-v0.3.3-src.tar.gz
 #   --libreoffice DMG also run the #8 LibreOffice checks with this DMG
 #   --vendored        also try the vendored opnca-r source build (repair path, ADR 0004)
 #   --quarantine-test also check what Gatekeeper does with quarantined copies
@@ -51,7 +51,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$ASSETS" ] && [ -f "$ASSETS/assets.tsv" ] || { echo "--assets DIR with assets.tsv is required" >&2; exit 2; }
-FIXTURE="${FIXTURE:-$ASSETS/quartifyr-v0.3.2-src.tar.gz}"
+FIXTURE="${FIXTURE:-$ASSETS/quartifyr-v0.3.3-src.tar.gz}"
 if [ "$(id -u)" -eq 0 ]; then echo "do not run as root" >&2; exit 2; fi
 
 ARCH="$(uname -m)"
@@ -283,7 +283,7 @@ s_r_install() {
     install.packages(setdiff(from_repo, "jsonlite"), lib = lib, repos = repo, type = "binary",
                      dependencies = FALSE, quiet = TRUE)
     install.packages(file.path(cellar, "opnca_0.2.7.tgz"), lib = lib, repos = NULL, type = "binary")
-    for (f in c("pyro_0.1.1.tar.gz", "reportifyr_0.4.0.tar.gz", "quartifyr_0.3.2.tar.gz"))
+    for (f in c("pyro_0.1.1.tar.gz", "reportifyr_0.4.0.tar.gz", "quartifyr_0.3.3.tar.gz"))
       install.packages(file.path(cellar, f), lib = lib, repos = NULL, type = "source")
     bad <- Filter(function(p) !identical(tryCatch(packageDescription(p, lib.loc = lib, fields = "Version"),
                                                   warning = function(w) NA), lock[[p]]$Version), names(lock))
@@ -362,7 +362,7 @@ s_report() {
   # The app creates report projects itself; here quartifyr's demo report stands in,
   # without its committed pyproject.toml/uv.lock/renv (an app-made project has none).
   rm -rf "$REPORT"; mkdir -p "$REPORT"
-  tar xzf "$FIXTURE" -C "$REPORT" --strip-components 3 "quartifyr-0.3.2/examples/demo-report"
+  tar xzf "$FIXTURE" -C "$REPORT" --strip-components 3 "quartifyr-0.3.3/examples/demo-report"
   rm -rf "$REPORT/.Rprofile" "$REPORT/renv" "$REPORT/renv.lock" "$REPORT/pyproject.toml" "$REPORT/uv.lock"
   cd "$REPORT"
   # reportifyr's project setup goes through pyro: `uv lock` + `uv sync` of its pinned

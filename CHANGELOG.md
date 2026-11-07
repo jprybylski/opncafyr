@@ -388,6 +388,12 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- quartifyr is pinned at 0.3.3, which releases quartifyr#81–#86: staged renders,
+  `--soffice-bin`, the LibreOffice fixes for macOS and Windows, and
+  `initialize_report_project_offline()` for one Python environment serving both passes.
+  It was pinned within the release's 24-hour refresh window; re-verify the hashes after
+  2026-11-08T00:29Z. The adapter workarounds and the LibreOffice recalculation switch are
+  unchanged for now.
 - Recorded the v1 platform matrix (ADR 0003, #1): Windows 11 x86_64, macOS arm64/x86_64
   (macOS 15 until opnca-r#45), R 4.6.2, a 30-minute configurable idle timeout and no
   native Linux. Also recorded the opnca-r install path (ADR 0004, #4): prebuilt binaries,

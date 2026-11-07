@@ -52,7 +52,7 @@ were reviewed. Remaining gaps are handled in our adapter (#33).
 ## jprybylski/quartifyr (public)
 
 #69–#72 (PR #74) and #75–#78 (PR #79) were released in v0.3.2 (2026-11-05) and reviewed.
-The follow-ups #81–#82 cover the gaps. The release workflow may still refresh a release
+The follow-ups #81–#86 (PR #87) were reviewed and released in v0.3.3 (2026-11-07). The release workflow may still refresh a release
 (move the tag, replace the tarball) within 24 hours of publishing; that is intentional, for
 quick fixes, so pin a quartifyr release only after that window has passed.
 
@@ -66,12 +66,12 @@ quick fixes, so pin a quartifyr release only after that window has passed.
 | [#76](https://github.com/jprybylski/quartifyr/issues/76) | Offline-safe render (no venv re-sync or index access) | Done (v0.3.2) as opt-in `--offline`; pass-2 error relabel doesn't fire (#82) | Gate 3, offline |
 | [#77](https://github.com/jprybylski/quartifyr/issues/77) | A failed render leaves the previous draft/final looking complete | Done (v0.3.2) for timeouts and early failures; strict rejections and partial pass-2 failures still leave a DOCX in place (#81) | Gate 3 |
 | [#78](https://github.com/jprybylski/quartifyr/issues/78) | Result `schema_version`, input hashes, tool versions; `check.R`; small fixes | Done (v0.3.2); inputs hashed after render and incomplete (#82) | Gate 3 |
-| [#81](https://github.com/jprybylski/quartifyr/issues/81) | No complete-looking DOCX after a strict rejection, partial pass-2 failure or kill; `.previous` keeps the last good render | Open; adapter renders in staging meanwhile (#32) | Gate 3 |
-| [#82](https://github.com/jprybylski/quartifyr/issues/82) | Pass-2 offline relabel; relative `reference_doc`/style paths; hash inputs before render; schema-check real output; venv mismatch | Open; adapter passes absolute paths and hashes inputs itself (#32) | Gate 3, offline |
-| [#83](https://github.com/jprybylski/quartifyr/issues/83) | `--soffice-bin` / `QUARTIFYR_SOFFICE_BIN` for the LibreOffice steps | Open; adapter controls `PATH` meanwhile (#32) | Gate 3 (#32), #8 |
-| [#84](https://github.com/jprybylski/quartifyr/issues/84) | Field recalculation always times out on macOS (LibreOffice 26.2) | Open; recalculation marked unavailable on macOS (#8) | Gate 3 (#32), #8 |
-| [#85](https://github.com/jprybylski/quartifyr/issues/85) | Offline report setup without pyro: one Python env for both passes | Open; adapter creates the project `.venv` from the wheelhouse and writes reportifyr's init marker (temporary, #32) | Gate 3 (#32), offline |
-| [#86](https://github.com/jprybylski/quartifyr/issues/86) | Field recalculation hangs and orphans soffice on Windows (malformed profile URL) | Open; recalculation off on Windows (#8) | Gate 3 (#32), #8 |
+| [#81](https://github.com/jprybylski/quartifyr/issues/81) | No complete-looking DOCX after a strict rejection, partial pass-2 failure or kill; `.previous` keeps the last good render | Done (v0.3.3); also moves `draft/intermediate_files/` aside. A non-strict incomplete render is still delivered live, so the adapter keeps `--strict` | Gate 3 |
+| [#82](https://github.com/jprybylski/quartifyr/issues/82) | Pass-2 offline relabel; relative `reference_doc`/style paths; hash inputs before render; schema-check real output; venv mismatch | Done (v0.3.3); `inputs[].role` is now an open string within v1 | Gate 3, offline |
+| [#83](https://github.com/jprybylski/quartifyr/issues/83) | `--soffice-bin` / `QUARTIFYR_SOFFICE_BIN` for the LibreOffice steps | Done (v0.3.3) | Gate 3 (#32), #8 |
+| [#84](https://github.com/jprybylski/quartifyr/issues/84) | Field recalculation always times out on macOS (LibreOffice 26.2) | Done (v0.3.3), verified upstream on macOS 26.6 only; recalculation stays off in the adapter until re-verified (#8) | Gate 3 (#32), #8 |
+| [#85](https://github.com/jprybylski/quartifyr/issues/85) | Offline report setup without pyro: one Python env for both passes | Done (v0.3.3) as `initialize_report_project_offline()`; uv is still required (reportifyr runs it). Adapter workaround still in place until switched over (#32) | Gate 3 (#32), offline |
+| [#86](https://github.com/jprybylski/quartifyr/issues/86) | Field recalculation hangs and orphans soffice on Windows (malformed profile URL) | Done (v0.3.3), with process tests run upstream on Windows 11; recalculation stays off in the adapter until re-verified (#8) | Gate 3 (#32), #8 |
 
 Offline installation is a supported v1 use case (2026-11-04). pyro and reportifyr (A2-ai,
 external) also reach the network during project setup. opncafyr handles that in its

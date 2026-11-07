@@ -69,8 +69,8 @@ jobs:
           test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
           gh release download v0.2.7 -R mantra-opnca/opnca-r -D "$WORK/assets-online" \
             -p "opnca_0.2.7_R4.6_${PLATFORM}.tgz" -p "opnca_0.2.7-vendored.tar.gz" -p manifest.json
-          curl -fsSL -o "$WORK/assets-online/quartifyr-v0.3.2-src.tar.gz" \
-            https://github.com/jprybylski/quartifyr/archive/refs/tags/v0.3.2.tar.gz
+          curl -fsSL -o "$WORK/assets-online/quartifyr-v0.3.3-src.tar.gz" \
+            https://github.com/jprybylski/quartifyr/archive/refs/tags/v0.3.3.tar.gz
           cp -R "$GITHUB_WORKSPACE" "$WORK/repo"
           sudo chown -R spike "$WORK"
 

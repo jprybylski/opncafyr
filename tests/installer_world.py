@@ -97,7 +97,7 @@ def make_world(tmp: Path, version: str = "0.0.1") -> World:
         f'"manifest.json" = "{sha(mdata)}"',
         f'"{binary}" = "{bin_sha}"',
     ]
-    for pkg, ver in (("quartifyr", "0.3.2"), ("reportifyr", "0.4.0"), ("pyro", "0.1.1")):
+    for pkg, ver in (("quartifyr", "0.3.3"), ("reportifyr", "0.4.0"), ("pyro", "0.1.1")):
         name = f"{pkg}_{ver}.tar.gz"
         _, digest = _file(world, pkg, name)
         pins += ["", f"[packages.{pkg}]", f'version = "{ver}"', 'license = "GPL-3.0-or-later"']
