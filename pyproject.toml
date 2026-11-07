@@ -40,6 +40,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/opncafyr"]
+# Development and test fixtures that must never ship (#41). scripts/check_wheel.py checks
+# every built wheel; a dev checkout (editable install) still has them.
+exclude = ["src/opncafyr/adapters/example_echo"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

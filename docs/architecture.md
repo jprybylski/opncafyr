@@ -14,9 +14,13 @@ enforces. The spec remains the authority on design intent.
 | Tools | opnca-r, deckifyr, quartifyr/reportifyr | their own calculations and rendering | navigate the workspace |
 
 A future tool is added by shipping `adapters/<tool>/descriptor.yaml` (validated against
-`schemas/tool-descriptor-v1.schema.json`), a health check and an adapter that implements
-`core.adapter.Adapter`. A future workflow (e.g. a non-NCA analysis) is a new package under
-`workflows/` that composes existing adapters. Neither requires changes to `core/`.
+`schemas/tool-descriptor-v1.schema.json`), a health check declared in it, and an adapter
+package: a `core.adapter.WebAppAdapter` from `web_app()` for a web app, and
+`CommandSpec` builders that a workflow submits as `JobRequest`s for jobs. A future
+workflow (e.g. a non-NCA analysis) is a new package under `workflows/` that composes
+existing adapters. Neither requires changes to `core/`. [adding-a-tool.md](adding-a-tool.md)
+is the guide. The toy `adapters/example_echo/` (#41) is a whole second tool, with a job and
+a web app, added without any core change; release wheels leave it out.
 
 A workflow package exposes `workflow()` returning a `core.registry.WorkflowPack`: its
 dataset importers (`core.datasets.Importer`, one per file format) and preview annotators

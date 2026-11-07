@@ -32,6 +32,11 @@ jobs:
         run: uv lock --locked --project runtime/python/tools
       - name: Tests
         run: uv run pytest -v
+      - name: Release wheel leaves out development-only tools (#41)
+        if: runner.os == 'Linux'
+        run: |
+          uv build --wheel --out-dir dist-check
+          uv run python scripts/check_wheel.py dist-check/*.whl
 
   # #49: the home page in headless Chromium (render, origin, keyboard walk, axe). No R and
   # no child apps.

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "summary-v1",
+  "title": "example_echo CSV summary",
+  "description": "Written by the example_echo toy adapter's summarize_csv job (#41). Column names and counts only; never a cell value.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "rows", "columns"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "rows": {"type": "integer", "minimum": 0},
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "non_empty"],
+        "properties": {
+          "name": {"type": "string"},
+          "non_empty": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  }
+}

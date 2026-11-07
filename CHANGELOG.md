@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A toy second tool, `example_echo`, and a guide to adding a tool,
+  [docs/adding-a-tool.md](docs/adding-a-tool.md) (#41).
+  - The toy has a job, which summarizes a CSV's columns without writing any cell value,
+    and a small web app served under `/apps/example_echo/`. It is found from its
+    descriptor alone.
+  - Adding it changed nothing under `core/` and left the workspace schema alone; a test
+    checks that no file outside its folder names it.
+  - Release wheels leave it out (`pyproject.toml`). `scripts/check_wheel.py` checks every
+    wheel `make_installer.py` builds, and CI builds one and checks it. A development
+    checkout shows its tile.
 - A woven concentration-time curve logo, with boxplots and unfinished threads, as
   scalable SVGs and transparent PNGs. The launcher uses the mark in its header and favicon.
 - A project-file editor in the launcher, requested by tools through their descriptor

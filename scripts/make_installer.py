@@ -66,6 +66,19 @@ def digest_of(files: dict[str, str]) -> str:
     ).hexdigest()
 
 
+def _check_wheel():
+    """``scripts/check_wheel.check_wheel``, loaded by path (tests import this file by path)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_wheel", Path(__file__).with_name("check_wheel.py")
+    )
+    assert spec is not None and spec.loader is not None  # noqa: S101
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.check_wheel
+
+
 def build_wheel(out: Path, version: str | None) -> Path:
     uv = shutil.which("uv")
     if uv is None:
@@ -93,6 +106,9 @@ def build_wheel(out: Path, version: str | None) -> Path:
             check=True,
         )
         built = sorted(set(out.glob("*.whl")) - before) or sorted(out.glob("opncafyr-*.whl"))
+        problems = _check_wheel()(built[-1])
+        if problems:
+            raise SystemExit(f"{built[-1].name}: " + "; ".join(problems))
         return built[-1]
     finally:
         if tmp is not None:

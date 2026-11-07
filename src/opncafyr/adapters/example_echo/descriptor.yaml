@@ -1,0 +1,16 @@
+# A toy second tool (#41). It proves that a tool can be added with a descriptor, a health
+# check and an adapter, without changing core/ or the workspace schema. It is a
+# development and test fixture: the release wheel leaves this folder out
+# (pyproject.toml, scripts/check_wheel.py). See docs/adding-a-tool.md.
+schema_version: "1.0"
+id: example_echo
+version: 1
+display_name: Example echo
+runtime: python
+capabilities: [summarize_csv, echo_app]
+executables: [python]
+health: {kind: python_import, executable: python, target: csv}
+web_app:
+  route: /apps/example_echo/
+  readiness: /api/health
+  max_body_bytes: 1048576

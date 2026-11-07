@@ -11,6 +11,7 @@ from opncafyr.core.adapter import ChildActivity, LaunchContext, SupportsActivity
 from opncafyr.core.registry import load_descriptors, load_web_adapters
 from opncafyr.core.runtime import Runtime
 from opncafyr.core.supervisor import LaunchError
+from tool_sets import DEV_ONLY, PRODUCT_WEB_APPS
 
 
 def _exe(path: Path) -> Path:
@@ -55,7 +56,7 @@ def run_dir(tmp_path):
 
 def test_registry_finds_both_web_adapters():
     adapters = load_web_adapters(load_descriptors())
-    assert set(adapters) == {"opnca", "deckifyr"}
+    assert set(adapters) == PRODUCT_WEB_APPS | DEV_ONLY
 
 
 def test_opnca_upload_limit_matches_descriptor():

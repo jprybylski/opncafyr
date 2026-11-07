@@ -143,8 +143,9 @@ scheduled first.
   `.opncafyr/jobs/`.
 
 **Gate 4**
-- Closes the release. #41 adds a toy second adapter to prove that `core/` stays
-  tool-agnostic.
+- Closes the release. #41 is done (2026-11-07): the toy `example_echo` adapter runs a
+  job and a web app with no change under `core/`, and
+  [adding-a-tool.md](adding-a-tool.md) is the guide.
 
 ## Risks
 
@@ -186,17 +187,19 @@ scheduled first.
 
 ## Extending to other tools
 
-To add a tool:
+To add a tool ([adding-a-tool.md](adding-a-tool.md)):
 1. Ship `src/opncafyr/adapters/<tool>/descriptor.yaml`. It must validate against
    `tool-descriptor-v1`.
-2. Add a health check.
-3. Add an adapter that implements `core.adapter.Adapter`.
+2. Declare its health check in the descriptor.
+3. Add the adapter: `web_app()` returning a `core.adapter.WebAppAdapter` for a web app,
+   and `CommandSpec` builders that a workflow submits as `JobRequest`s for jobs.
 4. If the tool has a web app, make sure it works under a base path (see #16 for the
    automated check).
 
 A new user journey, such as a non-NCA analysis, goes in a new package under
-`src/opncafyr/workflows/` and reuses existing adapters. Neither step changes `core/`. #41
-makes this concrete with a guide and a toy adapter.
+`src/opncafyr/workflows/` and reuses existing adapters. Neither step changes `core/`. The
+toy `example_echo` adapter (#41) proves it: a job and a web app, added with no change
+under `core/`, and left out of release wheels.
 
 ## Issue map
 

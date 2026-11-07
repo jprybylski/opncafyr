@@ -1,3 +1,6 @@
+from tool_sets import ALL_TOOLS
+
+
 def test_health_ok(client):
     resp = client.get("/health")
     assert resp.status_code == 200
@@ -15,7 +18,7 @@ def test_home_embeds_session_secret(client, security):
 
 def test_tools_lists_installed_adapters(client):
     ids = {t["id"] for t in client.get("/api/tools").json()["tools"]}
-    assert ids == {"opnca", "deckifyr", "quartifyr"}
+    assert ids == ALL_TOOLS
 
 
 def test_no_cors_headers(client):

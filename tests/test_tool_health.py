@@ -22,6 +22,7 @@ from opncafyr.core.registry import DescriptorError, ToolDescriptor, load_descrip
 from opncafyr.core.runtime import Runtime, RuntimeUnavailable
 from opncafyr.core.security import SESSION_HEADER
 from opncafyr.core.workspace import RecentWorkspaces
+from tool_sets import ALL_TOOLS
 
 PY = Path(sys.executable)
 
@@ -142,7 +143,7 @@ def test_invalid_descriptor_stops_the_launch_before_binding(tmp_path, monkeypatc
 
 def test_bundled_descriptors_reference_real_schemas():
     tools = load_descriptors()
-    assert set(tools) == {"opnca", "deckifyr", "quartifyr"}
+    assert set(tools) == ALL_TOOLS
     for tool in tools.values():
         assert tool.health is not None
         assert tool.health.executable in tool.executables
@@ -182,7 +183,7 @@ def test_descriptors_in_a_workspace_are_ignored(tmp_path, security, monkeypatch)
             ids = {t["id"] for t in api.get("/api/tools").json()["tools"]}
     finally:
         jobs.shutdown()
-    assert ids == {"opnca", "deckifyr", "quartifyr"}
+    assert ids == ALL_TOOLS
     assert set(load_descriptors()) == ids
 
 
@@ -292,7 +293,7 @@ def test_api_tools_reports_every_bundled_stub(security):
     ) as api:
         _wait(app.state.health)
         body = {t["id"]: t for t in api.get("/api/tools").json()["tools"]}
-    assert set(body) == {"opnca", "deckifyr", "quartifyr"}
+    assert set(body) == ALL_TOOLS
     for tool in body.values():
         assert tool["health"]["state"] == "unavailable"
         assert tool["health"]["detail"].startswith("The installed runtime has no ")
