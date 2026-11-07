@@ -44,6 +44,10 @@ packages = ["src/opncafyr"]
 # every built wheel; a dev checkout (editable install) still has them.
 exclude = ["src/opncafyr/adapters/example_echo"]
 
+# The user guide (#40), served in the app from opncafyr/web/guide/.
+[tool.hatch.build.targets.wheel.force-include]
+"docs/user-guide" = "opncafyr/web/guide"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # The proxy harness (#16) needs installed tools; run it with `pytest -m integration`.

@@ -14,6 +14,8 @@ reportifyr) or a PowerPoint deck ([deckifyr](https://github.com/jprybylski/decki
 > **Research use only.** opncafyr assembles artifacts; it does not make them scientifically
 > or regulatorily validated.
 
+Using it: the [user guide](docs/user-guide/index.md) (also inside the app, under **Guide**).
+
 ## Status
 
 Pre-alpha scaffold. The controller boots, serves `/health` and enforces its loopback

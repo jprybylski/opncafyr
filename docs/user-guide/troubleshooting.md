@@ -1,0 +1,124 @@
+# Troubleshooting and getting help
+
+Most problems show up as a message on the page you are using, or as a failed job. Start there: the app writes its messages for you to read, and they usually say what to do.
+
+## A tool shows Unavailable
+
+On **Home**, each tool in the **Tools** card shows its health. **Unavailable** means the app could not start or find that tool. The tile shows a short reason underneath.
+
+1. Quit the app and start it again. Tools are checked each time the app starts.
+2. If the tool is still **Unavailable**, repair the install: see [Checking and repairing an install](install.md#checking-and-repairing-an-install).
+3. If repair does not help, make a support bundle: see [Getting help](#getting-help).
+
+"Slide previews unavailable: LibreOffice is not installed." is not a fault. LibreOffice is optional; without it, decks build without slide previews.
+
+## A job failed
+
+1. Select **Jobs** on the left.
+2. Find the job marked **Failed**. Its message says what went wrong.
+3. Fix what the message names, then start the job again from the page where you started it.
+
+A failed or cancelled job keeps nothing half-made, so you can always start it again. If the message is unclear, make a support bundle: it includes recent job states and messages, without your data.
+
+If you opened a study folder and the app says unfinished jobs "were marked failed", the app was stopped while they ran. Start them again.
+
+## A check blocks the run
+
+A **Blocking** finding means the data or mapping needs a change before a run can start. The app never fixes these for you.
+
+1. Read the finding's message and hint. The line numbers are lines in the source file; the header is line 1.
+2. Change the mapping (card **4. Column mapping**) or add a cleaning step (card **2. Cleaning steps**). [Mapping columns and running checks](mapping-and-checks.md#blocking-findings) lists the usual fixes.
+3. If you changed the recipe, select **Apply to all rows** again.
+4. Select **Run checks** again.
+
+If **Start analysis** stays greyed out, read the line above it. It says what is left: run the checks, fix blocking findings, acknowledge warnings, or choose all three BLQ rules and the BLQ method.
+
+If the analyte you want shows no rows, check its exact text. `"METAB"` and `"METAB "` are different values. To join them, add a **Replace values** or **Trim spaces** step; that is your decision, and it is recorded.
+
+## opnca-r doesn't open
+
+- **Open in opnca-r** shows only on runs that are **Preparing** or **Running**. A run that has been saved cannot be opened again; make a new run instead.
+- While opnca-r starts, the page says "opnca-r is starting. It opens here when it is ready." Wait a moment.
+- If the page says "opnca-r is not running", go back to **Analysis** and select **Open in opnca-r** again.
+- If opnca-r shows **Stopped unexpectedly**, select **Reload**, or open the run again from **Analysis**.
+- If the **Analysis** page shows an error after **Open in opnca-r**, read it, then check opnca-r's health on **Home**.
+
+## A save or replay does not go through
+
+- If the **Analysis** page says the save failed, the run is **Failed**. Select **New run from this** to try again with the same choices.
+- If the page says the run "did not replay to the same results", it lists the differences. Select **Replay again**. If it still does not match, the run cannot be completed or published. Make a new run from cards 5 and 6, and make a support bundle so someone can look into it.
+
+## A report render fails
+
+1. Read the message on the **4. Report (DOCX)** card, or the failed job on the **Jobs** page.
+2. Select **Check** and fix what it lists. Most render problems show up there first.
+3. If you edited the report, look at your last change. Use **Source** in the editor to see the full text.
+4. Make sure the study folder is not inside a hidden folder (one whose name starts with a dot). Reports cannot be built there.
+5. If the editor has unsaved changes, save or discard them. **Check** and **Render** wait until you do.
+
+A failed render keeps nothing, so you can render again as often as you need. Deck builds work the same way: read the message on the **5. Deck (PPTX)** card and select **Check** first.
+
+## A deck build fails with "IndexError"
+
+A deck built from a publication with tables stops with "IndexError: tuple index out of range". This is a known issue in this version of the deck tool: it can't put a table with an empty cell on a slide. See [Known issue: tables with empty cells](decks.md#known-issue-tables-with-empty-cells).
+
+## The app closed by itself
+
+The app closes itself after a time with no open page, to free the computer's memory. It never closes while a job is running or an editor has unsaved changes.
+
+To change the time, go to **Settings** and choose **Close automatically when unused for**: from 5 minutes to 2 hours, or **Never**. The default is 30 minutes.
+
+When the app has stopped, the page says "opncafyr has stopped. You can close this tab." Start the app again from its icon. Your work is in the study folder, so nothing is lost.
+
+## Getting help
+
+The person who supports opncafyr at your site may ask for a support bundle. It is a zip file that helps them find out why something went wrong.
+
+### Create a support bundle
+
+1. Go to **Settings**.
+2. Under **Support**, select **Create support bundle…**.
+3. A window shows every part of the bundle. Open a part to read it. Nothing is saved yet.
+4. Select **Save on this computer**, or **Cancel**.
+5. The page says where the bundle was saved: in the app's `logs/support` folder. It also lists your recent bundles; select one to download a copy, for example to attach it to an email.
+
+![The support bundle window, listing each part of the bundle before it is saved](images/11-support.png)
+
+### What it holds, and what it never holds
+
+A support bundle holds:
+
+- the versions of the app and its tools, and your operating system;
+- each tool's health;
+- the states and short messages of recent jobs in the open study folder;
+- the end of the app's logs and of the last install log.
+
+It never holds your data, your results or your file names. Subject identifiers, numbers and your user name are masked in every message.
+
+The bundle stays on your computer. It is never sent anywhere. Send it yourself if you choose to.
+
+### From the command line
+
+If the app will not start, you can make a support bundle from Terminal or PowerShell. The app asks before it saves anything.
+
+On macOS, in Terminal:
+
+```sh
+"$HOME/Library/Application Support/opncafyr/current/launcher/bin/python" -m opncafyr doctor --bundle
+```
+
+On Windows, in PowerShell:
+
+```powershell
+$r="$env:LOCALAPPDATA\opncafyr"; & "$r\versions\$(Get-Content $r\current)\launcher\Scripts\python.exe" -m opncafyr doctor --bundle
+```
+
+To see everything first without saving, use `doctor --preview` in place of `doctor --bundle`. To include a study folder's recent jobs, add `--workspace` and the folder, for example `--workspace "$HOME/Documents/TA-walkthrough"`.
+
+### If the install failed
+
+A failed install writes its own bundle, `logs/support/install-failure-<time>.zip`, in the app folder (`~/Library/Application Support/opncafyr` on macOS, `%LOCALAPPDATA%\opncafyr` on Windows). It holds the install logs and step results, with your home folder, user name and any passwords or tokens masked. Send it to the person who supports opncafyr.
+
+### Try a repair
+
+Many install problems are fixed by a repair. See [Checking and repairing an install](install.md#checking-and-repairing-an-install).

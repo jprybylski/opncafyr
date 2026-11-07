@@ -62,6 +62,7 @@
         <li><a class="nav-link" href="#/data" data-view="data" title="Data"><svg class="icon" aria-hidden="true"><use href="#i-table"/></svg><span class="nav-label">Data</span></a></li>
         <li><a class="nav-link" href="#/jobs" data-view="jobs" title="Jobs"><svg class="icon" aria-hidden="true"><use href="#i-jobs"/></svg><span class="nav-label">Jobs</span><span class="count" id="nav-jobs-count" hidden></span></a></li>
         <li><a class="nav-link" href="#/settings" data-view="settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-label">Settings</span></a></li>
+        <li><a class="nav-link" href="#/guide" data-view="guide" title="Guide"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span class="nav-label">Guide</span></a></li>
       </ul>
       <p class="nav-heading" id="nav-apps-heading" hidden>Apps</p>
       <ul id="nav-apps" aria-labelledby="nav-apps-heading" hidden></ul>
@@ -70,7 +71,7 @@
     <main id="main" class="main" tabindex="-1">
       <!-- Home -->
       <div class="view" id="view-home" data-title="Home">
-        <div class="page-head"><h1 id="home-heading" tabindex="-1">Home</h1></div>
+        <div class="page-head"><h1 id="home-heading" tabindex="-1">Home</h1><p>New here? <a href="#/guide">Read the guide</a>.</p></div>
 
         <section id="workspace" class="card" aria-labelledby="ws-heading">
           <div class="study">
@@ -215,6 +216,17 @@
             <div class="card-head"><h2 id="files-editor-heading">Choose a file</h2><span class="aside" id="files-dirty"></span></div>
             <div id="files-editor-body" class="card-body"></div>
           </section>
+        </div>
+      </div>
+
+      <!-- User guide (#40): docs/user-guide/, shipped with the app -->
+      <div class="view" id="view-guide" data-title="Guide" hidden>
+        <div class="page-head"><h1 id="guide-heading" tabindex="-1">Guide</h1></div>
+        <div class="guide">
+          <nav class="card guide-nav" aria-label="Guide chapters">
+            <ol id="guide-chapters" class="guide-chapters"></ol>
+          </nav>
+          <article id="guide-article" class="card guide-article" aria-labelledby="guide-heading"></article>
         </div>
       </div>
 

@@ -150,6 +150,9 @@ scheduled first.
   redacted support bundle locally after a preview
   ([architecture.md](architecture.md#support-bundle-38)). A test runs the two-analyte
   fixture and checks that none of its subject IDs or concentrations reach the bundle.
+- #40 is done (2026-11-07): [user-guide/](user-guide/index.md), shown inside the app
+  under **Guide**, with a two-analyte walkthrough and screenshots from the fixture flow.
+  opnca-r's `analysis.R` research-use line is opnca-r#53.
 
 ## Risks
 

@@ -3,6 +3,7 @@
 import { initArtifacts } from "./artifacts.js";
 import { initDatasets } from "./datasets.js";
 import { initEditor } from "./editor.js";
+import { initGuide } from "./guide.js";
 import { initJobs } from "./jobs.js";
 import { initLifecycle } from "./lifecycle.js";
 import { initRouter } from "./router.js";
@@ -17,6 +18,7 @@ initRouter();
 initTheme();
 initToolView();
 initEditor();
+initGuide();
 initWorkspace();
 initTools();
 initArtifacts();

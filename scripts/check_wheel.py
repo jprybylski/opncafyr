@@ -23,6 +23,7 @@ REQUIRED = (
     "opncafyr/adapters/deckifyr/descriptor.yaml",
     "opncafyr/adapters/quartifyr/descriptor.yaml",
     "opncafyr/web/static/index.html",
+    "opncafyr/web/guide/index.md",  # the user guide (#40)
 )
 
 

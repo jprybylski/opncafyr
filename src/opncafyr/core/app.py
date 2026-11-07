@@ -37,6 +37,7 @@ from opncafyr import __version__
 from opncafyr.core.bootstrap import OPEN_PATH, consume_open_token, tokens_dir
 from opncafyr.core.datasets import DatasetService
 from opncafyr.core.datasets_api import mount_datasets_api
+from opncafyr.core.guide import guide_root
 from opncafyr.core.health import ToolHealth
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
 from opncafyr.core.lifecycle import (
@@ -468,5 +469,8 @@ def create_app(
                 HomeAssets(packages=[pack.static]),
                 name=f"workflow-{pack.id}",
             )
+    guide = guide_root()
+    if guide is not None:  # the user guide (#40); before /static, which would shadow it
+        app.mount("/static/guide", HomeAssets(directory=guide), name="guide")
     app.mount("/static", HomeAssets(packages=[("opncafyr.web", "static")]), name="static")
     return app

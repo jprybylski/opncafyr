@@ -7,6 +7,21 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A user guide for scientists (#40), in [docs/user-guide/](docs/user-guide/index.md) and
+  inside the app: **Guide** in the side navigation, and "Read the guide" on Home.
+  - Chapters cover install, the study folder, data and cleaning, mapping and checks,
+    analyte runs, publishing, reports, decks, troubleshooting (with the support bundle) and
+    uninstall. A two-analyte walkthrough goes from an empty folder to a report and a deck
+    with a practice file that ships with the guide.
+  - It opens with the same research-use notice as the app's banner.
+  - The app ships the guide (the wheel carries it as `opncafyr/web/guide/`) and shows it
+    with a small in-house Markdown reader, offline, building the page from text only.
+  - `scripts/guide_screenshots.py` regenerates the screenshots from the fixture flow;
+    `--serve` runs the app with an empty study folder to follow the guide by hand.
+- The generated cleaning script (`clean.R`) states "Research use only" in its header
+  (#40). Its text changed, so a recipe's cleaned result made before this change counts as
+  stale: apply the recipe again. Completed runs are not affected. opnca-r's saved
+  `analysis.R` doesn't say it yet ([opnca-r#53](https://github.com/mantra-opnca/opnca-r/issues/53)).
 - A redacted support bundle (#38): **Settings → Support → Create support bundle…** or
   `opncafyr doctor --bundle` (`--preview` prints it without saving).
   - It holds versions, the install's components, smoke results and hash check, tool

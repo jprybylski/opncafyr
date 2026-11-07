@@ -1,5 +1,7 @@
 """The home page in a real browser (#49, #50): rendering, origin, keyboard, axe, theme."""
 
+from pathlib import Path
+
 import pytest
 from home_seed import BROKEN_RUN_ID, JOB_LABEL, RUN_ID
 
@@ -147,6 +149,36 @@ def test_support_bundle_is_previewed_then_saved(page, home):
     link.wait_for()
     saved = list((home.app_root / "logs" / "support").glob("support-*.zip"))
     assert [p.name for p in saved] == [link.inner_text()]
+    assert page.errors == []
+
+
+GUIDE = Path(__file__).resolve().parents[2] / "docs" / "user-guide"
+
+
+@pytest.mark.skipif(not (GUIDE / "index.md").is_file(), reason="no guide yet")
+def test_guide_renders_with_the_notice_and_chapters(page):
+    page.get_by_role("link", name="Read the guide").click()
+    page.locator("#guide-article blockquote").wait_for()
+    assert page.locator("#guide-heading").inner_text() == "opncafyr user guide"
+    notice = page.locator("#guide-article blockquote").first.inner_text()
+    assert notice.startswith("Research use only.")
+    chapters = page.locator("#guide-chapters a")
+    assert chapters.count() > 5
+    # Follow a chapter link from the contents; the nav marks it.
+    second = chapters.nth(1)
+    name = second.inner_text()
+    second.click()
+    page.locator("#guide-chapters a[aria-current='page']", has_text=name).wait_for()
+    assert page.evaluate("location.hash").startswith("#/guide/")
+    # Every image that loaded has a size (none is broken).
+    page.goto(page.url.split("#")[0] + "#/guide/walkthrough")
+    page.locator("#guide-heading", has_text="walkthrough").or_(
+        page.locator("#guide-heading", has_text="Walkthrough")
+    ).first.wait_for()
+    for img in page.locator("#guide-article img").all():
+        img.scroll_into_view_if_needed()
+        assert page.evaluate("(i) => i.complete && i.naturalWidth > 0", img.element_handle())
+    _axe(page)
     assert page.errors == []
 
 

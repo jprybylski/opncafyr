@@ -255,3 +255,13 @@ def test_compiled_script_has_no_recipe_text_outside_literals():
     assert "pwned" not in code and "system" not in code
     assert "source(" not in script  # the library is inlined, never sourced from a path
     assert script.count("oc_run <- function") == 1
+
+
+def test_compiled_script_carries_the_research_use_notice():
+    # The same words as the app's banner and the user guide (#40).
+    step = {"op": "clean_names", "args": {}}
+    script = compile_recipe(doc(step), source_rel="source-data/two_analyte.csv", delimiter=",")
+    assert script.splitlines()[1] == (
+        "# Research use only. This script has not been validated for clinical or "
+        "regulatory decisions."
+    )

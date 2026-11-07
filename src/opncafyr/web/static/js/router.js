@@ -1,4 +1,5 @@
-// Views in one page (#50): "#/" Home, "#/data", "#/jobs", "#/settings", "#/apps/<id>" for a
+// Views in one page (#50): "#/" Home, "#/data", "#/jobs", "#/settings", "#/guide[/<page>
+// [/<heading>]]" for the user guide (#40), "#/apps/<id>" for a
 // tool's web app embedded in the launcher, and "#/tools/<id>/files[?path=<file>]" for a
 // tool's project files (#52). The path names a file only, never its content. Workflow
 // packs add their own views at start-up (workflows.js, registerView). Other hashes, such as the skip link's "#main", leave the
@@ -31,6 +32,8 @@ function routeFromHash() {
     try { id = decodeURIComponent(id); } catch (e) { /* keep the raw text */ }
     if (id) return { name: "tool", param: id };
   }
+  const guide = /^guide(?:\/([a-z0-9-]+))?(?:\/([\w-]+))?\/?$/.exec(path);
+  if (guide) return { name: "guide", param: guide[1] || "index", file: guide[2] };
   const files = /^tools\/([a-z][a-z0-9_-]*)\/files(?:\?(.*))?$/.exec(path);
   if (files) {
     const query = new URLSearchParams(files[2] || "");
