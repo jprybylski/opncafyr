@@ -160,11 +160,36 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
     for pkg in CELLAR:
         if pkg not in pins.get("packages", {}):
             errors.append(f"[packages.{pkg}] is missing")
+    errors += _check_source_build(pins, supported)
 
     errors += _check_r_packages(pins, supported, root, assets)
     errors += _check_python_envs(pins, root)
     errors += _check_wheels(pins, supported, root, assets)
     return errors, assets
+
+
+def _check_source_build(pins: dict[str, Any], supported: list[str]) -> list[str]:
+    """What ``repair --build-from-source`` needs (#34) is pinned for every platform."""
+    errors = []
+    opnca = pins.get("packages", {}).get("opnca-r", {})
+    files = opnca.get("assets", {})
+    if opnca.get("manifest_sha256") != files.get("manifest.json"):
+        errors.append("[packages.opnca-r] manifest_sha256 differs from assets.manifest.json")
+    vendored = [f for f in files if f.endswith("-vendored.tar.gz")]
+    if len(vendored) != 1:
+        errors.append(f"[packages.opnca-r] needs one -vendored.tar.gz, has {len(vendored)}")
+    rust = pins.get("rust", {})
+    if not rust.get("toolchain"):
+        errors.append("[rust] has no toolchain version")
+    standalone = rust.get("standalone", {}).get("assets", {})
+    for platform in supported:
+        if platform not in standalone:
+            errors.append(f"[rust.standalone] has no archive for {platform}")
+    rtools = pins.get("rtools", {})
+    for platform in supported:
+        if platform.startswith("windows") and platform not in rtools.get("assets", {}):
+            errors.append(f"[rtools] has no installer for {platform}")
+    return errors
 
 
 WHEELS = "runtime/python/wheels.toml"

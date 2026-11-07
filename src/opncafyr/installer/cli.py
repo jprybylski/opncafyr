@@ -2,11 +2,11 @@
 
     install    [--from-bundle DIR|ZIP] [--assets DIR ...] [--with-libreoffice] [--dry-run]
                [--cacert FILE] [--proxy URL]
-    repair     same options as install
+    repair     same options as install, plus [--build-from-source]
     uninstall  [--force] [--dry-run]
     status
     bundle     --out DIR [--platform P] [--archive] [--mirror TOML] [--assets DIR ...]
-               [--with-libreoffice]
+               [--with-libreoffice] [--with-source-build]
 
 Exit status: 0 done (or nothing to do), 1 failed, 2 bad arguments.
 """
@@ -71,7 +71,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="mode", required=True)
     _source_args(sub.add_parser("install", help="install or update opncafyr"))
-    _source_args(sub.add_parser("repair", help="check the installed opncafyr and fix it"))
+    repair = sub.add_parser("repair", help="check the installed opncafyr and fix it")
+    _source_args(repair)
+    repair.add_argument(
+        "--build-from-source",
+        action="store_true",
+        help="install afresh, building opnca-r from its vendored source instead of the "
+        "prebuilt binary (slow; on macOS it needs Apple's Command Line Tools)",
+    )
     un = sub.add_parser("uninstall", help="remove opncafyr (never your workspaces)")
     un.add_argument("--force", action="store_true", help="even if opncafyr is running")
     un.add_argument("--dry-run", action="store_true", help="list what would be removed")
@@ -90,6 +97,11 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--mirror", type=Path, metavar="TOML", help="fetch from internal mirrors")
     b.add_argument("--assets", type=Path, action="append", default=[], metavar="DIR")
     b.add_argument("--with-libreoffice", action="store_true", help="include LibreOffice")
+    b.add_argument(
+        "--with-source-build",
+        action="store_true",
+        help="include what `repair --build-from-source` needs (vendored opnca-r, Rust, Rtools)",
+    )
     b.add_argument("--cacert", type=Path)
     b.add_argument("--proxy")
     return parser
@@ -109,6 +121,7 @@ def _bundle(args: argparse.Namespace, payload: payload_mod.Payload) -> int:
         args.out.resolve(),
         say=_say,
         with_libreoffice=args.with_libreoffice,
+        with_source_build=args.with_source_build,
         assets_dirs=list(args.assets),
         rewrite=rewrite,
         cacert=args.cacert,
@@ -161,6 +174,7 @@ def main(argv: list[str] | None = None, *, payload_dir: Path | None = None) -> i
             proxy=args.proxy,
             skip_disk_check=args.skip_disk_check,
             reinstall=args.reinstall,
+            build_from_source=getattr(args, "build_from_source", False),
         )
         return Installer(layout, payload, opts, _say).run()
     except (InstallError, InstallerBusy) as exc:

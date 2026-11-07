@@ -55,3 +55,28 @@ opnca-r 0.2.7 (pinned in `runtime/pins.toml`) now provides:
   vendored tarball hashed in `runtime/pins.toml`.
 - The exception path has to be tested too (the vendored build in the container and in
   CI), so it never goes stale.
+
+## Amendment (2026-11-07, #34)
+- **Base R, not renv, installs the binary.** The installer puts the renamed
+  `opnca_<ver>.<ext>` in a local cellar folder and installs it, and the rest of the library,
+  with base R `install.packages()` from local, verified files. `renv::restore()` isn't run:
+  on macOS it needs the Command Line Tools (an administrator install) and it can go online
+  when an index lacks a package (docs/spikes/macos-install.md, finding 3). The owner's
+  requirement is that the install neither relies on nor disturbs the user's global R
+  library; base R meets it (2026-11-07). R runs with `--vanilla`, `R_LIBS` and
+  `R_LIBS_USER` set to the app's library and no site library; a compiler guard makes any
+  compile attempt fail; and a smoke test (`r_library_isolation`) checks R's library paths
+  on every install and repair. The launcher's R children (health probes, deckifyr) get the
+  same variables.
+- **The exception path is `repair --build-from-source`.** It always stages a new install
+  and builds the vendored tarball offline with the pinned standalone Rust toolchain
+  (components merged in Python, no rustup or `install.sh`) and, on Windows, a per-user
+  Rtools45, all inside a space-free build folder that is removed afterwards. macOS needs
+  the Command Line Tools, so preflight says so. CI runs it on macOS (offline, from a bundle)
+  and Windows as a standard user, with a decoy package in the user's R library that must
+  never load.
+- **Bundles carry the vendored tarball on request.** `bundle --with-source-build` adds the
+  tarball, Rust and Rtools; a default bundle carries only the binary, which corrects the
+  Offline line above.
+- "Still to confirm: #34, a renv cellar restore" no longer applies.
+

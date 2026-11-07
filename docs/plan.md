@@ -153,6 +153,10 @@ scheduled first.
 - #40 is done (2026-11-07): [user-guide/](user-guide/index.md), shown inside the app
   under **Guide**, with a two-analyte walkthrough and screenshots from the fixture flow.
   opnca-r's `analysis.R` research-use line is opnca-r#53.
+- #34 is done (2026-11-07): opnca-r installs from its verified binary with base R, never
+  touching the user's R library (ADR 0004 amendment), and `repair --build-from-source`
+  builds the vendored tarball. CI's `source-build-*` jobs prove both on macOS (offline) and
+  Windows as a standard user. #37's matrix can build on them.
 
 ## Risks
 

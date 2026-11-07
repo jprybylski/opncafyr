@@ -164,7 +164,14 @@ def test_deckifyr_argv(tmp_path, runtime):
     ):
         assert flag in args
     assert not any(a.startswith(("--quarto-bin", "--allowed-host")) for a in args)
-    assert spec.env == {"DECKIFYR_API_TOKEN": ctx.token}
+    lib = str(ctx.runtime.r_library)
+    # R code deckifyr runs sees the app's R library only, never the user's (#34).
+    assert spec.env == {
+        "DECKIFYR_API_TOKEN": ctx.token,
+        "R_LIBS": lib,
+        "R_LIBS_USER": lib,
+        "R_LIBS_SITE": "",
+    }
     assert spec.auth_headers == {"X-Deckifyr-Api-Token": ctx.token}
 
 

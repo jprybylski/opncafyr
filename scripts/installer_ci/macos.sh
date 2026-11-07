@@ -13,7 +13,8 @@
 # #36 legs: build the bundle twice from independent downloads and compare the manifests
 # -> install from the bundle with outbound network denied (sandbox-exec) and no denial in
 # the sandbox log -> the Gate 2 flow on that install, still denied (#51) -> a tampered
-# bundle is refused and the old install still runs -> an
+# bundle (a Quarto file, then the opnca-r binary, #34) is refused and the old install
+# still runs -> an
 # update to a newer payload killed mid-way leaves the old install runnable -> the offline
 # update completes -> the installation report is there -> uninstall.
 set -euo pipefail
@@ -233,6 +234,19 @@ rc=${PIPESTATUS[0]}
 set -e
 [ "$rc" -eq 1 ] || fail "a tampered bundle was not refused (exit $rc)"
 grep -q "in: quarto" "$RESULTS/8-tampered.log" || fail "the error does not name the quarto component"
+[ "$(active)" = "$before" ] || fail "the active install changed"
+# The same with opnca-r's binary as the victim (#34): its hash mismatch keeps the old install.
+T2="$WORK/tampered-opnca"
+sudo rm -rf "$T2"; sudo cp -R "$WORK/bundle/$NAME" "$T2"; sudo chown -R "$U" "$T2"
+victim="$(sudo sh -c 'ls "$1"/assets/opnca-r/opnca_*_R4.6_* | head -1' _ "$T2")"
+printf 'x' | sudo -u "$U" tee -a "$victim" > /dev/null
+sudo rm -rf "$ROOT/cache/downloads"
+set +e
+offline_user bash "$WORK/payload-newer/install.sh" install --from-bundle "$T2" 2>&1 | tee "$RESULTS/8b-tampered-opnca.log"
+rc=${PIPESTATUS[0]}
+set -e
+[ "$rc" -eq 1 ] || fail "a tampered opnca-r binary was not refused (exit $rc)"
+grep -q "in: opnca-r" "$RESULTS/8b-tampered-opnca.log" || fail "the error does not name opnca-r"
 [ "$(active)" = "$before" ] || fail "the active install changed"
 health 47804
 endleg

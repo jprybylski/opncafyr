@@ -23,6 +23,8 @@ on:
       - "installer/**"
       - "runtime/**"
       - "src/opncafyr/installer/**"
+      - "src/opncafyr/schemas/install-v1.schema.json"
+      - "src/opncafyr/schemas/bundle-manifest-v1.schema.json"
       - "src/opncafyr/paths.py"
       - "src/opncafyr/core/runtime.py"
       - "src/opncafyr/cli.py"
@@ -115,3 +117,64 @@ jobs:
           path: bundle-artifact/*.zip
           compression-level: 0
           retention-days: 7
+
+  # #34: `repair --build-from-source` as a standard user: opnca-r is built from its
+  # vendored tarball with the pinned Rust toolchain (and Rtools on Windows), with a decoy
+  # `opnca` in the user's own R library that must never load, and the user's R library,
+  # uninstall entries and PATH unchanged. macOS builds offline from a bundle with the
+  # network denied; GitHub's macOS runners have Xcode for the compiler.
+  source-build-macos:
+    name: source build (macos-15)
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build the installer payload
+        run: uv run python scripts/make_installer.py --out dist
+      - name: Source build legs (as a standard user)
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
+          bash scripts/installer_ci/macos_source.sh "dist/opncafyr-installer-$(cat VERSION)" installer-ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-build-macos-15
+          path: installer-ci/
+          if-no-files-found: ignore
+
+  source-build-windows:
+    name: source build (windows-2025)
+    runs-on: windows-2025
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build the installer payload
+        shell: bash
+        run: uv run python scripts/make_installer.py --out dist
+      - name: Fetch the private opnca-r files for --assets (binary and vendored source)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
+          v=$(python -c "import tomllib; print(tomllib.load(open('runtime/pins.toml','rb'))['packages']['opnca-r']['version'])")
+          gh release download "v$v" -R mantra-opnca/opnca-r -D ci-assets \
+            -p manifest.json -p "opnca_${v}_R4.6_windows-x86_64.zip" -p "opnca_${v}-vendored.tar.gz"
+      - name: Source build legs (as a standard user)
+        shell: powershell
+        run: |
+          $v = (Get-Content VERSION).Trim()
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts\installer_ci\windows.ps1 `
+            -Payload "dist\opncafyr-installer-$v" -Newer "dist\opncafyr-installer-$v" `
+            -Assets ci-assets -Results installer-ci -SourceBuild
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-build-windows-2025
+          path: installer-ci/
+          if-no-files-found: ignore

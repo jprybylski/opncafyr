@@ -211,7 +211,8 @@ def test_probe_commands_are_built_by_core(tmp_path):
     (r_tool,) = _tools(r=r_doc).values()
     argv, env = probe_command(r_tool, runtime)
     assert argv == [str(PY), "--vanilla", "-e", "library(opnca)"]
-    assert env == {"R_LIBS": str(tmp_path)}
+    # The app library only: never the user's own R library or a site library (#34).
+    assert env == {"R_LIBS": str(tmp_path), "R_LIBS_USER": str(tmp_path), "R_LIBS_SITE": ""}
     with pytest.raises(RuntimeUnavailable):
         probe_command(r_tool, Runtime(executables={"rscript": PY}))
 

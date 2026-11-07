@@ -92,7 +92,14 @@ class Pins:
             raise PinsError(f"wheels.toml has no [{env}.{platform}] list") from None
 
     # --- assets --------------------------------------------------------------------
-    def assets(self, platform: str, *, libreoffice: bool = False) -> list[Asset]:
+    def assets(
+        self, platform: str, *, libreoffice: bool = False, source_build: bool = False
+    ) -> list[Asset]:
+        """Every pinned file an install of ``platform`` needs.
+
+        ``source_build`` adds what ``repair --build-from-source`` needs (#34): opnca-r's
+        vendored source tarball, the standalone Rust toolchain and, on Windows, Rtools.
+        """
         if platform not in SUPPORTED:
             raise PinsError(f"Unsupported platform {platform}")
         out = [self._runtime(name, platform) for name in ("uv", "python", "r", "quarto")]
@@ -102,6 +109,8 @@ class Pins:
         out += self._wheels(platform)
         if libreoffice:
             out.append(self._runtime("libreoffice", platform, section=("optional",)))
+        if source_build:
+            out += self._source_build(platform)
         seen: dict[str, Asset] = {}
         for asset in out:
             other = seen.get(asset.path)
@@ -145,6 +154,40 @@ class Pins:
             )
             for f in ("manifest.json", binary[0])
         ]
+
+    def _source_build(self, platform: str) -> list[Asset]:
+        pin = self.pins["packages"][OPNCA]
+        vendored = [f for f in pin["assets"] if f.endswith("-vendored.tar.gz")]
+        if len(vendored) != 1:
+            raise PinsError(f"Expected one vendored opnca-r tarball, found {vendored}")
+        out = [
+            Asset(
+                OPNCA,
+                OPNCA,
+                vendored[0],
+                pin["release_url"] + vendored[0],
+                pin["assets"][vendored[0]],
+                str(pin["version"]),
+                str(pin.get("license", "")),
+                private=bool(pin.get("private", False)),
+            )
+        ]
+        rust = self.pins["rust"]
+        entry = rust["standalone"]["assets"][platform]
+        out.append(
+            Asset(
+                "rust",
+                "rust",
+                _filename(entry["url"]),
+                entry["url"],
+                entry["sha256"],
+                str(rust["toolchain"]),
+                str(rust["standalone"].get("license", "")),
+            )
+        )
+        if platform in self.pins["rtools"].get("platforms", []):
+            out.append(self._runtime("rtools", platform))
+        return out
 
     def _cellar(self) -> list[Asset]:
         out = []

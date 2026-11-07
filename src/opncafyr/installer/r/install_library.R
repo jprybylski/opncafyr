@@ -2,6 +2,8 @@
 #
 #   Rscript --vanilla install_library.R <lib> <repo> <contrib> <cellar> <lock.tsv> <opnca file>
 #
+# <opnca file> is "-" for `repair --build-from-source` (#34): opnca-r is then built after
+# this script, so it is skipped here and left out of the version check.
 # <repo>/<contrib> holds the pinned binaries (runtime/r/binaries.toml), <cellar> the opnca-r
 # binary (named opnca_<version>.<ext>) and the quartifyr, reportifyr and pyro source
 # tarballs, <lock.tsv> the name, version and source of every package in runtime/r/renv.lock.
@@ -15,7 +17,7 @@ repo <- normalizePath(args[[2]], winslash = "/", mustWork = TRUE)
 contrib <- args[[3]]
 cellar <- normalizePath(args[[4]], winslash = "/", mustWork = TRUE)
 lock <- utils::read.delim(args[[5]], colClasses = "character")
-opnca_file <- file.path(cellar, args[[6]])
+opnca_file <- if (identical(args[[6]], "-")) NA_character_ else file.path(cellar, args[[6]])
 
 .libPaths(lib)
 repo_url <- paste0("file:///", sub("^/", "", repo))
@@ -38,8 +40,10 @@ cat(sprintf("installing %d binary packages\n", length(from_repo)))
 utils::install.packages(from_repo, lib = lib, repos = repo_url, type = "binary",
                         dependencies = FALSE, quiet = TRUE)
 
-cat("installing opnca-r from its verified binary\n")
-utils::install.packages(opnca_file, lib = lib, repos = NULL, type = "binary", quiet = TRUE)
+if (!is.na(opnca_file)) {
+  cat("installing opnca-r from its verified binary\n")
+  utils::install.packages(opnca_file, lib = lib, repos = NULL, type = "binary", quiet = TRUE)
+}
 
 # The pure-R tool packages, each after the cellar packages it depends on.
 tarballs <- list.files(cellar, pattern = "\\.tar\\.gz$", full.names = TRUE)
@@ -67,6 +71,7 @@ while (length(pending)) {
 
 installed <- utils::installed.packages(lib.loc = lib)[, "Version"]
 want <- stats::setNames(lock$version, lock$name)
+if (is.na(opnca_file)) want <- want[names(want) != "opnca"]
 bad <- names(want)[is.na(installed[names(want)]) | installed[names(want)] != want]
 cat(sprintf("locked: %d, installed: %d, missing or wrong version: %d (%.0f s)\n",
             length(want), length(installed), length(bad),

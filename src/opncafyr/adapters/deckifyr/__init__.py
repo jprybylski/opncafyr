@@ -85,7 +85,7 @@ class DeckifyrWebApp:
                 path_dirs.append(exe.parent)
         return LaunchSpec(
             argv=argv,
-            env={API_TOKEN_ENV: ctx.token},
+            env={API_TOKEN_ENV: ctx.token, **r_library_env(ctx.runtime)},
             path_dirs=path_dirs,
             auth_headers={API_TOKEN_HEADER: ctx.token},
         )
@@ -132,6 +132,15 @@ RESULT_VERSION = 1
 OFFLINE_ENV = {"DECKIFYR_OFFLINE": "1", "UV_OFFLINE": "1", "UV_NO_INDEX": "1"}
 
 
+def r_library_env(runtime: Runtime) -> dict[str, str]:
+    """R code that deckifyr runs (Quarto chunks, flextable ``.rds``) sees the app's R
+    library only, never the user's own (#34)."""
+    if runtime.r_library is None:
+        return {}
+    library = str(runtime.r_library)
+    return {"R_LIBS": library, "R_LIBS_USER": library, "R_LIBS_SITE": ""}
+
+
 def cli_command(runtime: Runtime, command: str, *args: str, trusted: bool = True) -> CommandSpec:
     """``python -I -m deckifyr --json <command> <args>`` with the pinned binaries."""
     python = runtime.executable("deckifyr_python")
@@ -144,7 +153,8 @@ def cli_command(runtime: Runtime, command: str, *args: str, trusted: bool = True
                 exe = runtime.executable(name)
                 argv.append(f"{flag}={exe}")
                 path_dirs.append(exe.parent)
-    return CommandSpec(argv, dict(OFFLINE_ENV), list(dict.fromkeys(path_dirs)))
+    env = {**OFFLINE_ENV, **r_library_env(runtime)}
+    return CommandSpec(argv, env, list(dict.fromkeys(path_dirs)))
 
 
 def init_command(runtime: Runtime, folder: Path) -> CommandSpec:

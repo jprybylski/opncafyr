@@ -71,7 +71,9 @@ def probe_command(tool: ToolDescriptor, runtime: Runtime) -> tuple[list[str], di
         return [exe, "-I", "-c", f"import {probe.target}"], {}
     if probe.kind == "r_package":
         library = runtime.require_r_library()
-        return [exe, "--vanilla", "-e", f"library({probe.target})"], {"R_LIBS": str(library)}
+        # The app's library only: the user's own R library is never searched (#34).
+        env = {"R_LIBS": str(library), "R_LIBS_USER": str(library), "R_LIBS_SITE": ""}
+        return [exe, "--vanilla", "-e", f"library({probe.target})"], env
     if probe.kind == "version_flag":
         return [exe, "--version"], {}
     raise ValueError(f"Unknown probe kind {probe.kind!r}.")

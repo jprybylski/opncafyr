@@ -125,6 +125,7 @@ def build(
     *,
     say: Say,
     with_libreoffice: bool = False,
+    with_source_build: bool = False,
     assets_dirs: list[Path] | None = None,
     rewrite: Callable[[str], str] | None = None,
     cacert: Path | None = None,
@@ -136,7 +137,7 @@ def build(
     if platform not in SUPPORTED:
         raise InstallError(f"Unknown platform {platform}; use one of {', '.join(SUPPORTED)}")
     pins = Pins.load(payload.runtime)
-    assets = pins.assets(platform, libreoffice=with_libreoffice)
+    assets = pins.assets(platform, libreoffice=with_libreoffice, source_build=with_source_build)
     cache = Cache(cache_dir or Layout.default().downloads)
     local = [LocalSource(d, cache) for d in (assets_dirs or [])]
     out.mkdir(parents=True, exist_ok=True)
@@ -182,7 +183,7 @@ def build(
         "opncafyr_version": payload.version,
         "platform": platform,
         "payload_digest": payload.digest,
-        "options": {"libreoffice": with_libreoffice},
+        "options": {"libreoffice": with_libreoffice, "source_build": with_source_build},
         "trust": (
             "The installer checks every file against the pins inside its own payload, "
             "never against this list."

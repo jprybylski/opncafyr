@@ -34,6 +34,7 @@ class Context:
     offline: bool
     say: Callable[[str], None]
     with_libreoffice: bool = False
+    build_from_source: bool = False  # #34: opnca-r from its vendored source
     executables: dict[str, Path] = field(default_factory=dict)
     components: dict[str, dict[str, Any]] = field(default_factory=dict)
     paths: dict[str, Path] = field(default_factory=dict)

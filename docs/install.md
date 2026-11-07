@@ -122,11 +122,62 @@ next run removes it.
 A second `install` of the same installer is a no-op: it only recreates a missing icon.
 `repair` runs the smoke tests against the active install. If anything is damaged, it
 installs it again into a new id from the download cache, or from the same `--assets` or
-`--from-bundle` source. `uninstall` refuses while opncafyr is running (`--force` to
+`--from-bundle` source. `repair --build-from-source` is the exception path below.
+`uninstall` refuses while opncafyr is running (`--force` to
 override), and it never removes a folder that the recent-workspaces list names. On
 Windows, when `install.bat uninstall` runs from the installed copy
 (`%LOCALAPPDATA%\opncafyr\installer`), that folder goes a few seconds after the command
 finishes, because cmd is still reading `install.bat` until then.
+
+## The user's own R stays untouched (#34)
+
+opncafyr's R never reads or writes the user's R libraries (`~/Library/R/…` on macOS,
+`%LOCALAPPDATA%\R\win-library\…` on Windows) or a site library:
+- every R the installer and the launcher start runs with `--vanilla`, and with `R_LIBS`
+  and `R_LIBS_USER` set to the app's library `versions/<id>/rlib` and no site library;
+- the default install compiles nothing: R gets a `R_MAKEVARS_USER` file whose compilers
+  don't exist, so a package that tried to compile would fail rather than use a system
+  compiler;
+- the `r_library_isolation` smoke test checks that R's library paths are the app's library
+  and R's own, and nothing else. It runs on every install and repair.
+
+It installs opnca-r's prebuilt binary with base R `install.packages()` from local, verified
+files (ADR 0004, amended 2026-11-07), not with `renv::restore()`, which on macOS needs the
+Command Line Tools and can go online.
+
+## Building opnca-r from source (repair only, #34)
+
+When opnca-r's binary can't be used, `repair --build-from-source` installs afresh and builds
+opnca-r from its vendored source tarball instead:
+
+| | macOS | Windows |
+|---|---|---|
+| Command | `./install.sh repair --build-from-source` | `install.bat repair --build-from-source` |
+| Also needs | Apple's Command Line Tools (installing them needs an administrator: `xcode-select --install`) | nothing else: Rtools45 is installed for the build only |
+| Time | about 5–10 minutes more than an install | about 15–25 minutes more |
+
+- It downloads, or takes from `--assets`/`--from-bundle`, three more pinned files:
+  `opnca_<ver>-vendored.tar.gz` (which carries every Rust crate), the standalone Rust
+  toolchain and, on Windows, the Rtools45 installer. A bundle carries them when it is built
+  with `bundle --with-source-build`.
+- The build runs offline (`CARGO_NET_OFFLINE`), in a temporary folder without spaces
+  (on Windows `<app root>\sb`, short because Rtools' deepest files are close to Windows'
+  260-character path limit).
+  Rust and Rtools are unpacked there and removed afterwards, with no `~/.cargo` or
+  `~/.rustup`. Rtools' uninstall entry is removed again.
+- It always stages a new install. The previous one stays active until the build and the
+  smoke tests pass, so a failed build changes nothing.
+- The record says `"build_from_source": true`, and lists the vendored tarball and the Rust
+  (and Rtools) files used. A later `install` of the same version keeps the source build; an
+  update installs the new version's binary.
+- On macOS, preflight stops with a clear message when the Command Line Tools are missing.
+  On Windows, the build folder must have no space in its path: when the user name has one,
+  the installer uses Windows' short (8.3) name for it, and stops with a message if the
+  drive has none.
+
+CI proves it on both platforms, as a standard user, with a decoy `opnca` planted in the
+user's R library that must never load (`Installer` workflow, `source-build-*` jobs). The
+macOS job builds from a bundle with the network blocked.
 
 ## Offline installation: for IT administrators (#36)
 
@@ -153,6 +204,8 @@ install.bat bundle --platform macos-arm64 --out bundles --archive --assets <fold
 - `--platform`: `windows-x86_64`, `macos-arm64` or `macos-x86_64` (default: this machine).
 - `--archive` also writes `opncafyr-bundle-<version>-<platform>.zip`.
 - `--with-libreoffice` adds LibreOffice (optional, for slide previews; about 300–400 MB).
+- `--with-source-build` adds what `repair --build-from-source` needs: opnca-r's vendored
+  tarball, the Rust toolchain and, for Windows, Rtools45 (about 600 MB more).
 - `--mirror mirror.toml` fetches from internal mirrors instead (below).
 - An installed opncafyr can do the same with `opncafyr bundle …`.
 

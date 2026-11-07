@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -78,7 +79,7 @@ def run_all(
     """``runtime`` is a runtime-v1 document; ``versions`` the pinned versions to expect."""
     exe = {k: Path(v) for k, v in runtime["executables"].items()}
     lib = runtime["r_library"]
-    r_env = {**env, "R_LIBS_USER": lib, "R_LIBS": lib}
+    r_env = {**env, "R_LIBS_USER": lib, "R_LIBS": lib, "R_LIBS_SITE": ""}
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
     results: list[Result] = []
@@ -107,6 +108,15 @@ def run_all(
         if got != versions["opnca-r"]:
             raise RuntimeError(f"opnca is {got}, expected {versions['opnca-r']}")
         return f"library(opnca) {got}, quartifyr, reportifyr"
+
+    def r_isolation() -> str:
+        """R searches the app's library and its own only, never the user's (#34)."""
+        code = (
+            "cat(normalizePath(.libPaths(), winslash = '/'), sep = '\\n'); cat('\\n--\\n'); "
+            "cat(normalizePath(R.home(), winslash = '/'))"
+        )
+        out = _out([exe["rscript"], "--vanilla", "-e", code], r_env)
+        return check_lib_paths(out, lib)
 
     def quarto() -> str:
         got = _out([exe["quarto"], "--version"], env).splitlines()[-1].strip()
@@ -172,6 +182,7 @@ def run_all(
         ("launcher_import", launcher),
         ("tools_import", tools),
         ("r_packages", r_packages),
+        ("r_library_isolation", r_isolation),
         ("quarto_version", quarto),
         ("deckifyr_validate", deckifyr_validate),
         ("opnca_calculation", opnca_calc),
@@ -181,3 +192,27 @@ def run_all(
         _check(name, fn, results, log)
     shutil.rmtree(work, ignore_errors=True)
     return results
+
+
+def check_lib_paths(output: str, lib: str) -> str:
+    """Check ``.libPaths()`` (one per line, then ``--``, then ``R.home()``).
+
+    Every library must be the app's library or inside R's own installation; anything else
+    (the user's ``~/Library/R`` or ``%LOCALAPPDATA%\\R`` library, a site library) fails.
+    """
+    paths_text, sep, home = output.replace("\r\n", "\n").rpartition("\n--\n")
+    if not sep or not home.strip():
+        raise RuntimeError(f"unexpected .libPaths() output: {output[-300:]!r}")
+
+    def norm(p: str) -> str:
+        p = p.strip().replace("\\", "/").rstrip("/")
+        return p.lower() if sys.platform == "win32" else p
+
+    app, r_home = norm(str(Path(lib).resolve())), norm(home)
+    paths = [norm(p) for p in paths_text.splitlines() if p.strip()]
+    foreign = [p for p in paths if p != app and not (p + "/").startswith(r_home + "/")]
+    if foreign or app not in paths:
+        raise RuntimeError(
+            f"R library paths outside the app: {foreign or paths} (app library {app})"
+        )
+    return f"{len(paths)} library paths: the app's and R's own"

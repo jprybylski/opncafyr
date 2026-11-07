@@ -40,7 +40,9 @@ def _file(world: World, component: str, name: str) -> tuple[str, str]:
     return f"{BASE}/{component}/{name}", sha(data)
 
 
-def make_world(tmp: Path, version: str = "0.0.1") -> World:
+def make_world(tmp: Path, version: str = "0.0.1", *, source_build: bool = False) -> World:
+    """``source_build`` also pins what ``repair --build-from-source`` needs (#34): a
+    vendored opnca-r tarball (in the manifest too) and a standalone Rust archive."""
     world = World(
         root=tmp,
         assets=tmp / "assets",
@@ -66,19 +68,21 @@ def make_world(tmp: Path, version: str = "0.0.1") -> World:
     manifest = {"schema_version": 1, "package": "opnca", "version": "0.2.9"}
     binary = "opnca_0.2.9_R4.6_macos-arm64.tgz"
     _, bin_sha = _file(world, "opnca-r", binary)
-    manifest |= {
-        "source_commit": "c0ffee",
-        "assets": [
-            {
-                "asset": binary,
-                "kind": "binary",
-                "platform": "macos",
-                "arch": "arm64",
-                "r_minor": "4.6",
-                "sha256": bin_sha,
-            }
-        ],
-    }
+    entries = [
+        {
+            "asset": binary,
+            "kind": "binary",
+            "platform": "macos",
+            "arch": "arm64",
+            "r_minor": "4.6",
+            "sha256": bin_sha,
+        }
+    ]
+    vendored = "opnca_0.2.9-vendored.tar.gz"
+    if source_build:
+        _, vendored_sha = _file(world, "opnca-r", vendored)
+        entries.append({"asset": vendored, "kind": "source-vendored", "sha256": vendored_sha})
+    manifest |= {"source_commit": "c0ffee", "assets": entries}
     mdata = json.dumps(manifest).encode()
     world.files["assets/opnca-r/manifest.json"] = mdata
     (world.assets / "manifest.json").write_bytes(mdata)
@@ -97,6 +101,13 @@ def make_world(tmp: Path, version: str = "0.0.1") -> World:
         f'"manifest.json" = "{sha(mdata)}"',
         f'"{binary}" = "{bin_sha}"',
     ]
+    if source_build:
+        pins += [f'"{vendored}" = "{vendored_sha}"']
+        rust_url, rust_sha = _file(world, "rust", "rust-1.99.1-aarch64-apple-darwin.tar.xz")
+        pins += ["", "[rust]", 'toolchain = "1.99.1"', "[rust.standalone]", 'license = "MIT"']
+        pins += [f"[rust.standalone.assets.{PLATFORM}]", f'url = "{rust_url}"']
+        pins += [f'sha256 = "{rust_sha}"', "", "[rtools]", 'version = "45"']
+        pins += ['platforms = ["windows-x86_64"]']
     for pkg, ver in (("quartifyr", "0.3.3"), ("reportifyr", "0.4.0"), ("pyro", "0.1.1")):
         name = f"{pkg}_{ver}.tar.gz"
         _, digest = _file(world, pkg, name)

@@ -56,6 +56,8 @@ class Options:
     proxy: str | None = None
     skip_disk_check: bool = False
     reinstall: bool = False  # stage again even if the same payload is installed
+    # repair only (#34): build opnca-r from its vendored source instead of the binary
+    build_from_source: bool = False
 
     @property
     def offline(self) -> bool:
@@ -72,7 +74,11 @@ class Options:
 
 
 def identity(payload: Payload, platform: str, opts: Options) -> str:
-    """What makes two installs the same: the payload, the platform and the options."""
+    """What makes two installs the same: the payload, the platform and the options.
+
+    ``build_from_source`` isn't part of it: a source-built install is the same install, so
+    a later ``install`` of the same version keeps it, and an update returns to binaries.
+    """
     doc = {"payload": payload.digest, "platform": platform, "libreoffice": opts.with_libreoffice}
     return sha256_bytes(json.dumps(doc, sort_keys=True).encode())
 
@@ -172,6 +178,10 @@ class Installer:
                     f"Not enough free disk space: {free >> 20} MB free, "
                     f"{MIN_FREE_BYTES >> 20} MB needed under {root}."
                 )
+        if self.opts.build_from_source and sys.platform == "darwin":
+            from opncafyr.installer.source_build import check_command_line_tools
+
+            check_command_line_tools()
         return platform, os_desc
 
     # --- sources ---------------------------------------------------------------------
@@ -230,7 +240,11 @@ class Installer:
     def run(self) -> int:
         platform, os_desc = self.preflight()
         pins = Pins.load(self.payload.runtime)
-        assets = pins.assets(platform, libreoffice=self.opts.with_libreoffice)
+        assets = pins.assets(
+            platform,
+            libreoffice=self.opts.with_libreoffice,
+            source_build=self.opts.build_from_source,
+        )
         if self.opts.dry_run:
             return self.dry_run(platform, assets)
         with self.layout.install_lock():
@@ -244,12 +258,18 @@ class Installer:
             if self.opts.mode == "repair":
                 if active is None:
                     raise InstallError("Nothing is installed to repair. Run `install` instead.")
-                problems = self.check_active(active, pins)
-                if not problems:
-                    self.refresh(active)
-                    self.say(f"{active} checked: nothing to repair")
-                    return 0
-                self.say(f"{active} is damaged: " + "; ".join(problems))
+                if self.opts.build_from_source:
+                    # Always a new install: the active one stays until the build passes.
+                    self.say(
+                        f"building opnca-r from source into a new install; {active} stays active"
+                    )
+                else:
+                    problems = self.check_active(active, pins)
+                    if not problems:
+                        self.refresh(active)
+                        self.say(f"{active} checked: nothing to repair")
+                        return 0
+                    self.say(f"{active} is damaged: " + "; ".join(problems))
             elif active is not None and not self.opts.reinstall:
                 record = self.layout.record(active) or {}
                 if record.get("identity") == ident and not quick_check(self.layout, active):
@@ -334,6 +354,7 @@ class Installer:
             offline=self.opts.offline,
             say=self.say,
             with_libreoffice=self.opts.with_libreoffice,
+            build_from_source=self.opts.build_from_source,
         )
         step = "stage"
         try:
@@ -420,7 +441,10 @@ class Installer:
             "installed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "mode": self.opts.mode,
             "source": self.opts.source,
-            "options": {"libreoffice": self.opts.with_libreoffice},
+            "options": {
+                "libreoffice": self.opts.with_libreoffice,
+                "build_from_source": self.opts.build_from_source,
+            },
             "paths": {
                 "app_root": str(self.layout.root),
                 "version_dir": str(ctx.dir),

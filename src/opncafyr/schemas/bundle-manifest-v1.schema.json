@@ -16,7 +16,10 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["libreoffice"],
-      "properties": {"libreoffice": {"type": "boolean"}}
+      "properties": {
+        "libreoffice": {"type": "boolean"},
+        "source_build": {"type": "boolean", "description": "The bundle carries what repair --build-from-source needs (#34). Optional: earlier bundles lack it."}
+      }
     },
     "trust": {"type": "string"},
     "files": {

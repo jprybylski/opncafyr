@@ -70,3 +70,28 @@ def owned_by(key: str, root: str, winreg: Any = None) -> bool:
         return False
     location = next((v for n, v, _ in values if n == "InstallLocation"), "")
     return bool(location) and str(location).lower().startswith(root.lower())
+
+
+def uninstall_subkeys(winreg: Any = None) -> list[str]:
+    """The names of the user's uninstall entries (for spotting new ones)."""
+    winreg = winreg or _winreg()
+    try:
+        handle = winreg.OpenKey(winreg.HKEY_CURRENT_USER, UNINSTALL, 0, winreg.KEY_READ)
+    except FileNotFoundError:
+        return []
+    names = []
+    with handle:
+        i = 0
+        while True:
+            try:
+                names.append(winreg.EnumKey(handle, i))
+            except OSError:
+                break
+            i += 1
+    return names
+
+
+def delete(key: str, winreg: Any = None) -> None:
+    winreg = winreg or _winreg()
+    with contextlib.suppress(FileNotFoundError):
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, key)

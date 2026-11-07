@@ -18,7 +18,9 @@ param(
     [Parameter(Mandatory = $true)][string]$Payload,
     [Parameter(Mandatory = $true)][string]$Newer,
     [Parameter(Mandatory = $true)][string]$Assets,
-    [Parameter(Mandatory = $true)][string]$Results
+    [Parameter(Mandatory = $true)][string]$Results,
+    # #34: only install, then repair --build-from-source (the 'source' leg)
+    [switch]$SourceBuild
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -93,6 +95,16 @@ function As-User([string]$leg, [hashtable]$envs = @{}) {
     return $rc
 }
 
+if ($SourceBuild) {
+    foreach ($leg in 'identity', 'install', 'source', 'uninstall') {
+        $rc = As-User $leg
+        Copy-Item -Recurse "$work\results\*" $Results -ErrorAction SilentlyContinue
+        if ($rc -ne 0) { Fail "leg $leg failed (exit $rc)" }
+    }
+    if ([Environment]::GetEnvironmentVariable('Path', 'Machine') -ne $machinePathBefore) { Fail 'the machine PATH changed' }
+    Write-Host 'source build legs passed'
+    exit 0
+}
 foreach ($leg in 'identity', 'install', 'noop', 'launch', 'failure', 'uninstall') {
     $rc = As-User $leg
     if ($rc -ne 0) { Copy-Item -Recurse "$work\results\*" $Results -ErrorAction SilentlyContinue; Fail "leg $leg failed (exit $rc)" }

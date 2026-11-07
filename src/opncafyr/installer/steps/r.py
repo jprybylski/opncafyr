@@ -14,6 +14,11 @@
   opnca-r binary, the pure-R quartifyr, reportifyr and pyro tarballs); then every version is
   checked against ``renv.lock``. No renv at install time: its restore needs the Command
   Line Tools on macOS and reaches for crandb.r-pkg.org when an index lacks a package.
+- **The user's own R is never used** (#34): R runs with ``--vanilla``, ``R_LIBS`` and
+  ``R_LIBS_USER`` set to the app's library and no site library, so packages are installed
+  only into, and loaded only from, the app's library and R's own. A compiler guard
+  (``R_MAKEVARS_USER``) makes any compile attempt fail: the default install builds
+  nothing. ``repair --build-from-source`` builds opnca-r instead (``source_build``).
 """
 
 from __future__ import annotations
@@ -31,6 +36,17 @@ from opncafyr.installer.pins import CELLAR, OPNCA
 from opncafyr.installer.steps import WINDOWS, Context
 
 FRAMEWORK = "/Library/Frameworks/R.framework"
+# R_MAKEVARS_USER for the default install: every compiler names a file that doesn't
+# exist, so a package that tried to compile would fail instead of using a system compiler.
+NO_COMPILER = "".join(
+    f"{var} = /nonexistent/opncafyr-installs-no-compiled-code\n"
+    for var in ("CC", "CXX", "CXX11", "CXX14", "CXX17", "CXX20", "FC", "F77", "OBJC", "OBJCXX")
+)
+
+
+def library_env(lib: Path) -> dict[str, str]:
+    """R sees the app's library and its own, never the user's or a site library."""
+    return {"R_LIBS": str(lib), "R_LIBS_USER": str(lib), "R_LIBS_SITE": ""}
 
 
 def install_r(ctx: Context) -> None:
@@ -178,8 +194,9 @@ def install_library(ctx: Context) -> None:
     cellar = ctx.tmp / "r-cellar"
     shutil.rmtree(cellar, ignore_errors=True)
     cellar.mkdir(parents=True)
-    opnca_file = _opnca_binary(ctx)
-    link_or_copy(opnca_file[0], cellar / opnca_file[1])
+    opnca_file = None if ctx.build_from_source else _opnca_binary(ctx)
+    if opnca_file is not None:
+        link_or_copy(opnca_file[0], cellar / opnca_file[1])
     for name in CELLAR:
         link_or_copy(ctx.file(name), cellar / ctx.asset(name).file)
 
@@ -193,6 +210,8 @@ def install_library(ctx: Context) -> None:
     script.write_text(_r_script("install_library.R"), "utf-8")
     lib = ctx.dir / "rlib"
     lib.mkdir(parents=True, exist_ok=True)
+    guard = ctx.tmp / "no-compiler.mk"
+    guard.write_text(NO_COMPILER, "utf-8")
     proc.run(
         [
             ctx.executables["rscript"],
@@ -203,17 +222,23 @@ def install_library(ctx: Context) -> None:
             contrib,
             cellar,
             lock_tsv,
-            opnca_file[1],
+            opnca_file[1] if opnca_file is not None else "-",
         ],
-        env=ctx.env(R_LIBS_USER=str(lib)),
+        env=ctx.env(**library_env(lib), R_MAKEVARS_USER=str(guard)),
         log=ctx.log("r_library"),
         timeout=3600,
     )
     shutil.rmtree(repo, ignore_errors=True)
     shutil.rmtree(cellar, ignore_errors=True)
+    if opnca_file is None:
+        from opncafyr.installer.source_build import build_opnca
+
+        built = build_opnca(ctx, lib)
+        opnca = [ctx.asset(OPNCA, f) for f in ("manifest.json", built)]
+    else:
+        opnca = [ctx.asset(OPNCA, f) for f in ("manifest.json", opnca_file[2])]
     ctx.paths["r_library"] = lib
     ctx.record("r-packages", "", binaries)
-    opnca = [ctx.asset(OPNCA, f) for f in ("manifest.json", opnca_file[2])]
     ctx.record(OPNCA, opnca[0].version, opnca)
     for name in CELLAR:
         ctx.record(name, ctx.asset(name).version, [ctx.asset(name)])

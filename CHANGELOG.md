@@ -7,6 +7,25 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- `repair --build-from-source` (#34): installs afresh with opnca-r built from its vendored
+  source tarball instead of the prebuilt binary, for when the binary can't be used.
+  - It uses the pinned standalone Rust toolchain and, on Windows, Rtools45 run as the
+    user. Both are unpacked into a short, space-free build folder and removed afterwards.
+    Cargo runs offline with its home inside that folder, so nothing goes to `~/.cargo`.
+  - The previous install stays active until the build and smoke tests pass. The record
+    says `build_from_source` and lists the files used.
+  - macOS needs Apple's Command Line Tools for it, and preflight says so.
+    `bundle --with-source-build` carries the extra files for offline repairs.
+  - CI builds it on macOS (offline, from a bundle) and Windows as a standard user.
+- The user's own R library is never used (#34).
+  - Every R the installer and the launcher start (health probes and deckifyr included)
+    sees only the app's library and R's own.
+  - A new smoke test, `r_library_isolation`, checks this on every install and repair.
+  - The default install refuses to compile anything.
+  - CI plants a decoy `opnca` in the user's R library and checks that it never loads
+    and that the library is unchanged.
+- CI also tampers with the opnca-r binary in a bundle and checks that the install is
+  refused and the previous one kept (#34).
 - A user guide for scientists (#40), in [docs/user-guide/](docs/user-guide/index.md) and
   inside the app: **Guide** in the side navigation, and "Read the guide" on Home.
   - Chapters cover install, the study folder, data and cleaning, mapping and checks,

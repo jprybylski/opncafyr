@@ -3,6 +3,7 @@
 #   #19 legs: identity, install, noop, launch, failure, uninstall
 #   #36 legs: sanity, offline, tamper, interrupted, update
 #   #51 leg: flow (after offline)
+#   #34 leg: source (after install; windows.ps1 -SourceBuild)
 param(
     [Parameter(Mandatory = $true)][string]$Leg,
     [Parameter(Mandatory = $true)][string]$Work
@@ -143,6 +144,17 @@ switch ($Leg) {
         if ($rc -ne 1) { Fail "a tampered bundle was not refused (exit $rc)" }
         if ($script:lastOut -notmatch 'in: quarto') { Fail 'the error does not name quarto' }
         if ((Active) -ne $before) { Fail 'the active install changed' }
+        # The same with opnca-r's binary as the victim (#34).
+        $t2 = "$Work\tampered-opnca"
+        Remove-Item -Recurse -Force $t2 -ErrorAction SilentlyContinue
+        Copy-Item -Recurse $bundleDir $t2
+        $victim = Get-ChildItem "$t2\assets\opnca-r" -Filter 'opnca_*_R4.6_*' | Select-Object -First 1
+        [IO.File]::AppendAllText($victim.FullName, 'x')
+        Remove-Item -Recurse -Force (Join-Path $root 'cache\downloads') -ErrorAction SilentlyContinue
+        $rc = Native "$Work\payload-newer\install.bat" @('install', '--from-bundle', $t2)
+        if ($rc -ne 1) { Fail "a tampered opnca-r binary was not refused (exit $rc)" }
+        if ($script:lastOut -notmatch 'in: opnca-r') { Fail 'the error does not name opnca-r' }
+        if ((Active) -ne $before) { Fail 'the active install changed' }
         Health 47814
     }
     'interrupted' {
@@ -168,6 +180,64 @@ switch ($Leg) {
         $newer = (Get-Content "$Work\payload-newer\payload.json" -Raw | ConvertFrom-Json).version
         if ((Active) -notlike "$newer-*") { Fail "the update is not active: $(Active)" }
         Health 47816
+    }
+    'source' {
+        # repair --build-from-source with a decoy opnca in the user's own R library (#34).
+        $before = Active
+        $rt = Get-Content (Join-Path $root "versions\$before\runtime\runtime.json") -Raw | ConvertFrom-Json
+        $rexe = Join-Path (Split-Path $rt.executables.rscript) 'R.exe'
+        $userLib = Join-Path $env:LOCALAPPDATA 'R\win-library\4.6'
+        $decoy = "$Work\decoy\opnca"
+        $marker = "$Work\opnca-decoy-loaded"
+        New-Item -ItemType Directory -Force $userLib, "$decoy\R" | Out-Null
+        $utf8 = New-Object Text.UTF8Encoding($false)
+        [IO.File]::WriteAllText("$decoy\DESCRIPTION", "Package: opnca`nVersion: 0.0.1`nTitle: Decoy`nDescription: Must never load.`nLicense: MIT`nAuthor: CI`nMaintainer: CI <ci@example.invalid>`n", $utf8)
+        [IO.File]::WriteAllText("$decoy\NAMESPACE", "export(decoy)`n", $utf8)
+        $m = $marker -replace '\\', '/'
+        [IO.File]::WriteAllText("$decoy\R\zzz.R", ".onLoad <- function(lib, pkg) writeLines('loaded', '$m')`ndecoy <- function() TRUE`n", $utf8)
+        $rc = Native $rexe @('CMD', 'INSTALL', '--no-test-load', "--library=$userLib", $decoy)
+        if ($rc -ne 0) { Fail "could not plant the decoy (exit $rc)" }
+        if (Test-Path $marker) { Fail 'the decoy loaded while planting it' }
+        function Snap {
+            $files = Get-ChildItem -Recurse -File $userLib | Sort-Object FullName |
+                ForEach-Object { "$($_.FullName) $((Get-FileHash $_.FullName).Hash)" }
+            $keys = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' -ErrorAction SilentlyContinue |
+                ForEach-Object { $_.PSChildName } | Sort-Object
+            $path = [Environment]::GetEnvironmentVariable('Path', 'User')
+            # ~\.cargo and ~\.rustup may come with the runner's default profile; they must
+            # not appear or change.
+            $rust = foreach ($d in '.cargo', '.rustup') {
+                $p = Join-Path $env:USERPROFILE $d
+                if (Test-Path $p) {
+                    Get-ChildItem -Recurse -File $p -ErrorAction SilentlyContinue | Sort-Object FullName |
+                        ForEach-Object { "$($_.FullName) $($_.Length) $($_.LastWriteTimeUtc.Ticks)" }
+                } else { "$d absent" }
+            }
+            return (@($files) + @('--keys--') + @($keys) + @('--path--', "$path", '--rust--') + @($rust)) -join "`n"
+        }
+        $s1 = Snap
+        [IO.File]::WriteAllText("$Work\results\source-before.txt", $s1)
+        $rc = Native $installer @('repair', '--build-from-source', '--assets', "$Work\assets")
+        Copy-Item -Recurse (Join-Path $root 'logs') "$Work\results\app-logs" -ErrorAction SilentlyContinue
+        if ($rc -ne 0) { Fail "repair --build-from-source exited $rc" }
+        $after = Active
+        if ($after -eq $before) { Fail 'the repair did not stage a new install' }
+        $rec = Get-Content (Join-Path $root "versions\$after\install.json") -Raw | ConvertFrom-Json
+        if (-not $rec.options.build_from_source) { Fail 'the record does not say build_from_source' }
+        $opnca = $rec.components | Where-Object { $_.name -eq 'opnca-r' }
+        if (-not ($opnca.files | Where-Object { $_.file -like '*-vendored.tar.gz' })) { Fail 'the vendored tarball is not recorded' }
+        foreach ($n in 'rust', 'rtools') { if (-not ($rec.components | Where-Object { $_.name -eq $n })) { Fail "$n is not recorded" } }
+        foreach ($n in 'r_packages', 'r_library_isolation', 'opnca_calculation') {
+            $s = $rec.smoke | Where-Object { $_.name -eq $n }
+            if (-not $s -or $s.status -ne 'ok') { Fail "smoke $n is not ok: $($s.detail)" }
+        }
+        Write-Output "isolation: $(($rec.smoke | Where-Object { $_.name -eq 'r_library_isolation' }).detail)"
+        if (Test-Path $marker) { Fail "the decoy opnca in the user's library was loaded" }
+        $s2 = Snap
+        [IO.File]::WriteAllText("$Work\results\source-after.txt", $s2)
+        if ($s1 -ne $s2) { Fail "the user's R library, uninstall entries, PATH, ~\.cargo or ~\.rustup changed" }
+        if (Test-Path (Join-Path $root 'sb')) { Fail 'the build folder was left behind' }
+        Health 47817
     }
     default { Fail "unknown leg $Leg" }
 }
