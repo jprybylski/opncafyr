@@ -167,10 +167,11 @@ Study folder/
                                 written by opnca-r's server-side save (#28)
       logs/                     launcher logs, such as the replay report (#29)
       manifest.json             schemas/run-manifest-v1, sealed when completed
-    publications/<id>.json      schemas/publication-v1
+    publications/<id>.json      schemas/publication-v1: exact run IDs and every hash (#31)
     jobs/<job-id>/              schemas/job-v1 state.json, events.jsonl, stdout/stderr
                                 logs, diagnostic.json (core/jobmanager.py)
-  OUTPUTS/{figures,tables}/     reportifyr-compatible copies + *_metadata.json sidecars
+  OUTPUTS/{figures,tables}/     published copies <analyte>_<run-id>_<artifact>.<ext> +
+                                <name>_<ext>_metadata.json sidecars (#30, #31)
   report/                       quartifyr / Quarto project
   deck/                         deckifyr project
 ```
@@ -354,3 +355,29 @@ The newest finished replay is recorded in the manifest's `replay`. Completing a 
 a passed replay, so every sealed run holds its own replay evidence, and only completed
 runs can be published. Against opnca-r's own `analysis/calculate` response the replay
 matches to the 4 decimal places that API writes numbers with.
+
+## Publishing (#30, #31)
+
+`workflows/nca/publish/` turns completed runs into `OUTPUTS/` (user guide:
+[publishing.md](publishing.md)).
+
+- **Eligibility.** `curator.py` publishes only runs whose manifest is `completed`, whose
+  replay passed, and whose sealed files `verify_run` still finds intact. The API enforces
+  this (409 `not_publishable`).
+- **Catalog.** `catalog.py` maps a run's saved artifacts to publishable tables and figures.
+  The four ADR 0007 types are pre-selected, but the mean concentration–time figure is
+  unavailable until opnca-r saves one (mantra-opnca/opnca-r#50).
+- **Publishing.**
+  1. Files are copied, through a hidden temp file and a rename, to deterministic names.
+  2. A name that holds different bytes refuses the whole publication before anything is
+     written.
+  3. The launcher writes the reportifyr sidecars itself, in Python (`reportifyr-sidecar-v1`;
+     BLAKE3 `object_meta.hash`).
+  4. The copies and sidecars are checked on disk.
+  5. The publication manifest is written last, with `atomic_write_json`.
+- **Sidecar checks.** `sidecars.py` runs before every publish, render and build. It checks
+  that the sidecar exists, its JSON and schema, its path, file type and hash, and that its
+  `meta_type` and abbreviations are defined in `standard_footnotes.yaml`. It returns
+  `preflight-v1` findings that name files and checks, never values.
+- **Templates.** The bundled `standard_footnotes.yaml` and `config.yaml` are in
+  `adapters/quartifyr/template/`.

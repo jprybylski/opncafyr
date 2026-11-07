@@ -61,6 +61,13 @@ All four artifact types are offered and **pre-selected** in the publication cura
 Only artifacts from `completed` runs can be published, and the publication manifest pins
 run IDs and artifact SHA-256s (`CLAUDE.md`, `publication-v1`).
 
+> **Amendment (2026-11-07, #31).** opnca-r 0.2.8 saves no mean concentration–time figure,
+> only individual profiles and parameter boxplots. The curator therefore lists the mean
+> figure as unavailable, and pre-selects the other three types. The launcher doesn't draw
+> it, because opnca-r is the calculation authority. The upstream request is
+> mantra-opnca/opnca-r#50. Once a pinned opnca-r saves the figure, it will be pre-selected
+> as decided here.
+
 ### 4. Identifiable data
 | Where | Coded subject IDs (e.g. `USUBJID`) | Other subject-level values |
 |---|---|---|

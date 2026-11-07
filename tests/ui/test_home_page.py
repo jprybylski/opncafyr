@@ -3,6 +3,7 @@
 import pytest
 from home_seed import BROKEN_RUN_ID, JOB_LABEL, RUN_ID
 
+from artifact_docs import PUB_ID
 from opncafyr.core.registry import load_descriptors
 
 pytestmark = pytest.mark.ui
@@ -31,7 +32,7 @@ def test_home_renders_with_stub_adapters(page):
     runs = page.locator("#runs-body")
     assert _state(runs.locator("tr", has_text=RUN_ID)) == "Completed"
     assert _state(runs.locator("tr", has_text=BROKEN_RUN_ID)) == "Incomplete"
-    assert page.locator("#pubs-body").get_by_text("pub-1").is_visible()
+    assert page.locator("#pubs-body").get_by_text(PUB_ID).is_visible()
 
     assert _state(page.locator("#home-jobs li", has_text=JOB_LABEL)) == "Running"
     assert page.locator("#jobs-live").inner_text() == "1 job is running or waiting."

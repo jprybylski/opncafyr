@@ -7,6 +7,38 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Publication curator: completed runs' tables and figures copied into `OUTPUTS/` with a
+  publication manifest (#31).
+  - The Publish page lists every run. Only completed runs whose replay passed and whose
+    sealed files still match can be chosen, and the API enforces the same (409
+    `not_publishable`).
+  - Each run offers what opnca-r saved. Pre-selected:
+    - the parameter summary;
+    - the individual listing;
+    - individual profiles, linear and log.
+
+    Optional: summaries by group and parameter boxplots. One publication can combine
+    analytes.
+  - ADR 0007's mean concentration–time figure isn't saved by opnca-r 0.2.8. It is listed
+    as unavailable (mantra-opnca/opnca-r#50, filed; ADR 0007 amended); the launcher
+    doesn't draw it.
+  - "Check" shows names, statuses and sidecar findings without writing anything.
+    "Publish" then:
+    - copies each file byte for byte to
+      `OUTPUTS/<tables|figures>/<analyte>_<run-id>_<artifact>.<ext>`;
+    - writes its reportifyr sidecar in Python (meta_type `"NA"`; source is the run's
+      `analysis.R`);
+    - checks both (#30);
+    - records `.opncafyr/publications/<id>.json` last.
+  - A published file is never replaced. A name holding different bytes refuses the whole
+    publication before anything is written, and identical files are reused. Files from an
+    interrupted publish show as "not recorded" and are never used.
+  - `publication-v1` is finalised in place (nothing wrote it before). It records:
+    - exact run IDs, with each run's manifest and replay SHA-256;
+    - the SHA-256 of each source artifact, published copy and sidecar;
+    - whether each item shows subject IDs.
+  - New user guide `docs/publishing.md`, including why the publishing path has no R
+    scripts.
 - Checks of reportifyr metadata sidecars before anything is published or rendered (#30).
   - reportifyr only logs a missing or broken sidecar, and the report still succeeds. So the
     launcher checks each table and figure in `OUTPUTS/` first

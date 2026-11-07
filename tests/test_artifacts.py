@@ -7,7 +7,7 @@ import sys
 import pytest
 from fastapi.testclient import TestClient
 
-from artifact_docs import publication, run_manifest, write_publication, write_run
+from artifact_docs import PUB_ID, publication, run_manifest, write_publication, write_run
 from opncafyr.core.app import create_app
 from opncafyr.core.artifacts import INCOMPLETE, list_publications, list_runs
 from opncafyr.core.jobmanager import JobManager
@@ -83,7 +83,7 @@ def test_symlinks_leaving_the_workspace_are_ignored(tmp_path):
     os.symlink(outside / ".opncafyr" / "runs" / NEW, runs_dir / NEW)
     pubs = root / ".opncafyr" / "publications"
     pubs.mkdir()
-    os.symlink(outside / ".opncafyr" / "publications" / "pub-1.json", pubs / "pub-1.json")
+    os.symlink(outside / ".opncafyr" / "publications" / f"{PUB_ID}.json", pubs / f"{PUB_ID}.json")
     assert list_runs(root) == []
     assert list_publications(root) == []
 
@@ -99,12 +99,12 @@ def test_runs_folder_symlinked_outside_is_ignored(tmp_path):
 
 
 def test_publications_are_listed(tmp_path):
-    write_publication(tmp_path, publication("pub-1"))
+    write_publication(tmp_path, publication())
     write_publication(tmp_path, {"schema_version": "1.0"}, name="broken")
     (tmp_path / ".opncafyr" / "publications" / "readme.md").write_text("x")
     assert list_publications(tmp_path) == [
         {
-            "publication_id": "pub-1",
+            "publication_id": PUB_ID,
             "created_at": "2026-11-04T09:00:00Z",
             "state": "recorded",
             "items": 1,
@@ -170,4 +170,4 @@ def test_api_lists_runs_of_the_open_workspace(api):
         (NEW, "completed"),
         (OLD, INCOMPLETE),
     ]
-    assert [p["publication_id"] for p in body["publications"]] == ["pub-1"]
+    assert [p["publication_id"] for p in body["publications"]] == [PUB_ID]

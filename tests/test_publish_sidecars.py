@@ -181,7 +181,10 @@ def test_outputs_check_route(tmp_path, client):
     out = client.get("/api/nca/outputs/check").json()
     assert out["files"] == ["OUTPUTS/figures/a.png", "OUTPUTS/tables/b.csv"]
     assert out["blocking"] is True
-    assert [f["check"] for f in out["report"]["findings"]] == ["missing-sidecar"]
+    found = [(f["check"], f["path"]) for f in out["report"]["findings"]]
+    assert ("missing-sidecar", "OUTPUTS/tables/b.csv") in found
+    # Neither file is listed by a publication (#31), so reports and decks won't use them.
+    assert [p for c, p in found if c == "not-recorded"] == out["files"]
 
 
 def test_outputs_check_needs_a_workspace(client):

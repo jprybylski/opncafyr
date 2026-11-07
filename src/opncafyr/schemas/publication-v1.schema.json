@@ -2,27 +2,82 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "opncafyr/publication-v1",
   "title": "Publication manifest (.opncafyr/publications/<id>.json)",
-  "description": "Pins exact completed run IDs and artifact hashes. Never a moving 'latest'.",
+  "description": "A reviewed copy of completed runs' tables and figures into OUTPUTS/ (#31). Pins exact completed run IDs and the SHA-256 of every source artifact, published copy and reportifyr sidecar; never a moving 'latest'. Written last, after every file it lists is in place, so a publication that exists is complete.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "publication_id", "created_at", "items"],
+  "required": ["schema_version", "publication_id", "created_at", "tools", "runs", "items"],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "run_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4,}$"}
+  },
   "properties": {
     "schema_version": {"const": "1.0"},
-    "publication_id": {"type": "string"},
+    "publication_id": {"type": "string", "pattern": "^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$"},
     "created_at": {"type": "string", "format": "date-time"},
+    "label": {"type": "string", "maxLength": 200},
+    "tools": {
+      "type": "object",
+      "required": ["opncafyr", "sidecar_format"],
+      "additionalProperties": {"type": "string"},
+      "properties": {
+        "opncafyr": {"type": "string"},
+        "sidecar_format": {"type": "string", "description": "The reportifyr version whose sidecar format was written, e.g. 'reportifyr-0.4.0'."}
+      }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["run_id", "analyte", "manifest_sha256", "replay_sha256"],
+        "properties": {
+          "run_id": {"$ref": "#/$defs/run_id"},
+          "analyte": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["column", "value"],
+            "properties": {
+              "column": {"type": "string"},
+              "value": {"type": "string"},
+              "label": {"type": ["string", "null"]}
+            }
+          },
+          "manifest_sha256": {"$ref": "#/$defs/sha256", "description": "SHA-256 of the sealed run's manifest.json."},
+          "replay_sha256": {"$ref": "#/$defs/sha256", "description": "SHA-256 of the passed replay report."}
+        }
+      }
+    },
     "items": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["run_id", "artifact_path", "artifact_sha256", "published_path"],
+        "required": [
+          "run_id",
+          "artifact",
+          "kind",
+          "artifact_path",
+          "artifact_sha256",
+          "published_path",
+          "published_sha256",
+          "sidecar_path",
+          "sidecar_sha256",
+          "contains_subject_ids"
+        ],
         "properties": {
-          "run_id": {"type": "string"},
-          "artifact_path": {"type": "string"},
-          "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-          "published_path": {"type": "string", "pattern": "^OUTPUTS/(figures|tables|listings)/"},
-          "sidecar_path": {"type": "string"}
+          "run_id": {"$ref": "#/$defs/run_id"},
+          "artifact": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,80}$"},
+          "kind": {"enum": ["table", "figure"]},
+          "title": {"type": "string"},
+          "artifact_path": {"type": "string", "description": "Relative to the run folder, e.g. results/opnca-summary.csv."},
+          "artifact_sha256": {"$ref": "#/$defs/sha256"},
+          "published_path": {"type": "string", "pattern": "^OUTPUTS/(figures|tables|listings)/[^/]+$"},
+          "published_sha256": {"$ref": "#/$defs/sha256"},
+          "sidecar_path": {"type": "string", "pattern": "^OUTPUTS/(figures|tables|listings)/[^/]+_metadata\\.json$"},
+          "sidecar_sha256": {"$ref": "#/$defs/sha256"},
+          "contains_subject_ids": {"type": "boolean"}
         }
       }
     }

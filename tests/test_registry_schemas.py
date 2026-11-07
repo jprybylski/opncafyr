@@ -67,20 +67,31 @@ def test_run_manifest_requires_analyte():
 
 
 def test_publication_must_target_outputs():
-    item = {
-        "run_id": "r",
-        "artifact_path": "a.png",
-        "artifact_sha256": SHA,
-        "published_path": "elsewhere/a.png",
-    }
-    doc = {
-        "schema_version": "1.0",
-        "publication_id": "p",
-        "created_at": "2026-11-03T00:00:00Z",
-        "items": [item],
-    }
+    from artifact_docs import publication
+
+    validate(publication(), "publication-v1")
+    for key, value in (
+        ("published_path", "elsewhere/a.png"),
+        ("published_path", "OUTPUTS/figures/sub/a.png"),
+        ("sidecar_path", "OUTPUTS/figures/a.png"),
+        ("artifact_sha256", "latest"),
+    ):
+        doc = publication()
+        doc["items"][0][key] = value
+        with pytest.raises(ValidationError):
+            validate(doc, "publication-v1")
+
+
+def test_publication_pins_runs():
+    from artifact_docs import publication
+
+    for drop in ("runs", "tools"):
+        doc = publication()
+        del doc[drop]
+        with pytest.raises(ValidationError):
+            validate(doc, "publication-v1")
     with pytest.raises(ValidationError):
-        validate(doc, "publication-v1")
+        validate(publication(publication_id="latest"), "publication-v1")
 
 
 def test_atomic_write_validates_before_writing(tmp_path):

@@ -52,6 +52,7 @@ class Home:
     job_id: str
     quits: list[str]
     tokens: Path
+    study: Path
 
     def open_url(self) -> str:
         """A fresh one-time link, as the launcher would open it."""
@@ -121,6 +122,7 @@ def home(tmp_path: Path):
             job_id=job_id,
             quits=quits,
             tokens=tmp_path / "state" / "open-tokens",
+            study=study,
         )
     finally:
         server.should_exit = True

@@ -49,17 +49,38 @@ def run_manifest(run_id: str = "20261103T142512Z-7c4e", **overrides: Any) -> dic
     return doc
 
 
-def publication(publication_id: str = "pub-1", **overrides: Any) -> dict[str, Any]:
+PUB_ID = "pub-20261104T090000Z-1a2b"
+RUN_ID = "20261103T142512Z-7c4e"
+
+
+def publication(publication_id: str = PUB_ID, **overrides: Any) -> dict[str, Any]:
     doc = {
         "schema_version": "1.0",
         "publication_id": publication_id,
         "created_at": "2026-11-04T09:00:00Z",
+        "tools": {"opncafyr": "0.0.1", "sidecar_format": "reportifyr-0.4.0"},
+        "runs": [
+            {
+                "run_id": RUN_ID,
+                "analyte": {"column": "analyte", "value": "Example A", "label": None},
+                "manifest_sha256": SHA,
+                "replay_sha256": SHA,
+            }
+        ],
         "items": [
             {
-                "run_id": "20261103T142512Z-7c4e",
-                "artifact_path": "artifacts/figure.png",
+                "run_id": RUN_ID,
+                "artifact": "profiles-linear",
+                "kind": "figure",
+                "artifact_path": "results/figures/profiles-linear.png",
                 "artifact_sha256": SHA,
-                "published_path": "OUTPUTS/figures/figure.png",
+                "published_path": f"OUTPUTS/figures/example-a_{RUN_ID}_profiles-linear.png",
+                "published_sha256": SHA,
+                "sidecar_path": (
+                    f"OUTPUTS/figures/example-a_{RUN_ID}_profiles-linear_png_metadata.json"
+                ),
+                "sidecar_sha256": SHA,
+                "contains_subject_ids": True,
             }
         ],
     }
