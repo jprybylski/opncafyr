@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Durable save of an analysis into its run folder (#28).
+  - The launcher watches the run folder for opnca-r's server-side save (never a browser
+    download). A save counts only when `COMPLETE` matches `artifacts.json`, every artifact
+    re-hashes, nothing is unlisted or stray, and the record and `analysis.R` name the
+    snapshot by hash and relative path. A partial or tampered save fails the run.
+  - On a complete save the session stops and the run moves to review with its script,
+    record, artifacts, opnca-r's effective settings, versions and exclusions. A reviewed
+    run is completed, and sealed, only after its replay passes (#29).
+  - Points excluded inside opnca-r replace the launcher's exclusion column; until
+    mantra-opnca/opnca-r#49 is fixed such a save fails with a message.
 - opnca-r sessions on a run (#27).
   - "Open in opnca-r" starts `serve.R` on the run's frozen input with its preset, the run
     folder as output folder and the run id as storage namespace, so nothing from another

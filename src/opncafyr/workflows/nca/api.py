@@ -39,6 +39,12 @@ Sessions (#27):
 - ``POST /api/nca/runs/{id}/session``: start opnca-r on the run (replacing any other
   session) and wait until it is ready under ``/apps/opnca/``.
 - ``DELETE /api/nca/runs/{id}/session``; ``GET /api/nca/session``: which run is open.
+
+Save and completion (#28):
+- ``POST /api/nca/runs/{id}/save-status``: looks for opnca-r's save in the run folder
+  (the page polls it while a run is open). On ``COMPLETE`` it stops the session and
+  checks the save; the run moves to ``reviewing`` or ``failed``.
+- ``POST /api/nca/runs/{id}/complete``: the user confirms a reviewed run; it is sealed.
 """
 
 from __future__ import annotations
@@ -62,6 +68,7 @@ from opncafyr.core.workspace import Workspace, resolve_in_root
 from opncafyr.workflows.nca import checks as checks_mod
 from opncafyr.workflows.nca import mapping as mappings
 from opncafyr.workflows.nca import recipe as recipes
+from opncafyr.workflows.nca import save as save_mod
 from opncafyr.workflows.nca.cleaning import (
     PREVIEW_ROWS,
     CleaningError,
@@ -112,6 +119,7 @@ STATUS = {
     "run_saved": 409,
     "input_changed": 409,
     "session_failed": 503,
+    "replay_required": 409,
 }
 
 
@@ -539,6 +547,54 @@ def mount(app: FastAPI) -> Context:
     @app.get("/api/nca/session")
     def session_state() -> dict[str, Any]:
         return {"session": ctx.sessions.current(app.state.supervisor)}
+
+    @app.post("/api/nca/runs/{run_id}/save-status")
+    def save_status(run_id: str) -> dict[str, Any]:
+        folder = run_folder(run_id)
+        with ctx.lock:
+            manifest = read_run(folder)
+            if manifest["state"] not in ("preparing", "running"):
+                return {"save": {"state": manifest["state"], "problems": []}, "run": manifest}
+            sup = app.state.supervisor
+            alive = ctx.sessions.current(sup)["run_id"] == run_id
+            status = save_mod.check(folder, session_alive=alive)
+            if status.state in ("complete", "failed") and alive:
+                # Nothing more may be written: stop the session, then look again.
+                ctx.sessions.stop(sup, run_id)
+                status = save_mod.check(folder, session_alive=False)
+            if status.state in ("complete", "failed"):
+                manifest = save_mod.accept(folder, status)
+                after_save(folder, manifest)
+                manifest = read_run(folder)
+        return {"save": status.to_dict(), "run": manifest}
+
+    def after_save(folder: Path, manifest: dict[str, Any]) -> None:
+        """Hook for what follows a verified save (the replay job, #29)."""
+
+    ctx.after_save = after_save
+
+    @app.post("/api/nca/runs/{run_id}/complete")
+    def complete(run_id: str) -> dict[str, Any]:
+        folder = run_folder(run_id)
+        with ctx.lock:
+            manifest = read_run(folder)
+            if manifest["state"] != "reviewing":
+                raise error(
+                    "bad_state",
+                    f"Only a run in review can be completed; this one is {manifest['state']}.",
+                )
+            replay = manifest.get("replay") or {}
+            if replay.get("status") != "passed":
+                raise error(
+                    "replay_required",
+                    "The saved analysis must replay and match first (#29); only then can "
+                    "the run be completed.",
+                )
+            try:
+                sealed = runs_core.seal_run(folder)
+            except runs_core.RunError as exc:
+                raise error(exc.code, exc.message) from None
+        return {"run": sealed}
 
     @app.post("/api/nca/runs/{run_id}/rerun")
     def rerun(run_id: str) -> Any:

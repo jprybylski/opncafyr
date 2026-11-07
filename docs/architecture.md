@@ -316,3 +316,23 @@ first, and the launcher's stop stops it too; with the single-instance launcher t
 one session per output folder. The supervisor kills the whole process tree after the
 orderly stop and deletes the child's TMP folder. The page reloads the embedded opnca-r
 frame when the session changes (`app-restarted`).
+
+## Saving a run (#28)
+
+The user saves in opnca-r's Export view; its server writes `analysis.R`,
+`analysis-record.json`, `results/**`, `artifacts.json` and finally `COMPLETE` into the run
+folder (opnca-r 0.2.8, `--no-overwrite`). The launcher never reads a browser download: the
+Analysis page polls `POST /api/nca/runs/{id}/save-status` for open runs. When `COMPLETE`
+appears the session is stopped, then `adapters/opnca/export.py` checks the save: `COMPLETE`
+matches `artifacts.json`, every listed file re-hashes, `results/` holds nothing unlisted,
+the record names the snapshot's SHA-256 and `input/analysis.csv`, and nothing else sits at
+the top of the folder. A lock or staging folder with a live session means "saving"; any
+other partial output is a failed save, never a complete one.
+
+A complete save moves the run to `reviewing` with its script, record, artifacts (path,
+media type, bytes, SHA-256), opnca-r's settings and effective settings, the opnca-r and R
+versions and the exclusions (the launcher's, and any made in the session, which carry no
+reason and add a warning). If the session replaced the launcher's exclusion column with
+its own (opnca-r#49), the save fails. A failed save moves the run to `failed`; "New run
+from this" starts again. `POST /api/nca/runs/{id}/complete` seals a reviewed run once its
+replay has passed (#29).

@@ -2,7 +2,7 @@
 // added by the later steps of the path (session, save, replay, completion).
 
 import { button, cell, el, formatTime, getJSON, post, raw, section, setStatus, stateBadge, table } from "./common.js";
-import { emit } from "../../js/dom.js";
+import { emit, pollWhileVisible } from "../../js/dom.js";
 
 export const runActions = []; // (run, refresh) => [Node], filled by other modules
 
@@ -22,6 +22,7 @@ export function initRuns(stack, state) {
       sec.body.append(el("p", "No runs yet.", "muted"));
       return;
     }
+    open = data.runs.filter((r) => r.state === "running").map((r) => r.run_id);
     const rows = data.runs.map((run) => {
       const actions = el("td");
       for (const make of runActions) for (const node of make(run, refresh)) actions.append(node, " ");
@@ -84,6 +85,37 @@ export function initRuns(stack, state) {
     }
     return nodes;
   });
+
+  // Saving happens in opnca-r (its Export view); the launcher notices it on disk (#28).
+  runActions.push((run) => {
+    if (run.state !== "reviewing") return [];
+    const done = button("Confirm and complete", async () => {
+      try {
+        await post(`api/nca/runs/${encodeURIComponent(run.run_id)}/complete`);
+        setStatus(sec.status, `Run ${run.run_id} is completed and sealed.`);
+      } catch (e) { setStatus(sec.status, e.message, true); }
+      refresh();
+    }, "btn btn-primary btn-sm");
+    done.setAttribute("aria-label", `Confirm and complete run ${run.run_id}`);
+    return [done];
+  });
+
+  let open = [];
+  async function watchSaves() {
+    for (const runId of open) {
+      try {
+        const out = await post(`api/nca/runs/${encodeURIComponent(runId)}/save-status`);
+        if (out.save.state === "saving") setStatus(sec.status, `opnca-r is saving run ${runId}…`);
+        if (out.run.state !== "running" && out.run.state !== "preparing") {
+          setStatus(sec.status, out.save.state === "complete"
+            ? `Run ${runId} was saved by opnca-r and is ready for review.`
+            : `Run ${runId}: the save failed. ${out.save.problems.join(" ")}`, out.save.state !== "complete");
+          refresh();
+        }
+      } catch (e) { /* the next poll tries again */ }
+    }
+  }
+  pollWhileVisible(watchSaves, 3000);
 
   state.refreshRuns = refresh;
   state.onChange((what) => {

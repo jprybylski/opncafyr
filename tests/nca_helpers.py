@@ -284,3 +284,45 @@ def same_origin(client: TestClient) -> dict[str, str]:
     """Headers a page on the launcher's origin sends (needed for POSTs under /apps/)."""
     origin = str(client.base_url).rstrip("/")
     return {"origin": origin, "sec-fetch-site": "same-origin"}
+
+
+SAVE_METRICS = ["cmax", "tmax", "auclast", "lambda_z", "half_life"]
+
+
+def preset_of(study: Path, run_id: str) -> dict[str, Any]:
+    folder = study / ".opncafyr" / "runs" / run_id
+    return json.loads((folder / "input" / "opnca-mapping.json").read_text("utf-8"))
+
+
+def save_in_opnca(
+    client: TestClient, study: Path, run_id: str, *, body_extra=None, before_save=None
+) -> dict[str, Any]:
+    """Open the run in opnca-r, calculate with its preset and save, as the page's Save
+    button would (no figures). Returns the calculate response's data."""
+    r = client.post(f"/api/nca/runs/{run_id}/session")
+    assert r.status_code == 200, r.text
+    api = "/apps/opnca/api/v1/"
+    if before_save:
+        before_save(api)
+    body = {**preset_of(study, run_id), "metrics": SAVE_METRICS, **(body_extra or {})}
+    calc = client.post(api + "analysis/calculate", json=body, headers=same_origin(client))
+    assert calc.status_code == 200, calc.text
+    data = calc.json()["data"]
+    saved = client.post(
+        api + "export/save",
+        headers=same_origin(client),
+        json={
+            "config_id": data["config_id"],
+            "figure_names": [],
+            "figure_formats": [],
+            "figure_data": [],
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    return data
+
+
+def save_status(client: TestClient, run_id: str) -> dict[str, Any]:
+    r = client.post(f"/api/nca/runs/{run_id}/save-status")
+    assert r.status_code == 200, r.text
+    return r.json()
