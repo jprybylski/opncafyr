@@ -42,6 +42,21 @@ def test_child_env_has_token_and_app_tmpdir_only(sup):
     assert not any(k.startswith("OPNCAFYR_") for k in keys)
 
 
+def test_tmpdir_never_has_a_space(tmp_path):
+    # R won't start with a temp folder whose path has a space, and the macOS app root
+    # (~/Library/Application Support) has one, so opnca-r's server failed on every install.
+    sup, _ = toy_supervisor(tmp_path / "Application Support")
+    try:
+        child = sup.start("toy", {})
+        tmp = child.context.tmpdir
+        assert tmp.is_dir() and not any(ch.isspace() for ch in str(tmp))
+        assert child.context.workdir.is_relative_to(tmp_path / "Application Support")
+        sup.stop("toy")
+        assert not tmp.exists() and not child.context.workdir.exists()
+    finally:
+        sup.stop_all()
+
+
 def test_orderly_stop_exits_zero_and_cleans_up(sup):
     child = sup.start("toy", {})
     sup.stop("toy")

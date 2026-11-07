@@ -39,7 +39,13 @@ from opncafyr.core.adapter import (
     SupportsActivity,
     WebAppAdapter,
 )
-from opncafyr.core.proctree import OwnedProcess, child_env, free_loopback_port, spawn
+from opncafyr.core.proctree import (
+    OwnedProcess,
+    child_env,
+    child_tmpdir,
+    free_loopback_port,
+    spawn,
+)
 from opncafyr.core.redaction import REDACTOR, Redactor
 from opncafyr.core.runtime import Runtime
 
@@ -81,6 +87,7 @@ class Child:
     ready_line: str | None = None
     exit_code: int | None = None
     started_at: float = field(default_factory=time.time)
+    extra_tmp: Path | None = None  # a space-free TMPDIR outside workdir (child_tmpdir)
     _reader: threading.Thread | None = field(default=None, repr=False)
 
     @property
@@ -228,9 +235,11 @@ class Supervisor:
 
     def _spawn(self, tool: str, session: Mapping[str, Any]) -> Child:
         app = self.apps[tool]
-        workdir = self.state_root / "children" / f"{tool}-{uuid.uuid4().hex[:12]}"
-        tmpdir = workdir / "tmp"
-        tmpdir.mkdir(parents=True)
+        name = f"{tool}-{uuid.uuid4().hex[:12]}"
+        workdir = self.state_root / "children" / name
+        workdir.mkdir(parents=True)
+        # The macOS app root has a space, and R won't start with such a TMPDIR.
+        tmpdir, extra_tmp = child_tmpdir(workdir / "tmp", f"opncafyr-{name}-")
         ctx = LaunchContext(
             tool=tool,
             port=self._port_picker(),
@@ -243,7 +252,7 @@ class Supervisor:
         try:
             spec = app.adapter.launch(ctx, session)
         except Exception:
-            shutil.rmtree(workdir, ignore_errors=True)
+            _remove_dirs(workdir, extra_tmp)
             raise
         tmp = str(tmpdir)
         env = child_env({**spec.env, "TMPDIR": tmp, "TMP": tmp, "TEMP": tmp}, spec.path_dirs)
@@ -252,7 +261,7 @@ class Supervisor:
         try:
             proc = spawn(spec.argv, env=env, cwd=workdir)
         except Exception:
-            shutil.rmtree(workdir, ignore_errors=True)
+            _remove_dirs(workdir, extra_tmp)
             raise
         child = Child(
             tool=tool,
@@ -261,6 +270,7 @@ class Supervisor:
             proc=proc,
             log_path=log_path,
             max_body_bytes=app.max_body_bytes,
+            extra_tmp=extra_tmp,
         )
         reader = threading.Thread(
             target=_pump_output,
@@ -301,10 +311,16 @@ class Supervisor:
         if child._reader is not None:
             child._reader.join(timeout=5)
         for _ in range(5):  # Windows may hold files briefly after a kill
-            shutil.rmtree(child.context.workdir, ignore_errors=True)
+            _remove_dirs(child.context.workdir, child.extra_tmp)
             if not child.context.workdir.exists():
                 break
             time.sleep(0.2)
+
+
+def _remove_dirs(*dirs: Path | None) -> None:
+    for d in dirs:
+        if d is not None:
+            shutil.rmtree(d, ignore_errors=True)
 
 
 def _pump_output(child: Child, redactor: Redactor) -> None:

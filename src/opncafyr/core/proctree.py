@@ -18,6 +18,7 @@ import os
 import signal
 import socket
 import subprocess  # noqa: S404 - argv arrays only, see spawn()
+import tempfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,6 +82,24 @@ def system_path_dirs() -> list[str]:
         root = os.environ.get("SYSTEMROOT", r"C:\Windows")
         return [rf"{root}\System32", root, rf"{root}\System32\Wbem"]
     return ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]
+
+
+def child_tmpdir(own: Path, prefix: str) -> tuple[Path, Path | None]:
+    """A child's TMPDIR: ``own``, unless its path has whitespace.
+
+    R refuses to start when its temp folder's path contains a space ("'R_TempDir'
+    contains space"). Study folders often have one ("PK Study"), and so does the macOS app
+    root (``~/Library/Application Support``). Such a child gets a private folder in the
+    system temp folder instead. Returns ``(tmpdir, extra)``: ``extra`` is that private
+    folder, which the caller removes with the child, or None.
+    """
+    if any(ch.isspace() for ch in str(own)):
+        system = Path(tempfile.gettempdir())
+        if not any(ch.isspace() for ch in str(system)):
+            extra = Path(tempfile.mkdtemp(prefix=prefix, dir=system))
+            return extra, extra
+    own.mkdir(parents=True, exist_ok=True)
+    return own, None  # (with a space in both, R children report their own error)
 
 
 def child_env(

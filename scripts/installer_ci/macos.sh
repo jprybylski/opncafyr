@@ -12,7 +12,8 @@
 # -> uninstall removes the app, R and the icon but not a workspace.
 # #36 legs: build the bundle twice from independent downloads and compare the manifests
 # -> install from the bundle with outbound network denied (sandbox-exec) and no denial in
-# the sandbox log -> a tampered bundle is refused and the old install still runs -> an
+# the sandbox log -> the Gate 2 flow on that install, still denied (#51) -> a tampered
+# bundle is refused and the old install still runs -> an
 # update to a newer payload killed mid-way leaves the old install runnable -> the offline
 # update completes -> the installation report is there -> uninstall.
 set -euo pipefail
@@ -50,6 +51,12 @@ sudo mkdir -p "$WORK"
 sudo cp -R "$PAYLOAD_SRC" "$WORK/payload"
 sudo cp -R "$NEWER_SRC" "$WORK/payload-newer"
 sudo cp "$(dirname "$0")/../spikes/nonet.sb" "$WORK/nonet.sb"
+# The Gate 2 flow driver (#51) and the fixture helpers it imports, in the repository layout.
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+sudo mkdir -p "$WORK/flow/scripts/offline" "$WORK/flow/tests/fixtures"
+sudo cp "$REPO/scripts/offline/flow_check.py" "$WORK/flow/scripts/offline/"
+sudo cp "$REPO"/tests/{nca_helpers,publish_helpers,artifact_docs}.py "$WORK/flow/tests/"
+sudo cp "$REPO"/tests/fixtures/two_analyte.{csv,expected.json} "$WORK/flow/tests/fixtures/"
 sudo chown -R "$U" "$WORK"
 
 as_user() {
@@ -192,6 +199,24 @@ print("report ok:", r["install_id"], r["system"])
 PY
 no_attempts_since "$start"
 health 47803
+endleg
+
+# ---- 7b. the Gate 2 flow on the bundle install, network denied (#51) ---------------------
+# The installed launcher's own Python, app root and runtime: import -> clean -> map -> one
+# run per analyte saved in opnca-r, replayed and completed -> publish -> report -> deck.
+leg "Gate 2 flow on the bundle install"
+start="$(date '+%Y-%m-%d %H:%M:%S')"
+set +e
+offline_user "$ROOT/current/launcher/bin/python" "$WORK/flow/scripts/offline/flow_check.py" \
+  "$HOMEDIR/flow" --results "$WORK/flow-results" 2>&1 | tee "$RESULTS/7b-flow.log"
+rc=${PIPESTATUS[0]}
+set -e
+sudo cp -R "$WORK/flow-results" "$RESULTS/flow" || true
+sudo cp -R "$ROOT/logs" "$RESULTS/flow/app-logs" || true   # the opnca-r/deckifyr child logs
+sudo chown -R "$(id -u)" "$RESULTS/flow" || true
+[ "$rc" -eq 0 ] || fail "the Gate 2 flow failed on the bundle install"
+grep -q '"opnca": true' "$RESULTS/7b-flow.log" || fail "the flow ran without opnca-r"
+no_attempts_since "$start"
 endleg
 
 # ---- 8. a tampered bundle is refused; the old install stays ------------------------------

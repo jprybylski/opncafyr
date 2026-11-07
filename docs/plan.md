@@ -86,14 +86,13 @@ scheduled first.
 - **Offline installation (#36) is done** ([install.md](install.md#offline-installation-for-it-administrators-36)).
   The bundle builder, `--from-bundle` (no network at all), mirror mode and the installation
   verification report are in place. CI installs, updates and rejects a tampered bundle
-  with the user's network blocked, and any logged attempt fails the job. Two parts wait on
-  other work:
-  - attaching CI-built bundles to releases waits on the licensing review (#43);
-  - the Gate 2 end-to-end run from a bundle waits on the analysis path (#51).
+  with the user's network blocked, and any logged attempt fails the job. After the bundle
+  install it also runs the Gate 2 flow end to end (#51). Attaching CI-built bundles to
+  releases waits on the licensing review (#43).
 - **Offline audit (#44)** is done: [offline.md](offline.md) lists every network
-  touchpoint and its resolution, and the `offline` CI job installs from local files and
-  runs import, an opnca-r calculation, a report render and a deck build with the network
-  cut. #51 routes the job through the adapters as they land.
+  touchpoint and its resolution. The `offline` CI job installs from local files and, with
+  the network cut, runs the Gate 2 flow through the launcher's APIs and adapters (#51):
+  import, clean, map, one opnca-r run per analyte, replay, publish, report and deck.
 - **All Gate 0 decisions are made:** #1, #2, #3 and #4 (ADR 0003, ADR 0005, ADR 0007,
   ADR 0004).
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold

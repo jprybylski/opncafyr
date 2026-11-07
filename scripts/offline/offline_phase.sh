@@ -14,10 +14,13 @@
 #   2. python: the launcher and tools environments from the wheelhouse, hash-checked
 #      against the requirements exported from their uv.lock files
 #   3. r: renv::restore() from the local repository and the cellar
-#   4. import: scan, preview and import the two-analyte fixture through the app API
-#   5. opnca: one opnca-r calculation on one analyte (skipped without opnca-r)
-#   6. report: a quartifyr project with the tools environment, rendered --offline --strict
-#   7. deck: deckifyr init + build with --trusted-binaries-only
+#   4. flow: the Gate 2 flow through the launcher (scripts/offline/flow_check.py): import
+#      the two-analyte fixture, clean, map, one run per analyte saved in opnca-r, replayed
+#      and completed, then publish, render the DOCX report and build the PPTX deck. Every
+#      tool process is started by the launcher's adapters, which apply the offline
+#      settings themselves: the driver runs with a clean environment, so none of the
+#      variables exported below reach it. Without opnca-r (no release token) the runs
+#      stop at the snapshot and stand-in runs are published.
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
@@ -100,71 +103,26 @@ step r
   "$REPO/runtime/r/renv.lock" "$ASSETS/rrepo" "$ASSETS/cellar" "$WORK/rlib"
 done_step
 
-step import
-"$LAUNCHER_ENV/bin/python" "$REPO/scripts/offline/import_check.py" \
-  "$REPO/tests/fixtures/two_analyte.csv" "$WORK/import" | tee "$RESULTS/import.json"
-done_step
-
-step opnca
-if "$RSCRIPT" --vanilla -e 'quit(status = !requireNamespace("opnca", quietly = TRUE))'; then
-  "$RSCRIPT" --vanilla "$REPO/scripts/offline/opnca_check.R" "$RESULTS/opnca.json"
-else
-  echo "   opnca-r is not installed (no release token): calculation skipped"
-  echo '{"skipped": "opnca-r not available"}' > "$RESULTS/opnca.json"
-fi
-done_step
-
-step report
-PROJECT="$WORK/report"
-rm -rf "$PROJECT"
-cp -R "$REPO/scripts/offline/report" "$PROJECT"
-# reportifyr::initialize_report_project() would run pyro (uv lock/sync, maybe a curl of
-# uv). Lay the project out with reportifyr's own helpers instead, and hand reportifyr and
-# quartifyr the tools environment (docs/offline.md, "Reports").
-(cd "$PROJECT" && "$RSCRIPT" --vanilla -e '
-  rd <- reportifyr:::create_report_directories(".", NULL)
-  od <- reportifyr:::create_outputs_directories(".", NULL)
-  reportifyr:::copy_footnotes(rd)
-  reportifyr:::copy_config(rd, NULL, NULL)
-  reportifyr:::create_init_file(".", rd, od)
-  quartifyr::install_quarto_extensions(".")
-  quartifyr::install_quartifyr_extension(".")')
-# reportifyr reads the author from the global git config. Give it one in a throwaway home
-# instead of touching the user's.
-mkdir -p "$WORK/git-home"
-printf '[user]\n\tname = opncafyr CI\n\temail = ci@opncafyr.invalid\n' > "$WORK/git-home/.gitconfig"
-(cd "$PROJECT" && HOME="$WORK/git-home" "$RSCRIPT" --vanilla "$REPO/scripts/offline/make_report_outputs.R")
-RENDER="$("$RSCRIPT" --vanilla -e 'cat(system.file("scripts", "render.R", package = "quartifyr"))')"
-printf 'options(venv_dir = "%s")\n' "$(dirname "$TOOLS_ENV")" > "$WORK/report.Rprofile"
-# UV_NO_PROJECT: reportifyr's `uv run` must not adopt a pyproject.toml found in a parent of
-# the report project (here the repository's own; for users, any project their study folder
-# sits in). It would then look for that project's environment instead (docs/offline.md R2).
-(cd "$PROJECT" && R_PROFILE_USER="$WORK/report.Rprofile" QUARTIFYR_PYTHON_ENV="$TOOLS_ENV" \
-  UV_NO_PROJECT=1 UV_NO_CONFIG=1 \
-  "$RSCRIPT" "$RENDER" --project . --shell report.qmd --status draft --json --strict --offline \
-  --quarto-bin "$QUARTO" > "$RESULTS/report.json")
-python3 - "$RESULTS/report.json" <<'PY'
+step flow
+# The runtime record the installer would write, naming this job's pinned executables.
+mkdir -p "$WORK/runtime" "$WORK/flow-tmp"
+"$PYTHON" - "$WORK/runtime/runtime.json" <<PY
 import json, sys
-doc = json.load(open(sys.argv[1]))
-assert doc["status"] == "ok", doc.get("errors")
-print("report ok:", doc["draft"])
+json.dump({
+    "schema_version": 1,
+    "executables": {
+        "rscript": "$RSCRIPT",
+        "quarto": "$QUARTO",
+        "uv": "$UV_DIR/uv",
+        "deckifyr_python": "$TOOLS_ENV/bin/python",
+    },
+    "r_library": "$WORK/rlib",
+}, open(sys.argv[1], "w"), indent=2)
 PY
-done_step
-
-step deck
-DECK="$WORK/deck"
-rm -rf "$DECK"
-"$TOOLS_ENV/bin/python" -m deckifyr --json init "$DECK" > "$RESULTS/deck-init.json"
-"$TOOLS_ENV/bin/python" -m deckifyr --json build "$DECK/presentation.yaml" \
-  --trusted-binaries-only --quarto-bin "$QUARTO" --rscript-bin "$RSCRIPT" > "$RESULTS/deck.json"
-python3 - "$RESULTS/deck.json" <<'PY'
-import json, sys
-doc = json.load(open(sys.argv[1]))
-assert doc["status"] == "ok", doc
-pptx = [a for a in doc["artifacts"] if a["kind"] == "pptx"]
-assert pptx and open(pptx[0]["path"], "rb").read(2) == b"PK", "no PPTX"
-print("deck ok:", pptx[0]["path"])
-PY
+env -i HOME="$HOME" PATH=/usr/bin:/bin TMPDIR="$WORK/flow-tmp" LANG=C.UTF-8 \
+  OPNCAFYR_RUNTIME_FILE="$WORK/runtime/runtime.json" OPNCAFYR_APP_ROOT="$WORK/app" \
+  "$LAUNCHER_ENV/bin/python" "$REPO/scripts/offline/flow_check.py" "$WORK/flow" \
+  --results "$RESULTS"
 done_step
 
 echo "offline phase complete"

@@ -7,6 +7,20 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- The offline CI job and the Installer workflow's bundle install now run the Gate 2 flow
+  through the launcher, with the network blocked (#51). `scripts/offline/flow_check.py`
+  drives the launcher app in-process, the way the home page does:
+  - import the two-analyte fixture, clean it, map it;
+  - per analyte: snapshot, save in opnca-r through `/apps/opnca/`, replay, complete;
+  - check that the two runs share no rows;
+  - publish, render the DOCX report, build the PPTX deck.
+
+  The adapters start every tool and apply the offline settings; the driver runs with a
+  clean environment. It replaces the direct tool calls (`import_check.py`,
+  `opnca_check.R`, the hand-built report project). The Installer workflow runs it after
+  `install --from-bundle`: macOS leg 7b under `sandbox-exec`, the Windows `flow` leg under
+  the firewall rule. The flow's deck has figures only until deckifyr#96 (a table with an
+  empty cell fails to build) is fixed and pinned.
 - deckifyr adapter: set up, edit, check and build a PPTX deck from one publication (#33).
   - **Set up deck** runs `deckifyr init` (the bundled minimal deck, never `--from-repo`).
     It then writes:
@@ -646,6 +660,11 @@ All notable changes to this project are documented here. The format follows
   `upstream-blocked` removed from #27.
 
 ### Fixed
+- opnca-r's server didn't start on any installed copy on macOS, or on Windows when the
+  user name has a space: "'R_TempDir' contains space". The launcher gave its tool
+  servers a temp folder under the app folder (`~/Library/Application Support/...`). Tool
+  servers now get the same space-free temp folder as R jobs (#12), removed when they stop.
+  Found by the Installer workflow's Gate 2 flow (#51).
 - R jobs in a study folder whose path has a space (for example "PK Study") stopped at
   once with "'R_TempDir' contains space". Their temp folder was inside the study folder.
   Such a job now gets a private temp folder in the system temp folder instead, which is

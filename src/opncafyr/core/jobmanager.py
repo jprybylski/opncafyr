@@ -32,7 +32,6 @@ import os
 import re
 import secrets
 import shutil
-import tempfile
 import threading
 import time
 from collections.abc import Callable, Mapping
@@ -45,7 +44,14 @@ import psutil
 
 from opncafyr.core.jobs import TERMINAL_STATES, JobState, transition
 from opncafyr.core.manifest import atomic_write_json, validate
-from opncafyr.core.proctree import PIPE, OwnedProcess, child_env, kill_recorded_tree, spawn
+from opncafyr.core.proctree import (
+    PIPE,
+    OwnedProcess,
+    child_env,
+    child_tmpdir,
+    kill_recorded_tree,
+    spawn,
+)
 from opncafyr.core.runtime import Runtime, RuntimeUnavailable
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
 from opncafyr.paths import WORKSPACE_META_DIR
@@ -590,22 +596,9 @@ class JobManager:
         return ctx, target
 
     def _tmpdir(self, job: _Job) -> Path:
-        """The job's TMPDIR: ``<job>/tmp``, unless its path has whitespace.
-
-        R refuses to start when its temp folder's path contains a space ("'R_TempDir'
-        contains space"), and study folders often have one ("PK Study"). Such a job gets a
-        private folder in the system temp folder instead, removed with the job's own.
-        """
-        own = job.dir / "tmp"
-        if not any(ch.isspace() for ch in str(own)):
-            own.mkdir(exist_ok=True)
-            return own
-        system = Path(tempfile.gettempdir())
-        if any(ch.isspace() for ch in str(system)):
-            own.mkdir(exist_ok=True)
-            return own  # nothing better; R jobs report their own error
-        job.tmpdir = Path(tempfile.mkdtemp(prefix=f"opncafyr-job-{job.id}-", dir=system))
-        return job.tmpdir
+        """The job's TMPDIR: ``<job>/tmp``, or a space-free one (``proctree.child_tmpdir``)."""
+        tmpdir, job.tmpdir = child_tmpdir(job.dir / "tmp", f"opncafyr-job-{job.id}-")
+        return tmpdir
 
     def _claim_staging(self, job: _Job, staging: Path, output: str) -> None:
         if staging.exists():

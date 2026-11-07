@@ -2,6 +2,7 @@
 #   powershell -File windows_user.ps1 -Leg <leg> -Work <dir>
 #   #19 legs: identity, install, noop, launch, failure, uninstall
 #   #36 legs: sanity, offline, tamper, interrupted, update
+#   #51 leg: flow (after offline)
 param(
     [Parameter(Mandatory = $true)][string]$Leg,
     [Parameter(Mandatory = $true)][string]$Work
@@ -119,6 +120,16 @@ switch ($Leg) {
             if (-not ($r.smoke | Where-Object { $_.name -eq $n -and $_.status -eq 'ok' })) { Fail "report lacks a passing $n" }
         }
         Health 47813
+    }
+    'flow' {
+        # #51: the Gate 2 flow on the bundle install, with the installed launcher's own
+        # Python, app root and runtime. The study sits in the profile (a path with a space).
+        $python = Join-Path $root "versions\$(Active)\launcher\Scripts\python.exe"
+        if (-not (Test-Path $python)) { Fail "no launcher Python at $python" }
+        $rc = Native $python @("$Work\flow\scripts\offline\flow_check.py", (Join-Path $env:USERPROFILE 'flow'), '--results', "$Work\results\flow")
+        Copy-Item -Recurse (Join-Path $root 'logs') "$Work\results\flow\app-logs" -ErrorAction SilentlyContinue
+        if ($rc -ne 0) { Fail "the Gate 2 flow exited $rc" }
+        if ($script:lastOut -notmatch '"opnca": true') { Fail 'the flow ran without opnca-r' }
     }
     'tamper' {
         $before = Active

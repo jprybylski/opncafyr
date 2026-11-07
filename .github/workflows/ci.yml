@@ -120,8 +120,10 @@ jobs:
   # online phase fetches every pinned file (runtime/pins.toml [ci.linux-x86_64], the R
   # lock, both uv locks); the offline phase runs in its own network namespace under
   # strace, and any connection attempt that leaves the machine fails the job
-  # (docs/offline.md). opnca-r is private: without OPNCA_R_RELEASE_TOKEN its build and
-  # calculation are skipped with a warning.
+  # (docs/offline.md). #51: the offline phase ends with the Gate 2 flow through the
+  # launcher's APIs and adapters (import -> clean -> map -> one run per analyte -> replay
+  # -> publish -> report -> deck). opnca-r is private: without OPNCA_R_RELEASE_TOKEN it is
+  # not built, and the runs stop at the snapshot, with a warning.
   offline:
     name: offline install and run (Ubuntu 24.04, network blocked)
     runs-on: ubuntu-24.04
@@ -148,7 +150,7 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=opnca-r skipped::OPNCA_R_RELEASE_TOKEN is not set, so the offline job did not build opnca-r or run the calculation."
+            echo "::warning title=opnca-r skipped::OPNCA_R_RELEASE_TOKEN is not set, so the offline job did not build opnca-r, and the flow published stand-in runs instead of opnca-r runs."
           fi
       - name: Download the opnca-r vendored source tarball
         if: steps.opnca.outputs.enabled == 'true'

@@ -59,6 +59,12 @@ Copy-Item -Recurse $Payload "$work\payload"
 Copy-Item -Recurse $Newer "$work\payload-newer"
 Copy-Item -Recurse $Assets "$work\assets"
 Copy-Item (Join-Path $PSScriptRoot 'windows_user.ps1') "$work\windows_user.ps1"
+# The Gate 2 flow driver (#51) and the fixture helpers it imports, in the repository layout.
+$repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+New-Item -ItemType Directory -Force "$work\flow\scripts\offline", "$work\flow\tests\fixtures" | Out-Null
+Copy-Item "$repo\scripts\offline\flow_check.py" "$work\flow\scripts\offline\"
+Copy-Item "$repo\tests\nca_helpers.py", "$repo\tests\publish_helpers.py", "$repo\tests\artifact_docs.py" "$work\flow\tests\"
+Copy-Item "$repo\tests\fixtures\two_analyte.csv", "$repo\tests\fixtures\two_analyte.expected.json" "$work\flow\tests\fixtures\"
 icacls $work /grant "${user}:(OI)(CI)M" /T /Q | Out-Null
 
 function As-User([string]$leg, [hashtable]$envs = @{}) {
@@ -156,7 +162,7 @@ Write-Host "sanity: $($seen.Count) dropped packets logged for a deliberate attem
 if ($seen.Count -eq 0) { Fail 'the firewall log records no drops; the network check would prove nothing' }
 
 $t1 = Get-Date
-foreach ($leg in 'offline', 'tamper', 'interrupted', 'update') {
+foreach ($leg in 'offline', 'flow', 'tamper', 'interrupted', 'update') {
     $rc = As-User $leg @{ OPNCAFYR_PROXY_TRAP = '0' }
     if ($rc -ne 0) { Copy-Item -Recurse "$work\results\*" $Results -ErrorAction SilentlyContinue; Fail "leg $leg failed (exit $rc)" }
 }

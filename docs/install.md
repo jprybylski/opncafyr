@@ -265,8 +265,10 @@ with `install.sh bundle … --mirror mirror.toml`.
   - it builds the bundle twice, compares the manifests, and keeps the zip as an artifact;
   - it blocks the user's network: `sandbox-exec` on macOS, a per-user firewall rule on
     Windows, where a deliberate attempt first proves that blocked connections are logged;
-  - with the network blocked it installs from the bundle and checks the report, refuses a
-    tampered bundle, kills an update to a newer payload part-way through, and then
+  - with the network blocked it installs from the bundle and checks the report, runs the
+    Gate 2 flow on that install with the installed launcher (`scripts/offline/flow_check.py`,
+    #51: import, clean, map, one opnca-r run per analyte, replay, publish, report, deck),
+    refuses a tampered bundle, kills an update to a newer payload part-way through, and then
     completes it.
 
   Any logged connection attempt fails the job. `OPNCAFYR_PROXY_TRAP=0` turns off the

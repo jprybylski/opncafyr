@@ -71,7 +71,7 @@ at its pinned release, and traced runs (`strace` in a Linux network namespace, W
 | R12 | Report project `.Rprofile` and `renv/activate.R` (as in quartifyr's demo project) | renv bootstrap; `a2-ai.r-universe.dev` and CRAN repos | Report projects the launcher creates have neither. Every report job runs `Rscript --vanilla` (#32), so a project `.Rprofile` doesn't run and can't add repositories. | #32 |
 | R13 | uv with a warm cache | Nothing until the cache's HTTP freshness runs out; then index revalidation | **Traced**: `uv run` in a locked project made no attempt with a fresh cache. Don't rely on it: set the offline variables for every tool process. | #32, #33 |
 | R14 | Update checks, telemetry | None in any tool; none planned | The updater (#35) accepts a local bundle. | #35 |
-| R15 | Launcher R programs: cleaning (#22), opnca-r's data-format check (#24) and the replay of a saved `analysis.R` (#29) | None: base R and jsonlite only, no package installs, no repositories | Run as `Rscript --vanilla` from the pinned runtime (`core/rscript.py`), so a study folder's `.Rprofile` or `.Renviron` never runs. Not traced yet; the offline CI job reaches them in #51. | #22, #24, #29, #51 |
+| R15 | Launcher R programs: cleaning (#22), opnca-r's data-format check (#24) and the replay of a saved `analysis.R` (#29) | None: base R and jsonlite only, no package installs, no repositories | Run as `Rscript --vanilla` from the pinned runtime (`core/rscript.py`), so a study folder's `.Rprofile` or `.Renviron` never runs. **Traced** (#51): the offline CI job's flow runs cleaning, the data-format check and the replay of both runs with no attempts. | #22, #24, #29, #51 |
 
 ## Offline settings the launcher applies
 
@@ -109,10 +109,16 @@ container (#42) will reuse it. Pins for its Linux runtimes are in `[ci.linux-x86
    installs uv, Python, Quarto and Rust from the archives, both Python environments from the
    wheelhouse with every hash enforced (I3), and the R library with `renv::restore()` from
    the local repository, then the cellar packages with `R CMD INSTALL` (opnca-r built from
-   the vendored tarball). Then it runs:
-   the launcher's dataset scan, preview and import of `tests/fixtures/two_analyte.csv`
-   through its API; one `opnca::opnca()` calculation (Cmax checked against the input); a
-   quartifyr render (`--offline --strict`) of a two-artifact report; and a deckifyr build.
+   the vendored tarball). Then it runs the Gate 2 flow through the launcher
+   (`scripts/offline/flow_check.py`, #51). The launcher app runs in-process with its own
+   supervisor and job manager and the runtime record the installer would write. The
+   script imports `tests/fixtures/two_analyte.csv`, cleans and maps it, and makes one run
+   per analyte: snapshot, save in opnca-r through `/apps/opnca/`, replay, complete. It
+   checks that the two runs share no rows, then publishes them, renders the DOCX report
+   and builds the PPTX deck. The adapters start every tool process and apply the offline
+   settings themselves: the driver runs under `env -i`, so none of the shell script's own
+   `UV_*` or `R_*` variables help. The fixture's cleaning steps and mapping come from
+   `tests/nca_helpers.py`, the same ones the Gate 2 integration test uses.
 3. **Check.** `scripts/offline/check_trace.py` fails the job on any connection attempt to
    a non-loopback address or to port 53 (a DNS lookup), naming the program and its command
    line. The only tolerated attempt is I19, listed with its reason in
@@ -124,11 +130,17 @@ the R library (126 packages from source plus the four cellar packages, opnca-r's
 build included) takes about 20 of them. The check found no blocked attempt and four
 allowed lookups (I19). Same result in WSL Ubuntu 24.04 under `unshare -rn`.
 
-Without the `OPNCA_R_RELEASE_TOKEN` secret, opnca-r is left out and the calculation step
-is skipped with a warning. The two-analyte fixture goes only as far as import: cleaning
-(#22), the analyte snapshot (#25) and the opnca, quartifyr and deckifyr adapters (#27, #32,
-#33) don't exist yet. The follow-up issue (#51) routes the job through the adapters as they
-land.
+Without the `OPNCA_R_RELEASE_TOKEN` secret, opnca-r is left out with a warning. The runs
+then stop at the snapshot (the no-shared-rows check still runs), and stand-in completed
+runs are published so the report and deck are still built.
+
+The same driver runs in the `Installer` workflow right after `install --from-bundle`, as
+the standard user with the network blocked. It uses the installed launcher's Python and
+runtime: macOS leg 7b under `sandbox-exec`, the Windows `flow` leg under the firewall
+rule. Any logged attempt fails the job.
+
+The deck in the flow has figures only for now: deckifyr 0.3.6 can't build a table with an
+empty cell ([deckifyr#96](https://github.com/jprybylski/deckifyr/issues/96)).
 
 Desktop platforms are covered by the install spikes' offline variants (#6, #7) and, later,
 network-disabled VMs in the install matrix (#37).
@@ -200,7 +212,5 @@ platform (#8).
 
 - Upstream, filed with this audit: [quartifyr#83](https://github.com/jprybylski/quartifyr/issues/83) `--soffice-bin` (R8); [deckifyr#93](https://github.com/jprybylski/deckifyr/issues/93) offline mode for
   the R wrappers (R6) and `--from-repo` (R7).
-- #51: route the offline CI job through the adapters (#22, #25, #27, #32, #33).
-- #51: the Gate 2 end-to-end run from an offline bundle, once the analysis path exists. The
-  installer's report smoke tests (opnca-r calculation, Quarto DOCX, deckifyr build) are the
-  offline proof until then.
+- [deckifyr#96](https://github.com/jprybylski/deckifyr/issues/96): tables with an empty
+  cell. When it is pinned, add the tables back to the offline flow's deck.

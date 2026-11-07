@@ -6,8 +6,10 @@ name: Installer
 # leaves a workspace untouched.
 # #36: the offline bundle is built twice and the manifests compared; then, with the user's
 # network blocked (sandbox-exec / a per-user firewall rule) and every denied attempt
-# logged: install from the bundle, the installation report, a tampered bundle refused, an
-# update to a newer payload killed mid-way and then completed. Any logged attempt fails.
+# logged: install from the bundle, the installation report, the Gate 2 flow on that install
+# (#51: import -> clean -> map -> a run per analyte -> replay -> publish -> report -> deck,
+# scripts/offline/flow_check.py), a tampered bundle refused, an update to a newer payload
+# killed mid-way and then completed. Any logged attempt fails.
 # The bundle is uploaded as a workflow artifact (attaching it to releases waits on #43).
 # scripts/installer_ci/ has the legs; docs/install.md explains them.
 #
@@ -26,6 +28,9 @@ on:
       - "src/opncafyr/cli.py"
       - "scripts/make_installer.py"
       - "scripts/installer_ci/**"
+      - "scripts/offline/flow_check.py"
+      - "tests/nca_helpers.py"
+      - "tests/publish_helpers.py"
       - ".github/workflows/installer.yml"
 
 permissions:
