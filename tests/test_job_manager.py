@@ -145,6 +145,39 @@ def test_explain_gives_the_failure_message(manager):
     assert manager.get(job_id)["message"] == "Bad input (2)."
 
 
+def test_diagnose_reads_the_tools_own_error_report(manager):
+    code = 'import sys; sys.stderr.write(\'{"code": "E_X"}\'); sys.exit(1)'
+
+    def diagnose(ctx, exit_code):
+        report = json.loads((ctx.job_dir / "stderr.log").read_text("utf-8"))
+        return f"{report['code']} ({exit_code})"
+
+    request = py_job(code, diagnose=diagnose, explain=lambda c: "fallback")
+    job_id = manager.submit(request)
+    manager.wait(job_id, 20)
+    assert manager.get(job_id)["message"] == "E_X (1)"
+    # A diagnosis that finds nothing, or breaks, falls back to explain.
+    for broken in (lambda ctx, c: None, lambda ctx, c: 1 / 0):
+        job_id = manager.submit(py_job(code, diagnose=broken, explain=lambda c: "fallback"))
+        manager.wait(job_id, 20)
+        assert manager.get(job_id)["message"] == "fallback"
+
+
+def test_ok_exit_codes_run_the_review(manager, workspace):
+    seen = []
+
+    def review(ctx):
+        seen.append((ctx.job_dir / "stdout.log").read_text("utf-8"))
+        return ReviewResult(True)
+
+    code = "import sys; print('found 2'); sys.exit(1)"
+    job_id = manager.submit(py_job(code, review=review, ok_exit_codes=(0, 1)))
+    assert manager.wait(job_id, 20) is JobState.COMPLETED
+    assert seen == ["found 2\n"]
+    with pytest.raises(ValueError):
+        py_job("pass", ok_exit_codes=()).check()
+
+
 def test_failed_review_is_not_promoted(manager, workspace):
     request = py_job(
         WRITE_RESULT,

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/publish-binding-v1",
+  "title": "Which publication a report or deck project uses (.opncafyr/<tool>.json)",
+  "description": "A report or deck project (#32, #33) is bound to one publication. The launcher keeps a copy of its files in <project>/OUTPUTS/, and every build re-checks them against the publication's hashes. 'generated' holds the hashes of the source files the launcher wrote, so it can tell whether the user has since edited them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tool", "project", "publication_id", "publication_sha256", "generated", "updated_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "tool": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "project": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "publication_id": {"type": "string", "pattern": "^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$"},
+    "publication_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "generated": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "settings": {"type": "object"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

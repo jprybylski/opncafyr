@@ -18,6 +18,8 @@ SCHEMAS = [
     "settings-v1",
     "reportifyr-sidecar-v1",
     "preflight-v1",
+    "publish-binding-v1",
+    "publish-build-v1",
 ]
 SHA = "0" * 64
 

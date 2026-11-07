@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/publish-build-v1",
+  "title": "Build manifest of a report or deck (<project>/builds/<build-id>/build.json)",
+  "description": "What one DOCX or PPTX build was made from (#32, #33): the exact publication, the run IDs, the hash of every published file, every input file (hashed by the launcher before the tool ran), the tool versions and the outputs. Written last into the build's staging folder; the folder appears only after the build passed every check.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "build_id", "tool", "created_at", "publication_id", "publication_sha256", "runs", "items", "inputs", "tools", "settings", "outputs", "warnings", "tool_result"],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "relpath": {"type": "string", "minLength": 1, "not": {"pattern": "^(/|[A-Za-z]:)|(^|/)\\.\\.(/|$)"}}
+  },
+  "properties": {
+    "schema_version": {"const": 1},
+    "build_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$"},
+    "tool": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "publication_id": {"type": "string", "pattern": "^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$"},
+    "publication_sha256": {"$ref": "#/$defs/sha256"},
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4,}$"}
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["run_id", "published_path", "sha256", "sidecar_sha256"],
+        "properties": {
+          "run_id": {"type": "string"},
+          "published_path": {"$ref": "#/$defs/relpath"},
+          "sha256": {"$ref": "#/$defs/sha256"},
+          "sidecar_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "sha256"],
+        "properties": {
+          "role": {"type": "string"},
+          "path": {"$ref": "#/$defs/relpath"},
+          "sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "tools": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},
+    "settings": {"type": "object"},
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "sha256", "bytes"],
+        "properties": {
+          "role": {"type": "string"},
+          "path": {"$ref": "#/$defs/relpath"},
+          "sha256": {"$ref": "#/$defs/sha256"},
+          "bytes": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+          "code": {"type": ["string", "null"]},
+          "message": {"type": "string"},
+          "slide": {},
+          "element": {}
+        }
+      }
+    },
+    "tool_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/relpath"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

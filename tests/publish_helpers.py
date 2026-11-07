@@ -4,12 +4,40 @@ from __future__ import annotations
 
 import json
 import stat
+import struct
+import time
+import zlib
+from contextlib import contextmanager
 from pathlib import Path
+
+from fastapi.testclient import TestClient
 
 from artifact_docs import SHA, run_manifest
 from opncafyr.core import runs as R
+from opncafyr.core.app import create_app
+from opncafyr.core.jobmanager import JobManager
+from opncafyr.core.runtime import Runtime
+from opncafyr.core.security import SESSION_HEADER
+from opncafyr.core.workspace import RecentWorkspaces
 
-PNG = b"\x89PNG\r\n\x1a\n"
+
+def png(note: str, size: int = 8) -> bytes:
+    """A valid grey PNG (``size`` px square) carrying ``note`` in a text chunk."""
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        body = kind + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
+
+    rows = b"".join(b"\x00" + b"\x80" * size for _ in range(size))
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 0, 0, 0, 0))
+        + chunk(b"tEXt", b"Comment\x00" + note.encode())
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
+    )
+
+
 MEDIA = {".csv": "text/csv", ".png": "image/png", ".R": "text/x-r", ".json": "application/json"}
 KIND = {".csv": "table", ".png": "figure", ".R": "script", ".json": "record"}
 
@@ -22,16 +50,16 @@ def writable(root: Path) -> None:
 
 
 def saved_files(analyte: str, run_id: str) -> dict[str, bytes]:
-    tag = f"{analyte} {run_id}".encode()
+    tag = f"{analyte} {run_id}"
     return {
         "analysis.R": b'df <- read.csv("input/analysis.csv")\n',
         "analysis-record.json": b'{"data": {}}\n',
-        "results/opnca-summary.csv": b"metric,mean\ncmax," + tag + b"\n",
-        "results/opnca-parameters-wide.csv": b"USUBJID,cmax\nS-001," + tag + b"\n",
+        "results/opnca-summary.csv": f"metric,mean,note\ncmax,1.5,{tag}\n".encode(),
+        "results/opnca-parameters-wide.csv": f"USUBJID,cmax,note\nS-001,1.5,{tag}\n".encode(),
         "results/opnca-parameters-long.csv": b"profile_id,metric,value\nS-001,cmax,1\n",
-        "results/figures/profiles-linear.png": PNG + b"linear " + tag,
-        "results/figures/profiles-log.png": PNG + b"log " + tag,
-        "results/figures/boxplot-cmax.png": PNG + b"box " + tag,
+        "results/figures/profiles-linear.png": png(f"linear {tag}"),
+        "results/figures/profiles-log.png": png(f"log {tag}"),
+        "results/figures/boxplot-cmax.png": png(f"box {tag}"),
     }
 
 
@@ -104,3 +132,40 @@ PRESELECTED = ("summary", "listing", "profiles-linear", "profiles-log")
 
 def picks(run_id: str, artifacts=PRESELECTED) -> list[dict]:
     return [{"run_id": run_id, "artifact": a} for a in artifacts]
+
+
+@contextmanager
+def publish_client(security, tmp_path: Path, study: Path, runtime: Runtime | None = None, **kw):
+    """A TestClient with the session set and ``study`` opened, with jobs on ``runtime``."""
+    jobs = JobManager(runtime=runtime or Runtime(), poll_interval=0.05)
+    app = create_app(
+        security,
+        jobs=jobs,
+        picker=lambda prompt, start: study,
+        recent=RecentWorkspaces(tmp_path / "state" / "recent.json"),
+        runtime=runtime or Runtime(),
+        **kw,
+    )
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{security.port}",
+        cookies={security.cookie_name: security.secret},
+    ) as client:
+        client.headers[SESSION_HEADER] = security.secret
+        folder = client.post("/api/workspace/pick").json()["folder"]
+        r = client.post("/api/workspace/init", json={"path": folder["path"]})
+        if r.status_code != 200:  # already a workspace: open it
+            client.post("/api/workspace/open", json={"path": folder["path"]}).raise_for_status()
+        client.study = study
+        yield client
+    jobs.shutdown()
+
+
+def wait_job(client, job_id: str, timeout: float = 300.0) -> dict:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        job = client.get(f"/api/jobs/{job_id}").json()["job"]
+        if job["state"] in ("completed", "failed", "cancelled"):
+            return job
+        time.sleep(0.1)
+    raise TimeoutError(job_id)

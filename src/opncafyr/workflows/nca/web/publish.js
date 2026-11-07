@@ -4,6 +4,7 @@
 import { el, on } from "./common.js";
 import { initCurator, initPublications } from "./curator.js";
 import { initOutputs } from "./outputs.js";
+import { initReport } from "./report.js";
 
 export const state = {
   listeners: [],
@@ -39,6 +40,7 @@ export function init(container) {
   initCurator(stack, state);
   initPublications(stack, state);
   initOutputs(stack, state);
+  initReport(stack, state);
   on("workspace-changed", () => state.changed("workspace"));
   // Runs completed on the Analysis page show up when this page is opened again.
   on("view-changed", (route) => {

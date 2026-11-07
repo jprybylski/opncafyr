@@ -7,6 +7,31 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- quartifyr report adapter: set up, check and render a DOCX from one publication (#32).
+  - **Set up report** lays out `report/` offline:
+    - quartifyr 0.3.3's `initialize_report_project_offline()` and the bundled extensions
+      (no pyro, uv or network);
+    - the bundled template (ADR 0007), quartifyr's reference DOCX, a generated
+      `report.qmd` (data text reduced to plain words) and a copy of the publication's
+      files.
+
+    The project is bound to that publication (`publish-binding-v1`). Binding it to
+    another publication asks before replacing an edited `report.qmd`.
+  - **Check** runs the sidecar checks (#30) and quartifyr's `check.R` on a staging copy
+    that holds exactly the publication's files, each checked against its hash.
+  - **Render** runs `render.R --strict --offline` with the pinned Quarto on that copy:
+    - success means exit 0 and status `ok`; the DOCX that quartifyr lists is re-hashed and
+      kept in `report/builds/<id>/` with `build.json` (new `publish-build-v1`: the
+      publication, exact run IDs, every published file and input hash, tool versions);
+    - any failure, partial render, timeout (whole process tree killed) or cancel keeps
+      nothing;
+    - one report job runs at a time;
+    - "Download DOCX" serves a build only while it matches its manifest.
+  - Every report job runs with offline uv, app-owned uv and Deno caches, a throwaway git
+    identity, and the pinned uv first on `PATH` (docs/offline.md R1-R4, R12, S4, S6).
+  - The job manager gains `ok_exit_codes` (a check tool may exit 1 to report findings)
+    and `diagnose(ctx, code)` (a tool's own JSON error becomes the job's message).
+  - Integration tests render a two-analyte publication with real quartifyr and Quarto.
 - Publication curator: completed runs' tables and figures copied into `OUTPUTS/` with a
   publication manifest (#31).
   - The Publish page lists every run. Only completed runs whose replay passed and whose

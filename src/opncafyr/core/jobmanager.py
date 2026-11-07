@@ -126,8 +126,11 @@ class JobRequest:
     ``output`` and ``cwd`` are workspace-relative. ``build`` returns the command; the
     optional ``review`` checks the staged outputs after a clean exit; ``progress`` turns a
     stdout line into a message (default: lines starting with ``PROGRESS_PREFIX``);
-    ``explain`` turns a non-zero exit code into a message. None of these callables are
-    persisted.
+    ``explain`` turns a non-zero exit code into a message. ``diagnose`` does the same with
+    the job's context, so it can read the tool's own error report from the job's
+    ``stdout.log``/``stderr.log``; its message wins over ``explain``'s. ``ok_exit_codes``
+    are the exit codes that count as a clean exit (a check tool may exit 1 to say it found
+    something). None of these callables are persisted.
     """
 
     kind: str
@@ -140,6 +143,8 @@ class JobRequest:
     review: Callable[[JobContext], ReviewResult] | None = None
     progress: Callable[[str], str | None] | None = None
     explain: Callable[[int], str] | None = None
+    diagnose: Callable[[JobContext, int], str | None] | None = None
+    ok_exit_codes: tuple[int, ...] = (0,)
 
     def check(self) -> None:
         if not _KIND_RE.match(self.kind):
@@ -152,6 +157,8 @@ class JobRequest:
             raise ValueError("A job needs a finite timeout.")
         if self.timeout_s <= 0:
             raise ValueError("A job's timeout must be positive.")
+        if not self.ok_exit_codes or not all(isinstance(c, int) for c in self.ok_exit_codes):
+            raise ValueError("ok_exit_codes must list at least one integer exit code.")
 
 
 @dataclass
@@ -496,8 +503,15 @@ class JobManager:
         self._check_cancel(job)
 
         exit_code = self._run(job, request, ctx, spec)
-        if exit_code != 0:
-            text = request.explain(exit_code) if request.explain else None
+        if exit_code not in request.ok_exit_codes:
+            text = None
+            if request.diagnose is not None:
+                try:
+                    text = request.diagnose(ctx, exit_code)
+                except Exception as exc:  # noqa: BLE001 - a broken diagnosis falls back
+                    log.error("job %s diagnose raised %s", job.id, type(exc).__name__)
+            if not text and request.explain:
+                text = request.explain(exit_code)
             raise _Stop(
                 JobState.FAILED,
                 "exit_code",

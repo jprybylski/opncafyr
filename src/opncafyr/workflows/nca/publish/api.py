@@ -14,6 +14,14 @@ Curator (#31):
   into ``OUTPUTS/`` and the manifest is recorded (201). Refusals are 409 with a code.
 - ``GET  /api/nca/publications``; ``GET /api/nca/publications/{id}`` (with ``changed``:
   published files that no longer match).
+
+Report (#32, ``report.py``):
+- ``GET  /api/nca/report``: the project, its publication, running jobs, the last check's
+  findings and every build.
+- ``POST /api/nca/report {publication_id, source}``: set up ``report/`` (a job) or bind
+  it to another publication (409 ``needs_choice`` if ``report.qmd`` was edited).
+- ``POST /api/nca/report/check``; ``POST /api/nca/report/render {status}``: jobs.
+- ``GET  /api/nca/report/builds/{id}/docx``: the DOCX, if it still matches its manifest.
 """
 
 from __future__ import annotations
@@ -26,7 +34,7 @@ from pydantic import BaseModel, Field
 
 from opncafyr.adapters import quartifyr
 from opncafyr.core.artifacts import list_publications
-from opncafyr.workflows.nca.publish import curator, sidecars
+from opncafyr.workflows.nca.publish import curator, report, sidecars
 from opncafyr.workflows.nca.publish.catalog import UNAVAILABLE
 
 if TYPE_CHECKING:
@@ -39,6 +47,7 @@ STATUS = {
     "duplicate": 422,
     "too_many": 422,
     "publish_failed": 500,
+    "bad_status": 422,
 }
 
 
@@ -136,3 +145,5 @@ def mount(app: FastAPI, ctx: Context) -> None:
         except curator.PublishError as exc:
             raise failure(exc) from None
         return {"publication": doc, "changed": curator.verify_publication(root, doc)}
+
+    report.mount(app, ctx, failure)

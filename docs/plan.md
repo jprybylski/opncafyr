@@ -135,9 +135,12 @@ scheduled first.
   fails.
 
 **Gate 3**
-- Starts once #29 proves runs can be replayed. The quartifyr adapter calls quartifyr
-  0.3.2's `render.R --strict --json --offline` and `check.R --json` (quartifyr#69/#78),
-  in a staging copy of the project, until quartifyr#81 lands.
+- Starts once #29 proves runs can be replayed. The quartifyr adapter (#32) calls quartifyr
+  0.3.3's `render.R --strict --json --offline` and `check.R --json` in a staging copy of
+  the project that holds only the bound publication's files. It keeps only the DOCX
+  listed in the result, after re-hashing it. Quarto refuses a project inside a hidden
+  folder, so the render copy lives in the build's staging folder rather than
+  `.opncafyr/jobs/`.
 
 **Gate 4**
 - Closes the release. #41 adds a toy second adapter to prove that `core/` stays

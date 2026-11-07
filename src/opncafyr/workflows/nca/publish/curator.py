@@ -323,7 +323,7 @@ def plan(root: Path, picks: list[Pick], footnotes: sidecars.Footnotes) -> Plan:
     return out
 
 
-def _copy_in(source: Path, target: Path) -> None:
+def copy_file(source: Path, target: Path) -> None:
     """Copy through a hidden temp file in the target folder, then rename into place."""
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
@@ -383,7 +383,7 @@ def publish(
             folder = planned.runs[item.run_id][0]
             if item.status == "new":
                 source = resolve_in_root(folder, item.entry.path)
-                _copy_in(source, resolve_in_root(root, item.published_path))
+                copy_file(source, resolve_in_root(root, item.published_path))
             if not item.reuse_sidecar:
                 _write_bytes(resolve_in_root(root, item.sidecar_path), item.sidecar_bytes)
         # Check what is now on disk before recording it.

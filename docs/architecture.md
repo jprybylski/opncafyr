@@ -168,11 +168,16 @@ Study folder/
       logs/                     launcher logs, such as the replay report (#29)
       manifest.json             schemas/run-manifest-v1, sealed when completed
     publications/<id>.json      schemas/publication-v1: exact run IDs and every hash (#31)
+    report.json  deck.json      schemas/publish-binding-v1: the project's publication (#32, #33)
+    publish-checks/<id>/        preflight.json (schemas/preflight-v1) of a report check
     jobs/<job-id>/              schemas/job-v1 state.json, events.jsonl, stdout/stderr
                                 logs, diagnostic.json (core/jobmanager.py)
   OUTPUTS/{figures,tables}/     published copies <analyte>_<run-id>_<artifact>.<ext> +
                                 <name>_<ext>_metadata.json sidecars (#30, #31)
-  report/                       quartifyr / Quarto project
+  report/                       quartifyr project bound to one publication (#32):
+                                report.qmd, _quarto.yml, report/, _extensions/, OUTPUTS/ copy
+    builds/<build-id>/          report-<draft|final>.docx, render-result.json, build.json
+                                (schemas/publish-build-v1)
   deck/                         deckifyr project
 ```
 
@@ -381,3 +386,35 @@ matches to the 4 decimal places that API writes numbers with.
   `preflight-v1` findings that name files and checks, never values.
 - **Templates.** The bundled `standard_footnotes.yaml` and `config.yaml` are in
   `adapters/quartifyr/template/`.
+
+## Reports (#32)
+
+`workflows/nca/publish/report.py` runs quartifyr as jobs. The quartifyr adapter
+(`adapters/quartifyr/`) only builds the commands and reads the results.
+
+- **Setup** (`report.setup`): `r/quartifyr_setup.R` calls
+  `initialize_report_project_offline()` and the bundled-extension installers. The
+  review then writes the template, `report.qmd` and the `OUTPUTS/` copy, and the binding.
+  `report/` appears only when all of that worked.
+- **Check** (`report.check`): the sidecar checks plus `check.R --json`, run on a staging
+  copy. `check.R` exits 1 when it finds an error, so the job accepts exit codes 0 and 1
+  (`JobRequest.ok_exit_codes`).
+- **Render** (`report.render`):
+  `render.R --strict --offline --json --quarto-bin <pinned> --reference-doc <abs>`.
+  - The job runs in `report/builds/<id>.staging/work`, because Quarto refuses a project
+    inside a hidden folder.
+  - Inputs are hashed before the run.
+  - Success means exit 0 and `status: ok`. The DOCX the result lists is re-hashed, then
+    copied out, and the work copy is removed before promotion.
+  - On a non-zero exit, `JobRequest.diagnose` turns quartifyr's JSON error (`error_class`,
+    `errors`, missing metadata) into the job's message, without absolute paths.
+- **Environment**:
+  - `QUARTIFYR_PYTHON_ENV` = the tools env;
+  - `UV_OFFLINE`, `UV_NO_INDEX`, `UV_NO_SYNC`, `UV_NO_PROJECT`, `UV_NO_CONFIG`,
+    `UV_PYTHON_DOWNLOADS=never`;
+  - `UV_CACHE_DIR` and `DENO_DIR` under `<app root>/cache`;
+  - a throwaway `HOME` holding a git identity;
+  - the pinned uv first on `PATH`.
+- **Limits.** Time limits come from the quartifyr descriptor's `check_report` and
+  `render_report` contracts; the job manager kills the whole tree. Report jobs refuse to
+  start while another one runs.

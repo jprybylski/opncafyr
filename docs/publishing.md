@@ -5,7 +5,7 @@ A completed run becomes a report (DOCX) or a deck (PPTX) in two steps. Both star
 
 1. **Publish** tables and figures from completed runs into `OUTPUTS/`. This is a separate,
    reviewable step that never changes a run.
-2. **Build** a report or deck from one publication.
+2. **Build** a report or deck from one publication: see [Reports](#reports-32).
 
 Research use only. A successful DOCX or PPTX build shows that the files were assembled as
 recorded. It does not validate the analysis.
@@ -75,6 +75,47 @@ The sidecars the launcher writes have these parts:
   assumed.
 
 "Published files" on the Publish page runs the same checks over everything in `OUTPUTS/`.
+
+## Reports (#32)
+
+The **Report (DOCX)** card on the Publish page sets up `report/`, a quartifyr project for
+one publication.
+
+1. **Set up report** lays out the project offline, from the template bundled with the app
+   (ADR 0007):
+   - `report.qmd` with one captioned table or figure per published file;
+   - the owner's `standard_footnotes.yaml` and `config.yaml`;
+   - quartifyr's reference DOCX;
+   - the quarto-plus and quartifyr extensions.
+
+   It also writes a copy of the publication's files in `report/OUTPUTS/`. Analyte names
+   from the data are reduced to plain words before they go into `report.qmd`, so they
+   can't open a code chunk or a shortcode.
+2. **Use this publication** binds the project to another publication. If you edited
+   `report.qmd`, you choose whether to replace it or keep your version.
+3. **Check** runs two sets of checks on a copy of the project that holds exactly the
+   publication's files, each checked against its recorded hash:
+   - the launcher's sidecar checks;
+   - quartifyr's `check.R`.
+
+   It lists what would block or weaken the render.
+4. **Render** (choose draft or final) renders that same copy with quartifyr's strict,
+   offline render. It keeps the DOCX that quartifyr's result lists, after re-hashing it, in
+   `report/builds/<build-id>/` with two records:
+   - `build.json` (`publish-build-v1`). It lists the publication, the exact run IDs, the
+     hash of every published file, every input (hashed before the render), and the tool
+     versions;
+   - quartifyr's own `render-result.json`.
+
+   **Download DOCX** serves it only while it still matches its manifest.
+
+A render that fails, leaves placeholders unfilled, misses metadata, runs past its time
+limit or is cancelled keeps nothing. The whole process tree is stopped at the time
+limit. One report job runs at a time.
+
+Field recalculation (LibreOffice) is not used, so Word may ask to update fields when the
+file is opened (docs/spikes/libreoffice.md). Quarto can't render a project inside a hidden
+folder, so a study folder must not sit inside one (for example `~/.studies/`).
 
 ### Why there are no R scripts
 
