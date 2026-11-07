@@ -109,7 +109,9 @@ standard library.
 A failure anywhere before step 5 has these results:
 - the incomplete install is removed;
 - the previous install stays active;
-- a redacted support bundle is written to `logs/support/install-failure-<time>.zip`:
+- a redacted install-failure bundle is written to `logs/support/install-failure-<time>.zip`
+  (once opncafyr runs, **Settings → Support** or `opncafyr doctor --bundle` makes a fuller
+  support bundle, see [architecture.md](architecture.md#support-bundle-38)):
   - the logs, with the home folder, the user name and any token masked;
   - the step results;
   - OS, architecture and free disk.

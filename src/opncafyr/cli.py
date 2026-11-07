@@ -186,11 +186,13 @@ def cmd_launch(args: argparse.Namespace) -> int:
     )
 
 
-def cmd_doctor(_: argparse.Namespace) -> int:
+def cmd_doctor(args: argparse.Namespace) -> int:
     from opncafyr.core.health import ToolHealth
     from opncafyr.core.registry import DescriptorError, load_descriptors
     from opncafyr.core.runtime import load_runtime
 
+    if args.bundle or args.preview:
+        return _support_bundle(args)
     print(f"opncafyr {__version__}")
     print(f"python   {sys.version.split()[0]}")
     print(f"app root {app_root()}")
@@ -216,6 +218,58 @@ def cmd_doctor(_: argparse.Namespace) -> int:
         print(f"tool {tool_id:<10} {status.state}: {status.detail}")
         for req in status.missing:
             print(f"     {'':<10} {req.message}")
+    return 0
+
+
+def _support_bundle(args: argparse.Namespace) -> int:
+    """``doctor --preview`` / ``doctor --bundle``: the redacted support bundle (#38)."""
+    from opncafyr.core import support
+    from opncafyr.core.health import ToolHealth
+    from opncafyr.core.registry import DescriptorError, load_descriptors, load_workflows
+    from opncafyr.core.runtime import load_runtime
+
+    workspace = None
+    if args.workspace:
+        workspace = Path(args.workspace).resolve()
+        if not (workspace / ".opncafyr").is_dir():
+            print(f"{workspace.name} is not a study folder (no .opncafyr/).", file=sys.stderr)
+            return 2
+    try:
+        tools = load_descriptors()
+        runtime = load_runtime()
+    except (DescriptorError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    health = ToolHealth(tools, runtime)
+    health.check_all()
+    entries = support.build(
+        app_root=app_root(),
+        tools=tools,
+        health=health,
+        runtime=runtime,
+        workspace=workspace,
+        sensitive=support.sensitive_values(load_workflows(), workspace),
+    )
+    if args.preview:
+        for entry in entries:
+            print(f"===== {entry.name} =====")
+            print(entry.text, end="" if entry.text.endswith("\n") else "\n")
+        print("(preview only: nothing was saved)")
+        return 0
+    print("The support bundle will contain:")
+    for entry in entries:
+        print(f"  {entry.name:<34} {len(entry.text.encode('utf-8')):>8} bytes")
+    print("See every entry with `opncafyr doctor --preview`.")
+    if not args.yes:
+        if not sys.stdin.isatty():
+            print("Not saved: pass --yes to save without asking.", file=sys.stderr)
+            return 2
+        if input("Save it on this computer? [y/N] ").strip().lower() not in {"y", "yes"}:
+            print("Not saved.")
+            return 1
+    path = support.write(entries, app_root())
+    print(f"Saved {path}")
+    print("It stays on this computer. Send it to support yourself if you choose to.")
     return 0
 
 
@@ -305,6 +359,19 @@ def build_parser() -> argparse.ArgumentParser:
     launch.set_defaults(func=cmd_launch)
 
     doctor = sub.add_parser("doctor", help="Report paths and tool availability.")
+    what = doctor.add_mutually_exclusive_group()
+    what.add_argument(
+        "--bundle",
+        action="store_true",
+        help="Save a redacted support bundle in <app root>/logs/support (asks first).",
+    )
+    what.add_argument(
+        "--preview", action="store_true", help="Print the support bundle; save nothing."
+    )
+    doctor.add_argument(
+        "--workspace", metavar="DIR", help="Include this study folder's job states and counts."
+    )
+    doctor.add_argument("--yes", action="store_true", help="With --bundle: save without asking.")
     doctor.set_defaults(func=cmd_doctor)
 
     bundle = sub.add_parser(

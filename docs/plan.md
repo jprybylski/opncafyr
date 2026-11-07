@@ -146,6 +146,10 @@ scheduled first.
 - Closes the release. #41 is done (2026-11-07): the toy `example_echo` adapter runs a
   job and a web app with no change under `core/`, and
   [adding-a-tool.md](adding-a-tool.md) is the guide.
+- #38 is done (2026-11-07): Settings → Support and `opncafyr doctor --bundle` save a
+  redacted support bundle locally after a preview
+  ([architecture.md](architecture.md#support-bundle-38)). A test runs the two-analyte
+  fixture and checks that none of its subject IDs or concentrations reach the bundle.
 
 ## Risks
 

@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A redacted support bundle (#38): **Settings → Support → Create support bundle…** or
+  `opncafyr doctor --bundle` (`--preview` prints it without saving).
+  - It holds versions, the install's components, smoke results and hash check, tool
+    health, the open study's recent job states and exit codes, and the end of the
+    launcher, app and installer logs.
+  - It never holds data, results, job output logs (only their sizes), study file names or
+    the recent-folders list. Paths are shortened, identifier values masked and every
+    decimal number replaced, so a concentration in an error message can't get through.
+  - You see every part before it is saved, and it is saved on this computer only, in
+    `logs/support/`.
+  - Workflow packs can name identifier values to mask (`WorkflowPack.sensitive_values`);
+    the NCA pack names the mapped subject ID columns.
 - A toy second tool, `example_echo`, and a guide to adding a tool,
   [docs/adding-a-tool.md](docs/adding-a-tool.md) (#41).
   - The toy has a job, which summarizes a CSV's columns without writing any cell value,

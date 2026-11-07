@@ -72,6 +72,7 @@ from opncafyr.core.security import (
     reopen_page_headers,
 )
 from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
+from opncafyr.core.support_api import mount_support_api
 from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
 from opncafyr.core.workspace_api import Picker, mount_workspace_api
 from opncafyr.paths import logs_dir, state_dir
@@ -198,6 +199,7 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.tools = installed
         rt = runtime if runtime is not None else load_runtime()
+        app.state.runtime = rt
         health = ToolHealth(installed, rt)
         app.state.health = health
         health.start()
@@ -431,6 +433,7 @@ def create_app(
     mount_datasets_api(app, datasets)
     mount_runs_api(app)
     mount_project_files_api(app, project_files)
+    mount_support_api(app, packs)
 
     @app.get("/api/workflows")
     def workflow_views() -> dict[str, Any]:

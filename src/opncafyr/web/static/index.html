@@ -238,6 +238,15 @@
             </div>
           </div>
         </section>
+        <section class="card" aria-labelledby="support-heading">
+          <div class="card-head"><h2 id="support-heading">Support</h2></div>
+          <div class="card-body">
+            <p>A support bundle helps someone find out why something went wrong. It holds versions, tool health, recent job states and the end of the app's logs. It never holds your data, results or file names, and identifiers, numbers and your user name are masked. You see every part before it is saved, and it stays on this computer.</p>
+            <div class="actions"><button class="btn" id="support-create" type="button">Create support bundle…</button></div>
+            <p class="status" id="support-status" role="status" aria-live="polite"></p>
+            <ul class="support-saved" id="support-saved"></ul>
+          </div>
+        </section>
         <section class="card" aria-labelledby="about-heading">
           <div class="card-head"><h2 id="about-heading">For developers</h2></div>
           <div class="card-body">
@@ -255,6 +264,15 @@
       <button class="btn btn-primary" value="keep" autofocus>Keep running and quit when finished</button>
       <button class="btn btn-danger" value="cancel">Cancel jobs and quit</button>
       <button class="btn btn-ghost" value="stay">Don't quit</button>
+    </form>
+  </dialog>
+  <dialog id="support-dialog" class="support-dialog" aria-labelledby="support-title">
+    <h2 id="support-title">Support bundle</h2>
+    <p>This is everything the bundle will contain. Open a part to read it. Nothing is saved until you choose Save.</p>
+    <div id="support-entries" class="support-entries"></div>
+    <form method="dialog" class="actions">
+      <button class="btn btn-primary" value="save">Save on this computer</button>
+      <button class="btn btn-ghost" value="cancel" autofocus>Cancel</button>
     </form>
   </dialog>
   <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">

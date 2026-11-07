@@ -151,8 +151,8 @@ and the API carry text written for a person.
    log record (table-like arguments become a row count; registered identifier values
    and `token=` query values become `‹redacted›`) and every line of child output copied
    into `logs/children/`. Workflows register identifier values when they read a dataset.
-   Job logs stay in the study workspace with the run; the diagnostic bundle (#38) must
-   redact them.
+   Job logs stay in the study workspace with the run; the support bundle (#38) never
+   includes them, only their sizes.
 
 ## Workspace contract
 
@@ -551,3 +551,46 @@ existing fragment but can't edit its text.
 The test-only `toy_notes`
 tool (`tests/toy_notes.py`) shows a second tool using the editor with no change to core
 or the generic page.
+
+## Support bundle (#38)
+
+**Settings → Support → Create support bundle…** and `opncafyr doctor --bundle` collect
+what support needs to diagnose a problem into one zip, `<app root>/logs/support/
+support-<time>.zip` (`core/support.py`, `core/support_api.py`). It is saved on this
+machine only; nothing is uploaded. The page previews every entry, read-only, before
+anything is written, and Save writes exactly the previewed bytes. `doctor --preview`
+prints it without saving, and `doctor --bundle` asks first (`--yes` to skip;
+`--workspace DIR` adds a study folder's jobs).
+
+| Entry | Contents |
+|---|---|
+| `README.txt` | What is in the bundle and what isn't; the research-use notice |
+| `system.json` | opncafyr, Python, OS, architecture, free disk, active install id |
+| `install.json` | the active install's record (version, mode, options, components and versions, smoke results); whether its installer payload still matches its hashes and the record (`installer.payload.load`); missing runtime files (`quick_check`); installed and incomplete ids; the latest installation report; the names of `install-failure-*.zip` bundles and of the latest install's step logs |
+| `runtime.json` | each runtime executable's file name and whether it exists |
+| `tools.json` | each tool's version, capabilities, health and web-app state |
+| `jobs.json` | for the open study: its folder name, counts of what `.opncafyr/` holds, and the 20 most recent jobs (kind, pool, state, reason, exit code, times, time limit, the short message, `diagnostic.json` flags, and the sizes of `stdout.log`/`stderr.log`) |
+| `logs/launcher.log` | the last 500 records of the launcher log |
+| `logs/install/installer.log` | the end of the latest install, update or repair log |
+| `logs/children/<tool>.log` | the last 100 lines of each child app's log |
+
+Never included: dataset content, snapshots, results, job `stdout.log`/`stderr.log`
+content, job labels and outputs (they hold file names), file listings of the study, the
+recent-workspaces list and the environment.
+
+Every free-text value (job messages, log lines) is scrubbed:
+- secrets and tokens are masked (`installer.support.redact`, `core.redaction`);
+- the study folder's path becomes `<study:NAME>`, the home folder `~`, the user name
+  `<user>`;
+- identifier values become `‹redacted›`: those registered in the launcher, plus those
+  each workflow pack's `sensitive_values(workspace)` hook finds. The NCA pack returns
+  every value of the columns mapped to `SUBJECT_ID` and `SECONDARY_ID` in its cleaned
+  output, so the CLI masks them even without the study open;
+- every decimal number becomes `‹n›`, so a concentration quoted in an error can't get
+  through. Dotted versions (`4.6.2`) and ids are kept.
+
+Structured fields (versions, ids, states, exit codes, times) are copied unchanged.
+Installer logs hold no study data, so they get only the path and secret rules.
+`tests/test_support_bundle.py` and `tests/integration/nca/test_support_bundle_r.py` build
+a bundle after running the two-analyte fixture and check that none of its subject IDs or
+concentrations is in it.

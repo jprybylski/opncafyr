@@ -15,8 +15,8 @@ first rule is not to log values at all. This module is the backstop:
   by line before it is written (``core.supervisor``).
 
 Job ``stdout.log``/``stderr.log`` stay in the study workspace next to the run, where
-ADR 0007 allows coded subject IDs. A diagnostic bundle (#38) must redact them before
-including them.
+ADR 0007 allows coded subject IDs. The support bundle (#38, ``core.support``) never
+includes them, only their sizes.
 """
 
 from __future__ import annotations

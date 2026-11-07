@@ -131,6 +131,25 @@ def test_skip_link_keeps_the_view(page):
     assert page.get_by_role("heading", level=1, name="Settings").is_visible()
 
 
+def test_support_bundle_is_previewed_then_saved(page, home):
+    page.goto(page.url.split("#")[0] + "#/settings")
+    page.get_by_role("heading", level=1, name="Settings").wait_for()
+    page.get_by_role("button", name="Create support bundle…").click()
+    dialog = page.locator("#support-dialog")
+    dialog.wait_for()
+    assert dialog.locator("summary", has_text="jobs.json").is_visible()
+    dialog.locator("summary", has_text="README.txt").click()
+    assert "Research use only" in dialog.locator("pre").first.inner_text()
+    _axe(page)
+    dialog.get_by_role("button", name="Save on this computer").click()
+    page.locator("#support-status", has_text="Saved support-").wait_for()
+    link = page.locator("#support-saved a").first
+    link.wait_for()
+    saved = list((home.app_root / "logs" / "support").glob("support-*.zip"))
+    assert [p.name for p in saved] == [link.inner_text()]
+    assert page.errors == []
+
+
 BG = "getComputedStyle(document.body).backgroundColor"
 LIGHT_BG, DARK_BG = "rgb(242, 245, 244)", "rgb(12, 20, 19)"
 

@@ -19,6 +19,7 @@ def workflow() -> WorkflowPack:
     from opncafyr.workflows.nca import api
     from opncafyr.workflows.nca.analytes import AnalyteAnnotator
     from opncafyr.workflows.nca.importers.csv import CsvImporter
+    from opncafyr.workflows.nca.sensitive import sensitive_values
 
     return WorkflowPack(
         id="nca",
@@ -26,6 +27,7 @@ def workflow() -> WorkflowPack:
         annotators=(AnalyteAnnotator(),),
         mount=api.mount,
         static=("opncafyr.workflows.nca", "web"),
+        sensitive_values=sensitive_values,
         views=(
             WorkflowView(
                 id="analysis",

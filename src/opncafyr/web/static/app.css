@@ -587,6 +587,14 @@ dialog::backdrop { background: var(--backdrop); }
 dialog h2 { margin: 0 0 var(--space-2); font-size: var(--text-lg); }
 dialog p { margin: 0 0 var(--space-4); color: var(--muted); }
 
+/* Support bundle preview (#38): every entry, readable before it is saved. */
+dialog.support-dialog { max-width: min(56rem, calc(100vw - 2rem)); width: 100%; }
+.support-entries { display: grid; gap: var(--space-1); max-height: 60vh; overflow: auto; margin-bottom: var(--space-4); }
+.support-entries summary { cursor: pointer; font-family: var(--mono); font-size: var(--text-sm); }
+.support-entries pre { margin: var(--space-1) 0 var(--space-2); padding: var(--space-2); max-height: 20rem; overflow: auto; font-family: var(--mono); font-size: var(--text-xs); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.support-saved { margin: 0; padding-left: var(--space-4); font-size: var(--text-sm); }
+.support-saved:empty { display: none; }
+
 /* ---- Component reference page ------------------------------------------------- */
 
 .ref { max-width: 72rem; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-6); display: grid; gap: var(--space-5); }

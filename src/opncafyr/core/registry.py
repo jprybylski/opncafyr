@@ -16,7 +16,7 @@ from __future__ import annotations
 import importlib
 import pkgutil
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -332,6 +332,9 @@ class WorkflowPack:
       pass through the same security middleware as every other route.
     - ``static`` is ``(package, folder)`` of the pack's page assets and ``views`` the
       pages the shell lists. Core never knows what a view does.
+    - ``sensitive_values(workspace)`` returns identifier values in a study folder (such
+      as subject IDs) that must never reach a support bundle (#38). Core calls it only
+      to redact them, and treats a failure as "no values".
     """
 
     id: str
@@ -340,6 +343,7 @@ class WorkflowPack:
     mount: Callable[[Any], None] | None = None
     static: tuple[str, str] | None = None
     views: tuple[WorkflowView, ...] = ()
+    sensitive_values: Callable[[Path], Iterable[str]] | None = None
 
 
 def load_workflows() -> list[WorkflowPack]:

@@ -53,6 +53,7 @@ class Home:
     quits: list[str]
     tokens: Path
     study: Path
+    app_root: Path
 
     def open_url(self) -> str:
         """A fresh one-time link, as the launcher would open it."""
@@ -69,7 +70,9 @@ def browser():
 
 
 @pytest.fixture
-def home(tmp_path: Path):
+def home(tmp_path: Path, monkeypatch):
+    # The controller runs in this process: keep its app files (support bundles) in tmp.
+    monkeypatch.setenv("OPNCAFYR_APP_ROOT", str(tmp_path / "app root"))
     study = tmp_path / "Study A"
     (study / "source-data").mkdir(parents=True)
     shutil.copyfile(FIXTURES / "two_analyte.csv", study / "source-data" / "two_analyte.csv")
@@ -123,6 +126,7 @@ def home(tmp_path: Path):
             quits=quits,
             tokens=tmp_path / "state" / "open-tokens",
             study=study,
+            app_root=tmp_path / "app root",
         )
     finally:
         server.should_exit = True
