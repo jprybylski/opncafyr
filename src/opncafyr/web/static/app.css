@@ -221,14 +221,14 @@ main:focus, [tabindex="-1"]:focus { outline: none; }
 
 .brand { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; }
 .brand-mark {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
-  background: var(--chrome-accent);
-  color: var(--chrome-bg);
+  background: #f7faf8;
 }
+.brand-mark img { display: block; width: 100%; height: 100%; }
 .brand-sub { font-weight: 500; color: var(--chrome-muted); font-size: var(--text-sm); }
 
 .study-chip {

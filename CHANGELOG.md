@@ -7,6 +7,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A woven concentration-time curve logo, with boxplots and unfinished threads, as
+  scalable SVGs and transparent PNGs. The launcher uses the mark in its header and favicon.
 - A project-file editor in the launcher, requested by tools through their descriptor
   (#52). The report uses it first: **Edit report** on the report card, or **Edit project
   files** on the quartifyr tile.
