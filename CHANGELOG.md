@@ -394,6 +394,9 @@ All notable changes to this project are documented here. The format follows
   It was pinned within the release's 24-hour refresh window; re-verify the hashes after
   2026-11-08T00:29Z. The adapter workarounds and the LibreOffice recalculation switch are
   unchanged for now.
+- deckifyr is pinned at 0.3.6, which releases deckifyr#93 (offline mode for the R
+  wrappers, `init --from-repo` refused offline) and #94 (project files that start with a
+  UTF-8 BOM, and no locale-encoding fallback on Windows). Its dependencies are unchanged.
 - The README says opncafyr and opnca are under development and that public installation
   is not yet supported.
 - Recorded the v1 platform matrix (ADR 0003, #1): Windows 11 x86_64, macOS arm64/x86_64

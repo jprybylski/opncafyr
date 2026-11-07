@@ -103,7 +103,7 @@ def make_world(tmp: Path, version: str = "0.0.1") -> World:
         pins += ["", f"[packages.{pkg}]", f'version = "{ver}"', 'license = "GPL-3.0-or-later"']
         pins += [f'release_url = "{BASE}/{pkg}/"', f"[packages.{pkg}.assets]"]
         pins += [f'"{name}" = "{digest}"']
-    pins += ["", "[packages.deckifyr]", 'version = "0.3.5"', 'license = "GPL-3.0-or-later"']
+    pins += ["", "[packages.deckifyr]", 'version = "0.3.6"', 'license = "GPL-3.0-or-later"']
     pins += ["", "[r_packages]", 'lockfile = "runtime/r/renv.lock"']
     pins += ['binaries = "runtime/r/binaries.toml"']
     (runtime / "pins.toml").write_text("\n".join(pins) + "\n", "utf-8")

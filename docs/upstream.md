@@ -32,8 +32,9 @@ Select assets by `manifest.json` fields, never by file name. Since v0.2.7 every 
 
 ## jprybylski/deckifyr (public)
 
-#82–#86 were released in v0.3.4 (PR #87) and #88–#91 in v0.3.5 (PR #92, 2026-11-06). Both
-were reviewed. Remaining gaps are handled in our adapter (#33).
+#82–#86 were released in v0.3.4 (PR #87), #88–#91 in v0.3.5 (PR #92, 2026-11-06) and
+#93–#94 in v0.3.6 (PR #95, 2026-11-07). All were reviewed. Remaining gaps are handled in
+our adapter (#33).
 
 | Issue | What | Status | Needed by |
 |---|---|---|---|
@@ -46,8 +47,8 @@ were reviewed. Remaining gaps are handled in our adapter (#33).
 | [#89](https://github.com/jprybylski/deckifyr/issues/89) | Forbid project-file executables and paths outside the project | Done (v0.3.5) as opt-in `--trusted-binaries-only`; Quarto fragments still run code by design (#33) | Gate 3 |
 | [#90](https://github.com/jprybylski/deckifyr/issues/90) | Atomic PPTX, previews and manifest; JSON for every `--json` failure | Done (v0.3.5); argparse errors and signals print no JSON; stale preview files can remain | Gate 3 |
 | [#91](https://github.com/jprybylski/deckifyr/issues/91) | Releases can't change after publishing; small contract gaps | Done (v0.3.5); GitHub's immutable-releases setting is still off | Gate 0 pins |
-| [#93](https://github.com/jprybylski/deckifyr/issues/93) | Offline mode for the R wrappers (`uv run --no-sync`) and `init --from-repo` | Open; the launcher calls the Python CLI directly, so not blocking | Gate 3 (#33), offline (#44) |
-| [#94](https://github.com/jprybylski/deckifyr/issues/94) | Accept project YAML that starts with a UTF-8 BOM | Open; adapter writes YAML without a BOM (#33) | Gate 3 |
+| [#93](https://github.com/jprybylski/deckifyr/issues/93) | Offline mode for the R wrappers (`uv run --no-sync`) and `init --from-repo` | Done (v0.3.6); also adds `python_env` and the web/preview packages in the R-written group. The launcher still calls the Python CLI directly | Gate 3 (#33), offline (#44) |
+| [#94](https://github.com/jprybylski/deckifyr/issues/94) | Accept project YAML that starts with a UTF-8 BOM | Done (v0.3.6); all project YAML/JSON/CSV/QMD reads drop a BOM, and reads no longer fall back to the Windows locale encoding | Gate 3 |
 
 ## jprybylski/quartifyr (public)
 
