@@ -5,7 +5,8 @@ A completed run becomes a report (DOCX) or a deck (PPTX) in two steps. Both star
 
 1. **Publish** tables and figures from completed runs into `OUTPUTS/`. This is a separate,
    reviewable step that never changes a run.
-2. **Build** a report or deck from one publication: see [Reports](#reports-32).
+2. **Build** a report or deck from one publication: see [Reports](#reports-32) and
+   [Decks](#decks-33).
 
 Research use only. A successful DOCX or PPTX build shows that the files were assembled as
 recorded. It does not validate the analysis.
@@ -116,6 +117,48 @@ limit. One report job runs at a time.
 Field recalculation (LibreOffice) is not used, so Word may ask to update fields when the
 file is opened (docs/spikes/libreoffice.md). Quarto can't render a project inside a hidden
 folder, so a study folder must not sit inside one (for example `~/.studies/`).
+
+## Decks (#33)
+
+The **Deck (PPTX)** card sets up `deck/`, a deckifyr project for one publication.
+
+1. **Set up deck** copies deckifyr's bundled minimal deck. It never fetches a template
+   (ADR 0007). It then writes:
+   - an "NCA results" `presentation.yaml`: a title slide, then one slide per published table
+     or figure, referenced as `{rpfy}:<file>` so their footers come from the sidecars;
+   - the bundled `standard_footnotes.yaml`;
+   - a copy of the publication's files in `deck/OUTPUTS/`.
+2. **Open editor** starts the deck editor inside the launcher, under `/apps/deckifyr/`.
+   Closing it, quitting, or the idle timer saves unsaved edits first.
+   - The editor's own Build button makes drafts in `deck/build/`. The launcher doesn't
+     record those.
+   - **Use this publication** binds the deck to another publication. You must close the
+     editor first, and if you edited `presentation.yaml` you choose whether to replace or
+     keep it.
+3. **Check** runs `deckifyr validate --strict` on a copy of the deck holding exactly the
+   publication's files, after the launcher's sidecar checks. A validation error is shown
+   as the check's failure; deckifyr's warnings are listed.
+4. **Build** (optionally with slide previews) builds that copy. The build counts only when
+   all of these hold:
+   - deckifyr reports success;
+   - its manifest exists;
+   - the manifest's PPTX hash matches the file.
+
+   The launcher keeps these in `deck/builds/<build-id>/`:
+   - the PPTX;
+   - deckifyr's manifest;
+   - the previews deckifyr's manifest lists, each hashed;
+   - `build.json` (`publish-build-v1`).
+
+   **Download PPTX** serves it only while it still matches.
+
+Check and Build wait while the editor has unsaved edits: save them in the editor, or close
+it. Slide previews are offered only when LibreOffice is installed and a short test
+conversion finishes in time.
+
+Decks and reports are your own projects, and they are trusted. Quarto blocks and flextable
+`.rds` tables may run R code when the deck is built. They run with the app's pinned R,
+Quarto and LibreOffice only, never with a program a deck file names.
 
 ### Why there are no R scripts
 

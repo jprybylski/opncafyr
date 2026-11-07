@@ -10,7 +10,10 @@ web_app:
   route: /apps/deckifyr/
   readiness: /api/health
   max_body_bytes: 67108864
-# Job contracts (validate_deck, build_deck) land with their schemas in #33.
+# The deck workflow (workflows/nca/publish/deck.py) reads these time limits (#33).
+jobs:
+  validate_deck: {input_schema: publication-v1, output_schema: preflight-v1, timeout_s: 300}
+  build_deck: {input_schema: publication-v1, output_schema: publish-build-v1, timeout_s: 1200}
 optional_requirements:
   - name: libreoffice
     executable: soffice

@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -43,10 +42,8 @@ from opncafyr.core.jobmanager import (
     JobRequest,
     ReviewResult,
 )
-from opncafyr.core.jobs import TERMINAL_STATES, JobState
 from opncafyr.core.manifest import atomic_write_json, atomic_write_text
 from opncafyr.core.runtime import RuntimeUnavailable
-from opncafyr.core.workspace import resolve_in_root
 from opncafyr.paths import WORKSPACE_META_DIR, app_root
 from opncafyr.workflows.nca.publish import projects, sidecars
 from opncafyr.workflows.nca.publish.curator import PublishError
@@ -142,26 +139,16 @@ def write_report_qmd(project: Path, publication: dict[str, Any]) -> None:
 # --- the service ---------------------------------------------------------------------------
 
 
-class ReportService:
+class ReportService(projects.ProjectJobs):
+    tool = TOOL
+    project_name = PROJECT
+
     def __init__(self, cache: Path | None = None) -> None:
-        self.lock = threading.Lock()
-        self.jobs: dict[str, str] = {}  # step -> latest job id
+        super().__init__()
         self.cache = cache
 
     def _cache(self) -> Path:
         return self.cache if self.cache is not None else cache_dir()
-
-    def _busy(self, manager: JobManager) -> bool:
-        for job_id in self.jobs.values():
-            try:
-                if JobState(manager.get(job_id)["state"]) not in TERMINAL_STATES:
-                    return True
-            except KeyError:
-                continue
-        return False
-
-    def project(self, root: Path) -> Path:
-        return resolve_in_root(root, PROJECT)
 
     # --- set up or re-bind ---------------------------------------------------------------
 
@@ -175,8 +162,7 @@ class ReportService:
     ) -> dict[str, Any]:
         """Set up ``report/`` for a publication, or bind the existing project to it."""
         with self.lock:
-            if self._busy(manager):
-                raise PublishError("busy", "A report job is still running.")
+            self.refuse_if_busy(manager)
             publication, sha = projects.load_publication(root, publication_id)
             project = self.project(root)
             if project.exists():
@@ -257,24 +243,14 @@ class ReportService:
 
     # --- check and render ------------------------------------------------------------------
 
-    def _bound(self, root: Path) -> tuple[dict[str, Any], str]:
-        bound = projects.read_binding(root, TOOL)
-        if bound is None or not self.project(root).is_dir():
-            raise PublishError("no_project", "Set up the report for a publication first.")
-        publication, sha = projects.load_publication(root, bound["publication_id"])
-        if sha != bound["publication_sha256"]:
-            raise PublishError("publication_changed", "The bound publication's record changed.")
-        return publication, sha
-
     def _assemble(self, root: Path, publication: dict[str, Any], dest: Path) -> list[str]:
         projects.copy_project(self.project(root), dest, _skip)
         return projects.copy_publication(root, publication, dest)
 
     def check(self, manager: JobManager, root: Path, timeout_s: float = CHECK_TIMEOUT_S) -> str:
         with self.lock:
-            if self._busy(manager):
-                raise PublishError("busy", "A report job is still running.")
-            publication, _ = self._bound(root)
+            self.refuse_if_busy(manager)
+            publication, _ = self.bound(root)
             output = f"{CHECKS_DIR}/report-{projects.new_build_id()}"
             job_id = manager.submit(self._check(root, publication, output, timeout_s))
             self.jobs["check"] = job_id
@@ -323,9 +299,8 @@ class ReportService:
         if status not in Q.STATUSES:
             raise PublishError("bad_status", "Choose draft or final.")
         with self.lock:
-            if self._busy(manager):
-                raise PublishError("busy", "A report job is still running.")
-            publication, sha = self._bound(root)
+            self.refuse_if_busy(manager)
+            publication, sha = self.bound(root)
             build_id = projects.new_build_id()
             request = self._render(root, publication, sha, status, build_id, timeout_s)
             job_id = manager.submit(request)
@@ -467,32 +442,7 @@ class ReportService:
     # --- status ----------------------------------------------------------------------------
 
     def status(self, manager: JobManager | None, root: Path) -> dict[str, Any]:
-        project = self.project(root)
-        bound = projects.read_binding(root, TOOL)
-        jobs = {}
-        for step, job_id in self.jobs.items():
-            try:
-                job = manager.get(job_id) if manager is not None else None
-            except KeyError:
-                job = None
-            if job is not None:
-                jobs[step] = {k: job.get(k) for k in ("job_id", "state", "message", "output")}
-        out: dict[str, Any] = {
-            "project": project.is_dir(),
-            "binding": bound,
-            "edited": projects.edited(project, bound["generated"])
-            if bound and project.is_dir()
-            else [],
-            "jobs": jobs,
-            "check": None,
-            "builds": projects.list_builds(root, PROJECT),
-        }
-        check = jobs.get("check")
-        if check and check["state"] == JobState.COMPLETED and check.get("output"):
-            path = resolve_in_root(root, f"{check['output']}/preflight.json")
-            if path.is_file():
-                out["check"] = json.loads(path.read_text("utf-8"))
-        return out
+        return self.base_status(manager, root)
 
 
 def _sidecar_findings(project: Path, listed: list[str]) -> list[dict[str, Any]]:

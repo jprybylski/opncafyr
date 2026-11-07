@@ -178,7 +178,11 @@ Study folder/
                                 report.qmd, _quarto.yml, report/, _extensions/, OUTPUTS/ copy
     builds/<build-id>/          report-<draft|final>.docx, render-result.json, build.json
                                 (schemas/publish-build-v1)
-  deck/                         deckifyr project
+  deck/                         deckifyr project bound to one publication (#33):
+                                presentation.yaml, design.yaml, layouts.yaml,
+                                standard_footnotes.yaml, OUTPUTS/ copy; build/ (editor drafts)
+    builds/<build-id>/          the PPTX, deck-manifest.json, previews/, build-result.json,
+                                build.json (schemas/publish-build-v1)
 ```
 
 ## Datasets (#21)
@@ -418,3 +422,32 @@ matches to the 4 decimal places that API writes numbers with.
 - **Limits.** Time limits come from the quartifyr descriptor's `check_report` and
   `render_report` contracts; the job manager kills the whole tree. Report jobs refuse to
   start while another one runs.
+
+## Decks (#33)
+
+`workflows/nca/publish/deck.py` runs deckifyr. The deckifyr adapter
+(`adapters/deckifyr/`) builds the commands, reads the results, writes the "NCA results"
+`presentation.yaml` and runs the LibreOffice preview probe.
+
+- **Setup** (`deck.init`): `python -I -m deckifyr --json init <staging> --force`, using
+  the bundled minimal deck. The review writes the generated deck, the footnotes, the
+  `OUTPUTS/` copy and the binding.
+- **Editor**: `supervisor.start("deckifyr", {project, presentation, job_timeout})`.
+  - The editor's own job limit is kept below the launcher's build limit.
+  - Opening it restores `deck/OUTPUTS/` to the publication's files.
+  - Rebinding is refused while it runs.
+  - Check and build are refused while the editor reports unsaved edits.
+- **Check and build** (`deck.validate`, `deck.build`) run `--json validate|build --strict
+  --trusted-binaries-only` with the pinned `--rscript-bin`, `--quarto-bin` and
+  `--soffice-bin`.
+  - Both work on a staging copy: the project minus `build/`, `builds/` and `OUTPUTS/`, plus
+    the publication's files checked against their hashes.
+  - A build runs in `deck/builds/<id>.staging/work`. It needs `build.manifest`, and its
+    `build.previews` follows the request; only the staging copy is changed.
+  - It counts only when the exit code is 0, `status` is `ok`, and both the manifest's and
+    the result's PPTX SHA-256 match the file. Previews come from the manifest's list.
+  - Non-zero exits are explained from deckifyr's stderr JSON (`code`, `message`), without
+    absolute paths. Exit 2, signals and non-JSON output are unknown failures.
+- **Shell**: `js/tools.js` refreshes the app list when a workflow emits `app-restarted`,
+  so the embedded editor shows as soon as it is ready.
+

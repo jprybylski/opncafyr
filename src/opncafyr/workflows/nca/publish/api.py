@@ -22,6 +22,15 @@ Report (#32, ``report.py``):
   it to another publication (409 ``needs_choice`` if ``report.qmd`` was edited).
 - ``POST /api/nca/report/check``; ``POST /api/nca/report/render {status}``: jobs.
 - ``GET  /api/nca/report/builds/{id}/docx``: the DOCX, if it still matches its manifest.
+
+Deck (#33, ``deck.py``):
+- ``GET  /api/nca/deck``; ``POST /api/nca/deck {publication_id, source}`` (set up or bind).
+- ``POST /api/nca/deck/editor`` starts the editor under ``/apps/deckifyr/``; ``DELETE``
+  stops it (saving unsaved edits).
+- ``POST /api/nca/deck/check``; ``POST /api/nca/deck/build {previews}``: jobs, refused
+  while the editor has unsaved edits. ``POST /api/nca/deck/previews`` runs the LibreOffice
+  probe.
+- ``GET  /api/nca/deck/builds/{id}/pptx``: the PPTX, if it still matches its manifest.
 """
 
 from __future__ import annotations
@@ -34,7 +43,7 @@ from pydantic import BaseModel, Field
 
 from opncafyr.adapters import quartifyr
 from opncafyr.core.artifacts import list_publications
-from opncafyr.workflows.nca.publish import curator, report, sidecars
+from opncafyr.workflows.nca.publish import curator, deck, report, sidecars
 from opncafyr.workflows.nca.publish.catalog import UNAVAILABLE
 
 if TYPE_CHECKING:
@@ -48,6 +57,7 @@ STATUS = {
     "too_many": 422,
     "publish_failed": 500,
     "bad_status": 422,
+    "editor_failed": 503,
 }
 
 
@@ -147,3 +157,4 @@ def mount(app: FastAPI, ctx: Context) -> None:
         return {"publication": doc, "changed": curator.verify_publication(root, doc)}
 
     report.mount(app, ctx, failure)
+    deck.mount(app, ctx, failure)

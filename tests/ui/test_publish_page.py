@@ -75,3 +75,13 @@ def test_report_card_without_r(published_page, home):
     card.get_by_text(re.compile(r"not available")).wait_for(timeout=30000)
     assert card.get_by_text("No report project yet.").is_visible()
     assert page.errors == []
+
+
+def test_deck_card_without_tools(published_page, home):
+    page, run_id = published_page
+    card = page.locator("#nca-deck")
+    card.get_by_text("No deck project yet.").wait_for()
+    assert card.get_by_role("button", name="Build").is_disabled()
+    assert card.get_by_role("button", name="Open editor").is_disabled()
+    assert card.get_by_role("checkbox", name="with slide previews").is_disabled()
+    assert page.errors == []

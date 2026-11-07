@@ -17,13 +17,18 @@ export function findingsTable(findings, caption) {
   ]), caption);
 }
 
+function settingsText(settings) {
+  return Object.entries(settings || {}).map(([k, v]) =>
+    `${k.replace(/_/g, " ")}: ${v === true ? "yes" : v === false ? "no" : v}`).join(", ");
+}
+
 export function buildsTable(builds, kind, link) {
   return table(["Build", "Created", "Publication", "Runs", "Settings", ""], builds.map((b) => {
     const a = el("a", `Download ${kind}`);
     a.href = link(b);
     a.setAttribute("download", "");
     return [el("span", b.build_id, "path"), formatTime(b.created_at), el("span", b.publication_id, "path"),
-      b.runs.join(", "), Object.values(b.settings || {}).join(", "), a];
+      b.runs.join(", "), settingsText(b.settings), a];
   }), `${kind} builds`);
 }
 

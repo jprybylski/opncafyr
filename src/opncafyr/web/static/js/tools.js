@@ -2,7 +2,7 @@
 // names a tool, so a new adapter appears here without a change to core files.
 
 import { getJSON } from "./api.js";
-import { $, el, emit, pollWhileVisible, setStatus, stateBadge } from "./dom.js";
+import { $, el, emit, on, pollWhileVisible, setStatus, stateBadge } from "./dom.js";
 
 const APP_STATES = {
   not_started: "Web app not running",
@@ -84,4 +84,7 @@ async function refresh() {
 
 export function initTools() {
   pollWhileVisible(refresh, 10000);
+  // A workflow that just (re)started an app's session wants its state shown now, not at
+  // the next poll: the tool view waits for "running" before it shows the page.
+  on("app-restarted", () => refresh());
 }

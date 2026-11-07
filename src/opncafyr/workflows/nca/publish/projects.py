@@ -307,3 +307,77 @@ def build_output(root: Path, project: str, build_id: str, role: str) -> Path | N
     if path.is_symlink() or not path.is_file() or runs_core.sha256_file(path) != entry["sha256"]:
         return None
     return path
+
+
+# --- a project's jobs ----------------------------------------------------------------------
+
+
+class ProjectJobs:
+    """What the report and deck services share: their jobs and their bound publication."""
+
+    tool = ""
+    project_name = ""
+
+    def __init__(self) -> None:
+        import threading
+
+        self.lock = threading.Lock()
+        self.jobs: dict[str, str] = {}  # step -> latest job id
+
+    def project(self, root: Path) -> Path:
+        return resolve_in_root(root, self.project_name)
+
+    def busy(self, manager: Any) -> bool:
+        from opncafyr.core.jobs import TERMINAL_STATES, JobState
+
+        for job_id in self.jobs.values():
+            try:
+                if JobState(manager.get(job_id)["state"]) not in TERMINAL_STATES:
+                    return True
+            except KeyError:
+                continue
+        return False
+
+    def refuse_if_busy(self, manager: Any) -> None:
+        if self.busy(manager):
+            raise PublishError("busy", f"A {self.tool} job is still running.")
+
+    def bound(self, root: Path) -> tuple[dict[str, Any], str]:
+        """The bound publication (files still intact) and its hash."""
+        doc = read_binding(root, self.tool)
+        if doc is None or not self.project(root).is_dir():
+            raise PublishError("no_project", f"Set up the {self.tool} for a publication first.")
+        publication, sha = load_publication(root, doc["publication_id"])
+        if sha != doc["publication_sha256"]:
+            raise PublishError("publication_changed", "The bound publication's record changed.")
+        return publication, sha
+
+    def job_states(self, manager: Any) -> dict[str, dict[str, Any]]:
+        out = {}
+        for step, job_id in self.jobs.items():
+            try:
+                job = manager.get(job_id) if manager is not None else None
+            except KeyError:
+                job = None
+            if job is not None:
+                out[step] = {k: job.get(k) for k in ("job_id", "state", "message", "output")}
+        return out
+
+    def base_status(self, manager: Any, root: Path) -> dict[str, Any]:
+        project = self.project(root)
+        doc = read_binding(root, self.tool)
+        jobs = self.job_states(manager)
+        out: dict[str, Any] = {
+            "project": project.is_dir(),
+            "binding": doc,
+            "edited": edited(project, doc["generated"]) if doc and project.is_dir() else [],
+            "jobs": jobs,
+            "check": None,
+            "builds": list_builds(root, self.project_name),
+        }
+        check = jobs.get("check")
+        if check and check["state"] == "completed" and check.get("output"):
+            path = resolve_in_root(root, f"{check['output']}/preflight.json")
+            if path.is_file():
+                out["check"] = json.loads(path.read_text("utf-8"))
+        return out

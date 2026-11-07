@@ -7,6 +7,42 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- deckifyr adapter: set up, edit, check and build a PPTX deck from one publication (#33).
+  - **Set up deck** runs `deckifyr init` (the bundled minimal deck, never `--from-repo`).
+    It then writes:
+    - an "NCA results" `presentation.yaml`: a title slide and one `{rpfy}:` slide per
+      published table or figure, data text quoted, no BOM, manifest always set;
+    - the bundled footnotes;
+    - a copy of the publication's files.
+
+    Rebinding asks before replacing an edited deck.
+  - **Open editor** starts `deckifyr serve` on the project under `/apps/deckifyr/`.
+    Closing, quitting or idling saves unsaved edits. Check, build and rebinding wait for
+    them. The launcher shell now refreshes the app list when a workflow restarts an app,
+    so the editor shows as soon as it is ready.
+  - **Check** (`deckifyr --json validate --strict`) and **Build** (`build --strict`) run
+    from the tools environment with `--trusted-binaries-only` and the pinned Rscript,
+    Quarto and soffice. Each uses a staging copy holding exactly the publication's files
+    (hash-checked) after the sidecar checks (#30). A validation failure is a readable job
+    failure.
+  - **Builds**:
+    - a build counts only when deckifyr says ok, its manifest exists and the PPTX hash
+      matches;
+    - previews are taken from the manifest's list, never from a folder scan;
+    - `deck/builds/<id>/` holds the PPTX, deckifyr's manifest, the previews and
+      `build.json` (`publish-build-v1`: exact run IDs, every file and input hash, the
+      deckifyr version, structured warnings);
+    - "Download PPTX" serves a build only while it still matches.
+  - Slide previews are offered only when a short LibreOffice conversion succeeds in time
+    (docs/spikes/libreoffice.md).
+  - Decision recorded in docs/plan.md: deck and report projects are trusted user-authored
+    projects. Quarto blocks and flextable `.rds` files are allowed; code runs only through
+    the pinned binaries.
+  - Integration tests against deckifyr 0.3.6 cover:
+    - the generated deck validates and builds with sidecar footers;
+    - the editor loads under the launcher origin;
+    - an unsaved edit blocks a build and is saved when the editor closes;
+    - previews are built with real LibreOffice.
 - quartifyr report adapter: set up, check and render a DOCX from one publication (#32).
   - **Set up report** lays out `report/` offline:
     - quartifyr 0.3.3's `initialize_report_project_offline()` and the bundled extensions
