@@ -1,0 +1,3 @@
+# The practice file is the test fixture, byte for byte (tests/test_user_guide.py); never
+# convert its line endings on checkout.
+*.csv -text
