@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "opncafyr/recipe-v1",
   "title": "Cleaning and mapping recipe (.opncafyr/recipes/<id>.yaml)",
-  "description": "Ordered, explicit cleaning steps for one imported source (#22). The source file is never rewritten; a row leaves the data only through a filter_rows step with a reason, and lands in the rejected-row log. Steps carry data, never code: the launcher compiles them to a fixed R program. Semantic rules the schema cannot express (new-column targets, no numeric zero for BLQ values, column existence) are checked by workflows/nca/recipe.py.",
+  "description": "Ordered, explicit cleaning steps for one imported source (#22). The source file is never rewritten; a row leaves the data only through a filter_rows step with a reason, and lands in the rejected-row log. Steps carry data, never code: the launcher compiles them to a fixed R program. Semantic rules the schema cannot express (new-column targets, no numeric zero for BLQ values, column existence) are checked by workflows/nca/recipe.py. The optional mapping block (#23) names the column for each role, the units and the value tables of the flag columns; the user confirms every entry.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -30,6 +30,9 @@
       "items": {
         "$ref": "#/$defs/step"
       }
+    },
+    "mapping": {
+      "$ref": "#/$defs/mapping"
     }
   },
   "$defs": {
@@ -622,6 +625,390 @@
           }
         }
       ]
+    },
+    "mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roles"
+      ],
+      "properties": {
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "SUBJECT_ID": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "SECONDARY_ID": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ANALYTE": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ANALYTE_LABEL": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "SPECIMEN": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ACTUAL_TIME": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "NOMINAL_TIME": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "CONC": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "CONC_UNIT": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "LLOQ": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "BLQ": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "MISSING": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "EXCLUDED": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "EXCLUSION_REASON": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "DOSE": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "DOSE_UNIT": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ROUTE": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "TAU": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "INFUSION_DURATION": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "OCCASION": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/column"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "units": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ACTUAL_TIME": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "column"
+                  ],
+                  "properties": {
+                    "column": {
+                      "$ref": "#/$defs/column"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    }
+                  }
+                }
+              ]
+            },
+            "CONC": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "column"
+                  ],
+                  "properties": {
+                    "column": {
+                      "$ref": "#/$defs/column"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    }
+                  }
+                }
+              ]
+            },
+            "DOSE": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "column"
+                  ],
+                  "properties": {
+                    "column": {
+                      "$ref": "#/$defs/column"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "flags": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "BLQ": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "table": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 200,
+                  "propertyNames": {
+                    "$ref": "#/$defs/value"
+                  },
+                  "additionalProperties": {
+                    "type": "boolean"
+                  }
+                },
+                "text_pattern": {
+                  "enum": [
+                    "^<"
+                  ],
+                  "description": "Also BLQ: concentration text starting with '<' (ADR 0005 Q3)."
+                }
+              }
+            },
+            "MISSING": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "table"
+              ],
+              "properties": {
+                "table": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 200,
+                  "propertyNames": {
+                    "$ref": "#/$defs/value"
+                  },
+                  "additionalProperties": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "EXCLUDED": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "table"
+              ],
+              "properties": {
+                "table": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 200,
+                  "propertyNames": {
+                    "$ref": "#/$defs/value"
+                  },
+                  "additionalProperties": {
+                    "type": "boolean"
+                  }
+                },
+                "reason": {
+                  "$ref": "#/$defs/reason",
+                  "description": "One reason for every excluded row, when there is no reason column."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

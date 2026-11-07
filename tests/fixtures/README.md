@@ -129,3 +129,14 @@ Each scenario changes the standard setup and lists findings that must appear:
 The makecoolplots fixtures (`messy_generic.csv`, `adpc*.csv`, `sparse_*.csv`,
 `theoph_opnca.csv`) are not vendored. If a later issue needs them, copy them with their
 generator (`~/makecoolplots/r/make_fixtures.R`) and record their source commit here.
+
+## adpc.csv (from makecoolplots)
+
+`adpc.csv` is copied byte for byte from makecoolplots (`fixtures/adpc.csv`, release 0.1.1,
+commit 4e4b8d3), where `r/make_fixtures.R` builds it from `xgxr::sad`. The part of that
+script that makes it is kept in `adpc_from_makecoolplots.R` for provenance; it needs xgxr,
+which the launcher's R lock doesn't have, so it isn't run here. It is an ADaM-style ADPC
+(650 rows): `USUBJID`, `PARAMCD`/`PARAM`, `AVAL`/`AVALU`, `AFRLT`, `NFRLT`, `BLQFL`
+(`"Y"`/blank) and `ANL01FL`, with no dose or route column. #23 uses it to check role
+suggestions on ADaM names, and that dose and route are asked for, never defaulted.
+

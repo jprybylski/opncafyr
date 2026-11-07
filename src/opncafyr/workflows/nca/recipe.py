@@ -95,9 +95,14 @@ def new_recipe(recipe_id: str, source_id: str) -> dict[str, Any]:
 
 
 def recipe_hash(doc: dict[str, Any]) -> str:
-    """SHA-256 of the canonical JSON form (sorted keys, no spaces, UTF-8)."""
+    """SHA-256 of the canonical JSON form (sorted keys, no spaces, UTF-8), mapping included."""
     canonical = json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def steps_hash(doc: dict[str, Any]) -> str:
+    """The hash of the cleaning part only: a mapping change never re-runs cleaning."""
+    return recipe_hash({k: v for k, v in doc.items() if k != "mapping"})
 
 
 def loads(text: str) -> dict[str, Any]:
@@ -318,4 +323,14 @@ def check(doc: dict[str, Any], header: list[str]) -> ColumnPlan:
     """Schema plus semantic rules. The single entry point before a save or a run."""
     if not RECIPE_ID_RE.match(str(doc.get("id", ""))):
         raise RecipeError("A recipe id is lower-case letters, digits and dashes.")
-    return plan_columns(doc, header)
+    plan = plan_columns(doc, header)
+    if doc.get("mapping"):
+        from opncafyr.workflows.nca.mapping import mapping_columns
+
+        for where, name in mapping_columns(doc["mapping"]):
+            if name not in plan.columns:
+                raise RecipeError(
+                    f"The mapping names {name} ({where}), which is not a column after the "
+                    "cleaning steps."
+                )
+    return plan

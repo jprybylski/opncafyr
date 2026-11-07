@@ -27,6 +27,24 @@ EXPECTED = json.loads((FIXTURES / "two_analyte.expected.json").read_text("utf-8"
 SOURCE = "two_analyte.csv"
 
 
+def standard_mapping() -> dict[str, Any]:
+    """``standard_setup`` from the fixture as a recipe mapping block."""
+    setup = EXPECTED["standard_setup"]
+    units: dict[str, Any] = {}
+    for key, role in (("time", "ACTUAL_TIME"), ("conc", "CONC"), ("dose", "DOSE")):
+        text = setup["units"][key]
+        units[role] = {"column": text[5:]} if text.startswith("from ") else {"value": text}
+    flags = {
+        "BLQ": {"table": setup["blq"]["flag_table"], "text_pattern": setup["blq"]["text_pattern"]},
+        "MISSING": {"table": setup["missing"]["table"]},
+        "EXCLUDED": {"table": setup["excluded"]["table"]},
+    }
+    assert setup["blq"]["flag_column"] == setup["mapping"]["BLQ"]
+    assert setup["blq"]["text_column"] == setup["mapping"]["CONC"]
+    assert setup["excluded"]["reason"] == setup["mapping"]["EXCLUSION_REASON"]
+    return {"roles": dict(setup["mapping"]), "units": units, "flags": flags}
+
+
 def integration_runtime() -> Runtime | None:
     path = os.environ.get(RUNTIME_FILE_ENV)
     if not path:

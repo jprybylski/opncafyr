@@ -219,3 +219,23 @@ old result is never reused for a changed recipe. The job's review checks the fil
 `rows_in == rows_out + rows_rejected` for every step, and that the source is unchanged.
 A preview is the same script on the first 200 rows. Routes: `/api/nca/recipes...`
 (`workflows/nca/api.py`); page: Analysis (`workflows/nca/web/`).
+
+## Column mapping (#23)
+
+The recipe's `mapping` block names the column for each role (`SUBJECT_ID`, `ANALYTE`,
+`ACTUAL_TIME`, `CONC`, `DOSE` and `ROUTE` are required; specimen, nominal time, units,
+LLOQ, the BLQ/missing/excluded flags, exclusion reason, tau, infusion duration, occasion
+are optional), the units of time, concentration and dose (a per-row column or one
+declared value) and what each value of a flag column means. It is part of the recipe
+hash; the cleaning output is keyed on the steps alone, so a mapping change never re-runs
+cleaning.
+
+`workflows/nca/roles.py` suggests a column per role from the cleaned data, ported from
+makecoolplots: names (exact alias 0.75, a word inside the name 0.40, capped at 0.55)
+plus value checks, each with a reason. Below 0.6, or when two columns fit, the role comes
+back as `needs_choice` with the candidates; nominal-time names never suggest actual time.
+Nothing is saved until the user picks it. `units.py` normalises spelling only (ADR 0005
+Q2); a unit in a header is a hint to confirm. `routes.py` reads routes exactly as opnca-r
+does and lists any other value for an explicit recode. `mapping.problems()` blocks on an
+unmapped required role, a missing or unknown unit, a flag column without a value table
+and a column used for two roles.

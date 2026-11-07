@@ -278,7 +278,7 @@ op_report_dupes <- function(df, columns) {
 
 # --- Running a recipe ---------------------------------------------------------------
 
-oc_run <- function(input, output, sep, sample_rows, recipe_id, recipe_sha256, steps) {
+oc_run <- function(input, output, sep, sample_rows, recipe_id, steps_sha256, steps) {
   dir.create(output, showWarnings = FALSE, recursive = TRUE)
   df <- oc_read(input, sep, sample_rows)
   source_rows <- nrow(df)
@@ -314,7 +314,7 @@ oc_run <- function(input, output, sep, sample_rows, recipe_id, recipe_sha256, st
   utils::write.csv(rejected, file.path(output, "rejected.csv"), row.names = FALSE,
                    fileEncoding = "UTF-8", eol = "\n")
   summary <- list(
-    recipe_id = recipe_id, recipe_sha256 = recipe_sha256, sample_rows = sample_rows,
+    recipe_id = recipe_id, steps_sha256 = steps_sha256, sample_rows = sample_rows,
     source_rows = source_rows, rows_out = nrow(df), rows_rejected = nrow(rejected),
     columns = I(names(df)), steps = report
   )

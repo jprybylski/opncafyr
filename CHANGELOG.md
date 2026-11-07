@@ -7,6 +7,19 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Column-role mapping (#23).
+  - The recipe gains a `mapping` block: the column for each role, the units of time,
+    concentration and dose (a unit column or one declared value, never inferred) and what
+    each value of the BLQ, missing and exclusion flag columns means. It is hashed with the
+    recipe; cleaning results are keyed on the steps alone.
+  - Suggestions ported from makecoolplots (`workflows/nca/roles.py`): alias names plus
+    value checks, each with a reason. A weak match or two fitting columns is a
+    `needs_choice` question with candidates; nominal time is never suggested as actual
+    time. Units are normalised by spelling only; unrecognised routes are listed for an
+    explicit recode.
+  - `GET /api/nca/recipes/{id}/mapping-help` and `PUT .../mapping`; the Analysis page shows
+    each suggestion beside its role and fills in nothing until the user picks it.
+  - `tests/fixtures/adpc.csv`, copied from makecoolplots with its generator excerpt.
 - Cleaning recipes (#22).
   - `recipe-v1` is finalised in place (nothing had written the draft): ordered steps
     `{op, args, note}`, with `clean_names`, `rename`, `trim`, `parse_type`, `recode`,

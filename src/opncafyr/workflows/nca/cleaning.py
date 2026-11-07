@@ -48,7 +48,7 @@ from opncafyr.workflows.nca.clean_compile import (
 )
 from opncafyr.workflows.nca.importers.csv import sniff_delimiter
 from opncafyr.workflows.nca.recipe import check as check_recipe
-from opncafyr.workflows.nca.recipe import recipe_hash
+from opncafyr.workflows.nca.recipe import steps_hash
 
 CLEANED_DIR = ".opncafyr/cleaned"
 PREVIEW_ROWS = 200
@@ -67,7 +67,7 @@ class CleaningError(ValueError):
 @dataclass(frozen=True)
 class CleanTarget:
     recipe: dict[str, Any]
-    recipe_sha256: str
+    steps_sha256: str
     source: dict[str, Any]
     source_path: Path
     delimiter: str
@@ -84,7 +84,7 @@ class CleanTarget:
     def meta(self) -> dict[str, Any]:
         return {
             "recipe_id": self.recipe["id"],
-            "recipe_sha256": self.recipe_sha256,
+            "steps_sha256": self.steps_sha256,
             "source_id": self.source["id"],
             "source_path": self.source["path"],
             "source_sha256": self.source["sha256"],
@@ -127,11 +127,11 @@ def plan(
     header = read_header(path, delimiter)
     columns = check_recipe(recipe, header).columns
     script = compile_recipe(recipe, source_rel=source["path"], delimiter=delimiter)
-    digest = recipe_hash(recipe)
+    digest = steps_hash(recipe)
     key_text = "\n".join([digest, source["sha256"], str(sample_rows), _sha(script)])
     return CleanTarget(
         recipe=recipe,
-        recipe_sha256=digest,
+        steps_sha256=digest,
         source=source,
         source_path=path,
         delimiter=delimiter,
@@ -155,7 +155,7 @@ def check_output(folder: Path, target: CleanTarget) -> str | None:
         return "The result files can't be read."
     if meta != target.meta():
         return "The result was made from a different recipe, source or script."
-    if steps.get("recipe_sha256") != target.recipe_sha256:
+    if steps.get("steps_sha256") != target.steps_sha256:
         return "steps.json names a different recipe."
     report = steps.get("steps") or []
     if len(report) != len(target.recipe["steps"]):
@@ -181,6 +181,14 @@ def check_output(folder: Path, target: CleanTarget) -> str | None:
 def _count_rows(path: Path) -> int:
     with path.open(newline="", encoding="utf-8") as fh:
         return max(sum(1 for _ in csv.reader(fh)) - 1, 0)
+
+
+def read_cleaned(folder: Path) -> tuple[list[str], list[list[str]]]:
+    """The header and every row of ``cleaned.csv``, as text."""
+    with (folder / "cleaned.csv").open(newline="", encoding="utf-8") as fh:
+        reader = csv.reader(fh)
+        header = next(reader, [])
+        return header, list(reader)
 
 
 def load_result(folder: Path, head_rows: int = 20) -> dict[str, Any]:

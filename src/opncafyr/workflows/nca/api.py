@@ -12,6 +12,12 @@ Recipes (#22):
 - ``POST /api/nca/recipes/{id}/preview`` / ``.../apply``: start the cleaning job, or
   return a still-valid earlier result.
 - ``GET  /api/nca/recipes/{id}/result?kind=preview|full``: counts, first rows, rejected.
+
+Mapping (#23), on the full cleaned data:
+- ``GET  /api/nca/recipes/{id}/mapping-help``: suggestions and ``needs_choice`` questions
+  for every role, each column's distinct values (for flag tables and units), the route
+  values with opnca-r's reading of each, and what still blocks the saved mapping.
+- ``PUT  /api/nca/recipes/{id}/mapping {mapping}``: check and save the mapping block.
 """
 
 from __future__ import annotations
@@ -29,6 +35,7 @@ from pydantic import BaseModel, Field
 from opncafyr.core.jobmanager import JobManagerError
 from opncafyr.core.manifest import atomic_write_text
 from opncafyr.core.workspace import Workspace, resolve_in_root
+from opncafyr.workflows.nca import mapping as mappings
 from opncafyr.workflows.nca import recipe as recipes
 from opncafyr.workflows.nca.cleaning import (
     PREVIEW_ROWS,
@@ -37,7 +44,17 @@ from opncafyr.workflows.nca.cleaning import (
     check_output,
     load_result,
     plan,
+    read_cleaned,
 )
+from opncafyr.workflows.nca.roles import (
+    BY_ID,
+    ROLES,
+    columns_from_rows,
+    distinct_values,
+    suggest,
+)
+from opncafyr.workflows.nca.routes import route_values
+from opncafyr.workflows.nca.units import UNIT_ROLES, header_hint
 
 RECIPE_ID = PathParam(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")
 MAX_RECIPE_BYTES = 1 << 20
@@ -65,6 +82,10 @@ class NewRecipe(BaseModel):
 
 class SaveRecipe(BaseModel):
     recipe: dict[str, Any]
+
+
+class SaveMapping(BaseModel):
+    mapping: dict[str, Any]
 
 
 class Context:
@@ -107,6 +128,25 @@ class Context:
             raise error("recipe_invalid", str(exc), step=exc.step) from None
         except CleaningError as exc:
             raise error(exc.code, exc.message) from None
+
+    def require_cleaned(self, doc: dict[str, Any]) -> Path:
+        folder = self.cleaned_folder(doc)
+        if folder is None:
+            raise error("not_ready", "Apply the recipe to all rows first.")
+        return folder
+
+    def save(self, doc: dict[str, Any]) -> Any:
+        """Check ``doc`` against its source and write it. Callers hold ``self.lock``."""
+        ws = self.workspace()
+        path = self.recipe_path(ws.root, doc["id"])
+        if not path.is_file():
+            raise error("not_found", "There is no such recipe.")
+        old = self.load_recipe(doc["id"])
+        if doc.get("source_id") != old["source_id"]:
+            raise error("recipe_invalid", "A recipe stays with its source.")
+        target = self.plan(doc)
+        atomic_write_text(path, recipes.dumps(doc))
+        return target
 
     def cleaned_folder(self, doc: dict[str, Any], sample_rows: int = 0) -> Path | None:
         """The folder of a valid result for ``doc`` as it is now, if there is one."""
@@ -189,15 +229,7 @@ def mount(app: FastAPI) -> Context:
         if doc.get("id") != recipe_id:
             raise error("recipe_invalid", "The recipe's id does not match the URL.")
         with ctx.lock:
-            ws = ctx.workspace()
-            path = ctx.recipe_path(ws.root, recipe_id)
-            if not path.is_file():
-                raise error("not_found", "There is no such recipe.")
-            old = ctx.load_recipe(recipe_id)
-            if doc.get("source_id") != old["source_id"]:
-                raise error("recipe_invalid", "A recipe stays with its source.")
-            target = ctx.plan(doc)
-            atomic_write_text(path, recipes.dumps(doc))
+            target = ctx.save(doc)
         return {"recipe": doc, **_summary(doc), "columns": target.columns}
 
     def start(recipe_id: str, sample_rows: int) -> dict[str, Any]:
@@ -231,5 +263,42 @@ def mount(app: FastAPI) -> Context:
         if folder is None:
             raise error("not_ready", "This recipe has not been run as it is now.")
         return {"kind": kind, **load_result(folder)}
+
+    @app.get("/api/nca/recipes/{recipe_id}/mapping-help")
+    def mapping_help(recipe_id: str = RECIPE_ID) -> dict[str, Any]:
+        doc = ctx.load_recipe(recipe_id)
+        header, rows = read_cleaned(ctx.require_cleaned(doc))
+        columns = [c for c in columns_from_rows(header, rows)]
+        mapping = doc.get("mapping") or mappings.empty_mapping()
+        by_name = {c.name: c for c in columns}
+        route_col = mappings.role(mapping, "ROUTE")
+        hints = {}
+        for name, kind in UNIT_ROLES.items():
+            column = mappings.role(mapping, name)
+            hint = header_hint(column, kind) if column else None
+            if hint:
+                hints[name] = hint
+        return {
+            "roles": [{"id": r.id, "label": r.label, "required": r.required} for r in ROLES],
+            **suggest(columns),
+            "mapping": mapping,
+            "problems": mappings.problems(mapping),
+            "columns": [distinct_values(c) for c in columns if not c.name.startswith("opncafyr_")],
+            "routes": route_values(by_name[route_col].values) if route_col in by_name else [],
+            "unit_hints": hints,
+        }
+
+    @app.put("/api/nca/recipes/{recipe_id}/mapping")
+    def save_mapping(body: SaveMapping, recipe_id: str = RECIPE_ID) -> dict[str, Any]:
+        with ctx.lock:
+            doc = ctx.load_recipe(recipe_id)
+            doc["mapping"] = body.mapping
+            ctx.save(doc)
+        return {
+            "mapping": doc["mapping"],
+            "sha256": recipes.recipe_hash(doc),
+            "problems": mappings.problems(doc["mapping"]),
+            "labels": {r: BY_ID[r].label for r in BY_ID},
+        }
 
     return ctx
