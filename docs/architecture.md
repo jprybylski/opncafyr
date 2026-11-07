@@ -22,7 +22,11 @@ A workflow package exposes `workflow()` returning a `core.registry.WorkflowPack`
 dataset importers (`core.datasets.Importer`, one per file format) and preview annotators
 (`core.datasets.DatasetAnnotator`). Core finds packs by package scan
 (`load_workflows()`), as it finds web adapters, and never imports a workflow by name. A
-new file format is a new importer in a pack.
+new file format is a new importer in a pack. A pack can also add its own API routes
+(`mount(app)`, under `/api/<pack>/`, behind the same security middleware), page assets
+(`static`, served at `/static/workflows/<pack>/`) and pages (`views`, listed by
+`GET /api/workflows`). The shell adds a sidenav link and an empty view for each and calls
+the module's `init(container)`; core never knows what a view does.
 
 The registry (`core/registry.py`) reads descriptors only from the installed
 `opncafyr.adapters` package, never from a workspace or the working directory. A descriptor
@@ -59,7 +63,7 @@ launcher (uvicorn, 127.0.0.1:<ephemeral>)
  ├── child web apps on private loopback ports, proxied under /apps/<tool>/
  │     opnca-r (plumber2)        deckifyr serve (FastAPI)
  └── jobs (argv arrays, app-controlled PATH, cwd = approved workspace dir)
-       Rscript --no-init-file …  (cleaning, snapshot, opnca replay, report render)
+       Rscript --vanilla …  (cleaning, opnca replay, report render; core/rscript.py)
        python -m deckifyr --json …  (validate, build, preview)
 ```
 
@@ -154,6 +158,7 @@ Study folder/
                                 core/migrations/); `sources` lists imported files
     backups/                    copies made before a schema migration
     recipes/<recipe-id>.yaml    schemas/recipe-v1
+    cleaned/<recipe-id>-<key>/  clean.R, cleaned.csv, rejected.csv, steps.json (#22)
     runs/<run-id>/
       input/source-fingerprint.json
       input/analysis.csv        frozen, one analyte
@@ -187,3 +192,30 @@ annotator lists exact raw values of the analyte code columns of ADR 0005 Q1.
 size_bytes}` in `workspace.json` `sources` (the id a recipe's `source_id` names). The same
 bytes at the same path keep their entry; changed bytes get a new one. Data values travel
 only to the page on this origin and are never logged.
+
+## Cleaning (#22)
+
+A recipe (`.opncafyr/recipes/<id>.yaml`, `recipe-v1`) is an ordered list of steps
+`{op, args, note}` for one imported source. Steps are data: `clean_names`, `rename`, `trim`,
+`parse_type`, `recode`, `derive` (copy, concat or constant), `derive_elapsed_time`,
+`convert_units` (fixed factor tables only), `flag`, `exclude` (rows stay, marked, with a
+reason), `filter_rows` (rows move to the rejected-row log, with a reason) and
+`report_dupes` (reports, removes nothing). Row conditions are a fixed shape (`equals`,
+`in`, `is_blank`, `all`), never an expression. `workflows/nca/recipe.py` adds the rules a
+schema can't: derived values always go to new columns and `rename` never reuses a name
+the data has had (so nominal time can't replace actual time, even through a swap); no step
+writes a numeric zero for a BLQ-looking or blank value; the launcher's columns
+(`opncafyr_line`, `opncafyr_excluded`, `opncafyr_exclusion_reason`) can't be changed.
+
+`clean_compile.py` turns a recipe into a standalone `clean.R`: the fixed library
+`r/nca_clean_lib.R` inlined, then one call per step. Recipe text appears only as escaped
+ASCII string literals (`r_string`). R reads every column as text, keeps each row's
+physical line as `opncafyr_line`, and refuses ragged rows or fields spanning lines. Each
+run writes `.opncafyr/cleaned/<recipe-id>-<key>/` with `clean.R`, `meta.json`,
+`cleaned.csv`, `rejected.csv` (line, step, reason; no values) and `steps.json` (rows in,
+out and rejected per step, values changed, columns added, issues with lines, duplicate
+groups). The key covers the recipe, source and script hashes and the sample size, so an
+old result is never reused for a changed recipe. The job's review checks the files,
+`rows_in == rows_out + rows_rejected` for every step, and that the source is unchanged.
+A preview is the same script on the first 200 rows. Routes: `/api/nca/recipes...`
+(`workflows/nca/api.py`); page: Analysis (`workflows/nca/web/`).

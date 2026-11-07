@@ -82,6 +82,24 @@ def test_core_finds_workflow_packs_by_package_scan():
     assert all(isinstance(i, Importer) for i in packs["nca"].importers)
     assert all(isinstance(a, DatasetAnnotator) for a in packs["nca"].annotators)
     assert ".csv" in {ext for i in packs["nca"].importers for ext in i.extensions}
+    # The pack brings its own routes and page; core only lists and mounts them.
+    assert callable(packs["nca"].mount)
+    assert [v.id for v in packs["nca"].views] == ["analysis"]
+
+
+def test_workflow_views_are_checked():
+    from opncafyr.core.registry import WorkflowView
+
+    for bad in (
+        WorkflowView("Bad", "x", "a.js"),
+        WorkflowView("ok", "x", "../a.js"),
+        WorkflowView("ok", "x", "a.py"),
+    ):
+        try:
+            bad.check()
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted {bad!r}")
 
 
 # The installer runs under the bare pinned Python before anything is installed (#19).

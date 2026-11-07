@@ -707,13 +707,17 @@ def _scenarios(rows: list[Row]) -> list[dict[str, object]]:
             "change": {
                 "recipe": [
                     {
-                        "step": "derive_elapsed_time",
-                        "from": "PCDTC",
-                        "reference": "EXSTDTC",
-                        "unit": "h",
-                        "time_zone": "all local, none given",
+                        "op": "derive_elapsed_time",
+                        "args": {
+                            "target": "ELTM",
+                            "from": "PCDTC",
+                            "reference": "EXSTDTC",
+                            "unit": "h",
+                            "time_zone": "all local, none given",
+                        },
                     }
-                ]
+                ],
+                "mapping": {"ACTUAL_TIME": "ELTM"},
             },
             "includes": [
                 {
@@ -742,7 +746,7 @@ def _scenarios(rows: list[Row]) -> list[dict[str, object]]:
         },
         {
             "id": "analyte_code_trimmed",
-            "change": {"recipe": [{"step": "trim", "columns": ["PCTESTCD"]}]},
+            "change": {"recipe": [{"op": "trim", "args": {"columns": ["PCTESTCD"]}}]},
             "analytes": ["METAB"],
             "includes": [
                 {

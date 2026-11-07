@@ -113,8 +113,8 @@ jobs:
           args=(--out rt --deckifyr-wheel "dl/deckifyr/$DECKIFYR_WHEEL")
           if [ "${{ steps.opnca.outputs.enabled }}" = "true" ]; then args+=(--opnca-dir dl/opnca); fi
           echo "OPNCAFYR_RUNTIME_FILE=$(uv run --group integration python tests/integration/proxy/prepare_runtime.py "${args[@]}")" >> "$GITHUB_ENV"
-      - name: Proxy harness
-        run: uv run --group integration pytest -m integration tests/integration/proxy -rs
+      - name: Proxy harness and R-backed workflow tests
+        run: uv run --group integration pytest -m integration tests/integration -rs
 
   # #44: the whole stack installs from local files and runs with the network cut. The
   # online phase fetches every pinned file (runtime/pins.toml [ci.linux-x86_64], the R

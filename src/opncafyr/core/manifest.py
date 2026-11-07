@@ -35,13 +35,17 @@ def atomic_write_json(path: str | Path, document: Any, schema_name: str | None =
     """Validate (optionally) then write ``document`` so readers never see a partial file."""
     if schema_name is not None:
         validate(document, schema_name)
+    return atomic_write_text(path, json.dumps(document, indent=2, sort_keys=True) + "\n")
+
+
+def atomic_write_text(path: str | Path, text: str) -> Path:
+    """Write ``text`` (UTF-8, ``\\n`` line ends) through a synced temp file and a rename."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump(document, fh, indent=2, sort_keys=True)
-            fh.write("\n")
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp, target)

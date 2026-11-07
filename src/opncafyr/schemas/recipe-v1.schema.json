@@ -2,24 +2,626 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "opncafyr/recipe-v1",
   "title": "Cleaning and mapping recipe (.opncafyr/recipes/<id>.yaml)",
-  "description": "Ordered, explicit steps. The source file is never rewritten and rows are never silently dropped.",
+  "description": "Ordered, explicit cleaning steps for one imported source (#22). The source file is never rewritten; a row leaves the data only through a filter_rows step with a reason, and lands in the rejected-row log. Steps carry data, never code: the launcher compiles them to a fixed R program. Semantic rules the schema cannot express (new-column targets, no numeric zero for BLQ values, column existence) are checked by workflows/nca/recipe.py.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "id", "source_id", "steps"],
+  "required": [
+    "schema_version",
+    "id",
+    "source_id",
+    "steps"
+  ],
   "properties": {
-    "schema_version": {"const": "1.0"},
-    "id": {"type": "string"},
-    "source_id": {"type": "string"},
+    "schema_version": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
     "steps": {
       "type": "array",
+      "maxItems": 500,
       "items": {
-        "type": "object",
-        "required": ["op"],
-        "properties": {
-          "op": {"enum": ["clean_names", "rename", "parse_type", "recode", "derive", "flag", "exclude_rows"]},
-          "note": {"type": "string"}
-        }
+        "$ref": "#/$defs/step"
       }
+    }
+  },
+  "$defs": {
+    "column": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[^\\u0000-\\u001f]+$"
+    },
+    "value": {
+      "type": "string",
+      "maxLength": 1000,
+      "pattern": "^[^\\u0000]*$"
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "\\S"
+    },
+    "where": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "column",
+            "equals"
+          ],
+          "properties": {
+            "column": {
+              "$ref": "#/$defs/column"
+            },
+            "equals": {
+              "$ref": "#/$defs/value"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "column",
+            "in"
+          ],
+          "properties": {
+            "column": {
+              "$ref": "#/$defs/column"
+            },
+            "in": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 5000,
+              "items": {
+                "$ref": "#/$defs/value"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "column",
+            "is_blank"
+          ],
+          "properties": {
+            "column": {
+              "$ref": "#/$defs/column"
+            },
+            "is_blank": {
+              "const": true
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "all"
+          ],
+          "properties": {
+            "all": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": {
+                "$ref": "#/$defs/where"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "step": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "clean_names"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [],
+              "properties": {}
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "rename"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from",
+                "to"
+              ],
+              "properties": {
+                "from": {
+                  "$ref": "#/$defs/column"
+                },
+                "to": {
+                  "$ref": "#/$defs/column"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "trim"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "columns"
+              ],
+              "properties": {
+                "columns": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "$ref": "#/$defs/column"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "parse_type"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "column",
+                "type",
+                "decimal_mark"
+              ],
+              "properties": {
+                "column": {
+                  "$ref": "#/$defs/column"
+                },
+                "type": {
+                  "enum": [
+                    "number",
+                    "integer"
+                  ]
+                },
+                "decimal_mark": {
+                  "enum": [
+                    ".",
+                    ","
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "recode"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "column",
+                "map"
+              ],
+              "properties": {
+                "column": {
+                  "$ref": "#/$defs/column"
+                },
+                "map": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 500,
+                  "propertyNames": {
+                    "$ref": "#/$defs/value"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/value"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "derive"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "target",
+                    "fn",
+                    "from"
+                  ],
+                  "properties": {
+                    "target": {
+                      "$ref": "#/$defs/column"
+                    },
+                    "fn": {
+                      "const": "copy"
+                    },
+                    "from": {
+                      "$ref": "#/$defs/column"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "target",
+                    "fn",
+                    "from",
+                    "sep"
+                  ],
+                  "properties": {
+                    "target": {
+                      "$ref": "#/$defs/column"
+                    },
+                    "fn": {
+                      "const": "concat"
+                    },
+                    "from": {
+                      "type": "array",
+                      "minItems": 2,
+                      "items": {
+                        "$ref": "#/$defs/column"
+                      }
+                    },
+                    "sep": {
+                      "$ref": "#/$defs/value"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "target",
+                    "fn",
+                    "value"
+                  ],
+                  "properties": {
+                    "target": {
+                      "$ref": "#/$defs/column"
+                    },
+                    "fn": {
+                      "const": "constant"
+                    },
+                    "value": {
+                      "$ref": "#/$defs/value"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "derive_elapsed_time"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "target",
+                "from",
+                "reference",
+                "unit",
+                "time_zone"
+              ],
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/column"
+                },
+                "from": {
+                  "$ref": "#/$defs/column"
+                },
+                "reference": {
+                  "$ref": "#/$defs/column"
+                },
+                "unit": {
+                  "enum": [
+                    "s",
+                    "min",
+                    "h",
+                    "d",
+                    "w"
+                  ]
+                },
+                "time_zone": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "How time zones were handled, in words; recorded, not interpreted."
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "convert_units"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value_column",
+                "unit_column",
+                "from",
+                "to"
+              ],
+              "properties": {
+                "value_column": {
+                  "$ref": "#/$defs/column"
+                },
+                "unit_column": {
+                  "$ref": "#/$defs/column"
+                },
+                "from": {
+                  "$ref": "#/$defs/value"
+                },
+                "to": {
+                  "$ref": "#/$defs/value"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "flag"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "target",
+                "column",
+                "table"
+              ],
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/column"
+                },
+                "column": {
+                  "$ref": "#/$defs/column"
+                },
+                "table": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 200,
+                  "propertyNames": {
+                    "$ref": "#/$defs/value"
+                  },
+                  "additionalProperties": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "exclude"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "where",
+                "reason"
+              ],
+              "properties": {
+                "where": {
+                  "$ref": "#/$defs/where"
+                },
+                "reason": {
+                  "$ref": "#/$defs/reason"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "filter_rows"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "where",
+                "reason"
+              ],
+              "properties": {
+                "where": {
+                  "$ref": "#/$defs/where"
+                },
+                "reason": {
+                  "$ref": "#/$defs/reason"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "const": "report_dupes"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "columns"
+              ],
+              "properties": {
+                "columns": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "$ref": "#/$defs/column"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

@@ -23,7 +23,7 @@ from contextlib import asynccontextmanager
 from html import escape
 from importlib import resources
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import anyio.to_thread
 import httpx
@@ -403,6 +403,39 @@ def create_app(
         recent=recent if recent is not None else RecentWorkspaces(state_dir() / RECENT_FILE),
     )
     mount_datasets_api(app, datasets)
+
+    @app.get("/api/workflows")
+    def workflow_views() -> dict[str, Any]:
+        """The pages each workflow pack adds to the shell; core never knows what they do."""
+        return {
+            "workflows": [
+                {
+                    "id": pack.id,
+                    "views": [
+                        {
+                            "id": v.id,
+                            "title": v.title,
+                            "icon": v.icon,
+                            "summary": v.summary,
+                            "module": f"static/workflows/{pack.id}/{v.module}",
+                        }
+                        for v in pack.views
+                    ],
+                }
+                for pack in packs
+            ]
+        }
+
+    for pack in packs:
+        if pack.mount is not None:
+            pack.mount(app)
     mount_proxy(app)
+    for pack in packs:
+        if pack.static is not None:
+            app.mount(
+                f"/static/workflows/{pack.id}",
+                HomeAssets(packages=[pack.static]),
+                name=f"workflow-{pack.id}",
+            )
     app.mount("/static", HomeAssets(packages=[("opncafyr.web", "static")]), name="static")
     return app

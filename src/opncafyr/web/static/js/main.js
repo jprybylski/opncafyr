@@ -8,6 +8,7 @@ import { initRouter } from "./router.js";
 import { initTheme } from "./theme.js";
 import { initTools } from "./tools.js";
 import { initToolView } from "./toolview.js";
+import { initWorkflows } from "./workflows.js";
 import { initWorkspace } from "./workspace.js";
 
 initRouter();
@@ -19,3 +20,4 @@ initArtifacts();
 initDatasets();
 initJobs();
 initLifecycle();
+initWorkflows();

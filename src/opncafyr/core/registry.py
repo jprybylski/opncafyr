@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
+import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -208,13 +210,48 @@ def load_web_adapters(descriptors: dict[str, ToolDescriptor]) -> dict[str, Any]:
 # --- Workflow packs ----------------------------------------------------------------
 
 
+_VIEW_ID_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
+
+
+@dataclass(frozen=True)
+class WorkflowView:
+    """A page a workflow pack adds to the home shell (``#/<id>`` and a sidenav link).
+
+    ``module`` is a file in the pack's ``static`` folder, served under
+    ``/static/workflows/<pack id>/``; it exports ``init(container)``. ``icon`` names a
+    symbol in the home page's sprite.
+    """
+
+    id: str
+    title: str
+    module: str
+    icon: str = "table"
+    summary: str = ""
+
+    def check(self) -> None:
+        if not _VIEW_ID_RE.match(self.id):
+            raise ValueError(f"Invalid workflow view id {self.id!r}.")
+        if "/" in self.module or "\\" in self.module or not self.module.endswith(".js"):
+            raise ValueError(f"Workflow view module must be a .js file name: {self.module!r}")
+
+
 @dataclass(frozen=True)
 class WorkflowPack:
-    """What a workflow package adds to core: dataset importers and preview annotators."""
+    """What a workflow package adds to core.
+
+    - ``importers`` and ``annotators`` feed the datasets service (#21).
+    - ``mount(app)`` adds the pack's own API routes (under ``/api/<pack id>/``). They
+      pass through the same security middleware as every other route.
+    - ``static`` is ``(package, folder)`` of the pack's page assets and ``views`` the
+      pages the shell lists. Core never knows what a view does.
+    """
 
     id: str
     importers: tuple[Importer, ...] = ()
     annotators: tuple[DatasetAnnotator, ...] = ()
+    mount: Callable[[Any], None] | None = None
+    static: tuple[str, str] | None = None
+    views: tuple[WorkflowView, ...] = ()
 
 
 def load_workflows() -> list[WorkflowPack]:
@@ -235,5 +272,7 @@ def load_workflows() -> list[WorkflowPack]:
         pack = factory()
         if not isinstance(pack, WorkflowPack):
             raise ValueError(f"Workflow {info.name!r}: workflow() must return a WorkflowPack.")
+        for view in pack.views:
+            view.check()
         packs.append(pack)
     return packs

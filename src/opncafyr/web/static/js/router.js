@@ -1,6 +1,7 @@
 // Views in one page (#50): "#/" Home, "#/data", "#/jobs", "#/settings", and "#/apps/<id>" for a
-// tool's web app embedded in the launcher. Other hashes, such as the skip link's
-// "#main", leave the current view alone.
+// tool's web app embedded in the launcher. Workflow packs add their own views at start-up
+// (workflows.js, registerView). Other hashes, such as the skip link's "#main", leave the
+// current view alone.
 
 import { emit } from "./dom.js";
 
@@ -10,6 +11,14 @@ let current = null; // "home", "data", "jobs", "settings" or "tool:<id>"
 let currentRoute = { name: "home" };
 
 export const route = () => currentRoute;
+
+// A workflow view ("#/<name>") whose <div id="view-<name>"> now exists. If the page was
+// opened on that hash, show it now.
+export function registerView(name) {
+  VIEWS[name] = name;
+  const wanted = routeFromHash();
+  if (wanted && wanted.name === name) show(wanted, false);
+}
 
 function routeFromHash() {
   const hash = location.hash;

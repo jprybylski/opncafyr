@@ -1402,13 +1402,19 @@
         "change": {
           "recipe": [
             {
-              "step": "derive_elapsed_time",
-              "from": "PCDTC",
-              "reference": "EXSTDTC",
-              "unit": "h",
-              "time_zone": "all local, none given"
+              "op": "derive_elapsed_time",
+              "args": {
+                "target": "ELTM",
+                "from": "PCDTC",
+                "reference": "EXSTDTC",
+                "unit": "h",
+                "time_zone": "all local, none given"
+              }
             }
-          ]
+          ],
+          "mapping": {
+            "ACTUAL_TIME": "ELTM"
+          }
         },
         "includes": [
           {
@@ -1473,10 +1479,12 @@
         "change": {
           "recipe": [
             {
-              "step": "trim",
-              "columns": [
-                "PCTESTCD"
-              ]
+              "op": "trim",
+              "args": {
+                "columns": [
+                  "PCTESTCD"
+                ]
+              }
             }
           ]
         },

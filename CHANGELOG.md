@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Cleaning recipes (#22).
+  - `recipe-v1` is finalised in place (nothing had written the draft): ordered steps
+    `{op, args, note}`, with `clean_names`, `rename`, `trim`, `parse_type`, `recode`,
+    `derive`, `derive_elapsed_time`, `convert_units`, `flag`, `exclude`, `filter_rows` and
+    `report_dupes`. Row conditions are a fixed shape, never an expression.
+  - `workflows/nca/recipe.py` refuses a step that would set a BLQ or blank value to zero,
+    derive a constant zero, overwrite a column (so nominal time can't replace actual time)
+    or change the launcher's own columns. Recipes are hashed as canonical JSON.
+  - Each recipe compiles to a standalone, readable `clean.R` (the fixed library
+    `r/nca_clean_lib.R` plus one call per step; recipe text only as escaped string
+    literals), run as a job with the pinned R. Outputs: `cleaned.csv`, `rejected.csv`
+    (line, step, reason) and `steps.json` (rows in, out and rejected per step, values
+    changed, issues with lines, duplicate groups). The job is accepted only if every step
+    accounts for its rows and the source is unchanged. Preview runs the same script on the
+    first 200 rows.
+  - Workflow packs can add routes, page assets and pages (`WorkflowPack.mount`, `static`,
+    `views`; `GET /api/workflows`); the NCA pack's Analysis page edits, previews and
+    applies recipes. `core/rscript.py` is the one way R is run (`Rscript --vanilla`).
+  - The two-analyte fixture's scenario recipes use the `{op, args}` shape; CI runs the
+    R-backed tests in `tests/integration/nca` with the proxy harness.
 - Offline installation (#36), as a supported v1 use case
   ([docs/install.md](docs/install.md#offline-installation-for-it-administrators-36)).
   - The bundle builder (`install.sh bundle`, `install.bat bundle`, `opncafyr bundle`)
