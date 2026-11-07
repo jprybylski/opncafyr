@@ -96,6 +96,12 @@ function reload() {
 
 export function initToolView() {
   $("tool-reload").addEventListener("click", reload);
+  // A module that restarted an app's session (a workflow opening another run) asks for a
+  // fresh page, so the frame never shows the previous session.
+  on("app-restarted", (id) => {
+    const frame = frames.get(id);
+    if (frame) frame.src = frame.src; // eslint-disable-line no-self-assign
+  });
   on("apps-changed", (list) => {
     apps = new Map(list.map((a) => [a.id, a]));
     // An app that went away loses its frame.

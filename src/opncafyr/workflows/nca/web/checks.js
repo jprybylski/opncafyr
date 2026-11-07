@@ -26,17 +26,31 @@ export function initChecks(stack, state) {
   let result = null;
   const acked = new Set();
 
+  let generation = 0;
+
   async function load() {
+    const mine = ++generation; // a later load wins; an earlier one that finishes late is dropped
+    if (!state.recipe) {
+      pick.body.replaceChildren();
+      start.body.replaceChildren();
+      return;
+    }
+    let fresh;
+    try {
+      fresh = await getJSON(`api/nca/recipes/${encodeURIComponent(state.recipe.id)}/analytes`);
+    } catch (e) {
+      if (mine !== generation) return;
+      pick.body.replaceChildren();
+      start.body.replaceChildren();
+      return setStatus(pick.status, e.status === 404 || e.status === 409 ? "Apply the recipe and map the analyte column first." : e.message, e.status >= 500);
+    }
+    if (mine !== generation) return;
+    if (analytes && JSON.stringify(analytes) === JSON.stringify(fresh) && pick.body.childElementCount) return;
+    analytes = fresh;
     pick.body.replaceChildren();
     start.body.replaceChildren();
     result = null;
     acked.clear();
-    if (!state.recipe) return;
-    try {
-      analytes = await getJSON(`api/nca/recipes/${encodeURIComponent(state.recipe.id)}/analytes`);
-    } catch (e) {
-      return setStatus(pick.status, e.status === 404 || e.status === 409 ? "Apply the recipe and map the analyte column first." : e.message, e.status >= 500);
-    }
     setStatus(pick.status, "");
     const analyteSel = choice(analytes.values.map((v) => [v.value, `"${v.value}" (${v.rows} rows)`]));
     const specimenSel = choice([]);

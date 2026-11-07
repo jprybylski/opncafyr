@@ -300,3 +300,19 @@ folder) is made read-only. A sealed manifest can't be written again (`RunSealedE
 `lineage.parent_run_id`). `verify_run`, `opncafyr runs verify <study> [--run ID]` and
 `GET /api/runs/{id}/verify` recompute the hashes and report changed, missing and added
 files.
+
+## opnca-r sessions (#27)
+
+`POST /api/nca/runs/{id}/session` (`workflows/nca/session.py`) starts opnca-r's
+`scripts/serve.R` on a run that is `preparing` or `running` and has no opnca-r output
+yet: `--data-path` is the run's frozen `input/analysis.csv`, `--output-dir` the run
+folder, `--mapping` its preset, `--storage-namespace` the run id, with
+`--lock-dataset --no-persist-mapping --no-overwrite --require-blq-rules
+--require-explicit-settings --no-guess-roles` and the API and shutdown tokens. The preset
+is checked against the snapshot's header before launch. The run moves to `running`.
+
+There is one opnca-r child at a time: opening another run stops the current session
+first, and the launcher's stop stops it too; with the single-instance launcher that keeps
+one session per output folder. The supervisor kills the whole process tree after the
+orderly stop and deletes the child's TMP folder. The page reloads the embedded opnca-r
+frame when the session changes (`app-restarted`).

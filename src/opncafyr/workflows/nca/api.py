@@ -34,6 +34,11 @@ Runs (#25):
 - ``GET  /api/nca/runs``: every run with its analyte and state; ``GET /api/nca/runs/{id}``.
 - ``POST /api/nca/runs/{id}/rerun``: a new run with the same choices (#26); a run itself
   never changes. The integrity check is core's ``GET /api/runs/{id}/verify``.
+
+Sessions (#27):
+- ``POST /api/nca/runs/{id}/session``: start opnca-r on the run (replacing any other
+  session) and wait until it is ready under ``/apps/opnca/``.
+- ``DELETE /api/nca/runs/{id}/session``; ``GET /api/nca/session``: which run is open.
 """
 
 from __future__ import annotations
@@ -76,6 +81,7 @@ from opncafyr.workflows.nca.roles import (
     suggest,
 )
 from opncafyr.workflows.nca.routes import route_values
+from opncafyr.workflows.nca.session import SessionError, Sessions
 from opncafyr.workflows.nca.snapshot import SnapshotError, create_run
 from opncafyr.workflows.nca.units import UNIT_ROLES, header_hint
 
@@ -102,6 +108,10 @@ STATUS = {
     "run_invalid": 409,
     "run_sealed": 409,
     "bad_state": 409,
+    "run_not_open": 409,
+    "run_saved": 409,
+    "input_changed": 409,
+    "session_failed": 503,
 }
 
 
@@ -147,6 +157,7 @@ class Context:
         self.lock = threading.Lock()
         self.cleaning = CleaningService()
         self.format_checks = FormatChecks()
+        self.sessions = Sessions()
 
     def workspace(self) -> Workspace:
         ws: Workspace | None = self.app.state.workspace
@@ -507,6 +518,27 @@ def mount(app: FastAPI) -> Context:
     @app.get("/api/nca/runs/{run_id}")
     def get_run(run_id: str) -> dict[str, Any]:
         return {"run": read_run(run_folder(run_id))}
+
+    @app.post("/api/nca/runs/{run_id}/session")
+    def open_session(run_id: str) -> dict[str, Any]:
+        folder = run_folder(run_id)
+        try:
+            return {"session": ctx.sessions.start(app.state.supervisor, folder)}
+        except SessionError as exc:
+            raise error(exc.code, exc.message) from None
+        except PresetError as exc:
+            raise error("preset_invalid", str(exc)) from None
+        except runs_core.RunError as exc:
+            raise error(exc.code, exc.message) from None
+
+    @app.delete("/api/nca/runs/{run_id}/session")
+    def close_session(run_id: str) -> dict[str, Any]:
+        run_folder(run_id)
+        return {"session": ctx.sessions.stop(app.state.supervisor, run_id)}
+
+    @app.get("/api/nca/session")
+    def session_state() -> dict[str, Any]:
+        return {"session": ctx.sessions.current(app.state.supervisor)}
 
     @app.post("/api/nca/runs/{run_id}/rerun")
     def rerun(run_id: str) -> Any:

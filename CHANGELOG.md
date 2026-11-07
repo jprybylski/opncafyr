@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- opnca-r sessions on a run (#27).
+  - "Open in opnca-r" starts `serve.R` on the run's frozen input with its preset, the run
+    folder as output folder and the run id as storage namespace, so nothing from another
+    run's session carries over. Opening another run, or stopping the launcher, stops the
+    session and its whole process tree. The embedded page reloads with the new session.
+  - The adapter adds `--require-explicit-settings` and `--no-guess-roles` (opnca-r
+    0.2.8): no default BLQ method, no role guessed from column names.
+  - Confirmed against opnca-r 0.2.8 that CONC on BLQ rows doesn't change results (ADR
+    0005, "Still to confirm").
 - Run bundles and the final run-manifest-v1 (#26).
   - `run-manifest-v1` is finalised in place: the spec's minimum fields are required, a
     reviewing or completed run must name its script, record, export and artifacts, a

@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
-import psutil
 import uvicorn
 
 from opncafyr.cli import _bind_loopback
@@ -19,6 +18,7 @@ from opncafyr.core.registry import load_descriptors, load_web_adapters
 from opncafyr.core.runtime import RUNTIME_FILE_ENV, Runtime, load_runtime
 from opncafyr.core.security import SecurityConfig
 from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
+from process_helpers import tree_pids, wait_gone  # noqa: F401 - re-exported for the tests
 
 EVIL = "https://evil.example"
 
@@ -106,7 +106,12 @@ def load_page(browser, controller: Controller, route: str, settle_ms: int = 1500
     context = browser.new_context()
     page = context.new_page()
     try:
-        page.goto(open_url(controller.origin + "/", mint_open_token(controller.tokens)))
+        # Let the home page finish (it loads workflow pages lazily) before recording, so
+        # only the app's own requests are checked.
+        page.goto(
+            open_url(controller.origin + "/", mint_open_token(controller.tokens)),
+            wait_until="networkidle",
+        )
         page.on("request", lambda r: record.requests.append(r.url))
         page.on("response", lambda r: record.responses.append((r.status, r.url)))
         page.on("requestfailed", lambda r: record.failures.append(r.url))
@@ -125,27 +130,3 @@ def assert_stays_under(record: PageRecord, controller: Controller, route: str) -
     bad = [(s, u) for s, u in record.responses if s >= 400]
     assert not bad, f"failed responses: {bad}"
     assert not record.failures, f"failed requests: {record.failures}"
-
-
-def tree_pids(pid: int) -> list[psutil.Process]:
-    try:
-        root = psutil.Process(pid)
-        return [root, *root.children(recursive=True)]
-    except psutil.Error:
-        return []
-
-
-def wait_gone(procs: list[psutil.Process], timeout: float = 15.0) -> list[psutil.Process]:
-    """The processes from ``procs`` still alive (not zombies) after ``timeout``."""
-    deadline = time.monotonic() + timeout
-    while True:
-        alive = []
-        for p in procs:
-            try:
-                if p.is_running() and p.status() != psutil.STATUS_ZOMBIE:
-                    alive.append(p)
-            except psutil.Error:
-                pass
-        if not alive or time.monotonic() > deadline:
-            return alive
-        time.sleep(0.2)

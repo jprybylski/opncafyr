@@ -2,6 +2,7 @@
 // added by the later steps of the path (session, save, replay, completion).
 
 import { button, cell, el, formatTime, getJSON, post, raw, section, setStatus, stateBadge, table } from "./common.js";
+import { emit } from "../../js/dom.js";
 
 export const runActions = []; // (run, refresh) => [Node], filled by other modules
 
@@ -35,6 +36,28 @@ export function initRuns(stack, state) {
     });
     sec.body.append(table(["Run", "Analyte", "Label", "State", "Created", ""], rows, "Runs"));
   }
+
+  // Open a run in opnca-r (#27): one session at a time, on the run's frozen input.
+  runActions.push((run) => {
+    if (run.state !== "preparing" && run.state !== "running") return [];
+    const open = button("Open in opnca-r", async () => {
+      open.disabled = true;
+      setStatus(sec.status, `Starting opnca-r on run ${run.run_id}…`);
+      try {
+        await post(`api/nca/runs/${encodeURIComponent(run.run_id)}/session`);
+        setStatus(sec.status, `opnca-r is open on run ${run.run_id}. Save there when you are done.`);
+        emit("app-restarted", "opnca");
+        location.hash = "#/apps/opnca";
+      } catch (e) {
+        setStatus(sec.status, e.message, true);
+      } finally {
+        open.disabled = false;
+        refresh();
+      }
+    }, "btn btn-primary btn-sm");
+    open.setAttribute("aria-label", `Open run ${run.run_id} in opnca-r`);
+    return [open];
+  });
 
   // Integrity check and "new run from this one" (#26): a run never changes once made.
   runActions.push((run) => {

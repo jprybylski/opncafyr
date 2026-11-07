@@ -252,9 +252,11 @@ S-301    1    2.4
 
 ## Still to confirm
 - Recheck every rule on the first sponsor dataset.
-- Confirm that opnca-r ignores CONC on BLQ-flagged rows (pharmaversesdtm carries
+- ~~Confirm that opnca-r ignores CONC on BLQ-flagged rows (pharmaversesdtm carries
   PCSTRESN 0 on some BLQ rows). If it does not, a non-NA CONC on a BLQ row becomes
-  blocking until resolved. To check in #24/#27.
+  blocking until resolved. To check in #24/#27.~~ Confirmed for opnca-r 0.2.8 (#27):
+  setting CONC to 999 on every BLQ row of a run leaves the calculated results unchanged
+  (`tests/integration/nca/test_session_r.py::test_opnca_ignores_conc_on_blq_rows`).
 - Upstream request for an exclusion reason in opnca-r, at #28.
 
 ## Consequences

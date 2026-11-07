@@ -255,3 +255,32 @@ def start_run(
     r = client.post("/api/nca/runs", json=body)
     assert r.status_code == 201, r.text
     return r.json()["run"]
+
+
+def nca_supervisor(tmp_path: Path, runtime: Runtime):
+    """A supervisor for the installed web adapters, with state and logs under tmp_path."""
+    from opncafyr.core.registry import load_descriptors, load_web_adapters
+    from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
+
+    tools = load_descriptors()
+    apps = {
+        tool: WebAppConfig(
+            adapter=adapter,
+            route=tools[tool].web_route or f"/apps/{tool}/",
+            max_body_bytes=tools[tool].max_body_bytes or DEFAULT_MAX_BODY_BYTES,
+        )
+        for tool, adapter in load_web_adapters(tools).items()
+    }
+    return Supervisor(
+        apps,
+        runtime=runtime,
+        state_root=tmp_path / "sup-state",
+        log_root=tmp_path / "sup-logs",
+        ready_timeout=120.0,
+    )
+
+
+def same_origin(client: TestClient) -> dict[str, str]:
+    """Headers a page on the launcher's origin sends (needed for POSTs under /apps/)."""
+    origin = str(client.base_url).rstrip("/")
+    return {"origin": origin, "sec-fetch-site": "same-origin"}

@@ -16,15 +16,26 @@ export function initMapping(stack, state) {
   let help = null;
   let draft = null; // the mapping being edited
 
+  let generation = 0;
+
   async function load() {
-    sec.body.replaceChildren();
-    help = null;
-    if (!state.recipe) return setStatus(sec.status, "");
+    const mine = ++generation; // a later load wins
+    if (!state.recipe) {
+      sec.body.replaceChildren();
+      help = null;
+      return setStatus(sec.status, "");
+    }
+    let fresh;
     try {
-      help = await getJSON(`api/nca/recipes/${encodeURIComponent(state.recipe.id)}/mapping-help`);
+      fresh = await getJSON(`api/nca/recipes/${encodeURIComponent(state.recipe.id)}/mapping-help`);
     } catch (e) {
+      if (mine !== generation) return;
+      sec.body.replaceChildren();
+      help = null;
       return setStatus(sec.status, e.status === 404 ? "Apply the recipe to all rows to map its columns." : e.message, e.status !== 404);
     }
+    if (mine !== generation) return;
+    help = fresh;
     draft = structuredClone(help.mapping);
     draft.roles ||= {};
     draft.units ||= {};

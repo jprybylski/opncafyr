@@ -1,8 +1,13 @@
-"""opnca adapter. See docs/plan.md for the issues that implement the rest of it (#27, #28).
+"""opnca adapter (#27, #28).
 
 Implements the web-app part of ``opncafyr.core.adapter``: start, ready and stop for
 opnca-r's ``scripts/serve.R`` (pinned in ``runtime/pins.toml``). Executables come from the
 installed runtime, never from workspace content. Analysis logic stays in opnca-r.
+
+The child's process tree is killed after the orderly stop (``core.supervisor``): every
+descendant on POSIX, the whole Job Object on Windows, where the pid in ``OPNCA_READY``
+is a child of ``Rscript.exe``. The supervisor gives the child its own TMP folder and
+deletes it after the stop, so R temp files holding data don't outlive the session.
 """
 
 from __future__ import annotations
@@ -78,6 +83,10 @@ class OpncaWebApp:
             f"--storage-namespace={run_id}",
             "--no-overwrite",
             "--require-blq-rules",
+            # 0.2.8: no default BLQ method either, and no role guessed from column names,
+            # so the session uses exactly the preset the user confirmed (ADR 0005 Q3).
+            "--require-explicit-settings",
+            "--no-guess-roles",
             f"--api-token-env={API_TOKEN_ENV}",
             f"--shutdown-token-env={SHUTDOWN_TOKEN_ENV}",
             f"--max-upload-bytes={MAX_UPLOAD_BYTES}",
