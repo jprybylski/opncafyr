@@ -63,8 +63,8 @@ def make_world(tmp: Path, version: str = "0.0.1") -> World:
         pins += ["", f"[{name}]", f'version = "{ver}"', 'license = "MIT"']
         pins += [f"[{name}.assets.{PLATFORM}]", f'url = "{url}"', f'sha256 = "{digest}"']
 
-    manifest = {"schema_version": 1, "package": "opnca", "version": "0.2.8"}
-    binary = "opnca_0.2.8_R4.6_macos-arm64.tgz"
+    manifest = {"schema_version": 1, "package": "opnca", "version": "0.2.9"}
+    binary = "opnca_0.2.9_R4.6_macos-arm64.tgz"
     _, bin_sha = _file(world, "opnca-r", binary)
     manifest |= {
         "source_commit": "c0ffee",
@@ -86,7 +86,7 @@ def make_world(tmp: Path, version: str = "0.0.1") -> World:
     pins += [
         "",
         "[packages.opnca-r]",
-        'version = "0.2.8"',
+        'version = "0.2.9"',
         'license = "Apache-2.0"',
         "private = true",
         f'release_url = "{BASE}/opnca-r/"',
@@ -114,7 +114,7 @@ def make_world(tmp: Path, version: str = "0.0.1") -> World:
         "R": {"Version": "4.6.2"},
         "Packages": {
             "R6": {"Package": "R6", "Version": "2.6.1", "Source": "Repository"},
-            "opnca": {"Package": "opnca", "Version": "0.2.8", "Source": "Cellar"},
+            "opnca": {"Package": "opnca", "Version": "0.2.9", "Source": "Cellar"},
         },
     }
     (runtime / "r" / "renv.lock").write_text(json.dumps(lock), "utf-8")

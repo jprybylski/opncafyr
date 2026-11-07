@@ -103,8 +103,8 @@ scheduled first.
   (#22, #32).
 - **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and
   deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
-  [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7, opnca-r#45–#47 in 0.2.8
-  and deckifyr#88–#91 in 0.3.5, so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
+  [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7, opnca-r#45–#47 in 0.2.8,
+  opnca-r#49–#50 in 0.2.9 and deckifyr#88–#91 in 0.3.5, so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
   children run behind `/apps/<tool>/` with no rewriting ([spike result](spikes/basepath.md)).
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
@@ -122,7 +122,7 @@ scheduled first.
   opnca-r changes land.
 
 **opnca adapter (#27, #28)**
-- Use opnca-r 0.2.8 directly: `scripts/serve.R` with the launcher flags (#27) and the
+- Use opnca-r 0.2.9 directly: `scripts/serve.R` with the launcher flags (#27) and the
   server-side export (#28). The earlier temporary paths are no longer needed.
 - Never read browser downloads. #29 checks the saved `analysis.R` against the UI's
   results.
@@ -130,9 +130,10 @@ scheduled first.
   `tests/integration/nca/test_replay_r.py::test_gate_2_two_analytes_two_independent_runs`
   takes the two-analyte fixture through cleaning, mapping, checks, two snapshots, two
   opnca-r sessions and saves, two replays and two sealed runs, with no cross-analyte rows.
-  It runs with the CI proxy harness job. Points excluded inside an opnca-r session wait on
-  [opnca-r#49](https://github.com/mantra-opnca/opnca-r/issues/49); until then such a save
-  fails.
+  It runs with the CI proxy harness job. Points excluded inside an opnca-r session are
+  added to the launcher's exclusions since opnca-r 0.2.9
+  ([opnca-r#49](https://github.com/mantra-opnca/opnca-r/issues/49)), and the replay
+  reproduces them.
 
 **Gate 3**
 - Starts once #29 proves runs can be replayed. The quartifyr adapter (#32) calls quartifyr

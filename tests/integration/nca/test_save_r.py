@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import shutil
@@ -19,9 +20,12 @@ from nca_helpers import (
     save_in_opnca,
     save_status,
     start_run,
+    wait_job,
 )
 from opncafyr.core import runs as R
 from opncafyr.core.manifest import validate
+from opncafyr.workflows.nca.publish.catalog import catalog, missing
+from publish_helpers import png
 
 pytestmark = pytest.mark.integration
 
@@ -55,7 +59,7 @@ def test_a_save_moves_the_run_to_review_with_every_artifact(env):
     for art in run["artifacts"]:
         assert art["sha256"] == R.sha256_file(_folder(study, run_id) / art["path"])
         assert art["media_type"] and art["kind"] in ("script", "record", "table", "figure")
-    assert run["tools"]["opnca-r"] == "0.2.8" and run["tools"]["R"].startswith("R version")
+    assert run["tools"]["opnca-r"] == "0.2.9" and run["tools"]["R"].startswith("R version")
     assert run["nca_settings"]["effective_settings"]
     assert run["nca_settings"]["settings"]["blq_rules"] == run["nca_settings"]["blq"]["rules"]
     assert run["exclusions"]["launcher"]["rows"] > 0 and run["exclusions"]["session"] == []
@@ -113,13 +117,13 @@ def test_an_interrupted_save_never_completes(env):
     assert again.status_code == 201
 
 
-def test_session_exclusions_that_drop_the_launchers_fail_the_save(env):
+def test_session_exclusions_add_to_the_launchers(env):
     api, study, rid, _ = env
     run_id = start_run(api, rid, "PARENT")["run_id"]
     preset = preset_of(study, run_id)
+    subject, time = _first_point(study, run_id)
 
     def exclude_a_point(base):
-        subject, time = _first_point(study, run_id)
         r = api.post(
             base + "dataset/exclude",
             headers=same_origin(api),
@@ -133,7 +137,8 @@ def test_session_exclusions_that_drop_the_launchers_fail_the_save(env):
         )
         assert r.status_code == 200, r.text
 
-    # The page switches the excluded role to OPNCA_EXCLUDED once a point is excluded.
+    # The page maps the excluded role to OPNCA_EXCLUDED once a point is excluded; since
+    # opnca-r 0.2.9 that column starts from the launcher's NCA_EXCLUDED rows (opnca-r#49).
     save_in_opnca(
         api,
         study,
@@ -142,8 +147,56 @@ def test_session_exclusions_that_drop_the_launchers_fail_the_save(env):
         before_save=exclude_a_point,
     )
     out = save_status(api, run_id)
-    assert out["save"]["state"] == "failed"
-    assert "replaced the launcher's" in out["run"]["failure"]["message"]
+    assert out["save"]["state"] == "complete", out
+    run = out["run"]
+    assert run["nca_settings"]["mapping"]["excluded"] == "NCA_EXCLUDED"
+    assert run["exclusions"]["launcher"]["rows"] > 0
+    assert [(o["id"], o["time"], o["source"]) for o in run["exclusions"]["session"]] == [
+        (subject, time, "test")
+    ]
+    assert any(w.startswith("session_exclusion_no_reason: 1 ") for w in run["warnings"])
+    # analysis.R rebuilds both sets, so the replay matches.
+    job = wait_job(api, api.app.state.nca.replays[run_id], timeout=600)
+    assert job["state"] == "completed", job["message"]
+    assert save_status(api, run_id)["run"]["replay"]["status"] == "passed"
+
+
+def test_the_mean_figures_are_saved_with_their_choices_and_replayed(env):
+    api, study, rid, _ = env
+    run_id = start_run(api, rid, "PARENT")["run_id"]
+    figure = base64.b64encode(png("mean")).decode()
+    save = {
+        "figure_names": ["mean-linear", "mean-log"],
+        "figure_formats": ["png", "png"],
+        "figure_data": [figure, figure],
+    }
+    # opnca-r refuses the mean without a time basis; it never picks one (opnca-r#50).
+    with pytest.raises(AssertionError, match="MEAN_SETTINGS_REQUIRED"):
+        save_in_opnca(api, study, run_id, save_extra=save)
+    save_in_opnca(api, study, run_id, save_extra={**save, "time_basis": "actual"}, reopen=False)
+    run = save_status(api, run_id)["run"]
+    assert run["state"] == "reviewing", run
+    paths = {a["path"] for a in run["artifacts"]}
+    assert {
+        "results/opnca-mean-profiles.csv",
+        "results/figures/mean-linear.png",
+        "results/figures/mean-log.png",
+    } <= paths
+    mean = run["nca_settings"]["mean_profiles"]
+    assert (mean["time_basis"], mean["statistic"], mean["error_measure"]) == (
+        "actual",
+        "arithmetic",
+        "sd",
+    )
+    job = wait_job(api, api.app.state.nca.replays[run_id], timeout=600)
+    assert job["state"] == "completed", job["message"]
+    run = save_status(api, run_id)["run"]
+    assert run["replay"]["status"] == "passed"
+    entries = {e.artifact: e for e in catalog(run)}
+    assert entries["mean-linear"].preselected and entries["mean-profiles"].note.startswith(
+        "Arithmetic mean ± SD at each actual time"
+    )
+    assert missing(run) == []
 
 
 def _first_point(study, run_id):

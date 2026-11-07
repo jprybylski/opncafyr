@@ -12,12 +12,11 @@ export function initCurator(stack, state) {
     "Pick from completed runs. You can combine analytes in one publication. Each file is copied into " +
       "OUTPUTS/ with a metadata sidecar, and the publication records the exact runs and hashes.");
   const picker = el("div", null, "nca-body");
-  const unavailable = el("div");
   const label = el("input");
   label.maxLength = 200;
   const actions = el("div", null, "nca-row");
   const plan = el("div");
-  sec.body.append(picker, unavailable, field("Label (optional)", label), actions, plan);
+  sec.body.append(picker, field("Label (optional)", label), actions, plan);
 
   let boxes = []; // [{input, run_id, artifact}]
   let checkedKey = null;
@@ -95,7 +94,6 @@ export function initCurator(stack, state) {
         el("span", r.run_id, "path"), r.analyte ? raw(r.analyte.value) : "", r.reason || "",
       ]), "Runs that can't be published"));
     }
-    unavailable.replaceChildren(...data.unavailable.map((u) => el("p", `${u.title}: ${u.reason}`, "card-note")));
   }
 
   function runBlock(run) {
@@ -117,6 +115,7 @@ export function initCurator(stack, state) {
       row.append(el("span", short(a.sha256), "path muted"));
       set.append(row);
     }
+    for (const m of run.missing || []) set.append(el("p", `${m.title}: ${m.reason}`, "card-note"));
     return set;
   }
 

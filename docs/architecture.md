@@ -331,7 +331,7 @@ frame when the session changes (`app-restarted`).
 
 The user saves in opnca-r's Export view; its server writes `analysis.R`,
 `analysis-record.json`, `results/**`, `artifacts.json` and finally `COMPLETE` into the run
-folder (opnca-r 0.2.8, `--no-overwrite`). The launcher never reads a browser download: the
+folder (opnca-r 0.2.9, `--no-overwrite`). The launcher never reads a browser download: the
 Analysis page polls `POST /api/nca/runs/{id}/save-status` for open runs. When `COMPLETE`
 appears the session is stopped, then `adapters/opnca/export.py` checks the save: `COMPLETE`
 matches `artifacts.json`, every listed file re-hashes, `results/` holds nothing unlisted,
@@ -341,9 +341,11 @@ other partial output is a failed save, never a complete one.
 
 A complete save moves the run to `reviewing` with its script, record, artifacts (path,
 media type, bytes, SHA-256), opnca-r's settings and effective settings, the opnca-r and R
-versions and the exclusions (the launcher's, and any made in the session, which carry no
-reason and add a warning). If the session replaced the launcher's exclusion column with
-its own (opnca-r#49), the save fails. A failed save moves the run to `failed`; "New run
+versions, the mean-profile choices when the save has the mean figures, and the
+exclusions. The launcher's exclusions are the snapshot's `NCA_EXCLUDED` rows; points
+excluded in the session are added to them (opnca-r#49, 0.2.9), carry no reason and add a
+warning. A save whose record no longer maps `excluded` to `NCA_EXCLUDED` while the run has
+launcher exclusions fails, because those rows would have been dropped. A failed save moves the run to `failed`; "New run
 from this" starts again. `POST /api/nca/runs/{id}/complete` seals a reviewed run once its
 replay has passed (#29).
 
@@ -374,8 +376,9 @@ matches to the 4 decimal places that API writes numbers with.
   replay passed, and whose sealed files `verify_run` still finds intact. The API enforces
   this (409 `not_publishable`).
 - **Catalog.** `catalog.py` maps a run's saved artifacts to publishable tables and figures.
-  The four ADR 0007 types are pre-selected, but the mean concentration–time figure is
-  unavailable until opnca-r saves one (mantra-opnca/opnca-r#50).
+  The four ADR 0007 types are pre-selected, including the mean concentration–time figures
+  that opnca-r saves since 0.2.9 (mantra-opnca/opnca-r#50). Their sidecar notes state the
+  record's choices (statistic, error, time basis). A run saved without them says so.
 - **Publishing.**
   1. Files are copied, through a hidden temp file and a rename, to deterministic names.
   2. A name that holds different bytes refuses the whole publication before anything is

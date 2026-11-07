@@ -80,9 +80,9 @@ All notable changes to this project are documented here. The format follows
 
     Optional: summaries by group and parameter boxplots. One publication can combine
     analytes.
-  - ADR 0007's mean concentration–time figure isn't saved by opnca-r 0.2.8. It is listed
-    as unavailable (mantra-opnca/opnca-r#50, filed; ADR 0007 amended); the launcher
-    doesn't draw it.
+  - ADR 0007's mean concentration–time figure wasn't saved by opnca-r 0.2.8
+    (mantra-opnca/opnca-r#50); with 0.2.9 it is pre-selected too (see Changed). The
+    launcher never draws it.
   - "Check" shows names, statuses and sidecar findings without writing anything.
     "Publish" then:
     - copies each file byte for byte to
@@ -596,6 +596,19 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- opnca-r is pinned at 0.2.9 (PR #51), which releases opnca-r#49 and #50. Its R
+  dependencies are unchanged, and the installer smoke values are the same.
+  - **Exclusions (#49).** A point excluded inside opnca-r is now added to the launcher's
+    `NCA_EXCLUDED` rows instead of replacing them, so such a save no longer fails. The
+    run keeps the in-app points (by their opnca-r source) with a "no reason recorded"
+    warning, and the replay reproduces both sets. The check that fails a save which lost
+    the launcher's exclusions stays.
+  - **Mean figures (#50).** A run can save `mean-linear`/`mean-log` and
+    `results/opnca-mean-profiles.csv` (compared on replay like every results table). The
+    curator pre-selects the mean figures as ADR 0007 decided, offers the table as an
+    option, and puts the record's choices (statistic, error measure, time basis,
+    grouping) in their sidecar notes. A run saved without them says so in its own block,
+    replacing the page-wide "not saved by this opnca-r version" note.
 - quartifyr is pinned at 0.3.3, which releases quartifyr#81–#86: staged renders,
   `--soffice-bin`, the LibreOffice fixes for macOS and Windows, and
   `initialize_report_project_offline()` for one Python environment serving both passes.

@@ -11,10 +11,13 @@ then the folder is inspected (``adapters.opnca.export``). A complete save moves 
 opnca-r's settings and effective settings, the tool versions and the exclusions. A save
 that can't be complete moves it to ``failed``; the user makes a new run from it.
 
-One rule is the launcher's own: the snapshot's exclusions are in ``NCA_EXCLUDED``. Once a
-point is excluded inside opnca-r, its page analyses with ``OPNCA_EXCLUDED`` instead, which
-opnca-r starts all FALSE, so the launcher's exclusions would be silently dropped. Such a
-save fails (upstream issue recorded in docs/upstream.md).
+One rule is the launcher's own: the snapshot's exclusions are in ``NCA_EXCLUDED``, and the
+record must still map ``excluded`` to it. Since opnca-r 0.2.9 (opnca-r#49) a point excluded
+inside opnca-r is added to those rows (source ``mapping`` in the record) rather than
+replacing them, and the record keeps the mapping. A save whose record maps another column
+while the run has launcher exclusions would have dropped them, so it fails. The points
+excluded inside opnca-r are the record's observations with any other source; they are kept
+in the manifest with a warning, because opnca-r records no reason for them.
 """
 
 from __future__ import annotations
@@ -26,6 +29,9 @@ from typing import Any
 from opncafyr.adapters.opnca import export
 from opncafyr.core import runs as runs_core
 from opncafyr.workflows.nca.snapshot import SNAPSHOT_COLUMNS
+
+# opnca-r's source for rows the mapped ``excluded`` column flagged before the session.
+MAPPING_SOURCE = "mapping"
 
 # The run folder's own entries, next to opnca-r's.
 OWN = ("input", "settings.json", "manifest.json", "logs", "artifacts", "replay")
@@ -79,7 +85,7 @@ def accept(folder: Path, status: export.ExportStatus) -> dict[str, Any]:
             dict(zip(observations, v, strict=False))
             for v in zip(*observations.values(), strict=False)
         ]
-    in_session = [o for o in observations if mapped != SNAPSHOT_COLUMNS["EXCLUDED"]]
+    in_session = [o for o in observations if o.get("source") != MAPPING_SOURCE]
     warnings = list(manifest.get("warnings", []))
     if in_session:
         warnings.append(
@@ -98,6 +104,8 @@ def accept(folder: Path, status: export.ExportStatus) -> dict[str, Any]:
             "mapping": record.get("mapping"),
         }
     )
+    if isinstance(record.get("mean_profiles"), dict):
+        nca_settings["mean_profiles"] = record["mean_profiles"]
     by_path = {a["path"]: a for a in status.artifacts}
     return runs_core.set_state(
         folder,

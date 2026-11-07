@@ -67,6 +67,10 @@ run IDs and artifact SHA-256s (`CLAUDE.md`, `publication-v1`).
 > it, because opnca-r is the calculation authority. The upstream request is
 > mantra-opnca/opnca-r#50. Once a pinned opnca-r saves the figure, it will be pre-selected
 > as decided here.
+>
+> **Update (2026-11-07).** opnca-r 0.2.9 saves `mean-linear` and `mean-log` with the table
+> behind them, and the launcher pins it. The mean figures are pre-selected as decided here.
+> A run saved without them (left out in opnca-r, or saved by 0.2.8) says so in the curator.
 
 ### 4. Identifiable data
 | Where | Coded subject IDs (e.g. `USUBJID`) | Other subject-level values |

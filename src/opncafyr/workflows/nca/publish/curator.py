@@ -42,14 +42,18 @@ from opncafyr.core.jobs import JobState
 from opncafyr.core.manifest import atomic_write_json, validate
 from opncafyr.core.workspace import resolve_in_root
 from opncafyr.workflows.nca.publish import sidecars
-from opncafyr.workflows.nca.publish.catalog import Entry, catalog
+from opncafyr.workflows.nca.publish.catalog import Entry, catalog, missing
 
 SCHEMA = "publication-v1"
 SIDECAR_FORMAT = "reportifyr-0.4.0"
 PUBLICATION_ID_RE = re.compile(r"^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$")
 MAX_ITEMS = 200
 # Abbreviations each kind of artifact uses; kept only when the footnotes define them.
-ABBREVIATIONS = {"summary": ("NCA", "PK", "SD", "CV", "GM")}
+_MEAN_ABBREVIATIONS = ("PK", "BLQ", "SD", "SE")
+ABBREVIATIONS = {
+    "summary": ("NCA", "PK", "SD", "CV", "GM"),
+    **{a: _MEAN_ABBREVIATIONS for a in ("mean-linear", "mean-log", "mean-profiles")},
+}
 DEFAULT_ABBREVIATIONS = ("NCA", "PK")
 
 _lock = threading.Lock()
@@ -161,6 +165,7 @@ def publishable_runs(root: Path) -> list[dict[str, Any]]:
         row["publishable"] = why is None
         row["reason"] = why
         row["artifacts"] = [e.to_dict() for e in offered]
+        row["missing"] = missing(manifest) if why is None else []
         out.append(row)
     return out
 
@@ -242,7 +247,8 @@ def build_sidecar(
             "table1": False,
             "footnotes": {
                 "equations": [],
-                "notes": [f"{entry.title}. Analyte: {name}. Run {run_id}."],
+                "notes": [f"{entry.title}. Analyte: {name}. Run {run_id}."]
+                + ([entry.note] if entry.note else []),
                 "abbreviations": [a for a in wanted if a in footnotes.abbreviations],
             },
         },

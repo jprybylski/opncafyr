@@ -100,7 +100,7 @@ def test_tampered_file_is_refused_naming_the_component(world, layout, fakes):
 
 
 def test_missing_bundle_file_names_the_component(world, layout, fakes):
-    (world.bundle / "assets" / "opnca-r" / "opnca_0.2.8_R4.6_macos-arm64.tgz").unlink()
+    (world.bundle / "assets" / "opnca-r" / "opnca_0.2.9_R4.6_macos-arm64.tgz").unlink()
     with pytest.raises(MissingAssets) as exc:
         run(layout, world.payload, from_bundle=world.bundle)
     assert exc.value.components == ["opnca-r"]

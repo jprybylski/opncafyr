@@ -295,12 +295,21 @@ def preset_of(study: Path, run_id: str) -> dict[str, Any]:
 
 
 def save_in_opnca(
-    client: TestClient, study: Path, run_id: str, *, body_extra=None, before_save=None
+    client: TestClient,
+    study: Path,
+    run_id: str,
+    *,
+    body_extra=None,
+    before_save=None,
+    save_extra=None,
+    reopen=True,
 ) -> dict[str, Any]:
     """Open the run in opnca-r, calculate with its preset and save, as the page's Save
-    button would (no figures). Returns the calculate response's data."""
-    r = client.post(f"/api/nca/runs/{run_id}/session")
-    assert r.status_code == 200, r.text
+    button would (no figures unless ``save_extra`` adds them). Returns the calculate
+    response's data. ``reopen=False`` reuses a session that is still open."""
+    if reopen:
+        r = client.post(f"/api/nca/runs/{run_id}/session")
+        assert r.status_code == 200, r.text
     api = "/apps/opnca/api/v1/"
     if before_save:
         before_save(api)
@@ -316,6 +325,7 @@ def save_in_opnca(
             "figure_names": [],
             "figure_formats": [],
             "figure_data": [],
+            **(save_extra or {}),
         },
     )
     assert saved.status_code == 200, saved.text

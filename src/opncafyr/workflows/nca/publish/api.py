@@ -44,7 +44,6 @@ from pydantic import BaseModel, Field
 from opncafyr.adapters import quartifyr
 from opncafyr.core.artifacts import list_publications
 from opncafyr.workflows.nca.publish import curator, deck, report, sidecars
-from opncafyr.workflows.nca.publish.catalog import UNAVAILABLE
 
 if TYPE_CHECKING:
     from opncafyr.workflows.nca.api import Context
@@ -108,7 +107,7 @@ def mount(app: FastAPI, ctx: Context) -> None:
     @app.get("/api/nca/publish/runs")
     def publish_runs() -> dict[str, Any]:
         root = ctx.workspace().root
-        return {"runs": curator.publishable_runs(root), "unavailable": UNAVAILABLE}
+        return {"runs": curator.publishable_runs(root)}
 
     @app.post("/api/nca/publications")
     def create_publication(body: PublishBody) -> Any:

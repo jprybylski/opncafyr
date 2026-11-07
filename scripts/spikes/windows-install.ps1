@@ -192,8 +192,8 @@ Step 'rlib' {
     # The pinned tool packages go into the renv cellar *and* the repository indexes (renv
     # plans the install from the source index; see local_repo.R).
     $opnca = $Manifest | Where-Object { $_.kind -eq 'package:opnca-r' -and $_.local_name -like '*windows-x86_64.zip' }
-    Copy-Item (Join-Path $Assets $opnca.local_name) (Join-Path $cellar 'opnca_0.2.8.zip') -Force
-    Copy-Item (Join-Path $Assets $opnca.local_name) (Join-Path $bin 'opnca_0.2.8.zip') -Force
+    Copy-Item (Join-Path $Assets $opnca.local_name) (Join-Path $cellar 'opnca_0.2.9.zip') -Force
+    Copy-Item (Join-Path $Assets $opnca.local_name) (Join-Path $bin 'opnca_0.2.9.zip') -Force
     foreach ($a in $Manifest | Where-Object { $_.kind -in 'package:quartifyr', 'package:reportifyr', 'package:pyro' }) {
         Copy-Item (Join-Path $Assets $a.local_name) $cellar -Force
         Copy-Item (Join-Path $Assets $a.local_name) $srcDir -Force
@@ -313,7 +313,7 @@ Step 'repair' {
     $pins = @{
         'rtools45-6768-6492.exe' = '614c7378150a012e70b16edcfe5236dcead47f491f1f54203ea8d451c7743a75'
         'rust-1.99.1-x86_64-pc-windows-gnu.tar.xz' = '0210624b2eb2bdf4ec32c2a6caf5c3bd2ab84e5df66c7530023e37f02add1084'
-        'opnca_0.2.8-vendored.tar.gz' = 'b310280d80b97b5763bd15e4f3ad13eaa85c29d8b0e02e441f1016119eb9a9f0'
+        'opnca_0.2.9-vendored.tar.gz' = 'fb119ea6a64083ffe78810ffa5779d48c2458713ea92cf69f5a0bc094eedf9a3'
     }
     foreach ($f in $rtoolsExe, $rustTar, $vendored) {
         if ((Get-FileHash -Algorithm SHA256 $f).Hash.ToLower() -ne $pins[[IO.Path]::GetFileName($f)]) { throw "SHA-256 mismatch: $f" }

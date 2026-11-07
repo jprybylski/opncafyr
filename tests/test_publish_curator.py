@@ -13,8 +13,8 @@ from opncafyr.core.workspace import init_workspace
 from opncafyr.workflows.nca.publish import curator as C
 from opncafyr.workflows.nca.publish import sidecars as S
 from opncafyr.workflows.nca.publish.api import bundled_footnotes
-from opncafyr.workflows.nca.publish.catalog import catalog
-from publish_helpers import PRESELECTED, completed_run, picks, writable
+from opncafyr.workflows.nca.publish.catalog import catalog, mean_note
+from publish_helpers import BASIC, PRESELECTED, completed_run, picks, writable
 
 
 @pytest.fixture
@@ -50,6 +50,61 @@ def test_catalog_preselects_what_adr_0007_names(study):
     assert "parameters-long" not in " ".join(entries)  # the long table is not offered
 
 
+def test_the_mean_figures_and_table_state_how_they_were_made(study):
+    _, folder = completed_run(study)
+    entries = {e.artifact: e for e in catalog(R.read_manifest(folder))}
+    for name in ("mean-linear", "mean-log"):
+        assert entries[name].kind == "figure" and entries[name].preselected
+        assert not entries[name].contains_subject_ids
+    table = entries["mean-profiles"]
+    assert table.kind == "table" and not table.preselected and not table.contains_subject_ids
+    assert (
+        table.note
+        == entries["mean-log"].note
+        == (
+            "Arithmetic mean ± SD at each nominal time (NFRLT), of the observed concentrations "
+            "after the run's BLQ rules and exclusions."
+        )
+    )
+    assert entries["profiles-log"].note is None
+
+
+def test_mean_note_wording():
+    def note(**mean):
+        return mean_note({"nca_settings": {"mean_profiles": mean}})
+
+    geo = note(statistic="geometric", error_measure="se", time_basis="actual", grouping="ARM")
+    assert geo.startswith("Geometric mean with geometric SE at each actual time, by ARM,")
+    assert note(statistic="arithmetic", error_measure="none", time_basis="nominal").startswith(
+        "Arithmetic mean at each nominal time,"
+    )
+    assert mean_note({"nca_settings": {}}) is None
+
+
+def test_a_run_without_the_mean_figures_says_so(api):
+    run_id, _ = completed_run(api.study, mean=False)
+    row = api.get("/api/nca/publish/runs").json()["runs"][0]
+    assert row["publishable"] and not {"mean-linear", "mean-log"} & {
+        a["artifact"] for a in row["artifacts"]
+    }
+    assert [m["artifact"] for m in row["missing"]] == ["mean-conc-time"]
+    assert "saved without the mean figures" in row["missing"][0]["reason"]
+    assert post(api, picks(run_id, ["mean-linear"])).status_code == 404
+
+
+def test_the_mean_sidecars_carry_the_choices(api):
+    run_id, _ = completed_run(api.study)
+    r = post(api, picks(run_id, ["mean-linear", "mean-profiles"]))
+    assert r.status_code == 201, r.text
+    for item in r.json()["publication"]["items"]:
+        side = json.loads((api.study / item["sidecar_path"]).read_text("utf-8"))
+        notes = side["object_meta"]["footnotes"]["notes"]
+        assert notes[1].startswith("Arithmetic mean ± SD at each nominal time (NFRLT)")
+        assert "SD" in side["object_meta"]["footnotes"]["abbreviations"]
+    _, findings = S.check_outputs(api.study, bundled_footnotes())
+    assert not [f for f in findings if f.severity == "error"]
+
+
 def test_runs_listing_says_why_a_run_cannot_be_published(api):
     done, _ = completed_run(api.study, "Drug A")
     review, _ = completed_run(api.study, "Drug B", state="reviewing")
@@ -58,8 +113,8 @@ def test_runs_listing_says_why_a_run_cannot_be_published(api):
     assert rows[done]["publishable"] and rows[done]["replay"] == "passed"
     assert {a["artifact"] for a in rows[done]["artifacts"] if a["preselected"]} == set(PRESELECTED)
     assert not rows[review]["publishable"] and "completed" in rows[review]["reason"]
-    assert rows[review]["artifacts"] == []
-    assert out["unavailable"][0]["artifact"] == "mean-conc-time"
+    assert rows[review]["artifacts"] == [] and rows[review]["missing"] == []
+    assert rows[done]["missing"] == []
 
 
 def test_publish_copies_byte_identical_files_with_valid_sidecars(api):
@@ -70,7 +125,7 @@ def test_publish_copies_byte_identical_files_with_valid_sidecars(api):
     validate(doc, "publication-v1")
     assert [x["run_id"] for x in doc["runs"]] == [run_id]
     assert doc["runs"][0]["manifest_sha256"] == R.sha256_file(folder / "manifest.json")
-    assert {i["artifact"] for i in doc["items"]} == set(PRESELECTED)
+    assert {i["artifact"] for i in doc["items"]} == set(BASIC)
     for item in doc["items"]:
         published = api.study / item["published_path"]
         source = folder / item["artifact_path"]
@@ -126,7 +181,7 @@ def test_a_tampered_run_is_refused(api):
 
 def test_unknown_and_duplicate_picks(api):
     run_id, _ = completed_run(api.study)
-    assert post(api, picks(run_id, ["mean-conc-time"])).status_code == 404
+    assert post(api, picks(run_id, ["no-such-artifact"])).status_code == 404
     assert post(api, picks(run_id, ["summary", "summary"])).status_code == 422
     assert post(api, []).status_code == 422
     bad = [{"run_id": "../x", "artifact": "summary"}]

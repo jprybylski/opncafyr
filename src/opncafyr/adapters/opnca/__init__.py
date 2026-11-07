@@ -83,7 +83,7 @@ class OpncaWebApp:
             f"--storage-namespace={run_id}",
             "--no-overwrite",
             "--require-blq-rules",
-            # 0.2.8: no default BLQ method either, and no role guessed from column names,
+            # Since 0.2.8: no default BLQ method either, and no role guessed from column names,
             # so the session uses exactly the preset the user confirmed (ADR 0005 Q3).
             "--require-explicit-settings",
             "--no-guess-roles",

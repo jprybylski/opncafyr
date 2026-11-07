@@ -25,10 +25,16 @@ def test_publish_from_the_page(published_page):
     curator = page.locator("#nca-curator")
     curator.get_by_text(run_id).wait_for()
     boxes = curator.get_by_role("checkbox")
-    boxes.nth(4).wait_for()  # the list is redrawn when the page is shown
-    assert boxes.count() == 5  # four pre-selected types and an optional boxplot
-    assert [boxes.nth(i).is_checked() for i in range(5)] == [True, True, True, True, False]
-    assert curator.get_by_text("Mean concentration–time (linear and log): Not saved").is_visible()
+    boxes.nth(7).wait_for()  # the list is redrawn when the page is shown
+    # The four ADR 0007 types (six files), then an optional boxplot and the mean table.
+    assert boxes.count() == 8
+    assert [boxes.nth(i).is_checked() for i in range(8)] == [True] * 6 + [False] * 2
+    assert curator.get_by_text("saved without the mean figures").count() == 0
+    for name in (
+        "Mean concentration–time profiles (linear)",
+        "Mean concentration–time profiles (log)",
+    ):
+        curator.get_by_role("checkbox", name=re.compile(re.escape(name))).uncheck()
     publish = curator.get_by_role("button", name="Publish")
     assert publish.is_disabled()
     curator.get_by_role("button", name="Check").click()
@@ -45,6 +51,18 @@ def test_publish_from_the_page(published_page):
     assert page.errors == []
 
 
+def test_a_run_without_the_mean_figures_says_so(published_page, home):
+    page, _ = published_page
+    older, _ = completed_run(home.study, "Drug B", mean=False)
+    page.reload()
+    curator = page.locator("#nca-curator")
+    curator.get_by_text(older).wait_for()
+    note = curator.get_by_text(re.compile("Mean concentration–time .*saved without the mean"))
+    note.wait_for()
+    assert note.count() == 1
+    assert page.errors == []
+
+
 def test_publish_page_axe(published_page):
     from test_home_page import _axe
 
@@ -58,7 +76,7 @@ def test_report_card_without_r(published_page, home):
     curator = page.locator("#nca-curator")
     curator.get_by_text(run_id).wait_for()
     curator.get_by_role("button", name="Check").click()
-    curator.get_by_text("4 file(s) ready to publish.").wait_for()
+    curator.get_by_text("6 file(s) ready to publish.").wait_for()
     curator.get_by_role("button", name="Publish").click()
     done = curator.get_by_text(re.compile(r"Recorded pub-"))
     done.wait_for()

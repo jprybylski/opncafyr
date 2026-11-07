@@ -1,4 +1,4 @@
-"""Completed, sealed runs with an opnca-r 0.2.8-shaped save, without R (#31-#33)."""
+"""Completed, sealed runs with an opnca-r 0.2.9-shaped save, without R (#31-#33)."""
 
 from __future__ import annotations
 
@@ -49,9 +49,21 @@ def writable(root: Path) -> None:
             path.chmod(path.stat().st_mode | stat.S_IWUSR)
 
 
-def saved_files(analyte: str, run_id: str) -> dict[str, bytes]:
+MEAN_PROFILES = {
+    "file": "results/opnca-mean-profiles.csv",
+    "estimand": "observed_only",
+    "time_basis": "nominal",
+    "time_column": "NFRLT",
+    "statistic": "arithmetic",
+    "error_measure": "sd",
+    "grouping_view": "none",
+    "grouping": "None",
+}
+
+
+def saved_files(analyte: str, run_id: str, mean: bool = True) -> dict[str, bytes]:
     tag = f"{analyte} {run_id}"
-    return {
+    files = {
         "analysis.R": b'df <- read.csv("input/analysis.csv")\n',
         "analysis-record.json": b'{"data": {}}\n',
         "results/opnca-summary.csv": f"metric,mean,note\ncmax,1.5,{tag}\n".encode(),
@@ -61,6 +73,13 @@ def saved_files(analyte: str, run_id: str) -> dict[str, bytes]:
         "results/figures/profiles-log.png": png(f"log {tag}"),
         "results/figures/boxplot-cmax.png": png(f"box {tag}"),
     }
+    if mean:
+        files |= {
+            "results/opnca-mean-profiles.csv": f"group,time,mean,note\nall,1,1.5,{tag}\n".encode(),
+            "results/figures/mean-linear.png": png(f"mean linear {tag}"),
+            "results/figures/mean-log.png": png(f"mean log {tag}"),
+        }
+    return files
 
 
 def completed_run(
@@ -70,6 +89,7 @@ def completed_run(
     label: str | None = None,
     state: str = "completed",
     replay: str = "passed",
+    mean: bool = True,
 ) -> tuple[str, Path]:
     """A run of ``analyte`` moved to ``state`` (reviewing or completed) the real way."""
     (root / ".opncafyr").mkdir(parents=True, exist_ok=True)
@@ -86,7 +106,7 @@ def completed_run(
     folder = R.publish_run(staging, run_id)
     R.set_state(folder, "running")
     artifacts = []
-    for rel, data in saved_files(analyte, run_id).items():
+    for rel, data in saved_files(analyte, run_id, mean).items():
         path = folder / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
@@ -107,7 +127,7 @@ def completed_run(
         record={"path": "analysis-record.json", "sha256": SHA},
         export={"saved_at": "2026-11-03T14:30:00Z", "artifacts_sha256": SHA},
         artifacts=artifacts,
-        nca_settings={},
+        nca_settings={"mean_profiles": MEAN_PROFILES} if mean else {},
     )
     if state == "reviewing":
         return run_id, folder
@@ -127,10 +147,12 @@ def completed_run(
     return run_id, folder
 
 
-PRESELECTED = ("summary", "listing", "profiles-linear", "profiles-log")
+PRESELECTED = ("summary", "listing", "profiles-linear", "profiles-log", "mean-linear", "mean-log")
+# What most tests publish: two tables and two figures.
+BASIC = PRESELECTED[:4]
 
 
-def picks(run_id: str, artifacts=PRESELECTED) -> list[dict]:
+def picks(run_id: str, artifacts=BASIC) -> list[dict]:
     return [{"run_id": run_id, "artifact": a} for a in artifacts]
 
 

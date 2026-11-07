@@ -28,9 +28,21 @@ Each completed run offers the tables and figures that opnca-r saved:
 | Parameter summary by group | `results/opnca-summary-by-<group>.csv` | No | No |
 | Boxplots of parameters | `results/figures/boxplot-<parameter>` | No | No |
 
-ADR 0007 also pre-selects a **mean** concentration–time figure. opnca-r 0.2.8 doesn't save
-one, so the page lists it as unavailable (mantra-opnca/opnca-r#50). The launcher doesn't
-draw it either, because opnca-r is the calculation authority.
+Since opnca-r 0.2.9 a run can also offer the **mean** concentration–time profiles, which
+ADR 0007 pre-selects, and the table behind them:
+
+| Offered | From the run | Pre-selected | Shows subject IDs |
+|---|---|---|---|
+| Mean concentration–time profiles (linear, log) | `results/figures/mean-linear`, `mean-log` | Yes | No |
+| Mean concentration–time table | `results/opnca-mean-profiles.csv` | No | No |
+
+opnca-r computes the means; the launcher never draws or recalculates them. You choose the
+time basis (actual or nominal time), the statistic and the error measure in opnca-r's Save
+box, and opnca-r refuses to save the mean figures until the time basis is chosen. Nominal
+time is usually the right choice: with actual times most time points hold one sample. The
+choices are written in the analysis record, and the published files' footnotes state them.
+If a run was saved without the mean figures (they were unticked in opnca-r, or an older
+opnca-r saved the run), the page says so; make a new run to include them.
 
 One publication can combine runs of different analytes.
 
