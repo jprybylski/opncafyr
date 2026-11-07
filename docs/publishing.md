@@ -112,7 +112,17 @@ one publication.
    - quartifyr's `check.R`.
 
    It lists what would block or weaken the render.
-4. **Render** (choose draft or final) renders that same copy with quartifyr's strict,
+4. **Edit report** opens `report.qmd` in the launcher's project-file editor (#52):
+   - **source mode** edits everything;
+   - **visual mode** edits only plain headings, paragraphs and lists, and keeps the
+     front matter, shortcodes, divs, chunks and placeholders exactly as they are;
+   - the **preview** is approximate and runs nothing.
+
+   Save writes only if the file hasn't changed on disk since you opened it; otherwise
+   both versions stay on screen until you choose. Check and Render wait while the editor
+   holds unsaved text. Draft or final is a report setting, kept in
+   `report/opncafyr-settings.json`; a render asks until you choose.
+5. **Render** renders that same copy with quartifyr's strict,
    offline render. It keeps the DOCX that quartifyr's result lists, after re-hashing it, in
    `report/builds/<build-id>/` with two records:
    - `build.json` (`publish-build-v1`). It lists the publication, the exact run IDs, the
@@ -120,7 +130,9 @@ one publication.
      versions;
    - quartifyr's own `render-result.json`.
 
-   **Download DOCX** serves it only while it still matches its manifest.
+   **Download DOCX** serves it only while it still matches its manifest. A build is
+   marked **Out of date** once its source, settings or published files change; the
+   build itself is never changed or relabelled.
 
 A render that fails, leaves placeholders unfilled, misses metadata, runs past its time
 limit or is cancelled keeps nothing. The whole process tree is stopped at the time

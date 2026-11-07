@@ -1,0 +1,15 @@
+# A test-only second tool (#52): a plain Markdown notes project that uses the launcher's
+# project-file editor through its descriptor and adapter alone, with no core change.
+schema_version: "1.0"
+id: toy_notes
+version: 1
+display_name: Toy notes
+runtime: python
+capabilities: [edit_project_files]
+executables: [python]
+health: {kind: python_import, executable: python, target: json}
+project_editor:
+  capability: edit_project_files
+  project_root: notes
+  file_profile: notes-md-v1
+  settings_schema: notes-settings-v1

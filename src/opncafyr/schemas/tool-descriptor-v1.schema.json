@@ -87,6 +87,18 @@
         }
       }
     },
+    "project_editor": {
+      "description": "Opts the tool into the launcher's project-file editor (#52). Every value is a declarative id that the installed adapter bundles: never a path glob, command, module or executable.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "project_root", "file_profile"],
+      "properties": {
+        "capability": {"$ref": "#/$defs/capability"},
+        "project_root": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+        "file_profile": {"type": "string", "pattern": "^[a-z][a-z0-9-]*-v[0-9]+$"},
+        "settings_schema": {"type": "string", "pattern": "^[a-z][a-z0-9-]*-v[0-9]+$"}
+      }
+    },
     "optional_requirements": {
       "description": "Runtime executables that enable extra features. When one is missing the tool still works and the listed capabilities are reported unavailable.",
       "type": "array",

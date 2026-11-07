@@ -40,14 +40,29 @@ def atomic_write_json(path: str | Path, document: Any, schema_name: str | None =
 
 def atomic_write_text(path: str | Path, text: str) -> Path:
     """Write ``text`` (UTF-8, ``\\n`` line ends) through a synced temp file and a rename."""
+    return atomic_write_bytes(path, text.encode("utf-8"))
+
+
+def atomic_write_bytes(
+    path: str | Path, data: bytes, *, mode: int | None = None, make_parents: bool = True
+) -> Path:
+    """Write ``data`` through a synced temp file in the same folder and a rename.
+
+    Readers see the old file or the new one, never a partial write. ``mode`` sets the new
+    file's permission bits (the temp file starts at 0600). ``make_parents=False`` refuses to
+    create a missing folder.
+    """
     target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
+    if make_parents:
+        target.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
-            fh.write(text)
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
             fh.flush()
             os.fsync(fh.fileno())
+        if mode is not None:
+            os.chmod(tmp, mode)
         os.replace(tmp, target)
     except BaseException:
         Path(tmp).unlink(missing_ok=True)

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/adapters/quartifyr/report-settings-v1",
+  "title": "Report settings",
+  "description": "Owned by the quartifyr adapter and kept in the report project (opncafyr-settings.json). The adapter turns these into its fixed render arguments; nothing here names a file, a command or a URL.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "reference_doc"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {
+      "description": "quartifyr's document status. Not set until the user chooses.",
+      "enum": ["draft", "final"]
+    },
+    "reference_doc": {
+      "description": "The Word reference document. Only the one installed with quartifyr exists today.",
+      "enum": ["bundled"]
+    }
+  }
+}

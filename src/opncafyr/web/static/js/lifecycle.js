@@ -1,7 +1,8 @@
 // Lifecycle (#14): heartbeats while visible, Quit with its choices, the auto-close setting.
 
 import { getJSON, post, postAndForget, send } from "./api.js";
-import { $, emit, setStatus } from "./dom.js";
+import { $, emit, on, setStatus } from "./dom.js";
+import { saveAll, unsavedTools } from "./unsaved.js";
 
 const HEARTBEAT_MS = 15000;
 const PENDING_POLL_MS = 5000;
@@ -15,9 +16,12 @@ let pendingTimer = null;
 const appStatus = (text, isError) => setStatus($("app-status"), text, isError);
 const lifecycle = () => getJSON("api/lifecycle");
 
+// While an editor here holds unsaved text the page beats even when hidden, so the
+// launcher keeps waiting for it (#52).
 function beat() {
-  if (stopped || document.visibilityState !== "visible") return;
-  post("api/session/heartbeat", { page_id: PAGE_ID }).catch(() => {});
+  const unsaved = unsavedTools();
+  if (stopped || (document.visibilityState !== "visible" && !unsaved.length)) return Promise.resolve();
+  return post("api/session/heartbeat", { page_id: PAGE_ID, unsaved }).catch(() => {});
 }
 
 function showStopped() {
@@ -72,8 +76,22 @@ async function quit(jobs, unsaved) {
       return;
     }
     const where = (e.tools || []).join(", ") || "an editor";
-    $("unsaved-text").textContent = `There are unsaved changes in: ${where}. Go back and save them, or save them now and quit.`;
-    if ((await ask($("unsaved-dialog"))) === "save") await quit(jobs, "save");
+    const reasons = e.detail.reasons || [];
+    $("unsaved-text").textContent = reasons.includes("unsaved_in_page") && !unsavedTools().length
+      ? `Another tab has unsaved changes in: ${where}. Save them there, or discard them and quit.`
+      : `There are unsaved changes in: ${where}. Go back and save them, save them now and quit, or discard them and quit.`;
+    const choice = await ask($("unsaved-dialog"));
+    if (choice === "save") {
+      // Editors in this page save themselves; child apps save as they stop.
+      if (!(await saveAll())) {
+        appStatus("Some changes could not be saved. Quit was cancelled.", true);
+        return;
+      }
+      await beat();
+      await quit(jobs, "save");
+    } else if (choice === "discard") {
+      await quit(jobs, "discard");
+    }
   }
 }
 
@@ -121,6 +139,7 @@ async function onIdleChange(ev) {
 
 export function initLifecycle() {
   setInterval(beat, HEARTBEAT_MS);
+  on("unsaved-changed", () => beat());
   document.addEventListener("visibilitychange", beat);
   window.addEventListener("pageshow", beat);
   // A hint only: unload events are unreliable, so the idle timer doesn't rely on it.

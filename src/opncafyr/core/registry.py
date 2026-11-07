@@ -7,7 +7,8 @@ Versioning: a descriptor states the format it is written in (``schema_version``,
 "1.0" of ``tool-descriptor-v1``) and the adapter's own ``version``. Descriptors ship with
 the launcher, so there is nothing to migrate: a format the registry does not know fails
 startup. A new format gets a new schema file; ``tool-descriptor-v1`` is never changed
-incompatibly.
+incompatibly. Optional keys may be added (``project_editor``, #52): every existing
+descriptor stays valid.
 """
 
 from __future__ import annotations
@@ -67,6 +68,21 @@ class JobContract:
 
 
 @dataclass(frozen=True)
+class ProjectEditorSpec:
+    """A tool's opt-in to the project-file editor (#52). Ids only; the adapter bundles them."""
+
+    capability: str
+    project_root: str  # one visible folder at the top of the workspace
+    file_profile: str
+    settings_schema: str | None = None
+
+
+# Folders a project editor may never be rooted at: the published outputs, and anything
+# that differs from them only by case (case-insensitive file systems).
+RESERVED_PROJECT_ROOTS = frozenset({"outputs"})
+
+
+@dataclass(frozen=True)
 class ToolDescriptor:
     id: str
     version: int
@@ -80,6 +96,7 @@ class ToolDescriptor:
     health: HealthProbe | None = None
     jobs: dict[str, JobContract] | None = None
     optional_requirements: tuple[OptionalRequirement, ...] = ()
+    project_editor: ProjectEditorSpec | None = None
 
     @classmethod
     def from_mapping(cls, data: Any, source: str = "<descriptor>") -> ToolDescriptor:
@@ -87,6 +104,7 @@ class ToolDescriptor:
         _check_references(data, source)
         web = data.get("web_app") or {}
         health = data["health"]
+        editor = data.get("project_editor")
         return cls(
             id=data["id"],
             version=data["version"],
@@ -110,6 +128,16 @@ class ToolDescriptor:
                     tuple(req.get("capabilities", ())),
                 )
                 for req in data.get("optional_requirements", ())
+            ),
+            project_editor=(
+                ProjectEditorSpec(
+                    editor["capability"],
+                    editor["project_root"],
+                    editor["file_profile"],
+                    editor.get("settings_schema"),
+                )
+                if editor
+                else None
             ),
         )
 
@@ -164,6 +192,16 @@ def _check_references(data: dict[str, Any], source: str) -> None:
                     f"optional_requirements[{i}].capabilities[{j}]",
                     f"{cap!r} is not a declared capability",
                 )
+    editor = data.get("project_editor")
+    if editor:
+        if editor["capability"] not in capabilities:
+            raise DescriptorError(
+                source, "project_editor.capability", "must be a declared capability"
+            )
+        if editor["project_root"].lower() in RESERVED_PROJECT_ROOTS:
+            raise DescriptorError(
+                source, "project_editor.project_root", "can't be the published outputs folder"
+            )
 
 
 def load_descriptors(root: Traversable | Path | None = None) -> dict[str, ToolDescriptor]:
@@ -205,6 +243,56 @@ def load_web_adapters(descriptors: dict[str, ToolDescriptor]) -> dict[str, Any]:
             raise ValueError(f"Adapter {tool_id!r} declares a web_app but has no web_app().")
         adapters[tool_id] = factory()
     return adapters
+
+
+def load_project_editors(descriptors: dict[str, ToolDescriptor]) -> dict[str, Any]:
+    """Instantiate the project editor of every descriptor that declares ``project_editor``.
+
+    Found by package scan like web apps: ``opncafyr.adapters.<id>`` exposes
+    ``project_editor()`` returning a ``core.adapter.ProjectEditor``. The adapter must bundle
+    the file profile and settings schema the descriptor names, or startup stops.
+    """
+    editors: dict[str, Any] = {}
+    for tool_id, descriptor in descriptors.items():
+        if descriptor.project_editor is None:
+            continue
+        module = importlib.import_module(f"{ADAPTERS_PACKAGE}.{tool_id}")
+        factory = getattr(module, "project_editor", None)
+        if factory is None:
+            raise ValueError(
+                f"Adapter {tool_id!r} declares a project_editor but has no project_editor()."
+            )
+        editors[tool_id] = factory()
+    check_project_editors(descriptors, editors)
+    return editors
+
+
+def check_project_editors(descriptors: dict[str, ToolDescriptor], editors: dict[str, Any]) -> None:
+    """Every declared editor exists, implements the protocol and bundles what it names."""
+    from opncafyr.core.adapter import ProjectEditor
+
+    for tool_id, descriptor in descriptors.items():
+        spec = descriptor.project_editor
+        if spec is None:
+            continue
+        source = f"adapters/{tool_id}/descriptor.yaml"
+        editor = editors.get(tool_id)
+        if editor is None or not isinstance(editor, ProjectEditor):
+            raise DescriptorError(
+                source, "project_editor", "the adapter provides no project editor"
+            )
+        if spec.file_profile not in editor.profiles:
+            raise DescriptorError(
+                source,
+                "project_editor.file_profile",
+                f"the adapter bundles no file profile {spec.file_profile!r}",
+            )
+        if spec.settings_schema is not None and spec.settings_schema not in editor.settings_schemas:
+            raise DescriptorError(
+                source,
+                "project_editor.settings_schema",
+                f"the adapter bundles no settings schema {spec.settings_schema!r}",
+            )
 
 
 # --- Workflow packs ----------------------------------------------------------------

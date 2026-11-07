@@ -51,11 +51,15 @@ from opncafyr.core.lifecycle import (
     minutes_to_seconds,
 )
 from opncafyr.core.picker import pick_folder
+from opncafyr.core.projectfiles import ProjectFiles
+from opncafyr.core.projectfiles_api import mount_project_files_api
 from opncafyr.core.proxy import mount_proxy
 from opncafyr.core.registry import (
     ToolDescriptor,
     WorkflowPack,
+    check_project_editors,
     load_descriptors,
+    load_project_editors,
     load_web_adapters,
     load_workflows,
 )
@@ -112,10 +116,15 @@ class PageBody(BaseModel):
     page_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
 
 
+class HeartbeatBody(PageBody):
+    # Tools whose editor in this page holds unsaved text (#52).
+    unsaved: list[str] = Field(default_factory=list, max_length=16)
+
+
 class QuitBody(BaseModel):
     # The spec's default: keep live jobs running and stop once they finish.
     jobs: Literal["keep", "cancel"] = "keep"
-    unsaved: Literal["refuse", "save"] = "refuse"
+    unsaved: Literal["refuse", "save", "discard"] = "refuse"
 
 
 class SettingsBody(BaseModel):
@@ -162,6 +171,7 @@ def create_app(
     runtime: Runtime | None = None,
     open_tokens: Path | None = None,
     workflows: list[WorkflowPack] | None = None,
+    editors: dict[str, Any] | None = None,
 ) -> FastAPI:
     """Build the controller app.
 
@@ -172,6 +182,11 @@ def create_app(
     instance_id = instance_id or uuid.uuid4().hex
     lifecycle_config = lifecycle or LifecycleConfig()
     installed = tools if tools is not None else load_descriptors()
+    if editors is None:
+        editors = load_project_editors(installed)
+    else:
+        check_project_editors(installed, editors)
+    project_files = ProjectFiles(installed, editors)
     packs = workflows if workflows is not None else load_workflows()
     datasets = DatasetService(
         importers=[i for p in packs for i in p.importers],
@@ -235,6 +250,8 @@ def create_app(
         redoc_url=None,
         openapi_url=None,
     )
+    # Set before the workflow packs mount, so they can take a project's lock (#52).
+    app.state.project_files = project_files
     app.add_middleware(LoopbackGuardMiddleware, config=security)
 
     started = time.monotonic()
@@ -260,6 +277,11 @@ def create_app(
                     "version": t.version,
                     "capabilities": list(t.capabilities),
                     "web_route": t.web_route,
+                    "project_editor": (
+                        {"title": project_files.editors[t.id].title(t.project_editor.file_profile)}
+                        if t.project_editor is not None and t.id in project_files.editors
+                        else None
+                    ),
                     **health.status(t.id).as_json(),
                 }
                 for t in app.state.tools.values()
@@ -307,8 +329,11 @@ def create_app(
         return app.state.lifecycle
 
     @app.post("/api/session/heartbeat")
-    def heartbeat(body: PageBody) -> dict[str, bool]:
-        lifecycle_of().heartbeat(body.page_id)
+    def heartbeat(body: HeartbeatBody) -> dict[str, bool]:
+        try:
+            lifecycle_of().heartbeat(body.page_id, tuple(body.unsaved))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid heartbeat.") from None
         return {"ok": True}
 
     @app.post("/api/session/leave")
@@ -345,7 +370,7 @@ def create_app(
                 detail={
                     "code": "needs_choice",
                     "message": "There are unsaved changes. Save them in the editor, "
-                    "or choose Save and quit.",
+                    "or choose Save and quit or Discard and quit.",
                     "reasons": result.reasons,
                     "tools": result.tools,
                 },
@@ -405,6 +430,7 @@ def create_app(
     )
     mount_datasets_api(app, datasets)
     mount_runs_api(app)
+    mount_project_files_api(app, project_files)
 
     @app.get("/api/workflows")
     def workflow_views() -> dict[str, Any]:

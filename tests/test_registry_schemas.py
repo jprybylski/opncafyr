@@ -51,6 +51,71 @@ def test_descriptor_cannot_smuggle_an_executable():
         )
 
 
+EDITOR_BASE = {
+    "schema_version": "1.0",
+    "id": "notes",
+    "version": 1,
+    "runtime": "python",
+    "capabilities": ["edit_project_files"],
+    "executables": ["python"],
+    "health": {"kind": "version_flag", "executable": "python"},
+}
+
+
+def test_the_report_opts_into_the_project_editor():
+    from opncafyr.core.registry import load_project_editors
+
+    tools = load_descriptors()
+    spec = tools["quartifyr"].project_editor
+    assert (spec.project_root, spec.file_profile, spec.settings_schema) == (
+        "report",
+        "report-source-v1",
+        "report-settings-v1",
+    )
+    assert set(load_project_editors(tools)) == {"quartifyr"}
+    assert tools["deckifyr"].project_editor is None
+
+
+@pytest.mark.parametrize(
+    ("editor", "field"),
+    [
+        ({"capability": "other", "project_root": "n", "file_profile": "p-v1"}, "capability"),
+        (
+            {"capability": "edit_project_files", "project_root": "outputs", "file_profile": "p-v1"},
+            "project_root",
+        ),
+        (
+            {"capability": "edit_project_files", "project_root": "../up", "file_profile": "p-v1"},
+            "project_root",
+        ),
+        (
+            {
+                "capability": "edit_project_files",
+                "project_root": ".opncafyr",
+                "file_profile": "p-v1",
+            },
+            "project_root",
+        ),
+        (
+            {"capability": "edit_project_files", "project_root": "n", "file_profile": "*.md"},
+            "file_profile",
+        ),
+        (
+            {
+                "capability": "edit_project_files",
+                "project_root": "n",
+                "file_profile": "p-v1",
+                "command": "sh",
+            },
+            "command",
+        ),
+    ],
+)
+def test_project_editor_values_are_ids_only(editor, field):
+    with pytest.raises(DescriptorError, match=field):
+        ToolDescriptor.from_mapping({**EDITOR_BASE, "project_editor": editor})
+
+
 def _manifest(**overrides):
     from artifact_docs import run_manifest
 

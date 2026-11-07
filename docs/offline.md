@@ -72,6 +72,7 @@ at its pinned release, and traced runs (`strace` in a Linux network namespace, W
 | R13 | uv with a warm cache | Nothing until the cache's HTTP freshness runs out; then index revalidation | **Traced**: `uv run` in a locked project made no attempt with a fresh cache. Don't rely on it: set the offline variables for every tool process. | #32, #33 |
 | R14 | Update checks, telemetry | None in any tool; none planned | The updater (#35) accepts a local bundle. | #35 |
 | R15 | Launcher R programs: cleaning (#22), opnca-r's data-format check (#24) and the replay of a saved `analysis.R` (#29) | None: base R and jsonlite only, no package installs, no repositories | Run as `Rscript --vanilla` from the pinned runtime (`core/rscript.py`), so a study folder's `.Rprofile` or `.Renviron` never runs. **Traced** (#51): the offline CI job's flow runs cleaning, the data-format check and the replay of both runs with no attempts. | #22, #24, #29, #51 |
+| R16 | Launcher project-file editor and its preview (#52) | None: plain ES modules in `web/static/js/`, a DOM-only preview that loads nothing and runs nothing; no Quarto or child process | Keep it that way. Rendering stays on the strict offline render path (R3). | #52 |
 
 ## Offline settings the launcher applies
 

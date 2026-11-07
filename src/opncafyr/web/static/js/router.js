@@ -1,6 +1,7 @@
-// Views in one page (#50): "#/" Home, "#/data", "#/jobs", "#/settings", and "#/apps/<id>" for a
-// tool's web app embedded in the launcher. Workflow packs add their own views at start-up
-// (workflows.js, registerView). Other hashes, such as the skip link's "#main", leave the
+// Views in one page (#50): "#/" Home, "#/data", "#/jobs", "#/settings", "#/apps/<id>" for a
+// tool's web app embedded in the launcher, and "#/tools/<id>/files[?path=<file>]" for a
+// tool's project files (#52). The path names a file only, never its content. Workflow
+// packs add their own views at start-up (workflows.js, registerView). Other hashes, such as the skip link's "#main", leave the
 // current view alone.
 
 import { emit } from "./dom.js";
@@ -30,11 +31,16 @@ function routeFromHash() {
     try { id = decodeURIComponent(id); } catch (e) { /* keep the raw text */ }
     if (id) return { name: "tool", param: id };
   }
+  const files = /^tools\/([a-z][a-z0-9_-]*)\/files(?:\?(.*))?$/.exec(path);
+  if (files) {
+    const query = new URLSearchParams(files[2] || "");
+    return { name: "files", param: files[1], file: query.get("path") || undefined };
+  }
   return { name: VIEWS[path] || "home" };
 }
 
 function show(route, moveFocus) {
-  const key = route.param === undefined ? route.name : `${route.name}:${route.param}`;
+  const key = [route.name, route.param, route.file].filter((p) => p !== undefined).join(":");
   if (key === current) return;
   current = key;
   currentRoute = route;

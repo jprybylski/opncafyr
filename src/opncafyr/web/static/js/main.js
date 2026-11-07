@@ -2,6 +2,7 @@
 
 import { initArtifacts } from "./artifacts.js";
 import { initDatasets } from "./datasets.js";
+import { initEditor } from "./editor.js";
 import { initJobs } from "./jobs.js";
 import { initLifecycle } from "./lifecycle.js";
 import { initRouter } from "./router.js";
@@ -14,6 +15,7 @@ import { initWorkspace } from "./workspace.js";
 initRouter();
 initTheme();
 initToolView();
+initEditor();
 initWorkspace();
 initTools();
 initArtifacts();

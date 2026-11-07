@@ -11,6 +11,8 @@ export class ApiError extends Error {
     this.status = status;
     this.code = detail && typeof detail === "object" ? detail.code : undefined;
     this.tools = detail && typeof detail === "object" ? detail.tools : undefined;
+    // The whole error detail, e.g. a conflict's current_sha256 (#52).
+    this.detail = detail && typeof detail === "object" ? detail : {};
   }
 }
 

@@ -16,13 +16,23 @@ process tree:
   ``publish-build-v1`` manifest. A failed, partial, timed-out or cancelled render
   leaves no build.
 
+Editing (#52). The launcher's project-file editor opens ``report.qmd`` and the report
+settings (``adapters/quartifyr/editor.py``). The staging copy is taken under the
+project's editor lock, so a save never lands half-way through it, and an edit made while
+a job runs can't change that job's inputs. Check, render and re-binding wait while a page
+reports unsaved report text. A render's status comes from the request or else from the
+saved settings; with neither it asks. The status lists each build's ``stale_inputs``: the
+inputs that changed since, so the screen marks it out of date. Builds are never rewritten.
+
 Renders share the job manager's default pool, so one project never renders twice at once.
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -32,7 +42,9 @@ from pydantic import BaseModel, Field
 
 from opncafyr import __version__
 from opncafyr.adapters import quartifyr as Q
+from opncafyr.adapters.quartifyr import editor as QE
 from opncafyr.core import runs as runs_core
+from opncafyr.core.adapter import SettingsInvalid
 from opncafyr.core.jobmanager import (
     STAGING_SUFFIX,
     JobContext,
@@ -53,6 +65,7 @@ if TYPE_CHECKING:
 
 TOOL = "report"
 PROJECT = "report"
+EDITOR_TOOL = "quartifyr"  # the descriptor whose project editor opens report/
 CHECKS_DIR = f"{WORKSPACE_META_DIR}/publish-checks"
 SETUP_TIMEOUT_S = 600.0
 CHECK_TIMEOUT_S = 300.0
@@ -146,6 +159,39 @@ class ReportService(projects.ProjectJobs):
     def __init__(self, cache: Path | None = None) -> None:
         super().__init__()
         self.cache = cache
+        # Set by mount(): the editor's project lock and its unsaved flag (#52).
+        self.project_lock: Callable[[Path], Any] = lambda root: contextlib.nullcontext()
+        self.unsaved: Callable[[], bool] = lambda: False
+
+    def refuse_if_unsaved(self) -> None:
+        if self.unsaved():
+            raise PublishError(
+                "editor_unsaved",
+                "The report editor has unsaved changes. Save or discard them first.",
+            )
+
+    def render_settings(self, project: Path, status: str | None) -> tuple[str, dict[str, Any]]:
+        """The status to render with and the settings to record (request wins)."""
+        try:
+            settings, sha = QE.read_settings(project)
+        except SettingsInvalid as exc:
+            raise PublishError(
+                "settings_invalid", f"The report settings are not valid: {exc}"
+            ) from None
+        chosen = status or settings.get("status")
+        if chosen not in Q.STATUSES:
+            raise PublishError(
+                "needs_choice",
+                "Choose whether to render a draft or a final report.",
+                options=list(Q.STATUSES),
+            )
+        recorded = {
+            "status": chosen,
+            "status_from": "request" if status else "settings",
+            "reference_doc": settings["reference_doc"],
+            "settings_sha256": sha,
+        }
+        return chosen, recorded
 
     def _cache(self) -> Path:
         return self.cache if self.cache is not None else cache_dir()
@@ -166,6 +212,7 @@ class ReportService(projects.ProjectJobs):
             publication, sha = projects.load_publication(root, publication_id)
             project = self.project(root)
             if project.exists():
+                self.refuse_if_unsaved()
                 return {"binding": self._rebind(root, project, publication, sha, source)}
             job_id = manager.submit(self._setup(root, publication, sha, timeout_s))
             self.jobs["setup"] = job_id
@@ -234,7 +281,8 @@ class ReportService(projects.ProjectJobs):
         if source == "keep" and changed:
             new_generated = dict(generated)
         else:
-            write_report_qmd(project, publication)
+            with self.project_lock(root):
+                write_report_qmd(project, publication)
             new_generated = {rel: runs_core.sha256_file(project / rel) for rel in GENERATED}
         projects.sync_outputs(root, project, publication)
         doc = projects.binding(TOOL, PROJECT, publication["publication_id"], sha, new_generated)
@@ -244,12 +292,14 @@ class ReportService(projects.ProjectJobs):
     # --- check and render ------------------------------------------------------------------
 
     def _assemble(self, root: Path, publication: dict[str, Any], dest: Path) -> list[str]:
-        projects.copy_project(self.project(root), dest, _skip)
+        with self.project_lock(root):
+            projects.copy_project(self.project(root), dest, _skip)
         return projects.copy_publication(root, publication, dest)
 
     def check(self, manager: JobManager, root: Path, timeout_s: float = CHECK_TIMEOUT_S) -> str:
         with self.lock:
             self.refuse_if_busy(manager)
+            self.refuse_if_unsaved()
             publication, _ = self.bound(root)
             output = f"{CHECKS_DIR}/report-{projects.new_build_id()}"
             job_id = manager.submit(self._check(root, publication, output, timeout_s))
@@ -294,13 +344,19 @@ class ReportService(projects.ProjectJobs):
         )
 
     def render(
-        self, manager: JobManager, root: Path, status: str, timeout_s: float = RENDER_TIMEOUT_S
+        self,
+        manager: JobManager,
+        root: Path,
+        status: str | None = None,
+        timeout_s: float = RENDER_TIMEOUT_S,
     ) -> dict[str, Any]:
-        if status not in Q.STATUSES:
+        if status is not None and status not in Q.STATUSES:
             raise PublishError("bad_status", "Choose draft or final.")
         with self.lock:
             self.refuse_if_busy(manager)
+            self.refuse_if_unsaved()
             publication, sha = self.bound(root)
+            self.render_settings(self.project(root), status)  # ask now, not in the job
             build_id = projects.new_build_id()
             request = self._render(root, publication, sha, status, build_id, timeout_s)
             job_id = manager.submit(request)
@@ -312,11 +368,14 @@ class ReportService(projects.ProjectJobs):
         root: Path,
         publication: dict[str, Any],
         sha: str,
-        status: str,
+        requested: str | None,
         build_id: str,
         timeout_s: float,
     ) -> JobRequest:
         cache = self._cache()
+        # Decided from the staging copy, so the status, the settings hash and the inputs
+        # all come from the same snapshot.
+        picked: dict[str, Any] = {}
         quarto_timeout = int(max(60, min(900, timeout_s - 300)))
 
         output = f"{PROJECT}/{projects.BUILDS}/{build_id}"
@@ -331,6 +390,8 @@ class ReportService(projects.ProjectJobs):
                         f"('{hidden[0]}'). Move the study folder out of it.",
                     )
                 listed = self._assemble(root, publication, ctx.cwd)
+                status, recorded = self.render_settings(ctx.cwd, requested)
+                picked.update(status=status, settings=recorded)
                 findings = _sidecar_findings(ctx.cwd, listed)
                 errors = [f for f in findings if f["severity"] == "error"]
                 if errors:
@@ -355,6 +416,7 @@ class ReportService(projects.ProjectJobs):
                     ("standard_footnotes", Q.FOOTNOTES),
                     ("config", Q.CONFIG),
                     ("init_marker", Q.INIT_MARKER),
+                    ("settings", QE.SETTINGS_FILE),
                     ("extensions", Q.EXTENSIONS),
                     *projects.output_roles(publication),
                 ]
@@ -372,6 +434,7 @@ class ReportService(projects.ProjectJobs):
         def review(ctx: JobContext) -> ReviewResult:
             staging = ctx.staging
             assert staging is not None  # noqa: S101
+            status = picked["status"]
             result = Q.parse_render(0, _stdout(ctx), Q.render_schema(ctx.runtime), ctx.cwd)
             if not result.ok or result.document is None:
                 return ReviewResult(False, result.message)
@@ -404,7 +467,7 @@ class ReportService(projects.ProjectJobs):
                 publication_sha=sha,
                 inputs=json.loads((ctx.tmpdir / "inputs.json").read_text("utf-8")),
                 tools=tools,
-                settings={"status": status, "reference_doc": "bundled"},
+                settings=picked["settings"],
                 outputs=[
                     {
                         "role": status,
@@ -442,7 +505,27 @@ class ReportService(projects.ProjectJobs):
     # --- status ----------------------------------------------------------------------------
 
     def status(self, manager: JobManager | None, root: Path) -> dict[str, Any]:
-        return self.base_status(manager, root)
+        out = self.base_status(manager, root)
+        project = self.project(root)
+        current: dict[str, str | None] = {}
+
+        def now(rel: str) -> str | None:
+            if rel not in current:
+                found = projects.hash_inputs(project, [("input", rel)]) if project.is_dir() else []
+                current[rel] = found[0]["sha256"] if found else None
+            return current[rel]
+
+        # build id -> inputs that changed since (the build itself is never rewritten).
+        out["stale_inputs"] = {}
+        for build in out["builds"]:
+            recorded = {i["path"]: i["sha256"] for i in build["inputs"]}
+            if build["settings"].get("settings_sha256") is None:
+                # Built before the settings existed (or without them): saving them later
+                # changes what a new render would use.
+                recorded.setdefault(QE.SETTINGS_FILE, None)  # type: ignore[arg-type]
+            stale = sorted(p for p, sha in recorded.items() if now(p) != sha)
+            out["stale_inputs"][build["build_id"]] = stale
+        return out
 
 
 def _sidecar_findings(project: Path, listed: list[str]) -> list[dict[str, Any]]:
@@ -469,12 +552,24 @@ class ReportBody(BaseModel):
 
 
 class RenderBody(BaseModel):
-    status: str = Field(pattern=r"^(draft|final)$")
+    # Omitted: use the saved report settings (#52); with neither, the render asks.
+    status: str | None = Field(default=None, pattern=r"^(draft|final)$")
 
 
 def mount(app: FastAPI, ctx: Context, failure) -> ReportService:
     service = ReportService()
     app.state.report = service
+
+    def project_lock(root: Path):
+        files = getattr(app.state, "project_files", None)
+        return files.lock(root, EDITOR_TOOL) if files is not None else contextlib.nullcontext()
+
+    def unsaved() -> bool:
+        life = getattr(app.state, "lifecycle", None)
+        return life is not None and life.page_unsaved(EDITOR_TOOL)
+
+    service.project_lock = project_lock
+    service.unsaved = unsaved
 
     def manager() -> JobManager:
         jobs = getattr(app.state, "jobs", None)

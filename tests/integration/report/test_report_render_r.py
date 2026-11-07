@@ -37,6 +37,19 @@ def test_two_analyte_publication_renders_to_docx(api):
         assert (project / rel).is_file(), rel
     assert sorted(p.name for p in (project / "OUTPUTS" / "tables").iterdir())  # the copy
 
+    # Edit a prose paragraph through the launcher's editor (#52), as the page does.
+    editor = "/api/tools/quartifyr/project"
+    doc = api.post(f"{editor}/read", json={"path": "report.qmd"}).json()
+    assert "This report was assembled by opncafyr" in doc["text"]
+    edited = doc["text"].replace(
+        "This report was assembled by opncafyr", "Edited in the launcher, this report was built"
+    )
+    saved = api.post(
+        f"{editor}/save",
+        json={"path": "report.qmd", "text": edited, "expected_sha256": doc["sha256"]},
+    )
+    assert saved.status_code == 200, saved.text
+
     check = wait_job(api, api.post("/api/nca/report/check").json()["job_id"])
     assert check["state"] == "completed", check["message"]
     findings = api.get("/api/nca/report").json()["check"]["findings"]
@@ -53,6 +66,8 @@ def test_two_analyte_publication_renders_to_docx(api):
         i["published_path"] for i in pub["items"]
     }
     roles = {i["role"] for i in build["inputs"]}
+    shell = next(i for i in build["inputs"] if i["role"] == "shell_qmd")
+    assert shell["sha256"] == saved.json()["sha256"]
     assert {"shell_qmd", "quarto_yml", "reference_doc", "extensions", "sidecar"} <= roles
     assert build["tools"]["quartifyr"] and build["tools"]["reportifyr"]
 
@@ -62,6 +77,7 @@ def test_two_analyte_publication_renders_to_docx(api):
     assert R.sha256_file(docx) == build["outputs"][0]["sha256"]
     with zipfile.ZipFile(docx) as z:
         body = z.read("word/document.xml").decode("utf-8")
+    assert "Edited in the launcher" in body
     assert "Metabolite B" in body and len([n for n in z.namelist() if "media/" in n]) == 2
     # Only the selected publication's files went in: nothing else under report/OUTPUTS.
     published = {p.rpartition("/")[2] for i in pub["items"] for p in (i["published_path"],)}

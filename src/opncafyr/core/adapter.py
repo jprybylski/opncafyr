@@ -149,3 +149,77 @@ class SupportsActivity(Protocol):
     """
 
     def activity(self, child: ChildView, client: httpx.Client) -> ChildActivity: ...
+
+
+# --- Project-file editor (#52) ---------------------------------------------------------
+
+SYNTAXES = ("md", "qmd", "rmd", "yaml", "text")
+DEFAULT_MAX_EDIT_BYTES = 512 * 1024
+
+
+@dataclass(frozen=True)
+class EditableFile:
+    """A file the editor may open: ``path`` is POSIX, relative to the project root."""
+
+    path: str
+    label: str
+    syntax: str = "text"  # one of SYNTAXES; md/qmd/rmd also get the visual mode
+    max_bytes: int = DEFAULT_MAX_EDIT_BYTES
+
+
+@dataclass(frozen=True)
+class SettingsField:
+    """One field of an adapter-owned settings form. ``options`` are ``(value, label)``."""
+
+    name: str
+    label: str
+    options: tuple[tuple[str, str], ...]
+    help: str = ""
+    required: bool = False
+
+
+class SettingsInvalid(ValueError):
+    """Settings values (or a settings file) the adapter's schema rejects."""
+
+
+@runtime_checkable
+class ProjectEditor(Protocol):
+    """Optional for tool adapters: which project files the launcher's editor may open.
+
+    Declared by ``project_editor`` in the descriptor and built by the adapter package's
+    ``project_editor()``. Core owns the paths, hashes, locks and writes; the adapter only
+    decides what is safe to show and how its settings look. The ids passed in are the
+    descriptor's ``file_profile`` and ``settings_schema``.
+    """
+
+    profiles: frozenset[str]
+    settings_schemas: frozenset[str]
+
+    def title(self, file_profile: str) -> str:
+        """A heading for the editor page, e.g. "Report source"."""
+        ...
+
+    def files(self, project: Path, file_profile: str) -> list[EditableFile]:
+        """The files to offer, in display order. Core re-checks every path."""
+        ...
+
+    def check_text(self, file_profile: str, path: str, text: str) -> list[str]:
+        """Advisory warnings for text about to be saved (never blocks a save)."""
+        ...
+
+    def settings_file(self, settings_schema: str) -> str:
+        """The project-relative JSON file holding the settings (adapter-owned)."""
+        ...
+
+    def settings_form(self, settings_schema: str) -> list[SettingsField]: ...
+
+    def settings_values(self, settings_schema: str, document: dict[str, Any] | None) -> dict:
+        """Form values from the saved document (``None``: not saved yet).
+
+        Raises ``SettingsInvalid`` if the document doesn't match the schema.
+        """
+        ...
+
+    def settings_document(self, settings_schema: str, values: Mapping[str, Any]) -> dict:
+        """The versioned document to save. Raises ``SettingsInvalid``."""
+        ...

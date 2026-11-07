@@ -45,6 +45,13 @@ function card(tool, app) {
     link.href = `#/apps/${encodeURIComponent(tool.id)}`;
     foot.append(link);
   }
+  if (tool.project_editor) {
+    // The launcher's own editor (editor.js), for tools that opt in (#52).
+    const edit = el("a", "Edit project files", "btn btn-sm");
+    edit.href = `#/tools/${encodeURIComponent(tool.id)}/files`;
+    edit.title = tool.project_editor.title;
+    foot.append(edit);
+  }
   if (foot.childNodes.length) li.append(foot);
   return li;
 }

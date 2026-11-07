@@ -253,6 +253,62 @@ def test_page_ids_are_checked(jobs):
         Harness(jobs).life.heartbeat("../x")
 
 
+# --- unsaved editor text held in a page (#52) -------------------------------------------
+
+
+def test_a_page_with_unsaved_editor_text_blocks_idle_shutdown(jobs):
+    h = Harness(jobs)
+    h.clock.t = 0
+    h.life.heartbeat("page1", ("report",))
+    assert h.life.page_unsaved("report") and not h.life.page_unsaved("deck")
+    # The page itself expires at 45 s, its unsaved text is kept far longer.
+    h.check_at(60)
+    h.check_at(60 + 10 * TIMEOUT)
+    assert not h.life.stopped.is_set()
+    assert h.life.status()["unsaved"] == ["report"]
+    # Saving clears it (the next heartbeat lists nothing); then the idle timer runs.
+    h.clock.t = 1000
+    h.life.heartbeat("page1")
+    assert not h.life.page_unsaved("report")
+    h.check_at(1100)
+    h.check_at(1100 + TIMEOUT)
+    assert h.stopped()
+
+
+def test_unsaved_page_text_expires_after_its_window_or_on_leave(jobs):
+    h = Harness(jobs)
+    h.clock.t = 0
+    h.life.heartbeat("page1", ("report",))
+    h.clock.t = h.life.unsaved_window_s + 1
+    assert not h.life.page_unsaved("report")
+    h.life.heartbeat("page2", ("report",))
+    h.life.leave("page2")
+    assert h.life.status()["unsaved"] == []
+
+
+def test_quit_with_unsaved_page_text_asks_and_save_cannot_skip_it(jobs):
+    h = Harness(jobs, activity={"deck": ChildActivity(unsaved=True, busy=False)})
+    h.life.heartbeat("page1", ("report",))
+    asked = h.life.request_quit()
+    assert (asked.status, asked.tools) == ("needs_choice", ["deck", "report"])
+    # A child saves itself as it stops; text in a page can only be saved by the page.
+    saved = h.life.request_quit(unsaved="save")
+    assert (saved.status, saved.reasons, saved.tools) == (
+        "needs_choice",
+        ["unsaved_in_page"],
+        ["report"],
+    )
+    assert not h.life.stopped.is_set()
+    assert h.life.request_quit(unsaved="discard").status == "stopping"
+    assert h.stopped()
+
+
+@pytest.mark.parametrize("unsaved", [("Report",), ("../x",), tuple(f"t{i}" for i in range(17))])
+def test_unsaved_tool_ids_are_checked(jobs, unsaved):
+    with pytest.raises(ValueError):
+        Harness(jobs).life.heartbeat("page1", unsaved)
+
+
 # --- child activity through the supervisor --------------------------------------------
 
 
@@ -427,6 +483,20 @@ def test_quit_api_asks_about_unsaved_edits(api):
     assert resp.json()["status"] == "stopping"
     assert life.stopped.wait(20)
     assert api.calls == ["listener"]
+
+
+def test_heartbeat_api_reports_unsaved_editors(api):
+    beat = lambda body: api.post(  # noqa: E731
+        "/api/session/heartbeat", json=body, headers=api.session_headers
+    )
+    assert beat({"page_id": "p1", "unsaved": ["report"]}).status_code == 200
+    assert api.get("/api/lifecycle").json()["unsaved"] == ["report"]
+    assert beat({"page_id": "p1", "unsaved": ["Bad Tool"]}).status_code == 422
+    resp = api.post("/api/quit", json={"unsaved": "save"}, headers=api.session_headers)
+    assert resp.status_code == 409
+    assert resp.json()["detail"]["reasons"] == ["unsaved_in_page"]
+    assert beat({"page_id": "p1", "unsaved": []}).status_code == 200
+    assert api.get("/api/lifecycle").json()["unsaved"] == []
 
 
 def test_quit_api_keeps_jobs_by_default(api, jobs, tmp_path):

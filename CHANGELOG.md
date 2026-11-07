@@ -7,6 +7,30 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A project-file editor in the launcher, requested by tools through their descriptor
+  (#52). The report uses it first: **Edit report** on the report card, or **Edit project
+  files** on the quartifyr tile.
+  - Source mode: line numbers, find, undo, Save and Discard.
+  - Visual mode edits only plain headings, paragraphs and lists. Front matter, chunks,
+    shortcodes, divs, placeholders and other syntax stay locked, byte for byte.
+  - The preview is approximate and runs nothing.
+  - A save is refused if the file changed on disk since it was opened; both versions
+    stay on screen until you choose. Saves are atomic and keep file permissions. Paths
+    are checked by core: no links, hidden folders, `OUTPUTS/` or files the adapter
+    didn't list.
+  - Unsaved text blocks idle shutdown, and Quit offers Save and quit or the new
+    Discard and quit.
+  - Report Check, Render and re-binding wait for unsaved text.
+  - Draft or final is now a saved report setting. A render without a status uses it,
+    or asks.
+  - The build manifest records the settings and their hash.
+  - A build is marked out of date once its inputs change.
+  - A render copies the project under the editor's lock, so a save never changes a
+    render's inputs.
+  - Descriptor format: `project_editor` is a new optional key of `tool-descriptor-v1`.
+    The adapter supplies a `ProjectEditor` (`core/adapter.py`).
+  - A test-only second tool (`toy_notes`) uses the editor without core changes.
+  - `docs/architecture.md` describes how deckifyr's Quarto fragments could opt in.
 - The offline CI job and the Installer workflow's bundle install now run the Gate 2 flow
   through the launcher, with the network blocked (#51). `scripts/offline/flow_check.py`
   drives the launcher app in-process, the way the home page does:

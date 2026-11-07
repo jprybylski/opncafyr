@@ -128,7 +128,9 @@ and the API carry text written for a person.
    the browser can reach them directly. Child pages share the launcher's origin by
    design, so a child's own scripts are trusted like ours.
 3. **Controller ↔ workspace.** Every path goes through `core/workspace.resolve_in_root`.
-   Workspace files hold data and options only. The workspace root itself comes from the
+   Workspace files hold data and options only. The project-file editor (#52) writes only
+   files its tool's adapter lists, never through a link, outside `OUTPUTS/` and hidden
+   folders, and only against the revision the user opened. The workspace root itself comes from the
    native picker the controller runs (`core/picker.py`): `/api/workspace/*` accepts only
    a folder picked in this session or one on the recent list (paths only, in the app
    state dir).
@@ -454,3 +456,86 @@ matches to the 4 decimal places that API writes numbers with.
 - **Shell**: `js/tools.js` refreshes the app list when a workflow emits `app-restarted`,
   so the embedded editor shows as soon as it is ready.
 
+## Project-file editor (#52)
+
+A generic launcher capability: a tool opts in, and the launcher's own page edits the
+tool's project sources. Core knows files, revisions and locks, never what the files mean.
+
+- **Opting in.** The descriptor declares `project_editor: {capability, project_root,
+  file_profile, settings_schema?}` (an optional key of `tool-descriptor-v1`). The values
+  are ids, never globs, commands or paths. The adapter package's `project_editor()`
+  returns a `core.adapter.ProjectEditor`, found by package scan like `web_app()`.
+  Startup stops unless the adapter bundles the named profile and settings schema
+  (`registry.check_project_editors`).
+- **The adapter decides** which files to offer (`files()`), with a label, a syntax and a
+  byte cap; advisory warnings for saved text (`check_text()`); and its settings: the
+  file, the form fields and the versioned document (`settings_*`).
+- **Core enforces** (`core/projectfiles.py`), whatever the adapter lists:
+  - paths are relative, without `..`, backslashes, hidden parts or an `OUTPUTS` part,
+    inside the workspace, with every part `lstat`-ed so no link is followed;
+  - the file is on the adapter's current list and is a regular file;
+  - UTF-8 only, a kept BOM, CRLF converted back on save, files mixing line ends
+    read-only, the byte cap on read and save;
+  - a save sends the SHA-256 it opened; under the project's lock the file is hashed
+    again (409 `conflict` with `current_sha256` on a mismatch), written through a
+    synced temp file and a rename that keeps its permissions, then read back and
+    hashed. Logs carry the tool, the relative path and byte counts, never text.
+- **API** (`core/projectfiles_api.py`): `GET /api/tools/<id>/project`, then
+  `POST …/read`, `…/save` and `…/settings`. Paths and text travel in JSON bodies only.
+  `/api/tools` lists `project_editor: {title}` so the tool tile offers **Edit project
+  files**.
+- **Page** (`web/static/js/editor.js`, `#/tools/<id>/files[?path=<file>]`):
+  - **source mode**: line numbers, find, the browser's undo, Save (Ctrl/Cmd+S) and Discard;
+  - **visual mode** for Markdown, Quarto and R Markdown: `mdblocks.js` cuts the file into
+    exact slices. Only plain headings, paragraphs and lists are editable; front matter,
+    chunks, fences, divs, shortcodes, braces, inline code, citations, maths, tables, HTML
+    and anything unknown are locked. An edit is accepted only if every locked slice is
+    byte-for-byte unchanged;
+  - **preview** built from DOM nodes: no `innerHTML`, inert links, nothing run.
+
+  A conflict keeps the user's text in the editor and shows the disk version next to it.
+- **Unsaved text** (`unsaved.js`) goes with every heartbeat (`unsaved: [tool ids]`), and
+  the page keeps beating while hidden. The lifecycle counts it like a child's unsaved
+  edits (blocks idle shutdown for up to 15 minutes without a heartbeat) and
+  `Lifecycle.page_unsaved(tool)` lets a workflow wait. Quit asks: **Save and quit** saves
+  the page's editors first, and **Discard and quit** (`unsaved: "discard"`) drops them.
+- **Snapshots.** A workflow that copies a project for a job holds
+  `app.state.project_files.lock(root, tool)` while copying, so a save never lands
+  half-way through, and a later edit can't change that job's inputs.
+- **Trust.** Report and deck projects are trusted, user-authored projects (owner
+  decision, docs/plan.md risk table), so source mode may change chunks and shortcodes;
+  they run only through the pinned binaries on a launcher staging copy.
+
+**The report** (quartifyr adapter, `adapters/quartifyr/editor.py`) offers `report.qmd`
+and any other `.qmd`/`.rmd`/`.md` file at the top of `report/` (nothing in subfolders,
+so not `builds/`, `OUTPUTS/`, `_extensions/` or quartifyr's outputs), up to 256 KiB.
+Its settings (`report-settings-v1`, bundled with the adapter) are kept in
+`report/opncafyr-settings.json`: the document status and the reference DOCX. The report
+workflow:
+- renders with the request's status, else the saved one, else asks;
+- refuses check, render and re-binding while the report editor has unsaved text;
+- records `status`, `status_from`, `reference_doc` and `settings_sha256` in
+  `build.json`, with the settings file as an input;
+- lists each build's `stale_inputs` in its status, so the screen marks a build out of
+  date without rewriting it.
+
+**How deckifyr would opt in (not enabled yet).** deckifyr decks can place a Quarto
+fragment on a slide (`type: quarto`, `source: fragments/<name>.qmd`). deckifyr's own
+editor can choose an existing fragment but not edit its text, and the generated NCA deck
+has none. The deckifyr adapter would add `project_editor: {capability: edit_deck_sources,
+project_root: deck, file_profile: deck-fragments-v1}` and a `ProjectEditor` that:
+- lists `.qmd` files under the deck project, leaving out `build/`, `builds/` and
+  `OUTPUTS/`; subfolders such as `fragments/` already work in core;
+- warns in `check_text()` when a fragment has a slide break (`---`) or other content
+  deckifyr's strict validation rejects (deckifyr spec §8.1). `deckifyr validate
+  --strict` stays the authority.
+
+The deck workflow would then:
+- hold the editor lock while it copies `deck/` for check and build;
+- add `page_unsaved("deckifyr")` to its existing refusal while the deckifyr editor holds
+  unsaved edits.
+
+Creating a new fragment needs a "new file" operation, which the editor doesn't have yet:
+an adapter-supplied folder, name pattern and starter text. The test-only `toy_notes`
+tool (`tests/toy_notes.py`) shows a second tool using the editor with no change to core
+or the generic page.

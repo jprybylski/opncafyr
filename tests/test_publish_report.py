@@ -338,3 +338,145 @@ def test_render_needs_a_project(api):
     r = api.post("/api/nca/report/render", json={"status": "draft"})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "no_project"
     assert api.post("/api/nca/report/render", json={"status": "latest"}).status_code == 422
+
+
+# --- editing the report (#52) --------------------------------------------------------------
+
+EDIT = "/api/tools/quartifyr/project"
+
+
+def edit_qmd(api, change) -> str:
+    doc = api.post(f"{EDIT}/read", json={"path": "report.qmd"}).json()
+    new = change(doc["text"])
+    out = api.post(
+        f"{EDIT}/save", json={"path": "report.qmd", "text": new, "expected_sha256": doc["sha256"]}
+    )
+    assert out.status_code == 200, out.text
+    return out.json()["sha256"]
+
+
+def set_status(api, value):
+    settings = api.get(EDIT).json()["settings"]
+    out = api.post(
+        f"{EDIT}/settings",
+        json={
+            "values": {**settings["values"], "status": value},
+            "expected_sha256": settings["sha256"],
+        },
+    )
+    assert out.status_code == 200, out.text
+    return out.json()["sha256"]
+
+
+def test_the_report_editor_offers_only_the_report_sources(api, ready):
+    (api.study / "report" / "notes.md").write_text("Notes\n", "utf-8")
+    doc = api.get(EDIT).json()
+    assert doc["title"] == "Report source"
+    assert [f["path"] for f in doc["files"]] == ["report.qmd", "notes.md"]
+    assert doc["settings"]["values"] == {"status": None, "reference_doc": "bundled"}
+    for path in (
+        "_quarto.yml",
+        "report/config.yaml",
+        "report/standard_footnotes.yaml",
+        "OUTPUTS/tables/x.csv",
+        "builds/x/build.json",
+        "_extensions/quartifyr/a.lua",
+    ):
+        assert api.post(f"{EDIT}/read", json={"path": path}).status_code == 403, path
+
+
+def test_an_edited_report_renders_from_its_saved_source_and_settings(api, ready):
+    pub, a, b = ready
+    sha = edit_qmd(api, lambda t: t.replace("This report was assembled", "We assembled"))
+    settings_sha = set_status(api, "final")
+    out = api.post("/api/nca/report/render", json={})
+    assert out.status_code == 200, out.text
+    job = wait_job(api, out.json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    build = api.get("/api/nca/report").json()["builds"][0]
+    inputs = {i["role"]: i for i in build["inputs"]}
+    assert inputs["shell_qmd"]["sha256"] == sha
+    assert inputs["settings"]["sha256"] == settings_sha
+    assert build["settings"] == {
+        "status": "final",
+        "status_from": "settings",
+        "reference_doc": "bundled",
+        "settings_sha256": settings_sha,
+    }
+    assert build["runs"] == [a, b] and build["outputs"][0]["role"] == "final"
+    validate(build, "publish-build-v1")
+    assert api.get("/api/nca/report").json()["stale_inputs"] == {build["build_id"]: []}
+
+
+def test_a_render_without_a_status_asks(api, ready):
+    out = api.post("/api/nca/report/render", json={})
+    assert out.status_code == 409
+    detail = out.json()["detail"]
+    assert detail["code"] == "needs_choice" and detail["options"] == ["draft", "final"]
+
+
+def test_an_edit_after_a_build_marks_it_out_of_date(api, ready):
+    out, job = render(api, "draft")
+    assert job["state"] == "completed"
+    build_id = out["build_id"]
+    build = api.get("/api/nca/report").json()["builds"][0]
+    edit_qmd(api, lambda t: t + "\nA closing paragraph.\n")
+    status = api.get("/api/nca/report").json()
+    assert status["stale_inputs"][build_id] == ["report.qmd"]
+    # The old build is untouched: same manifest, still downloadable.
+    assert status["builds"][0] == build
+    assert api.get(f"/api/nca/report/builds/{build_id}/docx").status_code == 200
+    set_status(api, "draft")
+    assert api.get("/api/nca/report").json()["stale_inputs"][build_id] == [
+        "opncafyr-settings.json",
+        "report.qmd",
+    ]
+
+
+def test_check_render_and_rebind_wait_for_unsaved_editor_text(api, ready):
+    pub, _, _ = ready
+    beat = {"page_id": "p1", "unsaved": ["quartifyr"]}
+    assert api.post("/api/session/heartbeat", json=beat).status_code == 200
+    for url, body in (
+        ("/api/nca/report/render", {"status": "draft"}),
+        ("/api/nca/report/check", {}),
+        ("/api/nca/report", {"publication_id": pub["publication_id"]}),
+    ):
+        out = api.post(url, json=body)
+        assert out.status_code == 409 and out.json()["detail"]["code"] == "editor_unsaved", url
+    api.post("/api/session/heartbeat", json={"page_id": "p1", "unsaved": []})
+    assert render(api, "draft")[1]["state"] == "completed"
+
+
+def test_a_save_during_a_render_waits_for_its_copy_and_never_changes_it(api, ready, monkeypatch):
+    import threading
+
+    from opncafyr.workflows.nca.publish import projects
+
+    files = api.app.state.project_files
+    doc = api.post(f"{EDIT}/read", json={"path": "report.qmd"}).json()
+    seen: dict = {}
+    real = projects.copy_project
+
+    def slow_copy(project, dest, skip):
+        def edit():
+            seen["saved"] = files.save(
+                api.study, "quartifyr", "report.qmd", doc["text"] + "Late.\n", doc["sha256"]
+            )
+
+        thread = threading.Thread(target=edit)
+        thread.start()
+        thread.join(0.3)
+        seen["waited"] = thread.is_alive()  # the save waits for the copy's lock
+        real(project, dest, skip)
+        seen["thread"] = thread
+
+    monkeypatch.setattr(projects, "copy_project", slow_copy)
+    out, job = render(api, "draft")
+    seen["thread"].join(10)
+    assert job["state"] == "completed", job["message"]
+    assert seen["waited"] is True and "saved" in seen
+    build = next(b for b in api.get("/api/nca/report").json()["builds"])
+    inputs = {i["role"]: i["sha256"] for i in build["inputs"]}
+    assert inputs["shell_qmd"] == doc["sha256"]  # the snapshot, not the late edit
+    assert api.get("/api/nca/report").json()["stale_inputs"][out["build_id"]] == ["report.qmd"]

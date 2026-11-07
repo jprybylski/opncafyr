@@ -17,10 +17,13 @@ Curator (#31):
 
 Report (#32, ``report.py``):
 - ``GET  /api/nca/report``: the project, its publication, running jobs, the last check's
-  findings and every build.
+  findings, every build and each build's ``stale_inputs`` (#52).
 - ``POST /api/nca/report {publication_id, source}``: set up ``report/`` (a job) or bind
   it to another publication (409 ``needs_choice`` if ``report.qmd`` was edited).
-- ``POST /api/nca/report/check``; ``POST /api/nca/report/render {status}``: jobs.
+- ``POST /api/nca/report/check``; ``POST /api/nca/report/render {status?}``: jobs. Without
+  a status the render uses the saved report settings, or asks (#52). Both are refused
+  while the report editor holds unsaved text. The editor itself is the launcher's
+  ``/api/tools/quartifyr/project`` (``core/projectfiles_api.py``).
 - ``GET  /api/nca/report/builds/{id}/docx``: the DOCX, if it still matches its manifest.
 
 Deck (#33, ``deck.py``):

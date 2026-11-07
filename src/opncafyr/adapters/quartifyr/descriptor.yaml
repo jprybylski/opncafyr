@@ -3,7 +3,7 @@ id: quartifyr
 version: 1
 display_name: quartifyr + reportifyr
 runtime: r
-capabilities: [check_report, render_report]
+capabilities: [check_report, render_report, edit_project_files]
 # uv and the tools Python env (named for deckifyr, its first user) run reportifyr's
 # second pass offline (QUARTIFYR_PYTHON_ENV, docs/offline.md R2).
 executables: [rscript, quarto, uv, deckifyr_python]
@@ -12,6 +12,13 @@ health: {kind: r_package, executable: rscript, target: quartifyr}
 jobs:
   check_report: {input_schema: publication-v1, output_schema: preflight-v1, timeout_s: 300}
   render_report: {input_schema: publication-v1, output_schema: publish-build-v1, timeout_s: 1800}
+# The launcher's project-file editor opens the report's sources (#52, editor.py). The
+# profile and settings schema are bundled with this adapter.
+project_editor:
+  capability: edit_project_files
+  project_root: report
+  file_profile: report-source-v1
+  settings_schema: report-settings-v1
 optional_requirements:
   - name: libreoffice
     executable: soffice

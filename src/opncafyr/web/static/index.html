@@ -190,6 +190,33 @@
         <div id="tool-frames" class="tool-frames"></div>
       </div>
 
+      <!-- A tool's project files (#52): "#/tools/<id>/files". Shown only for tools whose
+           descriptor opts in; editor.js fills it from /api/tools/<id>/project. -->
+      <div class="view" id="view-files" data-title="Project files" hidden>
+        <div class="page-head">
+          <p class="crumb"><a href="#/">Home</a> <span aria-hidden="true">/</span> <span id="files-tool"></span></p>
+          <h1 id="files-heading" tabindex="-1">Project files</h1>
+          <p>Edit the project's source text, then save. Saving changes only the file you are editing.</p>
+        </div>
+        <p id="files-status" class="status" role="status" aria-live="polite"></p>
+        <div class="files-layout">
+          <div class="files-side">
+            <section class="card" aria-labelledby="files-list-heading">
+              <div class="card-head"><h2 id="files-list-heading">Files</h2></div>
+              <ul id="files-list" class="files-list"></ul>
+            </section>
+            <section class="card" id="files-settings" aria-labelledby="files-settings-heading" hidden>
+              <div class="card-head"><h2 id="files-settings-heading">Settings</h2></div>
+              <form id="files-settings-form" class="card-body"></form>
+            </section>
+          </div>
+          <section class="card files-editor" id="files-editor" aria-labelledby="files-editor-heading">
+            <div class="card-head"><h2 id="files-editor-heading">Choose a file</h2><span class="aside" id="files-dirty"></span></div>
+            <div id="files-editor-body" class="card-body"></div>
+          </section>
+        </div>
+      </div>
+
       <!-- Settings -->
       <div class="view" id="view-settings" data-title="Settings" hidden>
         <div class="page-head"><h1 id="settings-heading" tabindex="-1">Settings</h1></div>
@@ -235,6 +262,7 @@
     <form method="dialog" class="actions">
       <button class="btn btn-primary" value="stay" autofocus>Go back and save</button>
       <button class="btn" value="save">Save and quit</button>
+      <button class="btn btn-danger" value="discard">Discard and quit</button>
     </form>
   </dialog>
 </body>

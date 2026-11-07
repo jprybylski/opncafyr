@@ -378,3 +378,13 @@ def render_schema(runtime: Runtime) -> dict[str, Any] | None:
         return json.loads(path.read_text("utf-8"))
     except (OSError, ValueError):
         return None
+
+
+# --- project-file editor (#52) -------------------------------------------------------------
+
+
+def project_editor():
+    """The report's file policy and settings for the launcher's editor (``editor.py``)."""
+    from opncafyr.adapters.quartifyr.editor import ReportEditor
+
+    return ReportEditor()

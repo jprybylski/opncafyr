@@ -6,9 +6,15 @@
 - **Idle shutdown.** The launcher is idle when no page is open, no job is live and no
   child reports unsaved edits or busy work. After ``idle_timeout_s`` of continuous idle
   (30 minutes by default, 5 minutes up to off), it stops.
-- **Quit.** An explicit Quit is refused while a child has unsaved edits, until the user
-  chooses to save them. With live jobs the default keeps them running: new jobs are
-  refused and the launcher stops once they finish. Choosing ``cancel`` stops at once.
+- **Unsaved editors in the page (#52).** A heartbeat may list the tools whose editor in
+  that page has unsaved text. They count like a child's unsaved edits, and are kept for
+  ``unsaved_window_s`` (longer than the page window, as hidden tabs beat rarely) or until
+  the page reports them saved or leaves.
+- **Quit.** An explicit Quit is refused while anything is unsaved, until the user
+  chooses. ``save`` lets children save themselves as they stop; it can't save text held
+  in a page, so the page saves its own editors first. ``discard`` quits regardless.
+  With live jobs the default keeps them running: new jobs are refused and the launcher
+  stops once they finish. Choosing ``cancel`` stops at once.
 - **Order.** Stop accepting jobs, stop the children, then close the listener. The CLI
   clears the state record after the server returns.
 
@@ -38,6 +44,9 @@ DEFAULT_IDLE_MINUTES = 30
 MIN_IDLE_MINUTES = 5
 MAX_IDLE_MINUTES = 24 * 60
 HEARTBEAT_WINDOW_S = 45.0
+UNSAVED_WINDOW_S = 15 * 60.0
+MAX_UNSAVED_TOOLS = 16
+TOOL_ID_RE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 TICK_S = 5.0
 MAX_PAGES = 64
 PAGE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -46,7 +55,7 @@ SETTINGS_FILE = "settings.json"
 SETTINGS_SCHEMA = "settings-v1"
 
 JobsChoice = Literal["keep", "cancel"]
-UnsavedChoice = Literal["refuse", "save"]
+UnsavedChoice = Literal["refuse", "save", "discard"]
 
 
 class JobsView(Protocol):
@@ -89,6 +98,7 @@ class Lifecycle:
         request_shutdown: Callable[[], None],
         idle_timeout_s: float | None,
         heartbeat_window_s: float = HEARTBEAT_WINDOW_S,
+        unsaved_window_s: float = UNSAVED_WINDOW_S,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.jobs = jobs
@@ -97,9 +107,11 @@ class Lifecycle:
         self._request_shutdown = request_shutdown
         self.idle_timeout_s = idle_timeout_s
         self.heartbeat_window_s = heartbeat_window_s
+        self.unsaved_window_s = unsaved_window_s
         self._clock = clock
         self._lock = threading.Lock()
         self._pages: dict[str, float] = {}
+        self._page_unsaved: dict[str, tuple[frozenset[str], float]] = {}
         self._idle_since: float | None = None
         self._quit_pending = False
         self._stopping = False
@@ -108,9 +120,11 @@ class Lifecycle:
 
     # --- pages -----------------------------------------------------------------------
 
-    def heartbeat(self, page_id: str) -> None:
+    def heartbeat(self, page_id: str, unsaved: tuple[str, ...] | list[str] = ()) -> None:
         if not PAGE_ID_RE.match(page_id):
             raise ValueError("Invalid page id.")
+        if len(unsaved) > MAX_UNSAVED_TOOLS or not all(TOOL_ID_RE.match(t) for t in unsaved):
+            raise ValueError("Invalid unsaved list.")
         with self._lock:
             now = self._clock()
             self._expire(now)
@@ -118,17 +132,35 @@ class Lifecycle:
                 oldest = min(self._pages, key=self._pages.__getitem__)
                 del self._pages[oldest]
             self._pages[page_id] = now
+            if unsaved:
+                self._page_unsaved[page_id] = (frozenset(unsaved), now)
+            else:
+                self._page_unsaved.pop(page_id, None)
             self._idle_since = None
 
     def leave(self, page_id: str) -> None:
         with self._lock:
             self._pages.pop(page_id, None)
+            self._page_unsaved.pop(page_id, None)
 
     def _expire(self, now: float) -> None:
         cutoff = now - self.heartbeat_window_s
         for page, seen in list(self._pages.items()):
             if seen < cutoff:
                 del self._pages[page]
+        cutoff = now - self.unsaved_window_s
+        for page, (_, seen) in list(self._page_unsaved.items()):
+            if seen < cutoff:
+                del self._page_unsaved[page]
+
+    def _pages_unsaved(self) -> list[str]:
+        with self._lock:
+            self._expire(self._clock())
+            return sorted({t for tools, _ in self._page_unsaved.values() for t in tools})
+
+    def page_unsaved(self, tool: str) -> bool:
+        """True while some page reports unsaved editor text for ``tool``."""
+        return tool in self._pages_unsaved()
 
     # --- the periodic check ----------------------------------------------------------
 
@@ -158,7 +190,9 @@ class Lifecycle:
 
     def _children(self) -> tuple[list[str], list[str]]:
         activity = self._activity()
-        unsaved = sorted(tool for tool, a in activity.items() if a.unsaved)
+        unsaved = sorted(
+            {tool for tool, a in activity.items() if a.unsaved} | set(self._pages_unsaved())
+        )
         busy = sorted(tool for tool, a in activity.items() if a.busy)
         return unsaved, busy
 
@@ -170,6 +204,10 @@ class Lifecycle:
         unsaved_tools, busy = self._children()
         if unsaved_tools and unsaved == "refuse":
             return QuitResult("needs_choice", reasons=["unsaved_changes"], tools=unsaved_tools)
+        in_pages = self._pages_unsaved()
+        if in_pages and unsaved == "save":
+            # Only the page holding the text can save it.
+            return QuitResult("needs_choice", reasons=["unsaved_in_page"], tools=in_pages)
         live = self.jobs.active_count()
         with self._lock:
             if self._stopping:
