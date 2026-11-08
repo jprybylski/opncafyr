@@ -130,9 +130,15 @@ and its feature policy was enforced only in the page.
   LFS and Git Credential Manager, but managed mode never runs them.
 - **Corporate proxies:** with sending on, the usual `HTTPS_PROXY` variables reach Git, but
   there is no proxy configuration UI.
-- **The pinned Windows Git is unverified:** gitneighbr's Windows CI runs managed mode
-  (Git for Windows), but the pinned bundle's layout (`cmd/git.exe`,
-  `ucrt64/libexec/git-core`) hasn't been run on Windows yet.
+- **Windows (verified 2026-11-08, Windows 11 x64):**
+  - The installer's Git step fetched, checked and unpacked the pinned bundle
+    (`cmd/git.exe`, `ucrt64/libexec/git-core`, `git version 2.56.0.windows.4`).
+  - `tests/integration/proxy/test_gitneighbr_proxy.py` passed with gitneighbr 0.2.1 and
+    that Git.
+  - Managed Git fetched from github.com through `schannel`.
+  - After a Git for Windows checkout (CRLF on disk), touched files showed no changes:
+    0, against 145 without the Windows defaults.
+  - Caveats: that run used R 4.4.1, not the pinned 4.6.2, and not the full installer.
 - **Release pinning:** gitneighbr's release workflow re-tags and replaces the tarball when
   a later merge to its main leaves `VERSION` unchanged. Pin only a release whose version
   was bumped, and expect a checksum mismatch, not a silent change, otherwise.
