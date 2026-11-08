@@ -356,8 +356,11 @@ the record names the snapshot's SHA-256 and `input/analysis.csv`, and nothing el
 the top of the folder. A lock or staging folder with a live session means "saving"; any
 other partial output is a failed save, never a complete one.
 
+A schema-2 `artifacts.json` must also validate against the schema opnca-r installs in the
+app's R library (#59).
+
 A complete save moves the run to `reviewing` with its script, record, artifacts (path,
-media type, bytes, SHA-256), opnca-r's settings and effective settings, the opnca-r and R
+media type, bytes, SHA-256, and opnca-r's schema-2 description of each file), opnca-r's settings and effective settings, the opnca-r and R
 versions, the mean-profile choices when the save has the mean figures, and the
 exclusions. The launcher's exclusions are the snapshot's `NCA_EXCLUDED` rows; points
 excluded in the session are added to them (opnca-r#49, 0.2.9), carry no reason and add a
@@ -398,7 +401,10 @@ matches to 1e-10; since opnca-r 0.3.0 that API no longer rounds numbers.
   replay passed, and whose sealed files `verify_run` still finds intact. The API enforces
   this (409 `not_publishable`).
 - **Catalog.** `catalog.py` maps a run's saved artifacts to publishable tables and figures.
-  The four ADR 0007 types are pre-selected, including the mean concentration–time figures
+  For a run saved by opnca-r 0.3.1, titles, "shows subject IDs" and notes come from
+  opnca-r's description kept in the manifest (#59). Tables the replay didn't check aren't
+  offered, and formatted `.rds` tables are offered next to their CSV. Older runs use path
+  rules. The four ADR 0007 types are pre-selected, including the mean concentration–time figures
   that opnca-r saves since 0.2.9 (mantra-opnca/opnca-r#50). Their sidecar notes state the
   record's choices (statistic, error, time basis). A run saved without them says so.
 - **Publishing.**

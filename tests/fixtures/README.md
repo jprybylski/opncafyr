@@ -140,3 +140,12 @@ which the launcher's R lock doesn't have, so it isn't run here. It is an ADaM-st
 (`"Y"`/blank) and `ANL01FL`, with no dose or route column. #23 uses it to check role
 suggestions on ADaM names, and that dose and route are asked for, never defaulted.
 
+
+## opnca-r/opnca-artifacts-v2.schema.json
+
+A byte-for-byte copy of the schema opnca-r 0.3.1 installs as
+`opnca/schemas/opnca-artifacts-v2.schema.json` (from the pinned, checksummed release binary
+in `runtime/pins.toml`). The unit tests validate fake saves against it, as the launcher
+validates a real save against the installed copy (#59).
+`tests/integration/nca/test_save_r.py` fails if it differs from the installed one; copy it
+again whenever the opnca-r pin changes.

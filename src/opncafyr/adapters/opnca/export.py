@@ -14,7 +14,14 @@ A save is **complete** only if:
 - ``analysis.R`` and ``analysis-record.json`` are listed, the record's ``data.sha256`` is
   the snapshot's SHA-256 and its ``data.path`` and the script name the snapshot by its
   relative path;
-- nothing else sits at the top of the folder except the caller's own entries.
+- nothing else sits at the top of the folder except the caller's own entries;
+- an ``artifacts.json`` of schema version 2 (opnca-r 0.3.0+) validates against the schema
+  opnca-r ships, ``opnca/schemas/opnca-artifacts-v2.schema.json`` in the app's R library.
+
+A version 2 entry describes its file (title, kind, whether it identifies subjects and more,
+``DESCRIBED``). Those fields are kept with the artifact, so the publishing curator reads
+them rather than guessing from the file name (#59). A version 1 entry gets a kind from its
+path and media type.
 
 While the lock or a staging folder exists and the session is alive, the save is
 **saving**. Anything else with opnca-r output in it is **failed**: upstream reports such
@@ -30,6 +37,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from opncafyr.core.manifest import schema_problems
+
 COMPLETE = "COMPLETE"
 ARTIFACTS = "artifacts.json"
 SCRIPT = "analysis.R"
@@ -44,6 +53,27 @@ KINDS = {
     SCRIPT: "script",
     RECORD: "record",
 }
+
+# The schema opnca-r installs with the package, under the app-private R library.
+SCHEMA_FILE = ("opnca", "schemas", "opnca-artifacts-v2.schema.json")
+# The fields of a schema-2 entry that describe its file, kept in the run manifest (#59).
+DESCRIBED = (
+    "id",
+    "title",
+    "kind",
+    "format",
+    "analysis",
+    "grouping_view",
+    "subject_level",
+    "identifies_subjects",
+    "settings",
+    "replay",
+    "columns",
+    "caption",
+    "footnote",
+    "table",
+    "derived_from",
+)
 
 
 @dataclass
@@ -77,6 +107,16 @@ def _inside(folder: Path, rel: str) -> Path | None:
     return path
 
 
+def shipped_schema(r_library: Path | None) -> dict[str, Any] | None:
+    """opnca-r's own ``artifacts.json`` schema from the R library, or None if it isn't there."""
+    if r_library is None:
+        return None
+    try:
+        return json.loads(Path(r_library).joinpath(*SCHEMA_FILE).read_text("utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 def kind_of(rel: str, media_type: str) -> str:
     if rel in KINDS:
         return KINDS[rel]
@@ -88,9 +128,15 @@ def kind_of(rel: str, media_type: str) -> str:
 
 
 def inspect_export(
-    folder: Path, *, own: Iterable[str], snapshot_sha256: str, session_alive: bool
+    folder: Path,
+    *,
+    own: Iterable[str],
+    snapshot_sha256: str,
+    session_alive: bool,
+    artifacts_schema: dict[str, Any] | None = None,
 ) -> ExportStatus:
-    """What opnca-r's save in ``folder`` amounts to. ``own`` are the caller's entries."""
+    """What opnca-r's save in ``folder`` amounts to. ``own`` are the caller's entries;
+    ``artifacts_schema`` is opnca-r's schema for a version 2 listing (``shipped_schema``)."""
     own = set(own)
     names = {p.name for p in folder.iterdir()}
     in_progress = LOCK in names or any(n.startswith(STAGING_PREFIX) for n in names)
@@ -117,6 +163,14 @@ def inspect_export(
         return ExportStatus("failed", ["COMPLETE or artifacts.json can't be read."])
     if complete.get("artifacts_sha256") != _sha(folder / ARTIFACTS):
         problems.append("artifacts.json does not match the hash in COMPLETE.")
+    described = isinstance(listing, dict) and listing.get("schema_version") == 2
+    if described:
+        if artifacts_schema is None:
+            problems.append(
+                "opnca-r's artifacts.json schema isn't installed, so the save can't be checked."
+            )
+        else:
+            problems += schema_problems(listing, artifacts_schema, "artifacts.json")
     listed: set[str] = set()
     for art in artifacts:
         rel = str(art.get("path", ""))
@@ -155,8 +209,9 @@ def inspect_export(
         pass  # reported above as missing
     if problems:
         return ExportStatus("failed", problems)
-    for art in artifacts:
-        art["kind"] = kind_of(art["path"], art.get("media_type", ""))
+    if not described:
+        for art in artifacts:
+            art["kind"] = kind_of(art["path"], art.get("media_type", ""))
     return ExportStatus("complete", [], complete, artifacts, record)
 
 

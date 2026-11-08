@@ -153,6 +153,18 @@ def test_report_source_keeps_data_text_out_of_code():
     assert lines[i + 1] == "" and lines[i + 2].startswith("From run ")  # never last in a section
 
 
+def test_a_formatted_table_is_placed_like_a_csv_one():
+    """#59: reportifyr 0.4.0 fills a ``{rpfy}:`` table from a flextable ``.rds`` too."""
+    run = "20261103T142512Z-7c4e"
+    items = [Q.ReportItem("a_b_summary-formatted.rds", "table", "Summary (formatted)", "A", run)]
+    text = Q.report_source(
+        items, "pub-20261104T090000Z-1a2b", None, [{"run_id": run, "analyte": "A"}]
+    )
+    lines = text.splitlines()
+    i = lines.index("{rpfy}:a_b_summary-formatted.rds")
+    assert lines[i - 2] == '{{< tbl_caption "Tbl1" "Summary (formatted), A" >}}'
+
+
 def test_parse_render_decides_on_exit_code_and_status(tmp_path):
     ok = {"schema_version": 1, "status": "ok", "errors": [], "artifacts": [{"role": "draft"}]}
     assert Q.parse_render(0, json.dumps(ok), None, None).ok

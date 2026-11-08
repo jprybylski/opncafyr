@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import opnca_listing
 from opncafyr.adapters.opnca import export as E
 
 SRC = Path(__file__).resolve().parents[1] / "src"
@@ -20,8 +21,9 @@ def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def make_save(folder: Path, *, complete: bool = True) -> Path:
-    """A run folder as opnca-r 0.3.1 leaves it after a save."""
+def make_save(folder: Path, *, complete: bool = True, schema_version: int = 1, mutate=None) -> Path:
+    """A run folder as opnca-r leaves it after a save: schema 1 (0.2.9) or 2 (0.3.1), which
+    adds a formatted table. ``mutate`` may change the listing before it is hashed."""
     (folder / "input").mkdir(parents=True)
     (folder / "input" / "analysis.csv").write_text(INPUT_TEXT, "utf-8")
     (folder / "settings.json").write_text("{}", "utf-8")
@@ -35,22 +37,31 @@ def make_save(folder: Path, *, complete: bool = True) -> Path:
         "results/opnca-parameters-long.csv": b"profile_id,metric,value\nA,cmax,1\n",
         "results/figures/profiles-linear.png": b"\x89PNG fake",
     }
+    if schema_version == 2:
+        files["results/tables/opnca-parameters-long.rds"] = b"RDS fake"
     for rel, data in files.items():
         path = folder / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
-    media = {".R": "text/x-r", ".json": "application/json", ".csv": "text/csv", ".png": "image/png"}
-    listing = {
-        "artifacts": [
-            {
-                "path": rel,
-                "media_type": media[Path(rel).suffix],
-                "bytes": len(data),
-                "sha256": _sha(data),
-            }
-            for rel, data in files.items()
-        ]
+    media = {
+        ".R": "text/x-r",
+        ".json": "application/json",
+        ".csv": "text/csv",
+        ".png": "image/png",
+        ".rds": "application/octet-stream",
     }
+    entries = [
+        {
+            "path": rel,
+            "media_type": media[Path(rel).suffix],
+            "bytes": len(data),
+            "sha256": _sha(data),
+        }
+        for rel, data in files.items()
+    ]
+    listing = opnca_listing.listing(entries) if schema_version == 2 else {"artifacts": entries}
+    if mutate:
+        mutate(listing)
     (folder / "artifacts.json").write_text(json.dumps(listing, indent=2), "utf-8")
     if complete:
         digest = _sha((folder / "artifacts.json").read_bytes())
@@ -60,8 +71,10 @@ def make_save(folder: Path, *, complete: bool = True) -> Path:
     return folder
 
 
-def inspect(folder, alive=False):
-    return E.inspect_export(folder, own=OWN, snapshot_sha256=INPUT_SHA, session_alive=alive)
+def inspect(folder, alive=False, schema=opnca_listing.SCHEMA):
+    return E.inspect_export(
+        folder, own=OWN, snapshot_sha256=INPUT_SHA, session_alive=alive, artifacts_schema=schema
+    )
 
 
 def test_a_complete_save(tmp_path):
@@ -74,6 +87,49 @@ def test_a_complete_save(tmp_path):
         "results/opnca-parameters-long.csv": "table",
         "results/figures/profiles-linear.png": "figure",
     }
+
+
+def test_a_described_save_keeps_what_opnca_r_says_each_file_is(tmp_path):
+    status = inspect(make_save(tmp_path / "run", schema_version=2))
+    assert status.state == "complete", status.problems
+    by_path = {a["path"]: a for a in status.artifacts}
+    # opnca-r's own kind: a formatted table is a table, not "other" (#59).
+    assert by_path["results/tables/opnca-parameters-long.rds"]["kind"] == "table"
+    assert by_path["results/tables/opnca-parameters-long.rds"]["derived_from"] == (
+        "opnca-parameters-long"
+    )
+    figure = by_path["results/figures/profiles-linear.png"]
+    assert figure["identifies_subjects"] is True and figure["id"] == "figure-profiles-linear"
+
+
+def test_a_listing_that_breaks_opnca_rs_schema_fails_without_quoting_it(tmp_path):
+    def break_it(listing):
+        listing["artifacts"][2]["identifies_subjects"] = "S-001"
+        del listing["artifacts"][3]["title"]
+
+    status = inspect(make_save(tmp_path / "run", schema_version=2, mutate=break_it))
+    assert status.state == "failed"
+    text = " ".join(status.problems)
+    assert "artifacts.json at /artifacts/2/identifies_subjects fails 'type'" in text
+    assert "artifacts.json at /artifacts/3 fails 'required'" in text
+    assert "S-001" not in text  # a place and a rule, never a value
+
+
+def test_a_described_save_without_opnca_rs_schema_fails(tmp_path):
+    status = inspect(make_save(tmp_path / "run", schema_version=2), schema=None)
+    assert status.state == "failed"
+    assert any("schema isn't installed" in p for p in status.problems)
+    # A schema-1 listing (opnca-r 0.2.9) is checked as before, without one.
+    assert inspect(make_save(tmp_path / "old"), schema=None).state == "complete"
+
+
+def test_the_schema_is_read_from_the_installed_package(tmp_path):
+    assert E.shipped_schema(None) is None
+    assert E.shipped_schema(tmp_path) is None
+    target = tmp_path.joinpath(*E.SCHEMA_FILE)
+    target.parent.mkdir(parents=True)
+    target.write_bytes(opnca_listing.SCHEMA_PATH.read_bytes())
+    assert E.shipped_schema(tmp_path) == opnca_listing.SCHEMA
 
 
 def test_nothing_saved_yet(tmp_path):

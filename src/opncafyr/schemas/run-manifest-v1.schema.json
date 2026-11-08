@@ -38,6 +38,66 @@
           "$ref": "#/$defs/sha256"
         }
       }
+    },
+    "artifact_column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "label",
+        "unit"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "artifact_replay": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reproduced",
+            "file"
+          ],
+          "properties": {
+            "reproduced": {
+              "const": true
+            },
+            "file": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reproduced",
+            "reason"
+          ],
+          "properties": {
+            "reproduced": {
+              "const": false
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
     }
   },
   "properties": {
@@ -357,6 +417,7 @@
     "artifacts": {
       "type": "array",
       "items": {
+        "description": "A saved file. path, sha256, kind, media_type and bytes come from the launcher's check of the save. The other fields are optional: they are what opnca-r's artifacts.json schema 2 (opnca-r 0.3.0+, identifies_subjects since 0.3.1) says the file is, copied as written (#59), and a run saved by an earlier opnca-r has none of them.",
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -390,6 +451,70 @@
           "bytes": {
             "type": "integer",
             "minimum": 0
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "format": {
+            "type": "string"
+          },
+          "analysis": {
+            "type": "string"
+          },
+          "grouping_view": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subject_level": {
+            "type": "boolean"
+          },
+          "identifies_subjects": {
+            "type": "boolean",
+            "description": "Whether the saved file itself shows subject or profile identifiers (opnca-r#58). The curator's contains_subject_ids."
+          },
+          "settings": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "JSON pointer into the analysis record."
+          },
+          "replay": {
+            "$ref": "#/$defs/artifact_replay"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/artifact_column"
+            }
+          },
+          "caption": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "footnote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "table": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "derived_from": {
+            "type": "string"
           }
         }
       }

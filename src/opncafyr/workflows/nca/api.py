@@ -577,11 +577,12 @@ def mount(app: FastAPI) -> Context:
                 return {"save": {"state": manifest["state"], "problems": []}, "run": manifest}
             sup = app.state.supervisor
             alive = ctx.sessions.current(sup)["run_id"] == run_id
-            status = save_mod.check(folder, session_alive=alive)
+            schema = save_mod.artifacts_schema(app.state.runtime)
+            status = save_mod.check(folder, session_alive=alive, artifacts_schema=schema)
             if status.state in ("complete", "failed") and alive:
                 # Nothing more may be written: stop the session, then look again.
                 ctx.sessions.stop(sup, run_id)
-                status = save_mod.check(folder, session_alive=False)
+                status = save_mod.check(folder, session_alive=False, artifacts_schema=schema)
             if status.state in ("complete", "failed"):
                 manifest = save_mod.accept(folder, status)
                 after_save(folder, manifest)

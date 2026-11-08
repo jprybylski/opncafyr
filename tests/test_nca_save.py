@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from artifact_docs import LABELS, SHA, run_manifest
+from opnca_listing import describe
 from opncafyr.adapters.opnca import export
 from opncafyr.core import runs as R
 from opncafyr.workflows.nca import save
@@ -136,3 +137,22 @@ def test_a_run_prepared_without_labels_fails_the_save(tmp_path):
     R.write_manifest(folder, doc)
     run = save.accept(folder, status({"mapping": {"excluded": "NCA_EXCLUDED"}}))
     assert run["state"] == "failed" and "Make a new run" in run["failure"]["message"]
+
+
+def test_the_manifest_keeps_what_opnca_r_says_each_file_is(tmp_path):
+    """#59: artifacts.json schema 2's fields reach the run manifest, which validates."""
+    folder = running_run(tmp_path)
+    st = status({"mapping": {"excluded": "NCA_EXCLUDED"}})
+    for art in st.artifacts:
+        art.update(describe(art["path"]))
+    st.artifacts.append(
+        {"path": "results/figures/boxplot-cmax.png", "sha256": SHA, "media_type": "image/png"}
+        | {"bytes": 1}
+        | describe("results/figures/boxplot-cmax.png")
+    )
+    run = save.accept(folder, st)
+    assert run["state"] == "reviewing"
+    box = next(a for a in run["artifacts"] if a["path"].endswith("boxplot-cmax.png"))
+    assert box["identifies_subjects"] is False and box["subject_level"] is True
+    assert box["title"] == "Boxplot of cmax by profile" and box["kind"] == "figure"
+    assert R.read_manifest(folder)["artifacts"] == run["artifacts"]  # schema-valid on disk

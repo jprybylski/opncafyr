@@ -763,11 +763,32 @@ All notable changes to this project are documented here. The format follows
   (0.3.1). Imports are unchanged. flextable, a new suggested package, is already in
   `renv.lock`.
   - **Saved runs.** `artifacts.json` is schema 2, an additive change. A save also holds
-    `results/tables/*.rds`, the formatted flextable copies of the CSVs, kept as kind
-    `other`. Replay no longer compares a table that opnca-r marks
-    `replay.reproduced: false`, such as the bioequivalence tables. `replay.json` lists
-    those under `not_reproduced` with opnca-r's reason. The curator still picks files by
-    path.
+    `results/tables/*.rds`, the formatted flextable copies of the CSVs. Replay no longer
+    compares a table that opnca-r marks `replay.reproduced: false`, such as the
+    bioequivalence tables. `replay.json` lists those under `not_reproduced` with
+    opnca-r's reason.
+- The publishing curator offers what opnca-r says a run saved, not what file-name
+  patterns suggest (#59).
+  - A save's `artifacts.json` schema 2 is validated against the schema opnca-r installs
+    (`opnca/schemas/opnca-artifacts-v2.schema.json` in the app's R library). A listing
+    that breaks it, or a missing schema, fails the save. A problem names the place and
+    the rule, never a value.
+  - The run manifest keeps each file's schema-2 fields (`id`, `title`, `kind`,
+    `identifies_subjects`, `caption`, `footnote`, `replay`, `derived_from` and the rest).
+    They are optional in `run-manifest-v1`, so older runs still validate. `kind` is
+    opnca-r's, so a formatted `.rds` table is now `table`.
+  - For such a run, each item takes opnca-r's title, and "shows subject IDs" comes from
+    `identifies_subjects`. Sidecar notes come from the caption, the footnote and the
+    mean-profile choices. A figure or table that a later opnca-r saves is offered without
+    launcher changes. Ids, and so published file names and ADR 0007's pre-selection, stay
+    as they were.
+  - Formatted `.rds` tables are offered next to their CSV, as "… (formatted)". They are
+    never pre-selected and carry the CSV's identifier flag. reportifyr places them in a
+    report, and deckifyr renders them in a deck.
+  - A CSV table that the replay doesn't recompute is not offered, nor is its formatted
+    copy. The Publish page says why.
+  - Runs saved before opnca-r 0.3.1 have no `identifies_subjects` and keep the path
+    rules.
   - **API numbers.** opnca-r's API no longer rounds numbers to 4 decimals. The test that
     checks the replay against opnca-r's own results now uses 1e-10.
   - **Roles.** Under `--no-guess-roles`, opnca-r's server refuses a request that omits a

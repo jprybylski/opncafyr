@@ -7,7 +7,8 @@ browser download.
 
 When ``COMPLETE`` appears the session is stopped first, so nothing else can be written,
 then the folder is inspected (``adapters.opnca.export``). A complete save moves the run to
-``reviewing`` with its script, record, artifacts (path, media type, bytes, SHA-256),
+``reviewing`` with its script, record, artifacts (path, media type, bytes, SHA-256, and
+what opnca-r's ``artifacts.json`` schema 2 says each file is),
 opnca-r's settings and effective settings, the tool versions and the exclusions. A save
 that can't be complete moves it to ``failed``; the user makes a new run from it.
 
@@ -50,13 +51,21 @@ def launcher_exclusions(folder: Path) -> dict[str, Any]:
     return {"rows": len(rows), "reasons": sorted({r.get(reason_col, "") for r in rows})}
 
 
-def check(folder: Path, session_alive: bool) -> export.ExportStatus:
+def artifacts_schema(runtime: Any) -> dict[str, Any] | None:
+    """opnca-r's ``artifacts.json`` schema from the pinned R library, if it is installed."""
+    return export.shipped_schema(getattr(runtime, "r_library", None))
+
+
+def check(
+    folder: Path, session_alive: bool, artifacts_schema: dict[str, Any] | None = None
+) -> export.ExportStatus:
     manifest = runs_core.read_manifest(folder)
     return export.inspect_export(
         folder,
         own=OWN,
         snapshot_sha256=manifest["analysis_input"]["sha256"],
         session_alive=session_alive,
+        artifacts_schema=artifacts_schema,
     )
 
 
@@ -143,18 +152,22 @@ def accept(folder: Path, status: export.ExportStatus) -> dict[str, Any]:
             "saved_at": str(status.complete.get("saved_at", "")),
             "artifacts_sha256": status.complete["artifacts_sha256"],
         },
-        artifacts=[
-            {
-                "path": a["path"],
-                "sha256": a["sha256"],
-                "kind": a["kind"],
-                "media_type": a.get("media_type", "application/octet-stream"),
-                "bytes": a["bytes"],
-            }
-            for a in status.artifacts
-        ],
+        artifacts=[_artifact(a) for a in status.artifacts],
         nca_settings=nca_settings,
         exclusions={"launcher": ours, "session": in_session},
         tools=tools,
         warnings=warnings,
     )
+
+
+def _artifact(art: dict[str, Any]) -> dict[str, Any]:
+    """A manifest artifact: the file's hash and size, and what opnca-r says it is (#59)."""
+    out = {k: art[k] for k in export.DESCRIBED if k in art}
+    out.update(
+        path=art["path"],
+        sha256=art["sha256"],
+        kind=art["kind"],
+        media_type=art.get("media_type", "application/octet-stream"),
+        bytes=art["bytes"],
+    )
+    return out

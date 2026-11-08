@@ -18,23 +18,64 @@ was sealed when it was confirmed. Its files must also still match their recorded
 the page says why any other run can't be chosen. The server enforces the same rules, so an
 API call can't get around them.
 
-Each completed run offers the tables and figures that opnca-r saved:
+Each completed run offers the tables and figures that opnca-r saved.
+
+**What is offered comes from opnca-r (#59).** Since 0.3.1, opnca-r describes every file
+of a save in `artifacts.json` schema 2: its title, kind, format, whether the file itself
+shows subject IDs (`identifies_subjects`), a caption and footnote, and whether `analysis.R`
+replays it. The launcher validates the listing against the schema opnca-r installs
+(`opnca/schemas/opnca-artifacts-v2.schema.json` in the app's R library) when it accepts the
+save, and keeps those fields with each artifact in the run manifest. The catalog is then
+built from them:
+- the title is opnca-r's, and "shows subject IDs" is `identifies_subjects`. A table or
+  figure that a later opnca-r saves is offered without launcher changes, under its own
+  title and flag;
+- the footnotes are opnca-r's caption and footnote, plus the mean profiles' choices in
+  words for a file made from the record's `mean_profiles` block;
+- the ids stay the launcher's, because published file names use them:
+  `opnca-summary` → `summary`, `opnca-parameters-wide` → `listing`,
+  `opnca-mean-profiles` → `mean-profiles`, `opnca-summary-by-<g>` → `summary-by-<g>`,
+  `figure-<name>` → `<name>`. Other ids are used as they are.
+
+| Offered (opnca-r 0.3.1 titles) | Id | Pre-selected | Shows subject IDs |
+|---|---|---|---|
+| Summary of the parameters (selected grouping view) | `summary` | Yes | No |
+| Parameters, one row per profile | `listing` | Yes | Yes |
+| Concentration-time profiles (linear, log axis) | `profiles-linear`, `profiles-log` | Yes | Yes |
+| Mean concentration-time profile (linear, log axis) | `mean-linear`, `mean-log` | Yes | No |
+| Mean concentration-time profile (table) | `mean-profiles` | No | No |
+| Parameters, one row per profile and parameter | `opnca-parameters-long` | No | Yes |
+| Summary of the parameters by `<group>` | `summary-by-<group>` | No | No |
+| Boxplot of `<parameter>` by profile | `boxplot-<parameter>` | No | No |
+| `<table>` (formatted) | `<table id>-formatted` | No | As its CSV |
+
+Two rules are the launcher's own:
+- **Formatted tables.** When flextable is installed, opnca-r also saves each table as a
+  formatted flextable, `results/tables/<id>.rds` (`derived_from` its CSV). It is offered
+  next to its CSV, never pre-selected, and only when the CSV itself is offered. reportifyr
+  0.4.0 places `.rds` tables in a report, and deckifyr renders them in a deck. The CSV
+  stays the table the replay checks.
+- **Tables the replay didn't check.** A CSV table that opnca-r marks
+  `replay.reproduced: false` (the bioequivalence tables) is not offered, and neither is
+  its formatted copy. The replay never compared it, so a passed replay says nothing about
+  it. The page lists it as unavailable, with opnca-r's reason. Figures are exempt: replay
+  never redraws figures, only the tables behind them.
+
+**Older runs.** A run saved before opnca-r 0.3.1 has no `identifies_subjects`. Its catalog
+comes from the file paths, as before:
 
 | Offered | From the run | Pre-selected | Shows subject IDs |
 |---|---|---|---|
 | Parameter summary | `results/opnca-summary.csv` | Yes | No |
 | Individual parameter listing | `results/opnca-parameters-wide.csv` | Yes | Yes |
 | Individual concentration–time profiles (linear, log) | `results/figures/profiles-linear`, `profiles-log` | Yes | Yes |
+| Mean concentration–time profiles (linear, log) | `results/figures/mean-linear`, `mean-log` | Yes | No |
+| Mean concentration–time table | `results/opnca-mean-profiles.csv` | No | No |
 | Parameter summary by group | `results/opnca-summary-by-<group>.csv` | No | No |
 | Boxplots of parameters | `results/figures/boxplot-<parameter>` | No | No |
 
-Since opnca-r 0.2.9 a run can also offer the **mean** concentration–time profiles, which
-ADR 0007 pre-selects, and the table behind them:
-
-| Offered | From the run | Pre-selected | Shows subject IDs |
-|---|---|---|---|
-| Mean concentration–time profiles (linear, log) | `results/figures/mean-linear`, `mean-log` | Yes | No |
-| Mean concentration–time table | `results/opnca-mean-profiles.csv` | No | No |
+In such a run, a figure the launcher has no rule for is offered under its file name and
+taken to show subject IDs.
 
 opnca-r computes the means; the launcher never draws or recalculates them. You choose the
 time basis (actual or nominal time), the statistic and the error measure in opnca-r's Save

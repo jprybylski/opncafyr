@@ -14,19 +14,25 @@ One publication can combine runs of different analytes.
 
 ![The Publish page, choosing tables and figures from two completed runs](images/08-publish.png)
 
-Each completed run has a box with its analyte, its run ID, when it was made, and "Replay passed". Inside are the tables and figures opnca-r saved:
+Each completed run has a box with its analyte, its run ID, when it was made, and "Replay passed". Inside are the tables and figures opnca-r saved, under the names opnca-r gives them. opnca-r also says which files show subject IDs. For a run saved by opnca-r 0.3.1, the box typically holds:
 
 | Offered | Ticked to begin with | Shows subject IDs |
 |---|---|---|
-| Parameter summary (table) | Yes | No |
-| Individual parameter listing (table) | Yes | Yes |
-| Individual concentration–time profiles, linear and log (figures) | Yes | Yes |
-| Mean concentration–time profiles, linear and log (figures) | Yes | No |
-| Mean concentration–time table | No | No |
-| Parameter summary by group (table) | No | No |
-| Boxplots of parameters (figures) | No | No |
+| Summary of the parameters (table) | Yes | No |
+| Parameters, one row per profile (table) | Yes | Yes |
+| Concentration-time profiles, linear and log axis (figures) | Yes | Yes |
+| Mean concentration-time profile, linear and log axis (figures) | Yes | No |
+| Mean concentration-time profile (table) | No | No |
+| Parameters, one row per profile and parameter (table) | No | Yes |
+| Summary of the parameters by group (tables) | No | No |
+| Boxplot of each parameter by profile (figures) | No | No |
+| Any of these tables, **(formatted)** | No | As the table |
 
-Items that show subject IDs are marked **shows subject IDs**. If a run was saved without the mean figures, the box says so; make a new run and keep them ticked in opnca-r's **Save to run folder** box to include them.
+A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers, a caption and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Pick either, or both.
+
+Items that show subject IDs are marked **shows subject IDs**. If a run was saved without the mean figures, the box says so; make a new run and keep them ticked in opnca-r's **Save to run folder** box to include them. A table that the replay doesn't recompute, such as a bioequivalence table, can't be published, and the box says why.
+
+Runs saved by an earlier opnca-r keep their earlier names, such as "Parameter summary" and "Individual parameter listing".
 
 1. Tick the items you want, from one run or several.
 2. Type a **Label (optional)**, for example "PARENT and METAB".
