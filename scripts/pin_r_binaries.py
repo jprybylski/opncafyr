@@ -9,7 +9,7 @@ exactly the locked version, downloads it and records its URL and SHA-256. The re
 what the installer and the offline bundle builder fetch: binaries only, never a build
 from source on a user's machine.
 
-Packages from the cellar (opnca, quartifyr, reportifyr, pyro) are pinned in
+Packages from the cellar (opnca, quartifyr, reportifyr, pyro, gitneighbr) are pinned in
 runtime/pins.toml instead.
 
 Some P3M macOS builds link libraries a standard user can't install: P3M's gdtools links

@@ -255,6 +255,11 @@
       "Source": "Repository",
       "Repository": "P3M"
     },
+    "gitneighbr": {
+      "Package": "gitneighbr",
+      "Version": "0.2.1",
+      "Source": "Cellar"
+    },
     "glue": {
       "Package": "glue",
       "Version": "1.8.1",

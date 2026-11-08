@@ -115,6 +115,7 @@ class ToolDescriptor:
     web_route: str | None
     raw: dict[str, Any]
     max_body_bytes: int | None = None
+    guard_mutations: bool = False
     display_name: str | None = None
     executables: tuple[str, ...] = ()
     health: HealthProbe | None = None
@@ -145,6 +146,7 @@ class ToolDescriptor:
             web_route=web.get("route"),
             raw=data,
             max_body_bytes=web.get("max_body_bytes"),
+            guard_mutations=bool(web.get("guard_mutations", False)),
             display_name=data.get("display_name"),
             executables=tuple(data["executables"]),
             health=HealthProbe(health["kind"], health["executable"], health.get("target")),
@@ -384,7 +386,8 @@ class WorkflowView:
 
     ``module`` is a file in the pack's ``static`` folder, served under
     ``/static/workflows/<pack id>/``; it exports ``init(container)``. ``icon`` names a
-    symbol in the home page's sprite.
+    symbol in the home page's sprite. With ``requires_workspace`` the sidenav link shows
+    only while a study folder is open.
     """
 
     id: str
@@ -392,6 +395,7 @@ class WorkflowView:
     module: str
     icon: str = "table"
     summary: str = ""
+    requires_workspace: bool = False
 
     def check(self) -> None:
         if not _VIEW_ID_RE.match(self.id):

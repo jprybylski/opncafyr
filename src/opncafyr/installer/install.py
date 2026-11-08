@@ -7,6 +7,10 @@
 4. **Commit:** ``install.json`` is written last; without it the folder is incomplete.
 5. **Activate:** the ``current`` pointer flips atomically; icons and the payload copy follow.
 
+Git (#56) is optional but installed by default, and best effort: if its file can't be
+fetched or it can't be unpacked and started, the install goes on without it and the
+install record (``optional``) and the report say why; version history is then unavailable.
+
 Any failure before step 5 removes the incomplete folder, writes a redacted support bundle
 and leaves the previous install active. A second ``install`` of the same payload is a
 no-op (it only repairs a missing icon). ``repair`` checks the active install and, if a part
@@ -51,6 +55,7 @@ class Options:
     assets: list[Path] = field(default_factory=list)
     mirror: Path | None = None
     with_libreoffice: bool = False
+    with_git: bool = True  # #56: best effort; --without-git leaves it out
     dry_run: bool = False
     cacert: Path | None = None
     proxy: str | None = None
@@ -79,7 +84,12 @@ def identity(payload: Payload, platform: str, opts: Options) -> str:
     ``build_from_source`` isn't part of it: a source-built install is the same install, so
     a later ``install`` of the same version keeps it, and an update returns to binaries.
     """
-    doc = {"payload": payload.digest, "platform": platform, "libreoffice": opts.with_libreoffice}
+    doc = {
+        "payload": payload.digest,
+        "platform": platform,
+        "libreoffice": opts.with_libreoffice,
+        "git": opts.with_git,
+    }
     return sha256_bytes(json.dumps(doc, sort_keys=True).encode())
 
 
@@ -214,10 +224,17 @@ class Installer:
             )
         return cache, local, download
 
-    def _resolve(self, assets: list[Asset]) -> dict[str, Path]:
+    def _resolve(self, assets: list[Asset], skipped: dict[str, str]) -> dict[str, Path]:
         cache, local, download = self._sources()
         try:
-            return resolve(assets, cache=cache, local=local, download=download, progress=self.say)
+            return resolve(
+                assets,
+                cache=cache,
+                local=local,
+                download=download,
+                progress=self.say,
+                skipped=skipped,
+            )
         finally:
             for source in local:
                 source.close()
@@ -243,6 +260,7 @@ class Installer:
         assets = pins.assets(
             platform,
             libreoffice=self.opts.with_libreoffice,
+            git=self.opts.with_git,
             source_build=self.opts.build_from_source,
         )
         if self.opts.dry_run:
@@ -336,9 +354,16 @@ class Installer:
             raise RuntimeError("no run log")
         self.say(f"checking {len(assets)} pinned files ({self.opts.source})")
         started = time.monotonic()
-        files = self._resolve(assets)
+        skipped: dict[str, str] = {}
+        files = self._resolve(assets, skipped)
         self.run_log.step("verify", "ok", time.monotonic() - started, f"{len(files)} files")
         self.say(f"all {len(files)} files match their pinned SHA-256")
+        for component, problem in sorted(skipped.items()):
+            self.say(
+                f"warning: optional {component} could not be fetched; installing without it: "
+                f"{problem}"
+            )
+        assets = [a for a in assets if not (a.best_effort and a.component in skipped)]
         maybe_fail("verify")
 
         install_id = self.layout.next_install_id(self.payload.version)
@@ -354,8 +379,11 @@ class Installer:
             offline=self.opts.offline,
             say=self.say,
             with_libreoffice=self.opts.with_libreoffice,
+            with_git=self.opts.with_git,
             build_from_source=self.opts.build_from_source,
         )
+        for component, problem in skipped.items():
+            ctx.report_optional(component, "failed", f"not fetched: {problem}"[-500:])
         step = "stage"
         try:
             ctx.dir.mkdir(parents=True)
@@ -424,6 +452,12 @@ class Installer:
             f"opncafyr {self.payload.version} installed ({install_id}) in "
             f"{time.monotonic() - started:.0f} s"
         )
+        for name, outcome in sorted(ctx.optional.items()):
+            if outcome["status"] == "failed":
+                self.say(
+                    f"note: the optional {name} is not installed ({outcome['detail']}). "
+                    "Everything else works; `install --reinstall` tries again."
+                )
         return 0
 
     def install_record(
@@ -451,6 +485,7 @@ class Installer:
                 "r_dir": str(ctx.r_dir),
             },
             "components": [{"name": k, **v} for k, v in sorted(ctx.components.items())],
+            "optional": [{"name": k, **v} for k, v in sorted(ctx.optional.items())],
             "smoke": results,
             **({"bundle_id": self.bundle["bundle_id"]} if self.bundle else {}),
         }

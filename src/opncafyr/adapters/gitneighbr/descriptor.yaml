@@ -1,0 +1,20 @@
+schema_version: "1.0"
+id: gitneighbr
+version: 1
+display_name: Version history (gitneighbr)
+runtime: r
+# git_local_history: status, diffs, selected-file snapshots, explicit setup.
+# git_remote_transfer: Send/Update with a full preview, only when the user turns it on
+# for a session (workflows/nca/history.py, ADR 0008).
+capabilities: [git_local_history, git_remote_transfer]
+# git is the pinned portable Git (runtime/pins.toml [optional.git]); without it the tool
+# is unavailable and nothing else is affected.
+executables: [rscript, git]
+health: {kind: r_package, executable: rscript, target: gitneighbr}
+web_app:
+  route: /apps/gitneighbr/
+  readiness: /api/v1/health
+  max_body_bytes: 1048576
+  # Git actions change workspace files: refused while jobs run or other editors have
+  # unsaved work, and they hold the workspace lease while they run (#56).
+  guard_mutations: true

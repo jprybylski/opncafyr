@@ -19,8 +19,9 @@ from opncafyr.installer.platforms import SUPPORTED
 from opncafyr.installer.verify import InstallError
 
 # R packages that don't come from CRAN; their tarballs go in the cellar.
-CELLAR = ("quartifyr", "reportifyr", "pyro")
+CELLAR = ("quartifyr", "reportifyr", "pyro", "gitneighbr")
 OPNCA = "opnca-r"
+GIT = "git"  # [optional.git]: the portable Git for version history (#56)
 
 
 class PinsError(InstallError):
@@ -38,6 +39,9 @@ class Asset:
     license: str = ""
     private: bool = False
     optional: bool = False
+    # An optional component installed by default (``default = true``, e.g. Git, #56): if
+    # it can't be fetched or installed, the install goes on without it.
+    best_effort: bool = False
 
     @property
     def path(self) -> str:
@@ -93,12 +97,19 @@ class Pins:
 
     # --- assets --------------------------------------------------------------------
     def assets(
-        self, platform: str, *, libreoffice: bool = False, source_build: bool = False
+        self,
+        platform: str,
+        *,
+        libreoffice: bool = False,
+        git: bool = True,
+        source_build: bool = False,
     ) -> list[Asset]:
         """Every pinned file an install of ``platform`` needs.
 
-        ``source_build`` adds what ``repair --build-from-source`` needs (#34): opnca-r's
-        vendored source tarball, the standalone Rust toolchain and, on Windows, Rtools.
+        ``git`` adds the pinned portable Git (``[optional.git]``, #56) when the pins have
+        it, as a best-effort asset. ``source_build`` adds what ``repair
+        --build-from-source`` needs (#34): opnca-r's vendored source tarball, the
+        standalone Rust toolchain and, on Windows, Rtools.
         """
         if platform not in SUPPORTED:
             raise PinsError(f"Unsupported platform {platform}")
@@ -109,6 +120,8 @@ class Pins:
         out += self._wheels(platform)
         if libreoffice:
             out.append(self._runtime("libreoffice", platform, section=("optional",)))
+        if git and GIT in self.pins.get("optional", {}):
+            out.append(self._runtime(GIT, platform, section=("optional",)))
         if source_build:
             out += self._source_build(platform)
         seen: dict[str, Asset] = {}
@@ -134,6 +147,7 @@ class Pins:
             version=str(node.get("version", "")),
             license=str(node.get("license", "")),
             optional=bool(section),
+            best_effort=bool(section) and node.get("default") is True,
         )
 
     def _opnca(self, platform: str) -> list[Asset]:

@@ -251,6 +251,18 @@ Then, in **5. Deck (PPTX)**:
 5. Select **Build** and wait.
 6. Select **Download PPTX** and open the file in PowerPoint.
 
+## Step 15. Keep a snapshot of your work (optional)
+
+Version history keeps a copy of files you choose, with Git, on this computer. You don't need it, and a snapshot is not a run, a publication or a build: those stay as they are. See [Version history](version-history.md).
+
+1. Select **Version history** on the left. Leave **Also allow sending…** unticked, and select **Open version history**.
+2. The page opens under **Apps**. Select **Start version history here**, keeping the suggested files to leave out ticked: they are scratch files and caches the app can rebuild.
+3. Under **Before your first snapshot**, type your name and email, then select **Save my name and email**.
+4. Under **Changes**, in **Editable sources**, tick your cleaning recipe (in `.opncafyr/recipes/`), `report/report.qmd` and `deck/presentation.yaml`. Leave the rest unticked.
+5. Under **Save snapshot**, type `Cleaning recipe, report text and slides`, then select **Save snapshot**.
+
+The page confirms the snapshot was saved, and the files you ticked leave the **Changes** list. Files in the other groups stay listed until you choose to snapshot them. Runs and builds carry **Protected**, and data and results carry **May identify subjects**.
+
 ## What you have now
 
 Your `TA-walkthrough` folder now holds:
@@ -258,6 +270,7 @@ Your `TA-walkthrough` folder now holds:
 - `source-data/two_analyte.csv`, unchanged;
 - two completed, sealed runs, one per analyte, each with its own replay check (in the hidden `.opncafyr` folder);
 - `OUTPUTS`, with the published tables and figures;
-- `report` and `deck`, with your builds.
+- `report` and `deck`, with your builds;
+- if you did Step 15, a hidden `.git` folder with your first snapshot, and a `.gitignore` listing the files left out.
 
 The report and deck built, which shows the files were assembled as recorded. It does not show that the analysis is right. That judgement is yours.

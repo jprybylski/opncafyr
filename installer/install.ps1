@@ -1,6 +1,6 @@
 # opncafyr per-user installer for Windows (#19, #36). No administrator rights.
 #
-#   install.bat [install]  [--from-bundle DIR|ZIP] [--assets DIR] [--with-libreoffice] [--dry-run]
+#   install.bat [install]  [--from-bundle DIR|ZIP] [--assets DIR] [--with-libreoffice] [--without-git] [--dry-run]
 #   install.bat repair     (same options)
 #   install.bat uninstall  [--force] [--dry-run]
 #   install.bat status

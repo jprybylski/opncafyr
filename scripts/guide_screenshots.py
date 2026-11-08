@@ -65,6 +65,10 @@ NAMES = (
     "09-report",
     "10-deck",
     "11-support",
+    "12-history",
+    "13-history-setup",
+    "14-history-changes",
+    "15-history-save",
 )
 VIEWPORT = {"width": 1280, "height": 800}
 MAX_BYTES = 400 * 1024
@@ -512,6 +516,37 @@ def run(tmp: Path, runtime_file: Path, out: Path, only: set[str]) -> Shots:
                 page.keyboard.press("Escape")
 
             shots.take("11-support", support)
+
+            # 12-14: Version history on the finished study folder: the launcher's page,
+            # then gitneighbr's own page (local snapshots only, sending off).
+            go(page, base, "history", reload=True)
+            open_history = page.get_by_role("button", name="Open version history")
+            open_history.wait_for()
+            shots.take("12-history", lambda path: page.screenshot(path=str(path)))
+            open_history.click()
+            page.wait_for_url(re.compile(r"#/apps/gitneighbr$"), timeout=120_000)
+            git = page.frame_locator("#tool-frames iframe[data-app=gitneighbr]")
+            setup = git.get_by_role("region", name="Set up this folder")
+            setup.get_by_role("button", name="Start version history here").wait_for()
+            shots.take("13-history-setup", lambda path: setup.screenshot(path=str(path)))
+            setup.get_by_role("button", name="Start version history here").click()
+            git.locator("#identity-name").fill("A. Analyst")
+            git.locator("#identity-email").fill("analyst@example.org")
+            git.get_by_role("button", name="Save my name and email").click()
+            git.get_by_role("region", name="Set up your Git identity").wait_for(state="detached")
+            changes = git.get_by_role("region", name="Changed files")
+            recipe = changes.get_by_role("checkbox", name="Include .opncafyr/recipes/").first
+            recipe.wait_for()
+
+            def changed(path: Path) -> None:
+                changes.get_by_role("heading", name="Changes").scroll_into_view_if_needed()
+                page.screenshot(path=str(path))
+
+            shots.take("14-history-changes", changed)
+            recipe.check()
+            form = git.get_by_role("region", name="Save a snapshot")
+            form.locator("#commit-summary").fill("Cleaning recipe for the PK analysis")
+            shots.take("15-history-save", lambda path: form.screenshot(path=str(path)))
             context.close()
             browser.close()
     finally:

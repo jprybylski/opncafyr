@@ -8,8 +8,10 @@ repair, uninstall) runs on every CI OS in milliseconds.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import sys
+import tarfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -30,8 +32,8 @@ class World:
     files: dict[str, bytes] = field(default_factory=dict)  # bundle path -> content
 
 
-def _file(world: World, component: str, name: str) -> tuple[str, str]:
-    data = f"fake {component} {name}".encode()
+def _file(world: World, component: str, name: str, data: bytes | None = None) -> tuple[str, str]:
+    data = f"fake {component} {name}".encode() if data is None else data
     world.files[f"assets/{component}/{name}"] = data
     (world.assets / name).write_bytes(data)
     dest = world.bundle / "assets" / component / name
@@ -40,9 +42,43 @@ def _file(world: World, component: str, name: str) -> tuple[str, str]:
     return f"{BASE}/{component}/{name}", sha(data)
 
 
-def make_world(tmp: Path, version: str = "0.0.1", *, source_build: bool = False) -> World:
+GIT_ARCHIVE = "dugite-native-v2.56.0-a44aeca-macOS-arm64.tar.gz"
+
+
+def git_archive(members: dict[str, bytes | None] | None = None) -> bytes:
+    """A tiny tar.gz laid out like dugite-native's macOS archive (``./bin/git``,
+    ``./libexec/git-core/``). A member with ``None`` content is a folder."""
+    if members is None:
+        members = {
+            "bin/git": b"#!/bin/sh\necho fake git\n",
+            "libexec/git-core/": None,
+            "libexec/git-core/git-remote-https": b"fake helper\n",
+            "etc/gitconfig": b"",
+        }
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+        for name, data in members.items():
+            info = tarfile.TarInfo(f"./{name.rstrip('/')}")
+            info.mtime = 1_700_000_000
+            if data is None:
+                info.type, info.mode = tarfile.DIRTYPE, 0o755
+                tf.addfile(info)
+            else:
+                info.size, info.mode = len(data), 0o755
+                tf.addfile(info, io.BytesIO(data))
+    return buf.getvalue()
+
+
+def make_world(
+    tmp: Path,
+    version: str = "0.0.1",
+    *,
+    source_build: bool = False,
+    git: bytes | None = None,
+) -> World:
     """``source_build`` also pins what ``repair --build-from-source`` needs (#34): a
-    vendored opnca-r tarball (in the manifest too) and a standalone Rust archive."""
+    vendored opnca-r tarball (in the manifest too) and a standalone Rust archive. ``git``
+    pins that archive as the best-effort ``[optional.git]`` (#56; see ``git_archive``)."""
     world = World(
         root=tmp,
         assets=tmp / "assets",
@@ -108,13 +144,23 @@ def make_world(tmp: Path, version: str = "0.0.1", *, source_build: bool = False)
         pins += [f"[rust.standalone.assets.{PLATFORM}]", f'url = "{rust_url}"']
         pins += [f'sha256 = "{rust_sha}"', "", "[rtools]", 'version = "45"']
         pins += ['platforms = ["windows-x86_64"]']
-    for pkg, ver in (("quartifyr", "0.3.3"), ("reportifyr", "0.4.0"), ("pyro", "0.1.1")):
+    for pkg, ver in (
+        ("quartifyr", "0.3.3"),
+        ("reportifyr", "0.4.0"),
+        ("pyro", "0.1.1"),
+        ("gitneighbr", "0.2.1"),
+    ):
         name = f"{pkg}_{ver}.tar.gz"
         _, digest = _file(world, pkg, name)
         pins += ["", f"[packages.{pkg}]", f'version = "{ver}"', 'license = "GPL-3.0-or-later"']
         pins += [f'release_url = "{BASE}/{pkg}/"', f"[packages.{pkg}.assets]"]
         pins += [f'"{name}" = "{digest}"']
     pins += ["", "[packages.deckifyr]", 'version = "0.3.6"', 'license = "GPL-3.0-or-later"']
+    if git is not None:
+        url, digest = _file(world, "git", GIT_ARCHIVE, git)
+        pins += ["", "[optional.git]", 'status = "optional"', "default = true"]
+        pins += ['version = "2.56.0"', 'license = "GPL-2.0-only AND MIT"']
+        pins += [f"[optional.git.assets.{PLATFORM}]", f'url = "{url}"', f'sha256 = "{digest}"']
     pins += ["", "[r_packages]", 'lockfile = "runtime/r/renv.lock"']
     pins += ['binaries = "runtime/r/binaries.toml"']
     (runtime / "pins.toml").write_text("\n".join(pins) + "\n", "utf-8")
@@ -183,7 +229,8 @@ def fake_steps(log: list[str] | None = None):
         wh.mkdir()
         ctx.paths |= {"r_library": lib, "wheelhouse": wh}
         for asset in ctx.assets:
-            ctx.record(asset.component, asset.version, [asset])
+            if not asset.best_effort:  # its own step records it (Git, #56)
+                ctx.record(asset.component, asset.version, [asset])
         (ctx.log_dir / "stage.log").write_text(
             "Authorization: Bearer ghp_abcdefghijklmnopqrstuvwxyz0123\n", "utf-8"
         )

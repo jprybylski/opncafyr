@@ -37,7 +37,7 @@ Each step happens in the app, in your web browser, and nothing leaves your compu
 <ol class="steps">
   <li>
     <strong>Choose a study folder</strong>
-    <img src="{{ '/assets/screenshots/01-home.png' | relative_url }}" width="1280" height="1296" loading="lazy" alt="The app's Home page with the study folder named at the top and cards for data, runs and publishing.">
+    <img src="{{ '/assets/screenshots/01-home.png' | relative_url }}" width="1280" height="1183" loading="lazy" alt="The app's Home page with the study folder named at the top and cards for data, runs and publishing.">
     Everything the app records about a study lives in that folder.
   </li>
   <li>
@@ -66,6 +66,8 @@ Each step happens in the app, in your web browser, and nothing leaves your compu
     Build a Word report or a PowerPoint deck from a publication, then review it.
   </li>
 </ol>
+
+Optionally, [version history]({{ '/guides/version-history/' | relative_url }}) keeps Git snapshots of the files you choose. It is off until you open it, stays on your computer unless you turn sending on, and never changes a run, a publication or a build.
 
 ## Two guides, one set of instructions
 

@@ -43,5 +43,13 @@ def workflow() -> WorkflowPack:
                 icon="doc",
                 summary="Publish completed runs' tables and figures for reports and decks.",
             ),
+            WorkflowView(
+                id="history",
+                title="Version history",
+                module="history.js",
+                icon="folder",
+                summary="Optional Git snapshots of files you choose (gitneighbr).",
+                requires_workspace=True,
+            ),
         ),
     )

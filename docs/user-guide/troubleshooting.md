@@ -12,6 +12,8 @@ On **Home**, each tool in the **Tools** card shows its health. **Unavailable** m
 
 "Slide previews unavailable: LibreOffice is not installed." is not a fault. LibreOffice is optional; without it, decks build without slide previews.
 
+**Version history (gitneighbr)** is optional too. If it shows "The installed runtime has no 'git'", Git wasn't installed, for example because it couldn't be downloaded. The install report says so under **Optional components**. Everything else works without it. To add it later, reinstall: see [Checking and repairing an install](install.md#checking-and-repairing-an-install).
+
 ## A job failed
 
 1. Select **Jobs** on the left.
@@ -62,6 +64,16 @@ A failed render keeps nothing, so you can render again as often as you need. Dec
 ## A deck build fails with "IndexError"
 
 A deck built from a publication with tables stops with "IndexError: tuple index out of range". This is a known issue in this version of the deck tool: it can't put a table with an empty cell on a slide. See [Known issue: tables with empty cells](decks.md#known-issue-tables-with-empty-cells).
+
+## Version history won't set up, save or send
+
+Version history explains each refusal on its own page, and when it refuses, nothing in the folder has been changed.
+
+- **"This folder is inside a Git project that starts in a folder above it."** The study folder sits inside another Git project, so version history can't tell its files apart. Move the study folder out of it, or ask whoever manages that project.
+- **"…a Git setting that isn't supported here…"** or a named file such as `.gitattributes`. The folder's Git project uses Git LFS, an encryption filter, submodules or a setting that would run another program. The page names the setting; ask someone experienced with Git.
+- **Saving waits** while a job runs or another editor has unsaved changes. Let the job finish, or save the other editor's work, then try again.
+- **"Something changed since the list was shown."** Files changed after the list appeared. Look at the list again and retry.
+- **Sending or getting updates fails.** Check that the address starts with `https://` and that the access token is right and still valid. If you are on a company network, check that you can reach the server. Nothing on your computer changes when it fails.
 
 ## The app closed by itself
 

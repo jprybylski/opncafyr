@@ -54,6 +54,7 @@ from opncafyr.core.proctree import (
 )
 from opncafyr.core.runtime import Runtime, RuntimeUnavailable
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
+from opncafyr.core.workspace_lease import WorkspaceLease
 from opncafyr.paths import WORKSPACE_META_DIR
 
 log = logging.getLogger(__name__)
@@ -234,6 +235,8 @@ class JobManager:
         self._running: dict[str, int] = {}
         self._workspace: Path | None = None
         self._accepting = True
+        # Set by the app (core.workspace_lease): no job starts while a tool holds it.
+        self.lease: WorkspaceLease | None = None
 
     # --- workspace -------------------------------------------------------------------
 
@@ -357,6 +360,11 @@ class JobManager:
                 raise JobManagerError("Open a workspace before starting a job.")
             if not self._accepting:
                 raise JobManagerError("The launcher is stopping and accepts no new jobs.")
+            if self.lease is not None and self.lease.holder is not None:
+                raise JobManagerError(
+                    f"{self.lease.holder} is changing workspace files. "
+                    "Start the job after it finishes."
+                )
             jobs_root = self._jobs_root(self._workspace)
             while True:
                 job_id = _new_job_id()

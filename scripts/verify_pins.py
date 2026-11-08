@@ -19,6 +19,9 @@ Without ``--network`` it checks that:
   SHA-256 as here;
 - every runtime section and release package names its ``license`` (SPDX expression), for
   the offline bundle's licence inventory (#36);
+- each optional component (``[optional.<name>]``) has a ``version`` and a boolean
+  ``default`` if it sets one; with a ``release`` tag, every asset URL is under that tag and
+  names the version (the Git for version history, #56, is ``default = true``);
 - ``runtime/python/wheels.toml`` has a wheel list per environment and platform, each with
   an https URL and a SHA-256, and the tools list carries the pinned deckifyr wheel. Run
   as a script, it also checks that the file matches the locks (``pin_wheels.py --check``).
@@ -54,7 +57,7 @@ MOVING = re.compile(
 # Packages pinned from CRAN's own macOS build instead of the snapshot (binaries.toml
 # `origin = "cran"`; see scripts/pin_r_binaries.py).
 CRAN_BIN = "https://cran.r-project.org/bin/macosx/"
-CELLAR = ("opnca-r", "quartifyr", "reportifyr", "pyro")
+CELLAR = ("opnca-r", "quartifyr", "reportifyr", "pyro", "gitneighbr")
 CELLAR_R_NAMES = {"opnca-r": "opnca"}
 # Release packages a platform binary must exist for, and how to spot it in a file name.
 PLATFORM_BINARIES = {"opnca-r": "_{platform}."}
@@ -161,6 +164,7 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
         if pkg not in pins.get("packages", {}):
             errors.append(f"[packages.{pkg}] is missing")
     errors += _check_source_build(pins, supported)
+    errors += _check_optional(pins)
 
     errors += _check_r_packages(pins, supported, root, assets)
     errors += _check_python_envs(pins, root)
@@ -189,6 +193,29 @@ def _check_source_build(pins: dict[str, Any], supported: list[str]) -> list[str]
     for platform in supported:
         if platform.startswith("windows") and platform not in rtools.get("assets", {}):
             errors.append(f"[rtools] has no installer for {platform}")
+    return errors
+
+
+def _check_optional(pins: dict[str, Any]) -> list[str]:
+    """Optional components: a version, a boolean ``default``, URLs under their release."""
+    errors = []
+    for name, section in pins.get("optional", {}).items():
+        if not isinstance(section, dict):
+            continue
+        version = str(section.get("version", ""))
+        if not version:
+            errors.append(f"[optional.{name}] has no version")
+        if "default" in section and not isinstance(section["default"], bool):
+            errors.append(f"[optional.{name}] default must be true or false")
+        release = section.get("release")
+        if release is None:
+            continue
+        for platform, entry in section.get("assets", {}).items():
+            url = str(entry.get("url", ""))
+            if f"/{release}/" not in url or version not in url.rsplit("/", 1)[-1]:
+                errors.append(
+                    f"[optional.{name}.assets.{platform}] is not release {release}, {version}"
+                )
     return errors
 
 

@@ -76,6 +76,7 @@ from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppC
 from opncafyr.core.support_api import mount_support_api
 from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
 from opncafyr.core.workspace_api import Picker, mount_workspace_api
+from opncafyr.core.workspace_lease import WorkspaceLease
 from opncafyr.paths import logs_dir, state_dir
 
 log = logging.getLogger(__name__)
@@ -151,6 +152,7 @@ def build_supervisor(tools: dict[str, ToolDescriptor], runtime: Runtime) -> Supe
             adapter=adapter,
             route=tools[tool_id].web_route or f"/apps/{tool_id}/",
             max_body_bytes=tools[tool_id].max_body_bytes or DEFAULT_MAX_BODY_BYTES,
+            guard_mutations=tools[tool_id].guard_mutations,
         )
         for tool_id, adapter in adapters.items()
     }
@@ -209,6 +211,9 @@ def create_app(
         # Opening a workspace (/api/workspace/open) runs the job sweep.
         manager = jobs if jobs is not None else JobManager(runtime=rt)
         app.state.jobs = manager
+        lease = WorkspaceLease()
+        app.state.workspace_lease = lease
+        manager.lease = lease
         app.state.workspace = None
         store = settings if settings is not None else Settings(state_dir() / SETTINGS_FILE)
         app.state.settings = store
@@ -449,6 +454,7 @@ def create_app(
                             "title": v.title,
                             "icon": v.icon,
                             "summary": v.summary,
+                            "requires_workspace": v.requires_workspace,
                             "module": f"static/workflows/{pack.id}/{v.module}",
                         }
                         for v in pack.views

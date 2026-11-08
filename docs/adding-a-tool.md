@@ -144,6 +144,15 @@ rewriting anything, so the child itself has to serve under that base path.
 frameworks that need them (Shiny, Streamlit, Dash, Bokeh server) don't work behind it yet.
 A proxied request may take up to 300 seconds.
 
+**A web app that changes workspace files** (rather than writing through jobs) sets
+`guard_mutations: true` under `web_app`. Its POST/PUT/PATCH/DELETE requests are then
+refused with a 423 while a job runs or another tool has unsaved or busy work, and
+otherwise hold the workspace lease while they run. The 423 body has both
+`{"ok": false, "error": {code, title, message}}` and `{"detail": {code, message}}`, so
+the child's page can show it. If the child serves one workspace folder, put that folder in
+the session as `workspace_root`; the supervisor then stops it when the user opens
+another workspace. The gitneighbr adapter is the example.
+
 **A child app is trusted like launcher code.** Its pages share the launcher's origin, so
 a script on them can read the launcher's page and call any launcher API with the user's
 session. A child must therefore never serve data-derived HTML or script (column names,
@@ -398,7 +407,8 @@ Pages (`views`): each is an ES module served from `/static/workflows/<pack>/` th
 exports `init(container)`. Import `getJSON`, `post` and `send` from `../../js/api.js` so
 state-changing calls carry the session header (see `workflows/nca/web/common.js`). A
 view's `icon` must be one of the symbols the home page already has: `home`, `jobs`,
-`settings`, `folder`, `info`, `sun`, `doc` or `table`.
+`settings`, `folder`, `info`, `sun`, `doc` or `table`. A view with
+`requires_workspace=True` shows its link only while a study folder is open.
 
 Where outputs go: a tool's own results go in a top-level study folder the workflow names
 (like `report/` and `deck/`) or in a run under `.opncafyr/`. `OUTPUTS/` is reserved for

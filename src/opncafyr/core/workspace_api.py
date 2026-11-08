@@ -72,7 +72,14 @@ def mount_workspace_api(app: FastAPI, picker: Picker, recent: RecentWorkspaces) 
             swept = jobs.open(workspace.root)
         except JobManagerError as exc:
             raise _error(409, "jobs_active", str(exc)) from None
+        lease = getattr(app.state, "workspace_lease", None)
+        if lease is not None and lease.holder is not None:
+            raise _error(409, "workspace_busy", f"{lease.holder} is changing workspace files.")
         app.state.workspace = workspace
+        # A child serving the previous folder must not keep serving it (#56).
+        sup = getattr(app.state, "supervisor", None)
+        if sup is not None:
+            sup.stop_bound_elsewhere(workspace.root)
         recent.remember(workspace.root)
         return {
             "workspace": workspace.summary(),

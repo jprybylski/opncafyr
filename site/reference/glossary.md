@@ -92,6 +92,9 @@ Replay
 Run
 : One analyte's analysis: a frozen copy of that analyte's rows, your mapping and BLQ choices, the warnings you acknowledged, and later opnca-r's script and results. Its state is **Preparing**, **Running**, **Reviewing**, **Completed** or **Failed**. A run whose records are damaged shows as **Incomplete**.
 
+Snapshot
+: A copy of files you chose from a study folder, kept with Git by [version history]({{ '/guides/version-history/' | relative_url }}). It is optional and stays on your computer unless you send it. A snapshot is not a run, a publication or a build, and it never changes them.
+
 Source file
 : Your original data file, in the study folder or its `source-data` folder. The app reads it but never changes, moves or rewrites it.
 
@@ -109,6 +112,9 @@ Unit labels
 
 Verified bundle (offline bundle)
 : A folder or zip that holds every file the installer needs, for computers that can't download them. The installer checks every file against the fingerprints built into it and refuses a missing or changed file. See [Offline install]({{ '/guides/offline-install/' | relative_url }}).
+
+Version history
+: The optional page that keeps snapshots of files you choose, and can send them to a shared copy when you turn sending on for a session. See [Version history]({{ '/guides/version-history/' | relative_url }}).
 
 Warning
 : A check result that may be fine for your data but that you must look at and acknowledge before the run can start, for example a concentration of 0 with no BLQ flag.

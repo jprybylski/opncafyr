@@ -1,8 +1,10 @@
 """The offline bundle builder (#36, option 2): every pinned file for one platform, plus
-the installer, ready to carry across a firewall.
+the installer, ready to carry across a firewall. The pinned Git for version history (#56) is
+included by default and best effort: if it can't be fetched, the bundle is built without
+it (and says so), and installs from it go on without version history.
 
     install.sh bundle --platform windows-x86_64 --out <dir> [--archive] [--mirror mirror.toml]
-                      [--assets <dir>] [--with-libreoffice]
+                      [--assets <dir>] [--with-libreoffice] [--without-git]
     opncafyr bundle   (the same, from an installed launcher)
 
 It runs on any connected machine, for any supported platform, and fetches every file from
@@ -125,6 +127,7 @@ def build(
     *,
     say: Say,
     with_libreoffice: bool = False,
+    with_git: bool = True,
     with_source_build: bool = False,
     assets_dirs: list[Path] | None = None,
     rewrite: Callable[[str], str] | None = None,
@@ -137,7 +140,9 @@ def build(
     if platform not in SUPPORTED:
         raise InstallError(f"Unknown platform {platform}; use one of {', '.join(SUPPORTED)}")
     pins = Pins.load(payload.runtime)
-    assets = pins.assets(platform, libreoffice=with_libreoffice, source_build=with_source_build)
+    assets = pins.assets(
+        platform, libreoffice=with_libreoffice, git=with_git, source_build=with_source_build
+    )
     cache = Cache(cache_dir or Layout.default().downloads)
     local = [LocalSource(d, cache) for d in (assets_dirs or [])]
     out.mkdir(parents=True, exist_ok=True)
@@ -150,7 +155,13 @@ def build(
         user_agent=f"opncafyr-bundle/{payload.version}",
     )
     say(f"collecting {len(assets)} pinned files for {platform}")
-    files = resolve(assets, cache=cache, local=local, download=download, progress=say)
+    skipped: dict[str, str] = {}
+    files = resolve(
+        assets, cache=cache, local=local, download=download, progress=say, skipped=skipped
+    )
+    for component, problem in sorted(skipped.items()):
+        say(f"warning: leaving out the optional {component}, which could not be fetched: {problem}")
+    assets = [a for a in assets if not (a.best_effort and a.component in skipped)]
 
     dest = out / bundle_name(payload.version, platform)
     tmp = dest.with_name(dest.name + ".partial")

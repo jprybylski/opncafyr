@@ -173,3 +173,40 @@ def test_wheels_toml_must_pin_the_deckifyr_wheel(tree):
 
 def test_wheels_toml_is_current():
     assert verify_pins._check_wheels_current() == []
+
+
+def test_git_is_pinned_and_hashed_for_every_platform():
+    errors, assets = _check(ROOT)
+    assert errors == []
+    pins = tomllib.loads((ROOT / "runtime/pins.toml").read_text("utf-8"))
+    # --network hashes every asset in this list, Git's too (#56).
+    hashed = {a.label for a in assets if a.section == "optional.git"}
+    assert hashed == set(pins["platforms"]["supported"])
+
+
+def test_optional_git_must_stay_on_its_release(tree):
+    _edit(
+        tree,
+        "runtime/pins.toml",
+        "releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-macOS-x64",
+        "releases/download/v2.55.0-1/dugite-native-v2.56.0-a44aeca-macOS-x64",
+    )
+    errors, _ = _check(tree)
+    assert "[optional.git.assets.macos-x86_64] is not release v2.56.0-2, 2.56.0" in errors
+
+
+def test_optional_default_must_be_a_boolean(tree):
+    _edit(tree, "runtime/pins.toml", "default = true\n", 'default = "yes"\n')
+    errors, _ = _check(tree)
+    assert "[optional.git] default must be true or false" in errors
+
+
+def test_optional_git_needs_every_platform(tree):
+    _edit(
+        tree,
+        "runtime/pins.toml",
+        "[optional.git.assets.windows-x86_64]",
+        "[optional.git.assets.windows-arm64]",
+    )
+    errors, _ = _check(tree)
+    assert "[optional.git] has no asset for windows-x86_64" in errors

@@ -69,7 +69,11 @@
       "properties": {
         "route": {"type": "string", "pattern": "^/apps/[a-z][a-z0-9_-]*/$"},
         "readiness": {"type": "string", "pattern": "^/"},
-        "max_body_bytes": {"type": "integer", "minimum": 1}
+        "max_body_bytes": {"type": "integer", "minimum": 1},
+        "guard_mutations": {
+          "type": "boolean",
+          "description": "The app changes workspace files directly (#56). Each state-changing request it gets is refused while jobs run or other tools have unsaved or busy work, and otherwise holds the workspace lease while it runs. Optional; default false."
+        }
       }
     },
     "jobs": {

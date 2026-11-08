@@ -13,6 +13,7 @@ import uuid
 import webbrowser
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from opncafyr import __version__
 from opncafyr.core.bootstrap import mint_open_token, open_url, tokens_dir
@@ -27,7 +28,11 @@ from opncafyr.core.lifecycle import (
 )
 from opncafyr.paths import app_root, logs_dir, state_dir
 
+if TYPE_CHECKING:
+    from opncafyr.core.runtime import Runtime
+
 LOOPBACK = "127.0.0.1"
+GIT_VERSION_TIMEOUT = 30  # seconds, for `doctor`'s `git --version`
 _SAVED = object()  # --idle-timeout not given: use the saved setting
 
 
@@ -211,6 +216,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         print(exc, file=sys.stderr)
         return 1
     print(f"runtime  {runtime.source or 'none installed'}")
+    print(f"git      {_trusted_git(runtime)}")
     health = ToolHealth(tools, runtime)
     health.check_all()
     for tool_id in tools:
@@ -219,6 +225,33 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         for req in status.missing:
             print(f"     {'':<10} {req.message}")
     return 0
+
+
+def _trusted_git(runtime: Runtime) -> str:
+    """The pinned Git from the runtime record (#56), and the version it reports.
+
+    Only this Git is trusted for version history; a ``git`` on ``PATH`` never is.
+    """
+    from opncafyr.core.proctree import DEVNULL, PIPE, TimeoutExpired, child_env, spawn
+    from opncafyr.installer.steps.git import EXECUTABLE, exec_path
+
+    if not runtime.has(EXECUTABLE):
+        return "not installed (version history unavailable)"
+    git = runtime.executable(EXECUTABLE)
+    argv = [git, f"--exec-path={exec_path(git)}", "--version"]
+    env = child_env({"GIT_CONFIG_NOSYSTEM": "1"})
+    try:
+        proc = spawn(argv, env=env, cwd=git.parent, stdout=PIPE, stderr=DEVNULL)
+    except OSError as exc:
+        return f"{git} (does not start: {type(exc).__name__})"
+    try:
+        out, _ = proc.popen.communicate(timeout=GIT_VERSION_TIMEOUT)
+    except TimeoutExpired:
+        proc.kill_tree()
+        return f"{git} (no answer within {GIT_VERSION_TIMEOUT} s)"
+    if proc.popen.returncode != 0:
+        return f"{git} (exit code {proc.popen.returncode})"
+    return f"{git} ({out.decode(errors='replace').strip()[:80]})"
 
 
 def _support_bundle(args: argparse.Namespace) -> int:

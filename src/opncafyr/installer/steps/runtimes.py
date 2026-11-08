@@ -82,8 +82,9 @@ def runtime_record(ctx: Context) -> None:
         "deckifyr_python": venv_python(ctx.dir / "tools"),
         "quarto": ctx.executables["quarto"],
     }
-    if "soffice" in ctx.executables:
-        names["soffice"] = ctx.executables["soffice"]
+    for optional in ("soffice", "git"):  # only when installed (LibreOffice #8, Git #56)
+        if optional in ctx.executables:
+            names[optional] = ctx.executables[optional]
     doc = {
         "schema_version": 1,
         "executables": {k: str(v) for k, v in names.items()},

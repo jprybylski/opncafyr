@@ -44,6 +44,15 @@
       "properties": {"app_root": {"type": "string"}, "version_dir": {"type": "string"}, "r_dir": {"type": "string"}}
     },
     "components": {"type": "array", "items": {"type": "object", "required": ["name", "version", "files"]}},
+    "optional": {
+      "type": "array",
+      "description": "Best-effort optional components (Git, #56): installed, failed or skipped, with the reason. Optional: earlier reports lack it.",
+      "items": {
+        "type": "object",
+        "required": ["name", "status", "detail"],
+        "properties": {"status": {"enum": ["installed", "failed", "skipped"]}}
+      }
+    },
     "smoke": {
       "type": "array",
       "items": {

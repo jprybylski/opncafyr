@@ -58,7 +58,7 @@ The command keeps running while the app is open. It stops when you select **Quit
 ## Step 2. Find your way around
 
 <figure class="shot">
-  <img src="{{ '/assets/screenshots/01-home.png' | relative_url }}" width="1280" height="1296" loading="lazy"
+  <img src="{{ '/assets/screenshots/01-home.png' | relative_url }}" width="1280" height="1183" loading="lazy"
        alt="The Home page with a study folder open. The left side lists Home, Data, Jobs, Analysis, Publish, Settings and Guide, and under Apps, deckifyr and opnca-r. The main area shows the study folder card, then the Tools, Activity, Recent runs and Publications cards.">
   <figcaption>The Home page, with a study folder open.</figcaption>
 </figure>

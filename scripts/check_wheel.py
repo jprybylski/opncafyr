@@ -22,6 +22,7 @@ REQUIRED = (
     "opncafyr/adapters/opnca/descriptor.yaml",
     "opncafyr/adapters/deckifyr/descriptor.yaml",
     "opncafyr/adapters/quartifyr/descriptor.yaml",
+    "opncafyr/adapters/gitneighbr/descriptor.yaml",
     "opncafyr/web/static/index.html",
     "opncafyr/web/guide/index.md",  # the user guide (#40)
     "opncafyr/installer/assets/opncafyr.icns",  # the app icons (#54)

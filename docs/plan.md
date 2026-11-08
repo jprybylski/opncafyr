@@ -193,6 +193,7 @@ scheduled first.
 | opnca-r from prebuilt binaries; vendored source tarball only as a repair/exception fallback (option C) | **Accepted** (owner, 2026-11-06) | [ADR 0004](decisions/0004-opnca-r-binaries-with-vendored-fallback.md), #4 |
 | LibreOffice: optional verified per-user download for deckifyr previews (optional in offline bundles); quartifyr field recalculation off until quartifyr#84/#86 | From spike #8 (2026-11-06) | [spikes/libreoffice.md](spikes/libreoffice.md), #8 |
 | Home UI: static HTML + vanilla JS ES modules, no build step, no third-party runtime JS; axe check in CI | **Accepted** (owner, 2026-11-05) | [ADR 0006](decisions/0006-home-ui-stack.md), #18; shell build #49 |
+| Optional Git version history: gitneighbr managed mode as an adapter; pinned dugite-native Git, locked down; local snapshots by default, sending per session with a full preview; `guard_mutations` workspace lease in core | **Accepted** (owner, 2026-11-08); default ignore suggestions and review labels proposed | [ADR 0008](decisions/0008-git-version-history.md), #56 |
 | Cloud container mode in v1: supported environments, Docker vs Podman, storage types | Open | #42, #1 |
 | Redistributing image archives: audience, opncafyr license, GPL source obligations, PPM binaries | Open (needs legal) | #43 |
 
@@ -283,3 +284,4 @@ under `core/`, and left out of release wheels.
 | #40 | User guide with research-use notice | #32, #33 | — |
 | #41 | "Adding a tool" guide plus a toy second adapter that proves the core is tool-agnostic | #13, #15, #12 | — |
 | #43 | Attach offline Docker image archives to each release (pending a redistribution/licensing review) | #42 | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23) |
+| #56 | Optional Git version history through a managed gitneighbr adapter (post-core convenience; never blocks analysis or publishing) | #13–#17, #36, #44 | [gitneighbr#35–#44](upstream.md#jprybylskigitneighbr-public) |

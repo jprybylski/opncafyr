@@ -133,6 +133,16 @@ and the API carry text written for a person.
    Host, cross-site requests and a missing token, so their ports are safe even though
    the browser can reach them directly. Child pages share the launcher's origin by
    design, so a child's own scripts are trusted like ours.
+
+   A child that changes workspace files itself declares `web_app.guard_mutations`
+   (#56; today gitneighbr, ADR 0008). The proxy then refuses its state-changing
+   requests (423, `core/proxy.py` `mutation_refusal`) while a job runs, while another
+   child reports unsaved or busy work, or while a page holds unsaved editor text.
+   Otherwise the request holds the workspace lease (`core/workspace_lease.py`) until
+   its reply has been sent, and jobs and project-file saves refuse to start
+   meanwhile. A child started with a `workspace_root` session key serves that folder
+   only, and `core/workspace_api.py` stops it when another workspace opens
+   (`Supervisor.stop_bound_elsewhere`).
 3. **Controller ↔ workspace.** Every path goes through `core/workspace.resolve_in_root`.
    Workspace files hold data and options only. The project-file editor (#52) writes only
    files its tool's adapter lists, never through a link, outside `OUTPUTS/` and hidden

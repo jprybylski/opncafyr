@@ -36,6 +36,7 @@ from starlette.responses import StreamingResponse
 from opncafyr.core.supervisor import Child, ChildState, LaunchError, Supervisor
 
 METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 CONTROL_SEGMENT = "_opncafyr"  # can't be a tool id: ids start with a letter
 
 HOP_BY_HOP = frozenset(
@@ -151,6 +152,49 @@ def unavailable_page(sup: Supervisor, tool: str, detail: str | None = None) -> H
     return _page(502, f"{tool} is not responding", form)
 
 
+def busy_reply(code: str, message: str) -> JSONResponse:
+    """A 423 for a guarded request. Tool-agnostic JSON: ``ok``/``error`` for apps that use
+    an envelope, ``detail`` for the rest."""
+    body = {
+        "ok": False,
+        "data": None,
+        "error": {"code": code, "title": "Workspace busy", "message": message, "recoverable": True},
+        "detail": {"code": code, "message": message},
+    }
+    return JSONResponse(body, status_code=423, headers={"cache-control": "no-store"})
+
+
+def mutation_refusal(app: FastAPI, tool: str) -> JSONResponse | None:
+    """Take the workspace lease for one state-changing request to ``tool``, or say why not.
+
+    Refused while a job runs, while another tool's child reports unsaved or busy work, or
+    while a page holds unsaved editor text for another tool (#56). Runs in a worker thread:
+    the activity probes are HTTP calls.
+    """
+    lease = getattr(app.state, "workspace_lease", None)
+    jobs = getattr(app.state, "jobs", None)
+    if jobs is not None and jobs.active():
+        return busy_reply(
+            "jobs_active", "A job is running in this workspace. Try again when it finishes."
+        )
+    life = getattr(app.state, "lifecycle", None)
+    if life is not None and any(t != tool for t in life.unsaved_tools()):
+        return busy_reply(
+            "editor_unsaved", "Another editor has unsaved changes. Save or discard them first."
+        )
+    sup: Supervisor = app.state.supervisor
+    for other, activity in sup.activity().items():
+        if other != tool and (activity.unsaved or activity.busy):
+            return busy_reply(
+                "tool_busy", f"{other} has unsaved or running work. Finish it there first."
+            )
+    if lease is not None and not lease.acquire(tool):
+        return busy_reply(
+            "workspace_busy", f"{lease.holder} is changing workspace files. Try again."
+        )
+    return None
+
+
 def mount_proxy(app: FastAPI) -> None:
     """Add the ``/apps/...`` routes. ``app.state.supervisor`` and ``.proxy_client`` are set
     by the lifespan."""
@@ -201,6 +245,17 @@ def mount_proxy(app: FastAPI) -> None:
                     raise BodyTooLarge
                 yield chunk
 
+        guarded = child.guard_mutations and request.method not in SAFE_METHODS
+        if guarded:
+            refusal = await anyio.to_thread.run_sync(mutation_refusal, request.app, tool)
+            if refusal is not None:
+                return refusal
+        lease = getattr(request.app.state, "workspace_lease", None)
+
+        def release() -> None:
+            if guarded and lease is not None:
+                lease.release(tool)
+
         url = child.context.origin + request.url.path
         if request.url.query:
             url += "?" + request.url.query
@@ -214,15 +269,28 @@ def mount_proxy(app: FastAPI) -> None:
         try:
             response = await client.send(upstream, stream=True)
         except BodyTooLarge:
+            release()
             return JSONResponse({"detail": "Request body too large."}, status_code=413)
         except httpx.HTTPError as exc:
+            release()
             if isinstance(exc.__cause__, BodyTooLarge) or isinstance(exc.__context__, BodyTooLarge):
                 return JSONResponse({"detail": "Request body too large."}, status_code=413)
             return unavailable_page(sup, tool, "The app did not answer.")
+        except BaseException:
+            release()
+            raise
+
+        async def finish() -> None:
+            # The lease lasts until the reply has been sent: the child's change is done.
+            try:
+                await response.aclose()
+            finally:
+                release()
+
         streamed = StreamingResponse(
             response.aiter_raw(),
             status_code=response.status_code,
-            background=BackgroundTask(response.aclose),
+            background=BackgroundTask(finish),
         )
         # Raw headers keep repeated ones (Vary, Link, ...); we add only the frame policy.
         streamed.raw_headers = [
