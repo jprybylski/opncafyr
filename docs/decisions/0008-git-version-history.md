@@ -1,8 +1,7 @@
 # 0008. Optional Git version history through a managed gitneighbr
 
-- Status: accepted (owner, 2026-11-08) for the Git source, the scope, the upstream route
-  and the default ignore suggestions. The review labels below are **proposed** until the
-  owner confirms them.
+- Status: accepted (owner, 2026-11-08): the Git source, the scope, the upstream route,
+  the default ignore suggestions and the review labels.
 - Date: 2026-11-08
 - Issue: #56
 - Upstream: [gitneighbr#35–#44](../upstream.md#jprybylskigitneighbr-public), released in gitneighbr 0.2.0; 0.2.1 is pinned
@@ -101,7 +100,8 @@ and its feature policy was enforced only in the page.
      `.opncafyr/publications/`, `report/builds/`, `deck/builds/`, `workspace.json`, jobs
      and backups. Committing a copy of them is allowed. Updating can never replace a
      completed run or a build.
-   - **Review label "May identify subjects"** (proposed): source data, cleaned data and
+   - **Review label "May identify subjects"** (owner, 2026-11-08: anything that may contain
+     identifying data): source data, cleaned data and
      checks, runs, `OUTPUTS/`, report and deck builds. Sending them needs the extra
      confirmation. Nothing is called "safe".
    - **Send-blocked:** none by default.
