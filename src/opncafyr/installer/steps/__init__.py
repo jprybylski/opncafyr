@@ -1,7 +1,9 @@
 """Staging steps. Each takes the ``Context`` and installs one part into ``versions/<id>``.
 
 The order is fixed (``STEPS``); each step adds what it installed to
-``ctx.components`` and the executables it provides to ``ctx.executables``.
+``ctx.components`` and the executables it provides to ``ctx.executables``. A best-effort
+optional component (Git, #56) also reports its outcome in ``ctx.optional``; its step
+never fails the install.
 """
 
 from __future__ import annotations
@@ -34,10 +36,13 @@ class Context:
     offline: bool
     say: Callable[[str], None]
     with_libreoffice: bool = False
+    with_git: bool = True  # #56: the pinned portable Git, best effort
     build_from_source: bool = False  # #34: opnca-r from its vendored source
     executables: dict[str, Path] = field(default_factory=dict)
     components: dict[str, dict[str, Any]] = field(default_factory=dict)
     paths: dict[str, Path] = field(default_factory=dict)
+    # Best-effort optional components: name -> {"status", "detail"} (install record).
+    optional: dict[str, dict[str, str]] = field(default_factory=dict)
 
     @property
     def dir(self) -> Path:
@@ -82,6 +87,10 @@ class Context:
     def log(self, step: str) -> Path:
         return self.log_dir / f"{step}.log"
 
+    def report_optional(self, name: str, status: str, detail: str) -> None:
+        """Record a best-effort component's outcome: installed, failed or skipped."""
+        self.optional[name] = {"status": status, "detail": detail}
+
     def record(self, name: str, version: str, assets: list[Asset], **extra: Any) -> None:
         self.components[name] = {
             "version": version,
@@ -98,7 +107,7 @@ def venv_python(venv: Path, *, windowed: bool = False) -> Path:
 
 def steps() -> list[tuple[str, Callable[[Context], None]]]:
     """The staging steps in order: (name, function)."""
-    from opncafyr.installer.steps import libreoffice, r, runtimes, venvs
+    from opncafyr.installer.steps import git, libreoffice, r, runtimes, venvs
 
     return [
         ("python", runtimes.python),
@@ -110,6 +119,7 @@ def steps() -> list[tuple[str, Callable[[Context], None]]]:
         ("r_library", r.install_library),
         ("quarto", runtimes.quarto),
         ("libreoffice", libreoffice.install),
+        ("git", git.install),
         ("runtime_record", runtimes.runtime_record),
         ("installer_copy", runtimes.installer_copy),
         ("quarantine", runtimes.clear_quarantine),

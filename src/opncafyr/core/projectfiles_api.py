@@ -73,14 +73,30 @@ def mount_project_files_api(app: FastAPI, service: ProjectFiles) -> None:
     def read(body: ReadBody, tool: str = tool_param) -> dict[str, Any]:
         return run(lambda: service.read(root(), tool, body.path))
 
+    def not_leased() -> None:
+        # A tool changing workspace files right now (core.workspace_lease) goes first.
+        lease = getattr(app.state, "workspace_lease", None)
+        if lease is not None and lease.holder is not None:
+            raise HTTPException(
+                423,
+                {
+                    "code": "workspace_busy",
+                    "message": f"{lease.holder} is changing workspace files. "
+                    "Save again in a moment.",
+                },
+            )
+
     @app.post("/api/tools/{tool}/project/save")
     def save(body: SaveBody, tool: str = tool_param) -> dict[str, Any]:
+        not_leased()
         return run(lambda: service.save(root(), tool, body.path, body.text, body.expected_sha256))
 
     @app.post("/api/tools/{tool}/project/settings")
     def settings(body: SettingsBody, tool: str = tool_param) -> dict[str, Any]:
+        not_leased()
         return run(lambda: service.save_settings(root(), tool, body.values, body.expected_sha256))
 
     @app.post("/api/tools/{tool}/project/create")
     def create(body: CreateBody, tool: str = tool_param) -> dict[str, Any]:
+        not_leased()
         return run(lambda: service.create(root(), tool, body.rule, body.name))

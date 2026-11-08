@@ -1,12 +1,12 @@
 """Installer command line, reached through ``install.sh`` / ``install.bat`` (``run_installer.py``).
 
-    install    [--from-bundle DIR|ZIP] [--assets DIR ...] [--with-libreoffice] [--dry-run]
-               [--cacert FILE] [--proxy URL]
+    install    [--from-bundle DIR|ZIP] [--assets DIR ...] [--with-libreoffice] [--without-git]
+               [--dry-run] [--cacert FILE] [--proxy URL]
     repair     same options as install, plus [--build-from-source]
     uninstall  [--force] [--dry-run]
     status
     bundle     --out DIR [--platform P] [--archive] [--mirror TOML] [--assets DIR ...]
-               [--with-libreoffice] [--with-source-build]
+               [--with-libreoffice] [--without-git] [--with-source-build]
 
 Exit status: 0 done (or nothing to do), 1 failed, 2 bad arguments.
 """
@@ -54,6 +54,12 @@ def _source_args(p: argparse.ArgumentParser) -> None:
         action="store_true",
         help="also install LibreOffice for deckifyr slide previews",
     )
+    p.add_argument(
+        "--without-git",
+        action="store_true",
+        help="leave out the pinned Git, so version history is unavailable (it is installed "
+        "by default; if it fails, the install goes on without it)",
+    )
     p.add_argument("--dry-run", action="store_true", help="check and report; change nothing")
     p.add_argument("--cacert", type=Path, help="CA bundle for HTTPS (corporate proxies)")
     p.add_argument("--proxy", help="HTTPS proxy URL (default: HTTPS_PROXY)")
@@ -98,6 +104,11 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--assets", type=Path, action="append", default=[], metavar="DIR")
     b.add_argument("--with-libreoffice", action="store_true", help="include LibreOffice")
     b.add_argument(
+        "--without-git",
+        action="store_true",
+        help="leave out the pinned Git for version history (included by default)",
+    )
+    b.add_argument(
         "--with-source-build",
         action="store_true",
         help="include what `repair --build-from-source` needs (vendored opnca-r, Rust, Rtools)",
@@ -121,6 +132,7 @@ def _bundle(args: argparse.Namespace, payload: payload_mod.Payload) -> int:
         args.out.resolve(),
         say=_say,
         with_libreoffice=args.with_libreoffice,
+        with_git=not args.without_git,
         with_source_build=args.with_source_build,
         assets_dirs=list(args.assets),
         rewrite=rewrite,
@@ -169,6 +181,7 @@ def main(argv: list[str] | None = None, *, payload_dir: Path | None = None) -> i
             assets=list(args.assets),
             mirror=args.mirror,
             with_libreoffice=args.with_libreoffice,
+            with_git=not args.without_git,
             dry_run=args.dry_run,
             cacert=args.cacert,
             proxy=args.proxy,

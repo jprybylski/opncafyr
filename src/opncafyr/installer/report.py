@@ -7,6 +7,7 @@ self-contained ``.html`` next to it. They record:
   inside the payload; no detached signature until #39);
 - OS, architecture and paths;
 - the version and SHA-256 of every installed component;
+- what happened to each best-effort optional component (Git, #56): installed, or why not;
 - the smoke-test results: an opnca-r calculation against known values, a Quarto DOCX
   render with an R chunk, a deckifyr build.
 
@@ -64,6 +65,7 @@ def build(
         },
         "paths": record["paths"],
         "components": record["components"],
+        "optional": record.get("optional", []),
         "smoke": record["smoke"],
         "result": "pass" if all(r["status"] == "ok" for r in record["smoke"]) else "fail",
     }
@@ -100,6 +102,15 @@ def render_html(report: dict[str, Any]) -> str:
                 comps.append([c["name"], c["version"], f["file"], f["sha256"]])
         else:
             comps.append([c["name"], c["version"], f"{len(files)} files", "see the JSON report"])
+    optional = ""
+    if report.get("optional"):
+        rows = _rows([[o["name"], o["status"], o["detail"]] for o in report["optional"]])
+        optional = (
+            "<h2>Optional components</h2>\n"
+            "<p>Installed by default when possible; without one, everything else still works."
+            "</p>\n<table><tr><th>Component</th><th>Status</th><th>Detail</th></tr>"
+            f"{rows}</table>\n"
+        )
     bundle = report["bundle"]
     facts = [
         ["Result", report["result"]],
@@ -132,7 +143,7 @@ td:last-child {{ word-break: break-all; }}
 <table><tr><th>Check</th><th>Status</th><th>Time</th><th>Detail</th></tr>{smoke}</table>
 <h2>Components</h2>
 <table><tr><th>Component</th><th>Version</th><th>File</th><th>SHA-256</th></tr>{_rows(comps)}</table>
-</body></html>
+{optional}</body></html>
 """
 
 

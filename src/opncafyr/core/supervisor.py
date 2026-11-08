@@ -73,6 +73,7 @@ class WebAppConfig:
     adapter: WebAppAdapter
     route: str  # "/apps/<tool>/"
     max_body_bytes: int = DEFAULT_MAX_BODY_BYTES
+    guard_mutations: bool = False  # see core.workspace_lease
 
 
 @dataclass
@@ -83,6 +84,7 @@ class Child:
     proc: OwnedProcess
     log_path: Path
     max_body_bytes: int
+    guard_mutations: bool = False
     state: ChildState = ChildState.STARTING
     ready_line: str | None = None
     exit_code: int | None = None
@@ -148,6 +150,10 @@ class Supervisor:
 
     def can_restart(self, tool: str) -> bool:
         return tool in self._sessions
+
+    def session(self, tool: str) -> dict[str, Any]:
+        """A copy of the session the tool was last started with (empty if none)."""
+        return dict(self._sessions.get(tool, {}))
 
     def activity(self) -> dict[str, ChildActivity]:
         """Unsaved/busy state of each running child whose adapter can report it.
@@ -227,6 +233,25 @@ class Supervisor:
             self._teardown(child, known)
             child.state = ChildState.STOPPED
 
+    def stop_bound_elsewhere(self, workspace_root: Path | None) -> list[str]:
+        """Stop children started for another workspace.
+
+        A child whose launch session names a ``workspace_root`` serves that folder only;
+        when a different workspace opens (or none is), it is stopped.
+        """
+        stopped = []
+        for tool, session in list(self._sessions.items()):
+            bound = session.get("workspace_root")
+            if bound is None:
+                continue
+            if workspace_root is not None and Path(bound) == Path(workspace_root):
+                continue
+            if self.state(tool) in (ChildState.RUNNING, ChildState.STARTING, ChildState.CRASHED):
+                self.stop(tool)
+            self._sessions.pop(tool, None)
+            stopped.append(tool)
+        return stopped
+
     def stop_all(self) -> None:
         for tool in list(self._children):
             self.stop(tool)
@@ -270,6 +295,7 @@ class Supervisor:
             proc=proc,
             log_path=log_path,
             max_body_bytes=app.max_body_bytes,
+            guard_mutations=app.guard_mutations,
             extra_tmp=extra_tmp,
         )
         reader = threading.Thread(

@@ -47,6 +47,7 @@ class Controller:
                 adapter=adapter,
                 route=tools[tool].web_route or f"/apps/{tool}/",
                 max_body_bytes=tools[tool].max_body_bytes or DEFAULT_MAX_BODY_BYTES,
+                guard_mutations=tools[tool].guard_mutations,
             )
             for tool, adapter in load_web_adapters(tools).items()
         }
@@ -59,6 +60,7 @@ class Controller:
         )
         self.tokens = self.root / "state" / "open-tokens"
         app = create_app(self.security, supervisor=self.supervisor, open_tokens=self.tokens)
+        self.app = app
         self._server = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
         self._thread = threading.Thread(
             target=self._server.run, kwargs={"sockets": [sock]}, daemon=True

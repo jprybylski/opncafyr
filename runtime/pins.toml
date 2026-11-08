@@ -9,6 +9,8 @@
 # - Runtimes: [<name>.assets.<platform>] with url + sha256 for every platform in
 #   [platforms].supported, unless the section lists `platforms`.
 # - Release packages: release_url + [packages.<name>.assets] file name -> sha256.
+# - Optional components: [optional.<name>], installed only on request, or by default with
+#   `default = true` (then a failure leaves the component out instead of failing).
 # - Nothing names a moving ref (main, latest, HEAD); r-universe is never used.
 
 schema_version = 1
@@ -351,3 +353,33 @@ sha256 = "d6d1648a28b9b99020639ce707a13180691cd5352f98d7948202da767e964838"
 [optional.libreoffice.assets.windows-x86_64]
 url = "https://downloadarchive.documentfoundation.org/libreoffice/old/26.2.7.1/win/x86_64/LibreOffice_26.2.7.1_Win_x86-64.msi"
 sha256 = "82edb4c85605bf38420f461596c5e4eb625afbe6557bd6c7bfa2c470b430a8c7"
+
+[optional.git]
+# Git for the optional version history (#56, gitneighbr adapter). The tools use this
+# pinned, app-owned Git only, never one found on PATH. Installed by default, but optional:
+# if it can't be fetched or unpacked the install still succeeds, the install record and
+# report say so, and version history is unavailable (`--without-git` leaves it out).
+# Source: GitHub Desktop's dugite-native: a portable Git build for every supported
+# platform, a plain .tar.gz that unpacks per user with no installer or admin rights, from
+# one source for both OSes (git-scm.com has no portable macOS build). The macOS build is not
+# relocatable on its own (compiled exec path `/`): callers pass
+# `--exec-path=<root>/libexec/git-core` (macOS) or `<root>/ucrt64/libexec/git-core`
+# (Windows). Git is GPL-2.0-only; dugite-native's packaging is MIT, and the archives
+# bundle Git LFS and Git Credential Manager (MIT) and curl, OpenSSL and others.
+status = "optional"
+default = true
+version = "2.56.0"
+release = "v2.56.0-2"      # dugite-native release tag, published 2026-10-26
+license = "GPL-2.0-only AND MIT"
+
+[optional.git.assets.macos-arm64]
+url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-macOS-arm64.tar.gz"
+sha256 = "1110de343de11cc6f469b782b60f36217b9199b5e06875dd65baa26dd60563c7"
+
+[optional.git.assets.macos-x86_64]
+url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-macOS-x64.tar.gz"
+sha256 = "52cc663281e1ec2f1d76ba781193ca4847e62dbbf767f6c99ec9ec5b978a7659"
+
+[optional.git.assets.windows-x86_64]
+url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-windows-x64.tar.gz"
+sha256 = "f1e17876337d7be143e5d51976da36643d65528125cfbc14d57f171de0fd5f14"

@@ -158,6 +158,10 @@ class Lifecycle:
             self._expire(self._clock())
             return sorted({t for tools, _ in self._page_unsaved.values() for t in tools})
 
+    def unsaved_tools(self) -> list[str]:
+        """Every tool some page reports unsaved editor text for."""
+        return self._pages_unsaved()
+
     def page_unsaved(self, tool: str) -> bool:
         """True while some page reports unsaved editor text for ``tool``."""
         return tool in self._pages_unsaved()

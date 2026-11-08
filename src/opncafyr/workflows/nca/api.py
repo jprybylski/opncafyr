@@ -691,4 +691,8 @@ def mount(app: FastAPI) -> Context:
     from opncafyr.workflows.nca.publish import api as publish_api
 
     publish_api.mount(app, ctx)
+
+    from opncafyr.workflows.nca import history
+
+    history.mount(app)
     return ctx

@@ -65,6 +65,20 @@
         }
       }
     },
+    "optional": {
+      "type": "array",
+      "description": "Best-effort optional components installed by default (Git, #56) and what happened to each; a failed one leaves the install complete without it. Optional: earlier records lack it.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status", "detail"],
+        "properties": {
+          "name": {"type": "string"},
+          "status": {"enum": ["installed", "failed", "skipped"]},
+          "detail": {"type": "string"}
+        }
+      }
+    },
     "smoke": {
       "type": "array",
       "items": {

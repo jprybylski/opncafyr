@@ -1,8 +1,10 @@
 """Where pinned files come from: the download cache, local folders or bundles, or the web.
 
 ``resolve`` returns a verified local path for every asset, or raises ``MissingAssets``
-naming each component it couldn't satisfy. Every file is hashed against the pin before it
-is returned, wherever it came from; a bundle's own hash list is never consulted.
+naming each component it couldn't satisfy. A best-effort asset (an optional component
+installed by default, such as Git, #56) that can't be satisfied is reported in
+``skipped`` instead, when the caller passes it. Every file is hashed against the pin
+before it is returned, wherever it came from; a bundle's own hash list is never consulted.
 
 - ``Cache`` keeps verified downloads under ``<root>/cache/downloads/<sha256>/<file>``.
 - ``LocalSource`` reads a bundle folder or ``.zip`` (``assets/<component>/<file>``) or a
@@ -286,13 +288,20 @@ def resolve(
     local: Iterable[LocalSource] = (),
     download: DownloadSource | None = None,
     progress: Progress | None = None,
+    skipped: dict[str, str] | None = None,
 ) -> dict[str, Path]:
-    """A verified local file for every asset, keyed by ``Asset.path``."""
+    """A verified local file for every asset, keyed by ``Asset.path``.
+
+    With ``skipped``, a best-effort asset that can't be found or downloaded doesn't fail:
+    its component is added to ``skipped`` (component -> problem) and it has no entry.
+    """
     say = progress or (lambda _msg: None)
     found: dict[str, Path] = {}
     errors: list[AssetError] = []
     wanted: list[Asset] = []
     local = list(local)
+    assets = list(assets)
+    soft = {(a.component, a.file) for a in assets if a.best_effort and skipped is not None}
     for asset in assets:
         path = cache.get(asset)
         problem = None
@@ -320,8 +329,13 @@ def resolve(
                         say(f"downloaded {n}/{len(wanted)}")
                 except AssetError as exc:
                     errors.append(exc)
-    if errors:
-        raise MissingAssets(errors)
+    hard = [e for e in errors if (e.component, e.file) not in soft]
+    if hard:
+        raise MissingAssets(hard)
+    for e in errors:
+        if skipped is not None and (e.component, e.file) in soft:
+            problem = f"{e.file}: {e.problem}"
+            skipped[e.component] = "; ".join(filter(None, [skipped.get(e.component), problem]))
     return found
 
 

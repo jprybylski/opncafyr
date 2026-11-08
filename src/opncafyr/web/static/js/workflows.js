@@ -3,7 +3,7 @@
 // empty <div class="view">, and its module's init(container) is called once.
 
 import { getJSON } from "./api.js";
-import { el, icon } from "./dom.js";
+import { el, icon, on } from "./dom.js";
 import { registerView } from "./router.js";
 
 export async function initWorkflows() {
@@ -16,6 +16,18 @@ export async function initWorkflows() {
   const list = document.querySelector(".sidenav ul");
   const settings = list.querySelector('[data-view="settings"]')?.closest("li") || null;
   const main = document.getElementById("main");
+  // Links shown only while a study folder is open.
+  const needWorkspace = [];
+  const showWorkspaceLinks = async () => {
+    let open = false;
+    try {
+      open = Boolean((await getJSON("api/workspace")).workspace);
+    } catch (e) {
+      open = false;
+    }
+    for (const item of needWorkspace) item.hidden = !open;
+  };
+  on("workspace-changed", showWorkspaceLinks);
   for (const pack of data.workflows || []) {
     for (const view of pack.views || []) {
       const link = el("a", null, "nav-link");
@@ -26,6 +38,10 @@ export async function initWorkflows() {
       const item = el("li");
       item.append(link);
       list.insertBefore(item, settings);
+      if (view.requires_workspace) {
+        item.hidden = true;
+        needWorkspace.push(item);
+      }
 
       const container = el("div", null, "view");
       container.id = `view-${view.id}`;
@@ -41,4 +57,5 @@ export async function initWorkflows() {
       registerView(view.id);
     }
   }
+  if (needWorkspace.length) await showWorkspaceLinks();
 }

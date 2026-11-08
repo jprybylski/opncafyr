@@ -6,7 +6,8 @@ except for ``uv pip install`` of the deckifyr wheel's dependencies.
 
     uv run python tests/integration/proxy/prepare_runtime.py --out <dir> \\
         [--opnca-dir <dir with manifest.json and the selected binary>] \\
-        [--deckifyr-wheel <path>]
+        [--deckifyr-wheel <path>] \\
+        [--gitneighbr-tarball <gitneighbr_x.y.z.tar.gz> --git <path to git>]
 
 It prints the path of the ``runtime.json`` it writes. Point ``OPNCAFYR_RUNTIME_FILE``
 at it.
@@ -53,6 +54,21 @@ def install_opnca(opnca_dir: Path, out: Path, rscript: Path) -> Path:
     return lib
 
 
+def install_gitneighbr(tarball: Path, lib: Path, rscript: Path) -> None:
+    """gitneighbr's source tarball into ``lib`` (#56). Checked against its pin when one
+    exists; a development build (not yet released) is installed as given."""
+    pins = tomllib.loads(PINS.read_text("utf-8")).get("packages", {}).get("gitneighbr")
+    if pins is not None:
+        expected = pins.get("assets", {}).get(tarball.name)
+        if expected is None or release.sha256_file(tarball) != expected:
+            raise SystemExit(f"{tarball.name} does not match the pinned SHA-256")
+    lib.mkdir(parents=True, exist_ok=True)
+    r = rscript.with_name("R.exe" if os.name == "nt" else "R")
+    _run([str(r), "CMD", "INSTALL", "--no-test-load", f"--library={lib}", str(tarball)])
+    if not (lib / "gitneighbr" / "scripts" / "serve.R").is_file():
+        raise SystemExit("gitneighbr installed without scripts/serve.R")
+
+
 def install_deckifyr(wheel: Path, out: Path, python_version: str) -> Path:
     pins = tomllib.loads(PINS.read_text("utf-8"))["packages"]["deckifyr"]
     if wheel.name != pins["wheel"]:
@@ -74,6 +90,8 @@ def main() -> int:
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--opnca-dir", type=Path)
     parser.add_argument("--deckifyr-wheel", type=Path)
+    parser.add_argument("--gitneighbr-tarball", type=Path)
+    parser.add_argument("--git", type=Path, help="the Git gitneighbr runs (the pinned one in CI)")
     parser.add_argument("--rscript", type=Path, default=shutil.which("Rscript"))
     parser.add_argument("--python", default="3.13")
     args = parser.parse_args()
@@ -88,6 +106,15 @@ def main() -> int:
         rscript = Path(args.rscript).resolve()
         doc["r_library"] = str(install_opnca(args.opnca_dir.resolve(), out, rscript))
         executables["rscript"] = str(rscript)
+    if args.gitneighbr_tarball:
+        if args.rscript is None or args.git is None:
+            raise SystemExit("--gitneighbr-tarball needs Rscript and --git")
+        rscript = Path(args.rscript).resolve()
+        lib = Path(str(doc.get("r_library") or out / "rlib"))
+        install_gitneighbr(args.gitneighbr_tarball.resolve(), lib, rscript)
+        doc["r_library"] = str(lib)
+        executables["rscript"] = str(rscript)
+        executables["git"] = str(args.git.resolve())
     if args.deckifyr_wheel:
         python = install_deckifyr(args.deckifyr_wheel.resolve(), out, args.python)
         executables["deckifyr_python"] = str(python)
