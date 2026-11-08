@@ -124,6 +124,8 @@ STATUS = {
     "bad_state": 409,
     "run_not_open": 409,
     "run_saved": 409,
+    "run_outdated": 409,
+    "units_unresolved": 409,
     "input_changed": 409,
     "session_failed": 503,
     "replay_required": 409,

@@ -19,7 +19,7 @@ You clean data on the **Analysis** page, in cards **1. Source and recipe**, **2.
 - It never drops a row without a reason.
 - It never sets a below-the-limit (BLQ) or blank concentration to zero.
 - It never puts nominal time in place of actual time.
-- It never guesses units.
+- It never guesses units, and never converts them unless you add a **Convert units** step.
 - It never resolves duplicates by itself. You choose which row to keep.
 
 Derived values always go into a new column, so the original column is still there to compare.
@@ -46,7 +46,7 @@ Every value you type is matched exactly, including spaces and letter case.
 | **Join columns** | Joins columns into a new column, with a separator you choose. |
 | **Add a constant column** | Adds a new column with the same value on every row. |
 | **Derive elapsed time** | Works out time since dose from a sample date-time and a dose date-time, in the unit you choose. You also describe the time zones in words. |
-| **Convert units** | Converts values whose unit is exactly the text you give into another unit. |
+| **Convert units** | Converts values whose unit is exactly the text you give into another unit. This is the only way a value changes unit. |
 | **Make a TRUE/FALSE column** | Makes a new TRUE/FALSE column from the values of another column. You say what each value means. |
 | **Exclude rows (they stay, marked)** | Marks rows as excluded, with a reason. They stay in the data and opnca-r sees them as excluded. |
 | **Remove rows to the rejected-row log** | Takes rows out of the cleaned data, with a reason. They are listed in the rejected-row log. |
@@ -118,9 +118,16 @@ The app never guesses a unit. Under **Units** in **4. Column mapping**, say how 
 - **A unit column**: choose the column that holds the unit on each row, for example `PCSTRESU`. Its values are shown next to it.
 - **One unit for every row**: type the unit, for example `h`, `ng/mL` or `mg`.
 
-If a column name contains a unit, the app says, for example, "The header says ng/mL: confirm it above." You still have to choose. The app tidies spelling only (for example `ng/ml` becomes `ng/mL`).
+If a column name contains a unit, the app says, for example, "The header says ng/mL: confirm it above." You still have to choose. The app tidies spelling only (for example `ng/ml` becomes `ng/mL`, `µg/l` becomes `ug/L`, `mcg` becomes `ug` and `hr` becomes `h`). Blank cells in a unit column are skipped.
 
-Different units within one analyte, even equivalent ones such as `ng/mL` and `ug/L`, block the run until you add a **Convert units** step.
+Different units within one analyte, for time, concentration or dose, even equivalent ones such as `ng/mL` and `ug/L`, block the run until you add a **Convert units** step. So does a unit the app does not know.
+
+### Unit labels in opnca-r
+
+The units you confirm become the run's *unit labels*. When you select **Start analysis**, the app works out each label from the analyte's cleaned rows: the unit you typed, or the one unit its unit column holds. It passes them to opnca-r, whose **Data** view shows them under **Unit labels**, read-only and marked "set by the launcher". opnca-r uses them in its results, table headers (for example `cmax (ng/mL)`), chart axes, its record of the analysis and its `analysis.R` script. The run's `settings.json` and `manifest.json` record them too.
+
+{: .note }
+> Unit labels are words only. opnca-r never converts or rescales a value, and it does not check that the units fit together. A label never changes an estimate. Values change unit only through a **Convert units** step, which is recorded. A save labelled in other units than the run's is refused.
 
 ## Time
 
@@ -142,7 +149,7 @@ When a choice is unclear, the app asks rather than guessing:
 
 - **Column roles.** In **4. Column mapping**, the **Suggestion** column may say **Suggested: COLUMN (75%)**, with how sure the app is and why. Select **Use** to take it, or pick another column; a suggestion is never used until you pick it. When the app can't tell, for example because two columns fit equally well, it says **Your choice:** and lists the candidates.
 - **Flag values.** Every value of a BLQ, missing or exclusion flag needs **TRUE** or **FALSE**.
-- **Units.** Every unit must be declared, even when the header names one.
+- **Units.** Every unit must be declared, even when the header names one. A unit column must hold one known unit for the analyte.
 - **Routes.** If you map **Route**, the app shows each route value and how opnca-r reads it. A value opnca-r does not know shows as "Not recognised: add a “Replace values” step". The app never fills in a blank route.
 - **Analyte values.** Rows are matched on the exact text of the analyte code, so `"METAB "` (with a space) is not `"METAB"`. The app points out values that differ only by spaces or letter case; they stay separate analytes unless you clean them, for example with **Trim spaces**.
 - **Warnings.** Each warning needs its own tick in **I have reviewed this and want to go on**. Your acknowledgements are recorded with the run.
@@ -166,7 +173,7 @@ Select **Save mapping** to keep your choices. Anything that still blocks is list
 | route missing | The route is blank. | Remove the row, or replace the value, with a reason. |
 | route unrecognised | opnca-r does not know this route. | Add a **Replace values** step. |
 | route varies, dose varies | A profile has more than one route or dose. | One route and one dose per profile. |
-| units mixed, units undeclared | Units differ, or a unit is missing or unknown. | Add **Convert units**, or declare the unit. |
+| units mixed, units undeclared | Time, concentration or dose units differ, or a unit is missing or unknown. | Add **Convert units**, or declare the unit. |
 | duplicate key | Two or more rows share a subject and actual time. | Exclude or remove all but one, with a reason. |
 | blq and missing | A row is flagged both BLQ and missing. | A row is one or the other. |
 | flag value unmapped | A flag value has no TRUE or FALSE. | Say what it means in the mapping. |

@@ -1,4 +1,4 @@
-"""#16: opnca-r 0.2.9 behind /apps/opnca/, including the attacks from the upstream review."""
+"""#16: opnca-r 0.3.1 behind /apps/opnca/, including the attacks from the upstream review."""
 
 from __future__ import annotations
 
@@ -33,6 +33,8 @@ PRESET = {
     "blq_predose": "zero",
     "blq_postdose": "exclude",
     "blq_terminal": "exclude",
+    # No --mapping here, so the request declares the labels (--require-explicit-units).
+    "units": {"concentration": "ng/mL", "time": "h", "dose": "mg"},
 }
 
 

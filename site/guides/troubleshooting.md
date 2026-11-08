@@ -89,10 +89,11 @@ If the analyte you want shows no rows, check its exact text. `"METAB"` and `"MET
 - If the page says "opnca-r is not running", go back to **Analysis** and select **Open in opnca-r** again.
 - If opnca-r shows **Stopped unexpectedly**, select **Reload**, or open the run again from **Analysis**.
 - If the **Analysis** page shows an error after **Open in opnca-r**, read it, then check opnca-r's health on **Home**.
+- If it says the run "was prepared before the launcher passed its unit labels to opnca-r", the run was made by an older version of the app and can't be opened in opnca-r any more. Make a new run: set up cards **5. Analyte and checks** and **6. Start analysis** again and select **Start analysis**.
 
 ## A save or replay does not go through
 
-- If the **Analysis** page says the save failed, the run is **Failed**. Select **New run from this** to try again with the same choices.
+- If the **Analysis** page says the save failed, the run is **Failed**. Select **New run from this** to try again with the same choices. One reason is a save whose unit labels are not the run's: opnca-r labelled the results in other units.
 - If the page says the run "did not replay to the same results", it lists the differences. Select **Replay again**. If it still does not match, the run cannot be completed or published. Make a new run, and make a support bundle so someone can look into it.
 
 ## A report or deck fails to build

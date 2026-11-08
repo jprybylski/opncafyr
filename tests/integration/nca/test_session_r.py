@@ -68,7 +68,10 @@ def test_each_run_shows_only_its_analyte_and_its_own_mapping(env):
         assert api.get(f"/api/nca/runs/{run_id}").json()["run"]["state"] == "running"
         meta = api.get(API + "meta").json()["data"]
         config = meta["config"]
-        assert config["preset_mapping"] == preset
+        # opnca-r 0.3.1 keeps the preset's unit labels apart from its roles (opnca-r#56).
+        assert config["preset_mapping"] == {k: v for k, v in preset.items() if k != "units"}
+        assert config["units"] == preset["units"] and config["units_source"] == "preset"
+        assert config["require_explicit_units"] is True
         assert config["storage_namespace"] == run_id
         assert config["persist_mapping"] is False and config["guess_roles"] is False
         assert config["require_explicit_settings"] is True and config["lock_dataset"] is True
@@ -104,6 +107,17 @@ def test_a_saved_or_completed_run_is_not_reopened(env):
     (study / ".opncafyr" / "runs" / parent / "COMPLETE").write_text("{}", "utf-8")
     r = api.post(f"/api/nca/runs/{parent}/session")
     assert r.status_code == 409 and r.json()["detail"]["code"] == "run_saved"
+
+
+def test_a_run_prepared_without_unit_labels_is_not_opened(env):
+    api, study, parent, _ = env
+    path = study / ".opncafyr" / "runs" / parent / "input" / "opnca-mapping.json"
+    preset = json.loads(path.read_text("utf-8"))
+    del preset["units"]
+    path.chmod(0o644)
+    path.write_text(json.dumps(preset), "utf-8")
+    r = api.post(f"/api/nca/runs/{parent}/session")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "run_outdated"
 
 
 def test_opnca_ignores_conc_on_blq_rows(env, tmp_path):

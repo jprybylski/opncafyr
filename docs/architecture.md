@@ -292,9 +292,18 @@ writes the run in `.opncafyr/runs/.<run-id>.staging/` and renames it into place
   R's `read.csv` would rename, and subject IDs that R would merge as numbers, are refused.
 - `input/source-fingerprint.json` (path, size, SHA-256), `input/opnca-mapping.json` (the
   opnca-r preset: every role it knows, `""` for unmapped optional ones, the BLQ rules and
-  method the user chose), `settings.json` (`run-settings-v1`: analyte, specimen, mapping,
-  units, BLQ choices, acknowledged warnings, row accounting) and `manifest.json`
-  (`preparing`).
+  method the user chose, and the unit labels), `settings.json` (`run-settings-v1`:
+  analyte, specimen, mapping, units, BLQ choices, acknowledged warnings, row accounting)
+  and `manifest.json` (`preparing`).
+
+The unit labels (`analysis_units`, #57) are the units of the frozen rows:
+`units.analysis_labels` takes each role's declared unit, or the one unit its column holds
+across the selected rows, in the spelling table's form. A missing, unknown or mixed unit
+refuses the run (`units_unresolved`; the checks block it first). opnca-r 0.3.1 locks the
+preset's labels in its page and refuses a request with others (opnca-r#56). It uses them
+for every result, table, axis, `analysis.R` and `effective_settings.units`. Labels are
+metadata; nothing is converted. The manifest and settings record them next to the
+declared `units`.
 
 The input files and `settings.json` are read-only. Row accounting runs from the source
 through the recipe, the analyte and specimen filters to the snapshot; other analytes and
@@ -339,7 +348,7 @@ frame when the session changes (`app-restarted`).
 
 The user saves in opnca-r's Export view; its server writes `analysis.R`,
 `analysis-record.json`, `results/**`, `artifacts.json` and finally `COMPLETE` into the run
-folder (opnca-r 0.2.9, `--no-overwrite`). The launcher never reads a browser download: the
+folder (opnca-r 0.3.1, `--no-overwrite`). The launcher never reads a browser download: the
 Analysis page polls `POST /api/nca/runs/{id}/save-status` for open runs. When `COMPLETE`
 appears the session is stopped, then `adapters/opnca/export.py` checks the save: `COMPLETE`
 matches `artifacts.json`, every listed file re-hashes, `results/` holds nothing unlisted,
@@ -353,7 +362,10 @@ versions, the mean-profile choices when the save has the mean figures, and the
 exclusions. The launcher's exclusions are the snapshot's `NCA_EXCLUDED` rows; points
 excluded in the session are added to them (opnca-r#49, 0.2.9), carry no reason and add a
 warning. A save whose record no longer maps `excluded` to `NCA_EXCLUDED` while the run has
-launcher exclusions fails, because those rows would have been dropped. A failed save moves the run to `failed`; "New run
+launcher exclusions fails, because those rows would have been dropped. So does a save whose
+record's `effective_settings.units` are not the run's `analysis_units` with
+`units_source: "preset"` (#57); a run made before 0.3.1 has no labels, and opnca-r won't
+open it (`run_outdated`). A failed save moves the run to `failed`; "New run
 from this" starts again. `POST /api/nca/runs/{id}/complete` seals a reviewed run once its
 replay has passed (#29).
 
@@ -366,14 +378,16 @@ analysis.R` there, so nothing is written into the run while R runs; `analysis.R`
 the input's MD5 and writes `replay/`. The review compares every table of `results/` with
 `replay/` (`replay_compare.py`): same columns and rows in the same order; identifiers,
 labels, counts, flags and status equal as text; other numbers within a relative tolerance
-(default 1e-10, recorded). It writes `replay.json` (`replay-v1`, with a readable list of
+(default 1e-10, recorded). A table that opnca-r's `artifacts.json` (schema 2) marks
+`replay.reproduced: false`, such as the bioequivalence tables, is not compared. It is
+listed in `not_reproduced` with opnca-r's reason. It writes `replay.json` (`replay-v1`, with a readable list of
 differences) and the replayed tables to `runs/<id>/logs/replay-<n>/`. The job fails only
 if R fails; a difference is a finished replay with `status: failed`, kept with the run.
 
 The newest finished replay is recorded in the manifest's `replay`. Completing a run needs
 a passed replay, so every sealed run holds its own replay evidence, and only completed
 runs can be published. Against opnca-r's own `analysis/calculate` response the replay
-matches to the 4 decimal places that API writes numbers with.
+matches to 1e-10; since opnca-r 0.3.0 that API no longer rounds numbers.
 
 ## Publishing (#30, #31)
 

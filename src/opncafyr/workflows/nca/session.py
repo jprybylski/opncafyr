@@ -61,6 +61,12 @@ class Sessions:
         with data.open(newline="", encoding="utf-8") as fh:
             header = next(csv.reader(fh))
         preset = json.loads(preset_path.read_text("utf-8"))
+        if "units" not in preset:
+            raise SessionError(
+                "run_outdated",
+                f"Run {folder.name} was prepared before the launcher passed its unit labels "
+                "to opnca-r. Choose the analyte and Start analysis again to make a new run.",
+            )
         check_preset(preset, header)
         settings = json.loads((folder / "settings.json").read_text("utf-8"))
         analyte = settings["analyte"]

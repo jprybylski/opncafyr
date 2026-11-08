@@ -1,4 +1,4 @@
-"""Completed, sealed runs with an opnca-r 0.2.9-shaped save, without R (#31-#33)."""
+"""Completed, sealed runs with an opnca-r 0.3.1-shaped save, without R (#31-#33)."""
 
 from __future__ import annotations
 

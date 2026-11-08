@@ -23,6 +23,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from opncafyr.adapters.opnca import export
 from opncafyr.core import runs as runs_core
 from opncafyr.core.jobmanager import (
     JobContext,
@@ -34,7 +35,12 @@ from opncafyr.core.jobmanager import (
 from opncafyr.core.manifest import atomic_write_json
 from opncafyr.core.rscript import rscript_command
 from opncafyr.core.runtime import RuntimeUnavailable
-from opncafyr.workflows.nca.replay_compare import DEFAULT_RTOL, compare_folders, describe
+from opncafyr.workflows.nca.replay_compare import (
+    DEFAULT_RTOL,
+    compare_folders,
+    describe,
+    not_reproduced,
+)
 
 DEFAULT_TIMEOUT_S = 1800.0
 REPORT = "replay.json"
@@ -60,6 +66,19 @@ def _next_output(run: Path) -> str:
     }
     n = max(taken, default=0) + 1
     return f"{runs_core.RUNS_DIR}/{run.name}/logs/replay-{n}"
+
+
+def _not_reproduced(run: Path) -> dict[str, str]:
+    """The tables opnca-r's ``artifacts.json`` says ``analysis.R`` doesn't replay.
+
+    The save was checked against ``COMPLETE`` when it was accepted, so the listing is read
+    as is; if it can't be read, every table is compared.
+    """
+    try:
+        listing = json.loads((run / export.ARTIFACTS).read_text("utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return not_reproduced(listing) if isinstance(listing, dict) else {}
 
 
 def start(
@@ -88,7 +107,7 @@ def _request(
     def review(ctx: JobContext) -> ReviewResult:
         assert ctx.staging is not None  # noqa: S101 - output is always set
         replayed = ctx.cwd / "replay"
-        result = compare_folders(run / "results", replayed, rtol)
+        result = compare_folders(run / "results", replayed, rtol, _not_reproduced(run))
         (ctx.staging / "replay").mkdir()
         for table in sorted(replayed.glob("*.csv")) if replayed.is_dir() else []:
             shutil.copyfile(table, ctx.staging / "replay" / table.name)
@@ -100,6 +119,7 @@ def _request(
             "status": result["status"],
             "problem": result["problem"],
             "tables": result["tables"],
+            "not_reproduced": result["not_reproduced"],
             "differences": describe(result),
             "script_sha256": manifest["script"]["sha256"],
             "input_sha256": manifest["analysis_input"]["sha256"],

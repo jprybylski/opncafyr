@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from opncafyr.workflows.nca.replay_compare import compare_folders, compare_tables, describe
+from opncafyr.workflows.nca.replay_compare import (
+    compare_folders,
+    compare_tables,
+    describe,
+    not_reproduced,
+)
 
 HEADER = "profile_id,metric,value,unit,status,n_contributing\n"
 ROW = "TA-001,cmax,123.456789,ng/mL,ok,8\n"
@@ -92,3 +97,35 @@ def test_one_table(tmp_path):
     _write(tmp_path, "a.csv", HEADER + ROW)
     _write(tmp_path / "r", "a.csv", HEADER + ROW)
     assert compare_tables(tmp_path / "a.csv", tmp_path / "r" / "a.csv")["ok"] is True
+
+
+def test_tables_analysis_r_does_not_replay_are_listed_not_compared(tmp_path):
+    _write(tmp_path / "results", "opnca-parameters-long.csv", HEADER + ROW)
+    _write(tmp_path / "replay", "opnca-parameters-long.csv", HEADER + ROW)
+    _write(tmp_path / "results", "bioequivalence-summary.csv", "metric\ncmax\n")
+    listing = {
+        "schema_version": 2,
+        "artifacts": [
+            {"path": "results/opnca-parameters-long.csv", "replay": {"reproduced": True}},
+            {
+                "path": "results/bioequivalence-summary.csv",
+                "replay": {"reproduced": False, "reason": "not replayed"},
+            },
+            {"path": "results/tables/x.rds", "replay": {"reproduced": False, "reason": "rds"}},
+            {"path": "analysis.R"},
+        ],
+    }
+    skip = not_reproduced(listing)
+    assert skip == {"bioequivalence-summary.csv": "not replayed"}
+    report = compare_folders(tmp_path / "results", tmp_path / "replay", skip=skip)
+    assert report["status"] == "passed"
+    assert [t["file"] for t in report["tables"]] == ["opnca-parameters-long.csv"]
+    assert report["not_reproduced"] == [
+        {"file": "bioequivalence-summary.csv", "reason": "not replayed"}
+    ]
+    # Without the listing the table is compared, and its missing replay fails.
+    assert compare_folders(tmp_path / "results", tmp_path / "replay")["status"] == "failed"
+
+
+def test_a_version_1_listing_skips_nothing():
+    assert not_reproduced({"artifacts": [{"path": "results/a.csv", "sha256": "0" * 64}]}) == {}

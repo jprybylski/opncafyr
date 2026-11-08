@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 SHA = "0" * 64
+LABELS = {"concentration": "ng/mL", "time": "h", "dose": "mg"}
 
 
 def run_manifest(run_id: str = "20261103T142512Z-7c4e", **overrides: Any) -> dict[str, Any]:
@@ -21,6 +22,7 @@ def run_manifest(run_id: str = "20261103T142512Z-7c4e", **overrides: Any) -> dic
         "recipe": {"id": "pk-1", "sha256": SHA},
         "mapping": {"roles": {}},
         "units": {},
+        "analysis_units": dict(LABELS),
         "tools": {"opncafyr": "0.0.1", "opnca-r": "0.0.0", "R": "4.5.2"},
     }
     doc.update(overrides)

@@ -58,9 +58,15 @@ def test_a_save_moves_the_run_to_review_with_every_artifact(env):
     assert {a["path"] for a in run["artifacts"]} == {a["path"] for a in listing["artifacts"]}
     for art in run["artifacts"]:
         assert art["sha256"] == R.sha256_file(_folder(study, run_id) / art["path"])
-        assert art["media_type"] and art["kind"] in ("script", "record", "table", "figure")
-    assert run["tools"]["opnca-r"] == "0.2.9" and run["tools"]["R"].startswith("R version")
+        # results/tables/*.rds: opnca-r's flextable copies of the CSVs (opnca-r#54).
+        rds = art["path"].startswith("results/tables/") and art["path"].endswith(".rds")
+        kinds = ("other",) if rds else ("script", "record", "table", "figure")
+        assert art["media_type"] and art["kind"] in kinds
+    assert run["tools"]["opnca-r"] == "0.3.1" and run["tools"]["R"].startswith("R version")
     assert run["nca_settings"]["effective_settings"]
+    # The labels opnca-r used are the run's, set by the preset (#57, opnca-r#56).
+    assert run["nca_settings"]["effective_settings"]["units"] == run["analysis_units"]
+    assert run["nca_settings"]["effective_settings"]["units_source"] == "preset"
     assert run["nca_settings"]["settings"]["blq_rules"] == run["nca_settings"]["blq"]["rules"]
     assert run["exclusions"]["launcher"]["rows"] > 0 and run["exclusions"]["session"] == []
     assert R.verify_run(_folder(study, run_id))["ok"] is True

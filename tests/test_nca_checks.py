@@ -175,3 +175,16 @@ def test_findings_carry_lines_not_values():
         assert all(isinstance(n, int) for n in f["lines"])
         if f["check"] not in ("flag_value_unmapped",):
             assert "value" not in f
+
+
+def test_a_time_unit_column_is_checked_like_the_others():
+    header, rows = fixture_table()
+    header = [*header, "TIMEU"]
+    rows = [[*r, "hours" if i % 2 else "min"] for i, r in enumerate(rows)]
+    mapping = copy.deepcopy(resolving_mapping())
+    mapping["units"]["ACTUAL_TIME"] = {"column": "TIMEU"}
+    found = _findings(mapping=mapping, table=(header, rows))
+    assert _includes(found, {"check": "units_mixed", "role": "ACTUAL_TIME"})
+    rows = [[*r[:-1], "fortnights"] for r in rows]
+    found = _findings(mapping=mapping, table=(header, rows))
+    assert _includes(found, {"check": "units_undeclared", "role": "ACTUAL_TIME"})

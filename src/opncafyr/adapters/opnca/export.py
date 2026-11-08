@@ -1,6 +1,6 @@
 """opnca-r's server-side save into a run folder (``POST api/v1/export/save``, #28).
 
-opnca-r 0.2.9 writes ``analysis.R``, ``analysis-record.json``, ``results/**`` and
+opnca-r (0.2.9 and later) writes ``analysis.R``, ``analysis-record.json``, ``results/**`` and
 ``artifacts.json`` through its own staging folder (``.staging-*``) under a lock
 (``.opnca-save.lock/``), then ``COMPLETE`` last. This module only reads that output and
 decides whether it is a complete, intact save. It never reads a browser download.

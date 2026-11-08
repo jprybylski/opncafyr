@@ -53,7 +53,9 @@ The app never guesses a unit. Set them under **Units**:
 
 1. **Unit of time**: choose **One unit for every row** and type `h`. The file has no time unit column, and `AFRLT` is in hours.
 2. **Unit of concentration**: choose **A unit column**, then `PCSTRESU`. Its only value is `"ng/mL"`.
-3. **Unit of dose**: choose **A unit column**, then `DOSEU`.
+3. **Unit of dose**: choose **A unit column**, then `DOSEU`. Its only value is `"mg"`; its blank cells are skipped.
+
+These become the runs' *unit labels*: opnca-r will label the results in `ng/mL`, `h` and `mg`. The labels never change a number. See [Units]({{ '/guides/cleaning/' | relative_url }}#units).
 
 ### Flag values
 

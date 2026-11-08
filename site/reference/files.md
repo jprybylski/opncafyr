@@ -54,13 +54,13 @@ Run IDs look like `20261107T220451Z-1106`: the date and time the run was made (U
 |---|---|---|
 | `input/analysis.csv` | the frozen rows of this one analyte (and specimen) | the app, at **Start analysis** |
 | `input/source-fingerprint.json` | the source file's path, size and fingerprint | the app |
-| `input/opnca-mapping.json` | the column roles and BLQ choices handed to opnca-r | the app |
-| `settings.json` | the analyte, specimen, mapping, units, BLQ choices, acknowledged warnings and row counts | the app |
-| `analysis.R` | the script that reproduces the results | opnca-r, when you save |
-| `analysis-record.json`, `artifacts.json`, `COMPLETE` | opnca-r's record of the analysis, its list of saved files, and its "save finished" marker | opnca-r |
-| `results/` | the result tables (CSV) and `results/figures/` | opnca-r |
-| `logs/replay-<n>/` | each replay's report and replayed tables | the app |
-| `manifest.json` | the run's record: state, inputs, choices, tool versions, replay and, once completed, the fingerprint of every file | the app |
+| `input/opnca-mapping.json` | the column roles, unit labels and BLQ choices handed to opnca-r | the app |
+| `settings.json` | the analyte, specimen, mapping, units as declared, the unit labels passed to opnca-r (`analysis_units`), BLQ choices, acknowledged warnings and row counts | the app |
+| `analysis.R` | the script that reproduces the results; its header says "Research use only" | opnca-r, when you save |
+| `analysis-record.json`, `artifacts.json`, `COMPLETE` | opnca-r's record of the analysis (with the unit labels it used), its list of saved files with a description of each, and its "save finished" marker | opnca-r |
+| `results/` | the result tables (CSV), their formatted copies in `results/tables/` (`.rds`), and `results/figures/` | opnca-r |
+| `logs/replay-<n>/` | each replay's report and replayed tables; the report lists any table opnca-r says its script doesn't reproduce, which isn't compared | the app |
+| `manifest.json` | the run's record: state, inputs, choices (with the units and `analysis_units`), tool versions, replay and, once completed, the fingerprint of every file | the app |
 
 The input files and `settings.json` are read-only from the start. When you select **Confirm and complete**, every file in the run is recorded with its fingerprint and made read-only. **Check files** on the **Analysis** page compares them with the record.
 

@@ -45,7 +45,7 @@ In **6. Start analysis**:
 ## Step 9. Analyse PARENT in opnca-r and save
 
 1. In **7. Runs**, select **Open in opnca-r** on the new run. opnca-r opens inside the app.
-2. Look at **Data** and **Profiles** if you like. The data is the 77 `PARENT` plasma rows, already mapped.
+2. Look at **Data** and **Profiles** if you like. The data is the 77 `PARENT` plasma rows, already mapped. Under **Unit labels**, **Concentration**, **Time** and **Dose** show `ng/mL`, `h` and `mg`, marked "set by the launcher".
 3. Go to **Analyze**. Select the **Standard NCA** preset, then **Run analysis**.
 4. Look at **Results**. Subject `TA-008` has no parameter values, because its whole profile is excluded.
 5. Go to **Export**. In the **Save to run folder** box, keep **Mean concentration-time figures (linear and log) and their table** ticked.
@@ -67,7 +67,7 @@ In **6. Start analysis**:
 
 ## Step 10. Replay and complete PARENT
 
-When the save is complete, opnca-r closes and the app checks the saved files. Then it replays the run: it runs the saved analysis script again on its own copy of the frozen data and compares every result table with the saved one.
+When the save is complete, opnca-r closes and the app checks the saved files, including that the results carry the run's unit labels. Then it replays the run: it runs the saved analysis script again on its own copy of the frozen data and compares every result table with the saved one.
 
 1. Select **Analysis** on the left and scroll to **7. Runs**.
 2. Wait for the run to reach **Reviewing**. You may first see "Run … was saved by opnca-r and is ready for review."; the replay then starts by itself.

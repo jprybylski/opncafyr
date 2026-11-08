@@ -118,6 +118,26 @@
         }
       }
     },
+    "not_reproduced": {
+      "type": "array",
+      "description": "Saved tables that analysis.R does not replay, as opnca-r's artifacts.json states (replay.reproduced false, schema 2), with its reason. They are not compared. Absent in reports written before opnca-r 0.3.1 was pinned.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "reason"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "differences": {
       "type": "string"
     },

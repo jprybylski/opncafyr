@@ -10,6 +10,10 @@ order, and every cell agrees:
 - other numbers agree within a relative tolerance: ``|a - b| <= rtol * max(|a|, |b|)``
   (default 1e-10, recorded with the result); blanks and ``NA`` must match exactly.
 
+A table opnca-r's ``artifacts.json`` (schema 2, opnca-r 0.3.0) marks
+``replay.reproduced: false`` (the bioequivalence tables, for one) is not compared; it is
+listed under ``not_reproduced`` with opnca-r's reason (``not_reproduced``).
+
 The report lists the first mismatches readably: file, row, column, saved and replayed
 values. It lives in the run folder only; nothing here logs a value.
 """
@@ -100,14 +104,42 @@ def compare_tables(saved: Path, replayed: Path, rtol: float = DEFAULT_RTOL) -> d
     return out
 
 
-def compare_folders(results: Path, replay: Path, rtol: float = DEFAULT_RTOL) -> dict[str, Any]:
-    """Every table of ``results/`` (not its figures) against ``replay/``."""
-    files = sorted(p for p in results.glob("*.csv") if p.is_file())
+def not_reproduced(listing: dict[str, Any]) -> dict[str, str]:
+    """``results/<name>.csv`` -> reason, for each table ``analysis.R`` says it doesn't replay."""
+    out: dict[str, str] = {}
+    for art in listing.get("artifacts") or []:
+        path = str(art.get("path", ""))
+        replay = art.get("replay")
+        if (
+            isinstance(replay, dict)
+            and replay.get("reproduced") is False
+            and path.startswith("results/")
+            and path.count("/") == 1
+            and path.endswith(".csv")
+        ):
+            out[path.removeprefix("results/")] = str(replay.get("reason") or "")
+    return out
+
+
+def compare_folders(
+    results: Path,
+    replay: Path,
+    rtol: float = DEFAULT_RTOL,
+    skip: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Every table of ``results/`` (not its figures) against ``replay/``, except ``skip``."""
+    skip = skip or {}
+    files = sorted(p for p in results.glob("*.csv") if p.is_file() and p.name not in skip)
     tables = [compare_tables(p, replay / p.name, rtol) for p in files]
     return {
         "rtol": rtol,
         "status": "passed" if files and all(t["ok"] for t in tables) else "failed",
         "tables": tables,
+        "not_reproduced": [
+            {"file": name, "reason": reason}
+            for name, reason in sorted(skip.items())
+            if (results / name).is_file()
+        ],
         "problem": None if files else "The saved run has no result tables.",
     }
 

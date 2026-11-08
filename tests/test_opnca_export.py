@@ -21,7 +21,7 @@ def _sha(data: bytes) -> str:
 
 
 def make_save(folder: Path, *, complete: bool = True) -> Path:
-    """A run folder as opnca-r 0.2.9 leaves it after a save."""
+    """A run folder as opnca-r 0.3.1 leaves it after a save."""
     (folder / "input").mkdir(parents=True)
     (folder / "input" / "analysis.csv").write_text(INPUT_TEXT, "utf-8")
     (folder / "settings.json").write_text("{}", "utf-8")

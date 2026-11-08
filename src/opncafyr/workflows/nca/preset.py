@@ -5,6 +5,10 @@ and guesses any role left out (opnca-r#46), so the preset names every role it kn
 the four required ones always, ``""`` for every optional role that isn't mapped, the
 three BLQ rules and the BLQ method the user chose (ADR 0005 Q3). Concentration, BLQ,
 missing and excluded point at the snapshot's own ``NCA_*`` columns.
+
+``units`` (opnca-r 0.3.1, opnca-r#56) declares the three unit labels of the frozen input
+(``units.analysis_labels``). opnca-r locks them in its page and refuses a request with
+other labels, so results are never labelled with its defaults (#57).
 """
 
 from __future__ import annotations
@@ -16,7 +20,11 @@ from opncafyr.workflows.nca import mapping as M
 REQUIRED = ("id", "time", "concentration", "route")
 OPTIONAL = ("dose", "excluded", "nominal_time", "infusion_duration", "lloq", "blq", "missing")
 SETTINGS = ("blq_method", "blq_predose", "blq_postdose", "blq_terminal")
-KNOWN = (*REQUIRED, *OPTIONAL, "tau", "group_by", "grouping", *SETTINGS)
+UNIT_LABELS = ("concentration", "time", "dose")
+# opnca_units()'s label rules (opnca-r R/units.R): trimmed, not empty, at most 64
+# characters, no control characters. The launcher's own labels always pass; checked anyway.
+MAX_LABEL = 64
+KNOWN = (*REQUIRED, *OPTIONAL, "tau", "group_by", "grouping", *SETTINGS, "units")
 
 
 class PresetError(ValueError):
@@ -28,6 +36,7 @@ def build_preset(
     snapshot_columns: dict[str, str],
     blq: dict[str, Any],
     header: list[str],
+    units: dict[str, str],
 ) -> dict[str, Any]:
     role = lambda name: M.role(mapping, name) or ""  # noqa: E731
     preset: dict[str, Any] = {
@@ -44,6 +53,7 @@ def build_preset(
         "missing": snapshot_columns["MISSING"],
         "blq_method": blq["method"],
         **blq["rules"],
+        "units": {name: units[name] for name in UNIT_LABELS},
     }
     if role("TAU"):
         preset["tau"] = role("TAU")
@@ -65,6 +75,18 @@ def check_preset(preset: dict[str, Any], header: list[str]) -> None:
     for key in SETTINGS:
         if not preset.get(key):
             raise PresetError(f"The preset needs {key}, chosen by the user.")
+    units = preset.get("units")
+    if not isinstance(units, dict) or set(units) != set(UNIT_LABELS):
+        raise PresetError("The preset needs units: concentration, time and dose labels.")
+    for name, label in units.items():
+        if (
+            not isinstance(label, str)
+            or not label
+            or label != label.strip()
+            or len(label) > MAX_LABEL
+            or any(ord(c) < 32 or 127 <= ord(c) < 160 for c in label)
+        ):
+            raise PresetError(f"The {name} unit label {label!r} is not one opnca-r accepts.")
     for key in (*REQUIRED, *OPTIONAL, "tau"):
         value = preset.get(key)
         if value and value not in header:

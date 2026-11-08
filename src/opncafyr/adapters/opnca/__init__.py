@@ -87,6 +87,9 @@ class OpncaWebApp:
             # so the session uses exactly the preset the user confirmed (ADR 0005 Q3).
             "--require-explicit-settings",
             "--no-guess-roles",
+            # Since 0.3.1 (opnca-r#56): the unit labels come from the preset and are locked,
+            # never opnca-r's defaults (#57). --require-explicit-settings implies it.
+            "--require-explicit-units",
             f"--api-token-env={API_TOKEN_ENV}",
             f"--shutdown-token-env={SHUTDOWN_TOKEN_ENV}",
             f"--max-upload-bytes={MAX_UPLOAD_BYTES}",

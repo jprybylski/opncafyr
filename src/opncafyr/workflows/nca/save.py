@@ -18,6 +18,11 @@ replacing them, and the record keeps the mapping. A save whose record maps anoth
 while the run has launcher exclusions would have dropped them, so it fails. The points
 excluded inside opnca-r are the record's observations with any other source; they are kept
 in the manifest with a warning, because opnca-r records no reason for them.
+
+The other is the unit labels (#57). The preset declares the run's ``analysis_units`` and
+opnca-r 0.3.1 locks them (opnca-r#56); the record must state exactly those labels, with
+``units_source`` ``preset``. A save labelled otherwise fails rather than publishing results
+labelled in units the numbers are not in.
 """
 
 from __future__ import annotations
@@ -55,6 +60,24 @@ def check(folder: Path, session_alive: bool) -> export.ExportStatus:
     )
 
 
+def unit_problem(manifest: dict[str, Any], record: dict[str, Any]) -> str | None:
+    """Why the record's unit labels are not the run's, or None when they are."""
+    expected = manifest.get("analysis_units")
+    effective = record.get("effective_settings") or {}
+    recorded = effective.get("units")
+    if not expected:
+        return (
+            "This run was prepared before its unit labels were passed to opnca-r. Make a new run."
+        )
+    if recorded != expected or effective.get("units_source") != "preset":
+        want = ", ".join(f"{k} {expected.get(k)}" for k in ("concentration", "time", "dose"))
+        return (
+            f"opnca-r labelled the results in other units than the run's ({want}). "
+            "Make a new run from this one."
+        )
+    return None
+
+
 def accept(folder: Path, status: export.ExportStatus) -> dict[str, Any]:
     """Move a run with a complete save to ``reviewing``, or to ``failed`` with the reason."""
     manifest = runs_core.read_manifest(folder)
@@ -68,6 +91,10 @@ def accept(folder: Path, status: export.ExportStatus) -> dict[str, Any]:
             f"{ours['rows']} excluded rows with its own exclusions. Make a new run and "
             "exclude points with a recipe step instead."
         )
+    problem = unit_problem(manifest, record)
+    if status.state == "complete" and problem:
+        status.state = "failed"
+        status.problems.append(problem)
     if status.state != "complete":
         return runs_core.set_state(
             folder,

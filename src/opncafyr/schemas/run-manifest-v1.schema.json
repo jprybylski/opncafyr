@@ -191,7 +191,7 @@
     "units": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Units as declared in the mapping (ADR 0005 Q2); opnca-r takes none.",
+      "description": "Units as declared in the mapping (ADR 0005 Q2): a unit column or one value per role. The labels opnca-r was given are `analysis_units`.",
       "properties": {
         "ACTUAL_TIME": {
           "type": "object",
@@ -234,6 +234,33 @@
           },
           "minProperties": 1,
           "maxProperties": 1
+        }
+      }
+    },
+    "analysis_units": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "concentration",
+        "time",
+        "dose"
+      ],
+      "description": "The unit labels of the frozen analysis input, passed to opnca-r as its preset `units` (opnca-r 0.3.1, #57): each role's declared unit, or the one unit its unit column holds across the selected rows, in the launcher's spelling (units.normalise). Labels only: values are scaled only by a recorded 'Convert units' step. Absent on runs made before 0.3.1 was pinned.",
+      "properties": {
+        "concentration": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "time": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "dose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
         }
       }
     },
