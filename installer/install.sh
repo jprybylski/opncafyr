@@ -1,7 +1,7 @@
 #!/bin/bash
 # opncafyr per-user installer for macOS (#19, #36). No administrator rights, no sudo.
 #
-#   ./install.sh [install]  [--from-bundle DIR|ZIP] [--assets DIR] [--with-libreoffice] [--dry-run]
+#   ./install.sh [install]  [--from-bundle DIR|ZIP] [--assets DIR] [--with-libreoffice] [--without-git] [--dry-run]
 #   ./install.sh repair     (same options)
 #   ./install.sh uninstall  [--force] [--dry-run]
 #   ./install.sh status

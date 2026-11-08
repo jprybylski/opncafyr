@@ -7,6 +7,36 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Optional **Version history** (#56, ADR 0008): Git snapshots of files the user chooses
+  from the open study folder, in gitneighbr 0.2.0's managed mode under
+  `/apps/gitneighbr/`.
+  - A snapshot is not a run, a publication or a build. Those stay fixed, and no Git
+    action may change them in the folder (protected paths).
+  - The page appears only while a study folder is open. Nothing happens on folder
+    selection: no setup, fetch or connection until the user acts.
+  - Set-up is explicit. Suggested `.gitignore` rules (scratch files only, each with a
+    reason) are offered then, and are never written over an existing `.gitignore`.
+  - Changed files are grouped (sources, records, generated, data). Nothing is
+    pre-selected. Files that can identify subjects are labelled. A snapshot holds exactly
+    the selected files and leaves everything else, the user's own staging included, as it
+    was.
+  - Sending is off unless turned on for the session. Send lists every outgoing snapshot
+    and file, needs a confirmation (two for labelled files) and pushes exactly what was
+    listed. Update fast-forwards only, and never over protected files or local work.
+    HTTPS only, with the access token held in memory.
+  - A study folder inside another Git repository, or one using Git LFS, filters,
+    includes or other unsupported settings, is explained and left unchanged.
+- A pinned portable **Git** (dugite-native 2.56.0, `[optional.git]`), the only Git the
+  tools use. It is installed by default and is part of offline bundles. If it can't be
+  fetched, unpacked or started, the install still succeeds without version history, and
+  `install.json` and the install report list it under `optional`. `--without-git` leaves
+  it out. `doctor` reports it.
+- Core, tool-agnostic:
+  - `web_app.guard_mutations`: the proxy refuses a guarded app's state-changing requests
+    (423) while jobs run or other tools have unsaved or busy work, and otherwise holds a
+    workspace lease that keeps jobs and project-file saves from starting.
+  - A child launched with a `workspace_root` stops when another workspace opens.
+  - `WorkflowView.requires_workspace` hides a view's link until a folder is open.
 - Runs pass their unit labels to opnca-r (#57). Results in other units are no longer
   labelled with opnca-r's defaults (ng/mL, h, mg).
   - When a run is made, the labels come from its frozen one-analyte rows. Each role's

@@ -12,6 +12,8 @@ On **Home**, each tool in the **Tools** card shows its health. **Unavailable** m
 
 "Slide previews unavailable: LibreOffice is not installed." is not a fault. LibreOffice is optional; without it, decks build without slide previews.
 
+**Version history (gitneighbr)** is optional too. If it shows "The installed runtime has no 'git'", Git wasn't installed, for example because it couldn't be downloaded. The install report says so under **Optional components**. Everything else works without it. To add it later, reinstall: see [Checking and repairing an install](install.md#checking-and-repairing-an-install).
+
 ## A job failed
 
 1. Select **Jobs** on the left.
