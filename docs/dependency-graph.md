@@ -18,10 +18,14 @@ launcher (opncafyr)        uv 0.13.7 ─► Python 3.13.18 ─► launcher venv 
  │                          optional: Rscript + flextable (.rds tables), Quarto (Quarto
  │                          elements), LibreOffice (slide previews, #8)
  │
- └─ quartifyr adapter ────► R 4.6.2 ─► quartifyr 0.3.3 ─► reportifyr 0.4.0 ─► pyro 0.1.1
-                            Quarto 1.11.9 + extensions bundled in quartifyr
-                            tools venv as QUARTIFYR_PYTHON_ENV (python-docx, PyYAML, Pillow)
-                            optional: LibreOffice (field recalculation, #8)
+ ├─ quartifyr adapter ────► R 4.6.2 ─► quartifyr 0.3.3 ─► reportifyr 0.4.0 ─► pyro 0.1.1
+ │                          Quarto 1.11.9 + extensions bundled in quartifyr
+ │                          tools venv as QUARTIFYR_PYTHON_ENV (python-docx, PyYAML, Pillow)
+ │                          optional: LibreOffice (field recalculation, #8)
+ │
+ └─ gitneighbr adapter ───► R 4.6.2 ─► gitneighbr 0.2.0 (cellar) + plumber2, processx,
+                            curl, openssl, fs, jsonlite, R6, reqres
+                            optional: Git 2.56.0 (dugite-native, [optional.git], #56)
 
 repair path only (ADR 0004): Rust 1.99.1 (+ Rtools45 on Windows, Command Line Tools on
 macOS) to build opnca_0.3.1-vendored.tar.gz
@@ -36,6 +40,7 @@ macOS) to build opnca_0.3.1-vendored.tar.gz
 | deckifyr 0.3.6 | Python ≥ 3.10; python-pptx, pydantic, PyYAML, Pillow; extras `web` (fastapi, uvicorn) and `preview` (pymupdf) | `[packages.deckifyr]` wheel; tools venv | Calls Rscript (flextable `.rds`), quarto and soffice. The adapter passes absolute `--rscript-bin`, `--quarto-bin`, `--soffice-bin` with `--trusted-binaries-only`. `deckifyr build` needs none of LibreOffice. Its R wrapper package is not installed. |
 | quartifyr 0.3.3 | R ≥ 4.1; cli, jsonlite, openssl, quarto (R pkg), withr, processx, pyro, reportifyr, yaml; Quarto ≥ 1.6.36; Python: python-docx, PyYAML | `[packages.quartifyr]` source tarball (pure R) | Both Quarto extensions ship inside the tarball (`inst/extensions/`): `quartifyr` (GPL-3.0-or-later) and an unmodified copy of `A2-ai/quarto-plus` at be6ac44 (MIT). Offline init uses `QUARTIFYR_PYTHON_ENV`; render takes `--offline` (quartifyr#72, #76). LibreOffice from `--soffice-bin` / `QUARTIFYR_SOFFICE_BIN`, else `PATH` (quartifyr#83). |
 | reportifyr 0.4.0 (external) | R ≥ 4.1; assertthat, cli, digest, dplyr, flextable, fs, pyro, gert, ggplot2, here, jsonlite, log4r, officer, processx, purrr, rlang, this.path, tictoc, xml2, yaml; Python: python-docx, PyYAML, Pillow | `[packages.reportifyr]` source tarball from its GitHub release (pure R) | Never modified. r-universe keeps only the latest build, so it is pinned to the release tarball. Runs `uv run -m reportipyr.cli` without `--no-sync`: see [offline.md](offline.md). |
+| gitneighbr 0.2.0 | R ≥ 4.2; curl, fs, jsonlite, openssl, plumber2 ≥ 0.2.0, processx, R6, reqres; Git (the pinned `[optional.git]`, never `PATH`) | `[packages.gitneighbr]` source tarball and `SHA256SUMS` from its GitHub release (pure R) | Runs in managed mode only (`scripts/serve.R`, ADR 0008). Its dependencies were already in the lock. Its release workflow replaces a release's tarball when a later merge leaves `VERSION` unchanged, so only a bumped version is pinned. |
 | pyro 0.1.1 (external) | R ≥ 4.1; here, log4r, processx, rlang | `[packages.pyro]` source tarball (pure R) | Would curl-install uv and run `uv lock`/`uv sync` if asked to build a Python env; we never ask (the tools venv is passed in). Its bundled spec pins python-docx 1.1.2, PyYAML 6.0.2, Pillow 11.1.0 and needs Python ≥ 3.12. |
 | R 4.6.2 | — | `[r]` CRAN installers | Windows: R's Inno Setup installer in `/CURRENTUSER` mode (#6). macOS: the `.pkg` payload is expanded and relocated to a space-free R root (#7). rig's user mode works without admin but downloads its own unpinned installer, so it isn't used. |
 | R packages | — | `[r_packages]`: `runtime/r/renv.lock` + `runtime/r/binaries.toml` | 130 packages: 126 from the P3M snapshot of 2026-11-06 plus the 4 cellar packages. 67 have compiled code, so users get **binaries** only. Installed with base R's `install.packages()` from a local repository and checked against the lock (renv's restore needs the Command Line Tools on macOS, #7). |
@@ -70,7 +75,7 @@ Findings while pinning:
 ## Regenerating and verifying
 
 ```sh
-# 1. Lock (no installs). <cellar> holds the pinned opnca, quartifyr, reportifyr, pyro tarballs.
+# 1. Lock (no installs). <cellar> holds the pinned opnca, quartifyr, reportifyr, pyro, gitneighbr tarballs.
 Rscript --vanilla scripts/lock_r.R --snapshot 2026-11-06 --cellar <cellar>
 # 2. Pin every file per platform (downloads ~450 MB; --cache keeps them).
 uv run python scripts/pin_r_binaries.py --cache <dir>
@@ -89,7 +94,7 @@ a cellar with the four pinned packages, restored all 130 packages of `renv.lock`
 empty library in 10 s; opnca, quartifyr, reportifyr, plumber2, flextable and officer load
 from that library, and no request was attempted. `scripts/check_r_restore.R` reproduces
 it. Two lock and repository rules came out of this and the Windows spike (#6):
-- The four tool packages are locked as `"Source": "Cellar"`. With `"Source": "GitHub"`,
+- The cellar packages are locked as `"Source": "Cellar"`. With `"Source": "GitHub"`,
   renv 1.3 downloads them from GitHub before it looks in the cellar, which fails for
   private opnca-r. `verify_pins.py` enforces it.
 - The repository's *source* index must list every package (the binary entry where there

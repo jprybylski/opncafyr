@@ -19,7 +19,7 @@ from opncafyr.installer.platforms import SUPPORTED
 from opncafyr.installer.verify import InstallError
 
 # R packages that don't come from CRAN; their tarballs go in the cellar.
-CELLAR = ("quartifyr", "reportifyr", "pyro")
+CELLAR = ("quartifyr", "reportifyr", "pyro", "gitneighbr")
 OPNCA = "opnca-r"
 GIT = "git"  # [optional.git]: the portable Git for version history (#56)
 

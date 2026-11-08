@@ -231,6 +231,22 @@ commit = "66065c19a9aad1cf2cc4718aee9da013e6a3209f"
 "pyro_0.1.1.tar.gz" = "2aa39c43e6af927325f9058a6b02f75d48652b2579241d0fd9fba4a4d7ac4a30"
 "manifest.json" = "1b7f258fe0ea1103c6f55a72f4c2c18310a1a71a2218587b472be1e08e4a1528"
 
+[packages.gitneighbr]
+license = "MIT"
+# Version history (#56, ADR 0008), in managed mode only. Pure R; its dependencies were
+# already in the lock. v0.2.0 (2026-11-08) releases gitneighbr#35-#44 (PRs #45, #46); tag
+# v0.2.0 points at 6fcb027. Its release workflow replaces a release's tarball when a later
+# merge to main leaves VERSION unchanged, so pin only a release whose version was bumped
+# and expect a checksum mismatch, never a silent change, otherwise.
+version = "0.2.0"
+source = "github:jprybylski/gitneighbr"
+release_url = "https://github.com/jprybylski/gitneighbr/releases/download/v0.2.0/"
+commit = "6fcb02730a2bb42cbdb5960500ff0e67cfa08718"
+
+[packages.gitneighbr.assets]
+"gitneighbr_0.2.0.tar.gz" = "074b9925dd9b615ee8aef46b69717ed859e6056e374d479aa2b1020260405067"
+"SHA256SUMS" = "4b35ec7ccc866044580c471d2e72ea5bf4a4cd0d737878ad96b4d298a38f6c76"
+
 # --- Repair path only (ADR 0004) ---------------------------------------------------------
 # Never installed on a normal install. Only to build opnca_0.3.1-vendored.tar.gz when a
 # binary can't be used (e.g. macOS below the binary's minimum). macOS also needs the

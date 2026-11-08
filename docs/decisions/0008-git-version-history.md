@@ -5,7 +5,7 @@
   owner confirms them.
 - Date: 2026-11-08
 - Issue: #56
-- Upstream: [gitneighbr#35–#44](../upstream.md#jprybylskigitneighbr-public), in gitneighbr 0.2.0 (not yet released)
+- Upstream: [gitneighbr#35–#44](../upstream.md#jprybylskigitneighbr-public), released in gitneighbr 0.2.0 and pinned
 
 ## Context
 
@@ -51,7 +51,13 @@ and its feature policy was enforced only in the page.
    makes version history unavailable. Offline bundles include it.
 
    PATH git is never used. gitneighbr runs this Git with:
-   - no system or user configuration, and an app-owned config file for name and email;
+   - none of the computer's or the user's own configuration, and an app-owned config
+     file for name and email. In place of the computer's system configuration,
+     gitneighbr supplies its own: empty, except on Windows, where it keeps Git for
+     Windows' line-ending default (`core.autocrlf`) and the Windows certificate store
+     (`schannel`). Without these, a folder checked out by another Windows Git tool
+     would show text files as changed, and HTTPS would fail on networks that add their
+     own certificates;
    - no inherited `GIT_*`/`SSH_*` variables;
    - hooks, templates, fsmonitor, pager, editor, signing, credential helpers and askpass
      switched off;
@@ -122,7 +128,8 @@ and its feature policy was enforced only in the page.
   LFS and Git Credential Manager, but managed mode never runs them.
 - **Corporate proxies:** with sending on, the usual `HTTPS_PROXY` variables reach Git, but
   there is no proxy configuration UI.
-- **Windows is unverified:** the Windows Git layout (`cmd/git.exe`,
+- **The pinned Windows Git is unverified:** gitneighbr's Windows CI runs managed mode
+  (Git for Windows), but the pinned bundle's layout (`cmd/git.exe`,
   `ucrt64/libexec/git-core`) hasn't been run on Windows yet.
 - **Release pinning:** gitneighbr's release workflow re-tags and replaces the tarball when
   a later merge to its main leaves `VERSION` unchanged. Pin only a release whose version

@@ -27,6 +27,11 @@ All notable changes to this project are documented here. The format follows
     HTTPS only, with the access token held in memory.
   - A study folder inside another Git repository, or one using Git LFS, filters,
     includes or other unsupported settings, is explained and left unchanged.
+  - gitneighbr 0.2.0 is pinned as a cellar R package (`[packages.gitneighbr]`, its
+    release tarball and `SHA256SUMS`); its dependencies were already locked. On Windows
+    it keeps Git for Windows' line-ending and certificate-store defaults, so folders
+    checked out by other Git tools aren't shown as changed and HTTPS works with a
+    company's own certificates.
 - A pinned portable **Git** (dugite-native 2.56.0, `[optional.git]`), the only Git the
   tools use. It is installed by default and is part of offline bundles. If it can't be
   fetched, unpacked or started, the install still succeeds without version history, and

@@ -43,7 +43,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PLATFORM = "linux-x86_64"
-CELLAR_PACKAGES = ("opnca-r", "quartifyr", "reportifyr", "pyro")
+CELLAR_PACKAGES = ("opnca-r", "quartifyr", "reportifyr", "pyro", "gitneighbr")
 # DESCRIPTION fields that tools::write_PACKAGES puts in a repository index.
 INDEX_FIELDS = (
     "Package",

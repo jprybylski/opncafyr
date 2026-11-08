@@ -144,7 +144,12 @@ def make_world(
         pins += [f"[rust.standalone.assets.{PLATFORM}]", f'url = "{rust_url}"']
         pins += [f'sha256 = "{rust_sha}"', "", "[rtools]", 'version = "45"']
         pins += ['platforms = ["windows-x86_64"]']
-    for pkg, ver in (("quartifyr", "0.3.3"), ("reportifyr", "0.4.0"), ("pyro", "0.1.1")):
+    for pkg, ver in (
+        ("quartifyr", "0.3.3"),
+        ("reportifyr", "0.4.0"),
+        ("pyro", "0.1.1"),
+        ("gitneighbr", "0.2.0"),
+    ):
         name = f"{pkg}_{ver}.tar.gz"
         _, digest = _file(world, pkg, name)
         pins += ["", f"[packages.{pkg}]", f'version = "{ver}"', 'license = "GPL-3.0-or-later"']

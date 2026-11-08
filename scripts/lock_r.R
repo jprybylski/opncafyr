@@ -3,7 +3,7 @@
 #   Rscript --vanilla scripts/lock_r.R --snapshot 2026-11-06 --cellar <dir> [--out runtime/r/renv.lock]
 #
 # <dir> holds the pinned source tarballs of the packages that do not come from CRAN
-# (opnca, quartifyr, reportifyr, pyro). Their DESCRIPTION files give the top-level
+# (opnca, quartifyr, reportifyr, pyro, gitneighbr). Their DESCRIPTION files give the top-level
 # dependencies; EXTRA adds what they need only as Suggests (opnca-r's web app) plus renv.
 # The closure (Depends, Imports, LinkingTo) is computed against the dated Posit Package
 # Manager snapshot, so the same snapshot date always gives the same lockfile. Nothing is
@@ -33,7 +33,7 @@ EXTRA <- c("plumber2", "httpuv", "reqres", "jsonlite", "processx", "renv")
 # which also records where they come from). They are locked as `Source: Cellar`: with
 # `Source: GitHub`, renv 1.3 downloads them from GitHub before it looks in the cellar
 # (seen in the Windows spike, #6), which fails for private opnca-r.
-CELLAR <- c("opnca", "quartifyr", "reportifyr", "pyro")
+CELLAR <- c("opnca", "quartifyr", "reportifyr", "pyro", "gitneighbr")
 
 read_description <- function(tarball) {
   pkg <- sub("_.*$", "", basename(tarball))

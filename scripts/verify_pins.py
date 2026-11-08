@@ -57,7 +57,7 @@ MOVING = re.compile(
 # Packages pinned from CRAN's own macOS build instead of the snapshot (binaries.toml
 # `origin = "cran"`; see scripts/pin_r_binaries.py).
 CRAN_BIN = "https://cran.r-project.org/bin/macosx/"
-CELLAR = ("opnca-r", "quartifyr", "reportifyr", "pyro")
+CELLAR = ("opnca-r", "quartifyr", "reportifyr", "pyro", "gitneighbr")
 CELLAR_R_NAMES = {"opnca-r": "opnca"}
 # Release packages a platform binary must exist for, and how to spot it in a file name.
 PLATFORM_BINARIES = {"opnca-r": "_{platform}."}

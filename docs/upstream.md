@@ -91,26 +91,27 @@ adapter (#44) rather than through upstream issues.
 
 ## jprybylski/gitneighbr (public)
 
-Filed 2026-11-08 for #56 and implemented on gitneighbr's `feat/managed-mode` branch as
-0.2.0 (not yet released): a **managed mode** for launchers. Standalone `open_repo()` is
+Filed 2026-11-08 for #56 and released in gitneighbr 0.2.0 (2026-11-08; PRs #45, #46): a
+**managed mode** for launchers. Standalone `open_repo()` is
 unchanged. The adapter needs 0.2.0 or later.
 
 | Issue | What | Status | Needed by |
 |---|---|---|---|
-| [#35](https://github.com/jprybylski/gitneighbr/issues/35) | Serve the UI and API under a path prefix | Done on the branch; e2e behind a full-path proxy | #56 proxy |
-| [#36](https://github.com/jprybylski/gitneighbr/issues/36) | Foreground `scripts/serve.R`, `GITNEIGHBR_READY` line, two-token shutdown, health `version`/`busy`/`managed` | Done on the branch | #56 adapter |
-| [#37](https://github.com/jprybylski/gitneighbr/issues/37) | Token in an injected `X-Gitneighbr-Token` header; cross-site refusal; no URL-fragment token | Done on the branch; standalone keeps the fragment, removed from history | #56 |
-| [#38](https://github.com/jprybylski/gitneighbr/issues/38) | Act only on the exact folder; never an enclosing repository | Done on the branch | #56 |
-| [#39](https://github.com/jprybylski/gitneighbr/issues/39) | Server-side feature profiles; no `gh`/GitHub API traffic when off | Done on the branch; policy flags now enforced on the server in every mode | #56, offline |
-| [#40](https://github.com/jprybylski/gitneighbr/issues/40) | Trusted Git with a locked-down config and environment; fail closed on unreviewed repo settings and filters | Done on the branch, plus `--git-exec-path` for the non-relocatable dugite build; hostile-repo tests | #56 |
-| [#41](https://github.com/jprybylski/gitneighbr/issues/41) | Selected-file commit on a temporary index; re-check paths; compare-and-swap HEAD | Done on the branch (all modes) | #56 |
-| [#42](https://github.com/jprybylski/gitneighbr/issues/42) | Launcher policy: groups, protected paths, review labels, send-blocked, `.gitignore` template at setup only | Done on the branch | #56 |
-| [#43](https://github.com/jprybylski/gitneighbr/issues/43) | Send/Update with a full, preview-bound history check; HTTPS token via env only | Done on the branch; tested against a real HTTPS `git http-backend` | #56 remote |
-| [#44](https://github.com/jprybylski/gitneighbr/issues/44) | `SHA256SUMS` on releases; `clone --`; sanitised PR stderr | Done on the branch | pins |
+| [#35](https://github.com/jprybylski/gitneighbr/issues/35) | Serve the UI and API under a path prefix | Done (v0.2.0); e2e behind a full-path proxy | #56 proxy |
+| [#36](https://github.com/jprybylski/gitneighbr/issues/36) | Foreground `scripts/serve.R`, `GITNEIGHBR_READY` line, two-token shutdown, health `version`/`busy`/`managed` | Done (v0.2.0) | #56 adapter |
+| [#37](https://github.com/jprybylski/gitneighbr/issues/37) | Token in an injected `X-Gitneighbr-Token` header; cross-site refusal; no URL-fragment token | Done (v0.2.0); standalone keeps the fragment, removed from history | #56 |
+| [#38](https://github.com/jprybylski/gitneighbr/issues/38) | Act only on the exact folder; never an enclosing repository | Done (v0.2.0) | #56 |
+| [#39](https://github.com/jprybylski/gitneighbr/issues/39) | Server-side feature profiles; no `gh`/GitHub API traffic when off | Done (v0.2.0); policy flags now enforced on the server in every mode | #56, offline |
+| [#40](https://github.com/jprybylski/gitneighbr/issues/40) | Trusted Git with a locked-down config and environment; fail closed on unreviewed repo settings and filters | Done (v0.2.0), plus `--git-exec-path` for the non-relocatable dugite build; hostile-repo tests | #56 |
+| [#41](https://github.com/jprybylski/gitneighbr/issues/41) | Selected-file commit on a temporary index; re-check paths; compare-and-swap HEAD | Done (v0.2.0) (all modes) | #56 |
+| [#42](https://github.com/jprybylski/gitneighbr/issues/42) | Launcher policy: groups, protected paths, review labels, send-blocked, `.gitignore` template at setup only | Done (v0.2.0) | #56 |
+| [#43](https://github.com/jprybylski/gitneighbr/issues/43) | Send/Update with a full, preview-bound history check; HTTPS token via env only | Done (v0.2.0); tested against a real HTTPS `git http-backend` | #56 remote |
+| [#44](https://github.com/jprybylski/gitneighbr/issues/44) | `SHA256SUMS` on releases; `clone --`; sanitised PR stderr | Done (v0.2.0) | pins |
 
-Pin gitneighbr as a cellar package only after 0.2.0 is released. Its release workflow
-re-tags and replaces the tarball when a later merge leaves `VERSION` unchanged, so pin a
-release whose version was bumped (ADR 0008).
+Pinned as a cellar package (`[packages.gitneighbr]`, 0.2.0). Testing on Windows CI also
+added a managed system configuration that keeps Git for Windows' line-ending and
+certificate defaults (ADR 0008). Its release workflow re-tags and replaces the tarball when
+a later merge leaves `VERSION` unchanged, so pin only a release whose version was bumped.
 
 ## Not filed
 
