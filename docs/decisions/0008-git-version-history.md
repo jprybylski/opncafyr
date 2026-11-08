@@ -1,7 +1,7 @@
 # 0008. Optional Git version history through a managed gitneighbr
 
-- Status: accepted (owner, 2026-11-08) for the Git source, the scope and the upstream
-  route. The default ignore suggestions and review labels below are **proposed** until the
+- Status: accepted (owner, 2026-11-08) for the Git source, the scope, the upstream route
+  and the default ignore suggestions. The review labels below are **proposed** until the
   owner confirms them.
 - Date: 2026-11-08
 - Issue: #56
@@ -97,11 +97,20 @@ and its feature policy was enforced only in the page.
      checks, runs, `OUTPUTS/`, report and deck builds. Sending them needs the extra
      confirmation. Nothing is called "safe".
    - **Send-blocked:** none by default.
-   - **Ignore suggestions** (proposed): offered only during explicit setup, each with a
-     reason, never written over an existing `.gitignore`, and nothing hidden silently.
-     Scratch files only: `.opncafyr/jobs/`, `.DS_Store`, `Thumbs.db`, Office `~$*` lock
-     files and `.Rhistory`. Whether to snapshot data, runs or outputs stays the user's
-     choice, file by file. Manifests are not ignored, because they carry provenance.
+   - **Ignore suggestions** (owner, 2026-11-08): noise, and files not needed to reproduce
+     results. They are offered only during explicit setup, each with a reason, and never
+     written over an existing `.gitignore`; nothing is hidden silently. The list:
+     - job scratch (`.opncafyr/jobs/`);
+     - caches the app rebuilds: `.opncafyr/cleaned/`, `.opncafyr/checks/` and
+       `.opncafyr/publish-checks/` (each run keeps its own copy of its input);
+     - pre-upgrade copies (`.opncafyr/backups/`);
+     - render caches and logs (`report/.quarto/`, `report/.rpfy-logs/`);
+     - the deck editor's own previews (`deck/build/`, not `deck/builds/`);
+     - OS and editor files (`.DS_Store`, `Thumbs.db`, Office `~$*` lock files, `.Rhistory`).
+
+     Whether to snapshot source data, runs, publications, builds or `OUTPUTS/` stays the
+     user's choice, file by file. Manifests are never ignored, because they carry
+     provenance.
 
 ## Consequences
 

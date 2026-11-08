@@ -19,7 +19,7 @@ If **Version history** says it is unavailable, its part of the install is missin
 The first time, the page says version history isn't set up in this folder yet. Nothing happens until you choose to set it up.
 
 - **Start version history here** sets it up in this folder only.
-- It can offer a few files to leave out of snapshots, such as job scratch files and the lock files Word makes. Each comes with a reason. Untick any you want to keep. They are written as a new `.gitignore`, and only if the folder doesn't have one yet. Left-out files stay on your computer and still show under "show ignored".
+- It can offer files to leave out of snapshots: ones you don't need to reproduce your results, such as job scratch files, caches the app rebuilds, render logs and the lock files Word makes. Each comes with a reason. Untick any you want to keep. They are written as a new `.gitignore`, and only if the folder doesn't have one yet. Left-out files stay on your computer and still show under "show ignored".
 - The first time you save a snapshot, it asks for your name and email. They are kept by the app on this computer, not in the study folder.
 
 The page refuses, and says why, when:

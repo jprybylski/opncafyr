@@ -22,10 +22,14 @@ from typing import TYPE_CHECKING, Any
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from opncafyr.core.migrations import BACKUP_DIR
 from opncafyr.core.runs import RUNS_DIR
 from opncafyr.core.workspace import WORKSPACE_META_DIR
 from opncafyr.paths import state_dir
+from opncafyr.workflows.nca.cleaning import CLEANED_DIR
+from opncafyr.workflows.nca.format_check import CHECKS_DIR
 from opncafyr.workflows.nca.publish.projects import BUILDS, OUTPUTS
+from opncafyr.workflows.nca.publish.report import CHECKS_DIR as PUBLISH_CHECKS_DIR
 from opncafyr.workflows.nca.recipe import RECIPES_DIR
 
 if TYPE_CHECKING:
@@ -48,8 +52,9 @@ def policy() -> dict[str, Any]:
     - **Review** labels mark files that can contain subject-level or identifiable data;
       sending them needs an extra confirmation. Nothing is classified as "safe".
     - **Ignore template** rules are only offered when the user sets up version history.
-      They leave out scratch files only; whether to snapshot data, runs or outputs is
-      the user's choice, per file (ADR 0008).
+      They leave out noise and files not needed to reproduce results (scratch, caches the
+      app rebuilds, render logs); whether to snapshot data, runs or outputs is the user's
+      choice, per file (ADR 0008).
     """
     return {
         "schema_version": 1,
@@ -115,6 +120,28 @@ def policy() -> dict[str, Any]:
         "send_blocked": [],
         "ignore_template": [
             {"rule": f"{META}/jobs/", "reason": "Job logs and scratch space for each job."},
+            {
+                "rule": f"{CLEANED_DIR}/",
+                "reason": (
+                    "Cleaned-data caches the app rebuilds from the source data and recipe. "
+                    "Each run keeps its own copy of its input."
+                ),
+            },
+            {"rule": f"{CHECKS_DIR}/", "reason": "Saved data-check results, rebuilt when needed."},
+            {
+                "rule": f"{PUBLISH_CHECKS_DIR}/",
+                "reason": "Saved report and deck check results, rebuilt when needed.",
+            },
+            {
+                "rule": f"{META}/{BACKUP_DIR}/",
+                "reason": "Copies of the folder's settings kept before an app upgrade.",
+            },
+            {"rule": "report/.quarto/", "reason": "Quarto's render cache."},
+            {"rule": "report/.rpfy-logs/", "reason": "Render logs from reportifyr."},
+            {
+                "rule": "deck/build/",
+                "reason": "The deck editor's own previews. Finished decks are in deck/builds/.",
+            },
             {"rule": ".DS_Store", "reason": "macOS folder settings."},
             {"rule": "Thumbs.db", "reason": "Windows thumbnail cache."},
             {"rule": "~$*", "reason": "Lock files Word and PowerPoint make while a file is open."},

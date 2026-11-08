@@ -14,8 +14,9 @@ All notable changes to this project are documented here. The format follows
     action may change them in the folder (protected paths).
   - The page appears only while a study folder is open. Nothing happens on folder
     selection: no setup, fetch or connection until the user acts.
-  - Set-up is explicit. Suggested `.gitignore` rules (scratch files only, each with a
-    reason) are offered then, and are never written over an existing `.gitignore`.
+  - Set-up is explicit. Suggested `.gitignore` rules are offered then, each with a
+    reason, and are never written over an existing `.gitignore`. They cover noise and
+    files not needed to reproduce results (scratch, rebuildable caches, render logs).
   - Changed files are grouped (sources, records, generated, data). Nothing is
     pre-selected. Files that can identify subjects are labelled. A snapshot holds exactly
     the selected files and leaves everything else, the user's own staging included, as it

@@ -171,10 +171,15 @@ def test_policy_protects_the_immutable_records_and_never_ignores_them():
     records += ("report/builds/**", "deck/builds/**")
     for path in records:
         assert path in protected
-    rules = [t["rule"] for t in policy["ignore_template"]]
+    rules = [t["rule"].rstrip("/") for t in policy["ignore_template"]]
+    # Never left out: what the user edits, and what they choose about file by file.
     chosen_by_the_user = (".opncafyr/runs", ".opncafyr/publications", "OUTPUTS", "source-data")
-    for kept in (*chosen_by_the_user, "report", "deck"):
-        assert not any(r.startswith(kept) for r in rules), kept
+    edited = (".opncafyr/recipes/clean.yaml", "report/report.qmd", "report/_quarto.yml")
+    edited += ("deck/presentation.yaml", "report/builds/b1", "deck/builds/b1")
+    for kept in (*chosen_by_the_user, *edited):
+        assert not any(kept == r or kept.startswith(r + "/") for r in rules), kept
+        assert not any(r.startswith(kept + "/") for r in rules), kept
+    assert all(t["reason"] for t in policy["ignore_template"])
     assert policy["send_blocked"] == []
     # gitneighbr's glob rules: relative, "/", no "..", only * ? ** as wildcards.
     globs = [g for grp in policy["groups"] for g in grp["globs"]] + protected
