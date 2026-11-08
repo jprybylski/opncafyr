@@ -59,7 +59,7 @@ If you have not used the app before, [opening the app and choosing a study folde
 1. [Import and clean]({{ '/get-started/walkthrough-import/' | relative_url }}): make the study folder, preview and import the file, and add cleaning steps that remove or exclude the problem rows, each with a reason.
 2. [Map and check]({{ '/get-started/walkthrough-map/' | relative_url }}): say what each column means, set the units and flag values, choose exactly one analyte, and read the findings the checks report.
 3. [Run each analyte]({{ '/get-started/walkthrough-run/' | relative_url }}): start a run for `PARENT`, analyse and save it in opnca-r, replay and complete it, then do the same for `METAB`.
-4. [Publish, report and deck]({{ '/get-started/walkthrough-publish/' | relative_url }}): publish the tables and figures of both completed runs, then build a Word report and a PowerPoint deck from them.
+4. [Publish, report and deck]({{ '/get-started/walkthrough-publish/' | relative_url }}): publish the tables and figures of both completed runs, then build a Word report and a PowerPoint deck from them, and optionally keep a snapshot of your work.
 
 {: .tip }
 > The app's **Guide** (in the left navigation) has the same exercise and works without a network. Its copy of the practice file can be downloaded from inside the app.

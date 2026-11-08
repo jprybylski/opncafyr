@@ -93,8 +93,10 @@ and its feature policy was enforced only in the page.
    opens.
 
 5. **The policy for an NCA study folder** (`history.policy()`):
-   - **Groups:** editable sources (recipes, `report/`, `deck/`); run and publication
-     records; generated files; source data; other.
+   - **Groups**, in match order (gitneighbr uses the first that matches): run and
+     publication records; generated files (`OUTPUTS/`, builds, the report's and deck's
+     copies of published files); editable sources (recipes, `report/`, `deck/`); the
+     app's working files (the rest of `.opncafyr/`); source data; other.
    - **Protected:** no Git action may change these in the folder: `.opncafyr/runs/`,
      `.opncafyr/publications/`, `report/builds/`, `deck/builds/`, `workspace.json`, jobs
      and backups. Committing a copy of them is allowed. Updating can never replace a

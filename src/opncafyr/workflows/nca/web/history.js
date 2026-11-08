@@ -45,15 +45,20 @@ export function init(container) {
     await refresh();
   }
 
+  // Loading the page and showing it both refresh; only the latest one draws, so the
+  // buttons never appear twice.
+  let latest = 0;
   async function refresh() {
-    actions.replaceChildren();
+    const mine = ++latest;
     let state;
     try {
       state = await getJSON("api/nca/history");
     } catch (err) {
-      setStatus(sec.status, err.message || String(err), "error");
+      if (mine === latest) setStatus(sec.status, err.message || String(err), "error");
       return;
     }
+    if (mine !== latest) return;
+    actions.replaceChildren();
     remote.disabled = state.running;
     remoteLabel.hidden = !state.available;
     if (!state.workspace_open) {

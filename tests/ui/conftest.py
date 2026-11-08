@@ -145,5 +145,7 @@ def page(request, browser, home):
     pg.get_by_role("link", name="Open toy").wait_for()
     pg.get_by_role("button", name=f"Cancel {JOB_LABEL}").wait_for()
     pg.locator("#runs-table").get_by_text(RUN_ID).wait_for()
+    # Links to views that need a study folder appear once the open folder is known.
+    pg.get_by_role("link", name="Version history", exact=True).wait_for()
     yield pg
     context.close()

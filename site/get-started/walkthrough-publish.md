@@ -104,6 +104,25 @@ Then, in **5. Deck (PPTX)**:
 > - **Check or Build waits** — the deck editor or the fragment editor has unsaved changes. Save them, or close the deck editor.
 > - **The editor's own Build button** makes a draft for you to look at. The app does not record it; only **Build** on the **Publish** page makes a recorded build.
 
+## Step 15. Keep a snapshot of your work (optional)
+
+[Version history]({{ '/guides/version-history/' | relative_url }}) keeps a copy of files you choose, with Git, on this computer. You don't need it, and a snapshot is not a run, a publication or a build: those stay as they are.
+
+1. Select **Version history** on the left. Leave **Also allow sending…** unticked, and select **Open version history**.
+2. The page opens under **Apps**. Select **Start version history here**, keeping the suggested files to leave out ticked: they are scratch files and caches the app can rebuild.
+3. Under **Before your first snapshot**, type your name and email, then select **Save my name and email**.
+4. Under **Changes**, in **Editable sources**, tick your cleaning recipe (in `.opncafyr/recipes/`), `report/report.qmd` and `deck/presentation.yaml`. Leave the rest unticked.
+5. Under **Save snapshot**, type `Cleaning recipe, report text and slides`, then select **Save snapshot**.
+
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/15-history-save.png' | relative_url }}" width="768" height="347" loading="lazy"
+       alt="The Save snapshot form with one file selected and a summary typed, above the Save snapshot button.">
+  <figcaption>Only the files you tick are saved in the snapshot.</figcaption>
+</figure>
+
+{: .expect }
+> The page confirms the snapshot was saved, and the files you ticked leave the **Changes** list. Runs and builds carry **Protected**, and data and results carry **May identify subjects**. Files you didn't tick stay listed until you choose to snapshot them.
+
 ## Review what you made
 
 Your `TA-walkthrough` folder now holds:
@@ -111,7 +130,8 @@ Your `TA-walkthrough` folder now holds:
 - `source-data/two_analyte.csv`, unchanged;
 - two completed, sealed runs, one per analyte, each with its own replay check (in the hidden `.opncafyr` folder);
 - `OUTPUTS`, with the published tables and figures;
-- `report` and `deck`, with your builds.
+- `report` and `deck`, with your builds;
+- if you did Step 15, a hidden `.git` folder with your first snapshot, and a `.gitignore` listing the files left out.
 
 Every build is kept in `report/builds` or `deck/builds`, with a record of the exact runs and file fingerprints it used. **Download DOCX** and **Download PPTX** work only while the file still matches that record. A report build is marked **Out of date** once the report text, its settings or the published files change after it was made; render again to get a current one.
 
@@ -128,5 +148,6 @@ Open the DOCX and the PPTX and read them. Check that each table and figure is th
 - [Workspace and run provenance]({{ '/guides/provenance/' | relative_url }}): what the study folder records, and why any change makes a new run.
 - [Cleaning, BLQ and units]({{ '/guides/cleaning/' | relative_url }}): every cleaning step, and when the app asks you to choose.
 - [Build reports and decks]({{ '/guides/reports-and-decks/' | relative_url }}): editing the report text and the slides.
+- [Version history]({{ '/guides/version-history/' | relative_url }}): snapshots of files you choose, and reviewed sending to a shared copy.
 
 **Back to:** [Two-analyte walkthrough]({{ '/get-started/walkthrough/' | relative_url }})

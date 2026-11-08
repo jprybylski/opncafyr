@@ -17,7 +17,7 @@ All notable changes to this project are documented here. The format follows
   - Set-up is explicit. Suggested `.gitignore` rules are offered then, each with a
     reason, and are never written over an existing `.gitignore`. They cover noise and
     files not needed to reproduce results (scratch, rebuildable caches, render logs).
-  - Changed files are grouped (sources, records, generated, data). Nothing is
+  - Changed files are grouped (records, generated, sources, app files, data). Nothing is
     pre-selected. Files that can identify subjects are labelled. A snapshot holds exactly
     the selected files and leaves everything else, the user's own staging included, as it
     was.
@@ -27,6 +27,10 @@ All notable changes to this project are documented here. The format follows
     HTTPS only, with the access token held in memory.
   - A study folder inside another Git repository, or one using Git LFS, filters,
     includes or other unsupported settings, is explained and left unchanged.
+  - Both user guides cover it: a chapter with screenshots, an optional walkthrough step,
+    the study-folder and files pages, troubleshooting, limitations and the glossary. All
+    guide screenshots are regenerated (`scripts/guide_screenshots.py` now captures the
+    version history pages too).
   - gitneighbr 0.2.0 is pinned as a cellar R package (`[packages.gitneighbr]`, its
     release tarball and `SHA256SUMS`); its dependencies were already locked. On Windows
     it keeps Git for Windows' line-ending and certificate-store defaults, so folders

@@ -14,6 +14,7 @@ Later steps add more folders, but only when you use them:
 | `OUTPUTS` | you publish | copies of the tables and figures you chose |
 | `report` | you set up a report | the Word report project and its builds |
 | `deck` | you set up a deck | the PowerPoint deck project and its builds |
+| `.git`, `.gitignore` | you set up [version history](version-history.md) (optional) | Git's snapshots of files you chose, and the files left out of them |
 
 The app never changes, moves or rewrites your source files. Cleaning reads them and writes its results inside `.opncafyr`.
 

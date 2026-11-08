@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import re
 import shutil
 import sys
 import zipfile
@@ -137,6 +138,12 @@ def _all_text(entries) -> str:
     return "\n".join(e.text for e in entries)
 
 
+def _as_number(value: str, text: str) -> bool:
+    """Whether ``value`` appears in ``text`` as a number of its own. Job timestamps carry
+    milliseconds, so a job that ran at 10:15:38.985 must not count as the value 38.985."""
+    return re.search(rf"(?<![\d:]){re.escape(value)}(?!\d)", text) is not None
+
+
 # --- scrubbing rules -------------------------------------------------------------------
 
 
@@ -199,7 +206,7 @@ def test_bundle_after_the_fixture_has_no_subject_ids_or_concentrations(app_root,
     text = _all_text(entries)
     ids, concs = _fixture()
     assert [i for i in ids if i in text] == []
-    assert [c for c in concs if c in text] == []
+    assert [c for c in concs if _as_number(c, text)] == []
     assert str(study) not in text and str(study.resolve()) not in text
     assert str(Path.home()) not in text
     user = os.environ.get("USER") or os.environ.get("USERNAME")

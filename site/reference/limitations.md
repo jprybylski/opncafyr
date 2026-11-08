@@ -28,6 +28,7 @@ These are deliberate and are not expected to change.
 | **Completed runs never change.** | Any change to cleaning, mapping, exclusions or BLQ rules needs a new run. |
 | **Only completed runs can be published.** | A run must have a matching replay, be confirmed, and still match its recorded fingerprints. |
 | **One run open in opnca-r at a time.** | Opening another run closes the first. A run that has been saved can't be opened in opnca-r again, nor can a run made by an older version of the app before it passed unit labels to opnca-r. |
+| **Version history is optional, and local unless you turn sending on.** | Snapshots are copies of files you choose. They are not runs, publications or builds, and Git actions never change those in the study folder. Sending is off unless you turn it on for a session, and every file is listed before anything leaves. |
 | **Source files are never changed.** | The app only reads them: cleaning results are written inside the study folder's own records. Importing records a file's fingerprint; it doesn't copy the file. |
 
 ## Not available yet
@@ -42,6 +43,7 @@ These are deliberate and are not expected to change.
 | **One report template and one deck template.** Both come with the app. Your organisation's own report shell or deck template can't be plugged in yet. | Edit the report text and the slides after setting them up. |
 | **The installer and the app are not code-signed (Windows) or notarized (macOS).** Offline bundles have no detached signature. | Get the installer from the person who supports opncafyr at your site. For offline bundles, administrators can compare the installer payload digest with the value from whoever supplied the installer. |
 | **No ready-made offline bundles are published with releases.** | An administrator builds one on a connected computer. See [Offline install]({{ '/guides/offline-install/' | relative_url }}). |
+| **Version history sends only over HTTPS, to an existing Git repository.** SSH addresses, Git LFS, submodules, encryption filters and study folders inside another Git project aren't supported. | Use the HTTPS address and an access token. Keep study folders outside other Git projects. The page explains any refusal and changes nothing. |
 | **No native Linux install.** A container image for cloud computers is under discussion. | Use macOS or Windows. |
 | **macOS 14 and earlier, Windows 10 and Windows on Arm are not supported.** | See [Platforms and versions]({{ '/reference/platforms/' | relative_url }}). |
 | **No public download page.** The opnca-r release is not public. | Ask whoever provides your opncafyr install. |

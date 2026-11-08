@@ -22,7 +22,13 @@ A snapshot is not a run, a publication or a build. Those stay fixed records of t
 
 1. Open a study folder. **Version history** appears in the left side once a folder is open.
 2. Select **Version history**, then **Open version history**. Leave **Also allow sending…** unticked unless you need it (see [Sending and getting updates](#sending-and-getting-updates)).
-3. The version history page opens under **Apps**.
+3. The version history page opens under **Apps**, as **Version history (gitneighbr)**.
+
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/12-history.png' | relative_url }}" width="1280" height="800" loading="lazy"
+       alt="The Version history page: a note that a snapshot is not a run, a publication or a build, a warning that study data can be identifiable, an unticked box to also allow sending, and the Open version history button.">
+  <figcaption>Sending stays off unless you tick the box before opening version history.</figcaption>
+</figure>
 
 If **Version history** says it is unavailable, its part of the install is missing (for example Git). Everything else in the app keeps working. See [A tool shows Unavailable]({{ '/guides/troubleshooting/' | relative_url }}).
 
@@ -32,7 +38,13 @@ The first time, the page says version history isn't set up in this folder yet. N
 
 - **Start version history here** sets it up in this folder only.
 - It can offer files to leave out of snapshots: ones you don't need to reproduce your results, such as job scratch files, caches the app rebuilds, render logs and the lock files Word makes. Each comes with a reason. Untick any you want to keep. They are written as a new `.gitignore`, and only if the folder doesn't have one yet. Left-out files stay on your computer and still show under "show ignored".
-- The first time you save a snapshot, it asks for your name and email. They are kept by the app on this computer, not in the study folder.
+- Before your first snapshot, it asks for your name and email (**Before your first snapshot**), recorded with each snapshot. Select **Save my name and email**. They are kept by the app on this computer, not in the study folder, unless you tick **Just for this project**.
+
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/13-history-setup.png' | relative_url }}" width="726" height="650" loading="lazy"
+       alt="Setting up version history: twelve suggested files and folders to leave out of snapshots, each ticked and with its reason, such as job scratch space, cleaned-data caches the app rebuilds, Quarto's render cache and Word's lock files, above the Start version history here button.">
+  <figcaption>The suggestions leave out only noise and files you don't need to reproduce results. Untick any you want to keep.</figcaption>
+</figure>
 
 The page refuses, and says why, when:
 
@@ -41,11 +53,23 @@ The page refuses, and says why, when:
 
 ## Save a snapshot
 
-1. The page lists changed files in groups: **Editable sources** (recipes, report and deck projects), **Run and publication records**, **Generated files**, **Source data** and **Other files**. Some carry labels:
+1. Under **Changes**, the page lists changed files in groups: **Run and publication records**, **Generated files** (published outputs and builds), **Editable sources** (cleaning recipes, and the report and deck projects you edit), **App working files**, **Source data** and **Other files**. Some carry labels:
    - **Protected:** the app's fixed records. Version history never changes these files in your folder.
    - **May identify subjects:** data, results, outputs, reports and decks that can contain subject-level information.
-2. Nothing is selected for you. Select each file you want in the snapshot. Select a file's name to see what changed; for binary files you see their size only.
-3. Type a summary, then select **Save snapshot**.
+2. Nothing is selected for you. Select each file you want in the snapshot. Select a file's name to see what changed; for binary files you see their size only. On a new file, **Stop showing this file** adds it to `.gitignore`, after asking.
+3. Under **Save snapshot**, type a summary, then select **Save snapshot**.
+
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/14-history-changes.png' | relative_url }}" width="1280" height="800" loading="lazy"
+       alt="The top of the Changes list: the Run and publication records group, with each new file labelled Protected, and run files also labelled May identify subjects.">
+  <figcaption>Files are grouped by what they are. Nothing is selected for you.</figcaption>
+</figure>
+
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/15-history-save.png' | relative_url }}" width="768" height="347" loading="lazy"
+       alt="The Save snapshot form with one file selected and a summary typed, above the Save snapshot button.">
+  <figcaption>Only the files you tick are saved in the snapshot.</figcaption>
+</figure>
 
 Only the files you selected are saved. Anything else, including what you had already staged with Git yourself, is left as it was. If the folder changed since the list was shown, the snapshot is refused and nothing is saved; look again and retry.
 

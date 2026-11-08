@@ -187,3 +187,53 @@ def test_policy_protects_the_immutable_records_and_never_ignores_them():
     for glob in globs:
         assert not glob.startswith("/") and "\\" not in glob and ".." not in glob.split("/")
         assert not re.search(r"[\[\]{}!]", glob)
+
+
+def _glob_regex(glob: str) -> re.Pattern[str]:
+    """gitneighbr's glob rules: ``dir/`` is a folder and all inside it, ``**`` any depth,
+    ``*`` and ``?`` within one path part."""
+    if glob.endswith("/"):
+        glob += "**"
+    out, i = "", 0
+    while i < len(glob):
+        if glob.startswith("**/", i):
+            out, i = out + "(?:.*/)?", i + 3
+        elif glob.startswith("**", i):
+            out, i = out + ".*", i + 2
+        elif glob[i] == "*":
+            out, i = out + "[^/]*", i + 1
+        elif glob[i] == "?":
+            out, i = out + "[^/]", i + 1
+        else:
+            out, i = out + re.escape(glob[i]), i + 1
+    return re.compile(out + "$")
+
+
+def _group_of(policy, path: str) -> str:
+    """The first group whose globs match, as gitneighbr assigns them."""
+    for group in policy["groups"]:
+        if any(_glob_regex(g).match(path) for g in group["globs"]):
+            return group["id"]
+    return policy["default_group"]["id"]
+
+
+def test_policy_puts_each_file_in_the_group_a_user_would_expect():
+    policy = history.policy()
+    expected = {
+        ".opncafyr/runs/20261106T120000Z-ab12/manifest.json": "records",
+        ".opncafyr/publications/pub-1/publication.json": "records",
+        "OUTPUTS/tables/PARENT_run_summary.csv": "generated",
+        "report/builds/b1/report-draft.docx": "generated",
+        "deck/builds/b1/deck.pptx": "generated",
+        "report/OUTPUTS/figures/PARENT_profile.png": "generated",
+        ".opncafyr/recipes/clean.yaml": "sources",
+        "report/report.qmd": "sources",
+        "deck/presentation.yaml": "sources",
+        ".opncafyr/workspace.json": "app",
+        ".opncafyr/cleaned/r1-abc/cleaned.csv": "app",
+        "source-data/pk.csv": "data",
+        "notes.md": "other",
+    }
+    assert {path: _group_of(policy, path) for path in expected} == expected
+    ids = [g["id"] for g in policy["groups"]]
+    assert len(ids) == len(set(ids))

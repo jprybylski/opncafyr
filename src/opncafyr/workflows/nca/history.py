@@ -45,7 +45,9 @@ SOURCE_DATA = "source-data"
 def policy() -> dict[str, Any]:
     """The gitneighbr launcher policy for an NCA study folder.
 
-    - **Groups** say what each changed file is, in the folder's own terms.
+    - **Groups** say what each changed file is, in the folder's own terms. gitneighbr
+      puts a file in the first group that matches, so the narrower groups come first:
+      builds before the report and deck sources, recipes before the app's other files.
     - **Protected** paths are the app's immutable records (runs, publications, builds)
       and its own bookkeeping: no Git action may change them in the folder, so getting
       updates never replaces a completed run or a build.
@@ -60,12 +62,6 @@ def policy() -> dict[str, Any]:
         "schema_version": 1,
         "groups": [
             {
-                "id": "sources",
-                "label": "Editable sources",
-                "description": "Cleaning recipes and the report and deck projects you edit.",
-                "globs": [f"{RECIPES_DIR}/**", "report/**", "deck/**"],
-            },
-            {
                 "id": "records",
                 "label": "Run and publication records",
                 "description": (
@@ -77,8 +73,32 @@ def policy() -> dict[str, Any]:
             {
                 "id": "generated",
                 "label": "Generated files",
-                "description": "Published outputs, builds and the app's working files.",
-                "globs": [f"{OUTPUTS}/", f"report/{BUILDS}/", f"deck/{BUILDS}/", f"{META}/**"],
+                "description": (
+                    "Published outputs, report and deck builds, and the copies of published "
+                    "files the report and deck use."
+                ),
+                "globs": [
+                    f"{OUTPUTS}/",
+                    f"report/{BUILDS}/",
+                    f"deck/{BUILDS}/",
+                    f"report/{OUTPUTS}/",
+                    f"deck/{OUTPUTS}/",
+                    "deck/build/",
+                ],
+            },
+            {
+                "id": "sources",
+                "label": "Editable sources",
+                "description": "Cleaning recipes and the report and deck projects you edit.",
+                "globs": [f"{RECIPES_DIR}/**", "report/**", "deck/**"],
+            },
+            {
+                "id": "app",
+                "label": "App working files",
+                "description": (
+                    f"The app's own settings, cleaned-data caches and check results in {META}."
+                ),
+                "globs": [f"{META}/**"],
             },
             {
                 "id": "data",
@@ -114,6 +134,8 @@ def policy() -> dict[str, Any]:
                     f"{OUTPUTS}/",
                     f"report/{BUILDS}/",
                     f"deck/{BUILDS}/",
+                    f"report/{OUTPUTS}/",
+                    f"deck/{OUTPUTS}/",
                 ],
             }
         ],
