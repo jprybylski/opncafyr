@@ -54,10 +54,11 @@ sudo cp -R "$NEWER_SRC" "$WORK/payload-newer"
 sudo cp "$(dirname "$0")/../spikes/nonet.sb" "$WORK/nonet.sb"
 # The Gate 2 flow driver (#51) and the fixture helpers it imports, in the repository layout.
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-sudo mkdir -p "$WORK/flow/scripts/offline" "$WORK/flow/tests/fixtures"
+sudo mkdir -p "$WORK/flow/scripts/offline" "$WORK/flow/tests/fixtures/opnca-r"
 sudo cp "$REPO/scripts/offline/flow_check.py" "$WORK/flow/scripts/offline/"
-sudo cp "$REPO"/tests/{nca_helpers,publish_helpers,artifact_docs}.py "$WORK/flow/tests/"
+sudo cp "$REPO"/tests/{nca_helpers,publish_helpers,artifact_docs,opnca_listing}.py "$WORK/flow/tests/"
 sudo cp "$REPO"/tests/fixtures/two_analyte.{csv,expected.json} "$WORK/flow/tests/fixtures/"
+sudo cp "$REPO"/tests/fixtures/opnca-r/opnca-artifacts-v2.schema.json "$WORK/flow/tests/fixtures/opnca-r/"
 sudo chown -R "$U" "$WORK"
 
 as_user() {
