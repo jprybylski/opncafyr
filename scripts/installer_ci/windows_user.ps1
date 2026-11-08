@@ -59,6 +59,10 @@ switch ($Leg) {
         if ($rc -ne 0) { Fail "install exited $rc" }
         if (-not (Active)) { Fail 'nothing is active' }
         foreach ($l in $desktopLnk, $startLnk) { if (-not (Test-Path $l)) { Fail "no shortcut $l" } }
+        foreach ($l in $desktopLnk, $startLnk) {
+            $icon = ($shell.CreateShortcut($l).IconLocation -split ',')[0]
+            if ($icon -notlike '*\opncafyr.ico' -or -not (Test-Path -LiteralPath $icon)) { Fail "shortcut $l icon is $icon" }
+        }
         # R's per-user installer must leave no registration behind (r_registry).
         if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\R for Windows 4.6.2_is1') { Fail 'R uninstall entry left in HKCU' }
         if (Test-Path 'HKCU:\Software\R-core') { Fail 'HKCU R-core was written' }

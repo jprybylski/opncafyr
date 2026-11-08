@@ -4,10 +4,14 @@
   starts ``<app root>/current/launcher/bin/python -m opncafyr launch`` in the background
   and exits, so the app never sits in the Dock as "not responding". It goes through the
   ``current`` link, so an update needs no new app. Locally created, it carries no
-  quarantine flag; signing and notarization are #39.
+  quarantine flag; signing and notarization are #39. Its icon is ``opncafyr.icns``.
 - **Windows:** ``opncafyr.lnk`` on the Desktop and in the Start Menu, made through
   ``WScript.Shell`` by ``ps/icons_windows.ps1``. A shortcut can't follow the pointer
   file, so it names the active install's ``pythonw.exe`` and is rewritten on activation.
+  Its icon is ``opncafyr.ico``, copied into the version folder next to the launcher.
+
+Both icon files are exported from ``web/static/logo-mark.svg`` by
+``scripts/export_logo.py`` and ship in ``installer/assets/``; nothing is downloaded.
 """
 
 from __future__ import annotations
@@ -23,6 +27,8 @@ from opncafyr.installer import proc
 from opncafyr.installer.layout import Layout
 
 APP_NAME = "opncafyr"
+ICNS = "opncafyr.icns"
+ICO = "opncafyr.ico"
 APPS_DIR_ENV = "OPNCAFYR_APPS_DIR"  # tests and CI only
 SHORTCUTS_ENV = "OPNCAFYR_SHORTCUT_DIRS"  # tests and CI only: ;-separated folders
 
@@ -33,12 +39,20 @@ def macos_app_path(environ: dict[str, str] | None = None) -> Path:
     return base / f"{APP_NAME}.app"
 
 
+def icon_bytes(name: str) -> bytes:
+    """An icon file bundled in ``opncafyr.installer/assets``."""
+    return resources.files("opncafyr.installer").joinpath("assets", name).read_bytes()
+
+
 def write_macos_app(layout: Layout, version: str, app: Path | None = None) -> Path:
     app = app or macos_app_path()
     contents = app / "Contents"
     (contents / "MacOS").mkdir(parents=True, exist_ok=True)
+    (contents / "Resources").mkdir(parents=True, exist_ok=True)
+    (contents / "Resources" / ICNS).write_bytes(icon_bytes(ICNS))
     plist = {
         "CFBundleExecutable": APP_NAME,
+        "CFBundleIconFile": ICNS,
         "CFBundleIdentifier": "org.opncafyr.launcher",
         "CFBundleName": APP_NAME,
         "CFBundleDisplayName": APP_NAME,
@@ -112,6 +126,8 @@ def create(layout: Layout, install_id: str, version: str, log: Path) -> list[Pat
         return [write_macos_app(layout, version)]
     if sys.platform == "win32":
         vdir = layout.version_dir(install_id)
+        icon = vdir / ICO
+        icon.write_bytes(icon_bytes(ICO))
         _run_ps(
             "create",
             layout,
@@ -120,6 +136,7 @@ def create(layout: Layout, install_id: str, version: str, log: Path) -> list[Pat
             arguments="-m opncafyr launch",
             workdir=str(vdir),
             description="opncafyr workspace launcher",
+            icon=str(icon),
         )
         return existing()
     return []
@@ -143,8 +160,13 @@ def existing() -> list[Path]:
 
 def present(layout: Layout) -> bool:
     if sys.platform == "darwin":
-        stub = macos_app_path() / "Contents" / "MacOS" / APP_NAME
-        return stub.is_file() and str(layout.root) in stub.read_text("utf-8")
+        contents = macos_app_path() / "Contents"
+        stub = contents / "MacOS" / APP_NAME
+        return (
+            stub.is_file()
+            and str(layout.root) in stub.read_text("utf-8")
+            and (contents / "Resources" / ICNS).is_file()
+        )
     if sys.platform == "win32":
         return len(existing()) == len(windows_shortcut_dirs())
     return True

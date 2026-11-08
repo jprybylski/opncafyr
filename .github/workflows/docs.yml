@@ -1,0 +1,139 @@
+# Build and check the documentation website (site/, #53) on pull requests and pushes; deploy
+# it to GitHub Pages from main. The repository's Pages source is "GitHub Actions".
+# Local equivalent: site/preview.sh build, then scripts/site_smoke.py (site/README.md).
+name: Docs site
+
+on:
+  push:
+    branches: [main, "ci/**"]
+    paths:
+      - "site/**"
+      - "docs/user-guide/**"
+      - "src/opncafyr/web/static/**"
+      - "src/opncafyr/workflows/nca/web/**"
+      - "src/opncafyr/installer/**"
+      - "src/opncafyr/cli.py"
+      - "installer/**"
+      - "runtime/pins.toml"
+      - "scripts/site_smoke.py"
+      - "scripts/guide_review.py"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "site/**"
+      - "docs/user-guide/**"
+      - "src/opncafyr/web/static/**"
+      - "src/opncafyr/workflows/nca/web/**"
+      - "src/opncafyr/installer/**"
+      - "src/opncafyr/cli.py"
+      - "installer/**"
+      - "runtime/pins.toml"
+      - "scripts/site_smoke.py"
+      - "scripts/guide_review.py"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer push waits, and a running deployment finishes.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # configure-pages reads the repository's Pages settings (the project-site path).
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+          working-directory: site
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      # Screenshots, the practice file and the logo come from the app's own copies.
+      - name: Copy shared assets
+        run: site/preview.sh sync
+
+      - name: Build
+        working-directory: site
+        run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
+        env:
+          JEKYLL_ENV: production
+
+      # Internal links, anchors, images and alt text. External links aren't fetched.
+      - name: Check links and images
+        working-directory: site
+        run: |
+          base="${{ steps.pages.outputs.base_path }}"
+          bundle exec htmlproofer _site \
+            --disable-external \
+            --swap-urls "^${base}/:/" \
+            --ignore-urls '/^https?:/'
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install Chromium
+        run: |
+          uv sync --locked --group ui
+          uv run --group ui playwright install --with-deps chromium
+
+      # Home, install, walkthrough and troubleshooting pages at laptop and phone widths, in
+      # light and dark, served under /opncafyr/: loading, images, alt text, overflow,
+      # keyboard, search and axe (WCAG 2.2 AA).
+      - name: Browser smoke check
+        run: uv run --group ui python scripts/site_smoke.py site/_site
+
+      - name: Upload the site
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/_site
+
+  # Advisory: warns (never fails) when user-facing files changed without both guides, or
+  # when the UI is newer than the guide screenshots. See scripts/guide_review.py.
+  guide-review:
+    name: Review both guides
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - name: Check what changed
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            BASE=$(git merge-base origin/main HEAD)
+          fi
+          uv run --no-project python scripts/guide_review.py --base "$BASE"
+
+  deploy:
+    name: Deploy
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

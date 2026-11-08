@@ -26,3 +26,12 @@ Thumbs.db
 *.xpt
 .opncafyr/
 OUTPUTS/
+
+# Docs website (site/): build output, local gems, and assets copied in at build time
+site/_site/
+site/.jekyll-cache/
+site/.bundle/
+site/vendor/
+site/assets/screenshots/
+site/assets/images/
+site/assets/example/

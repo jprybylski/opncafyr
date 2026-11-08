@@ -7,6 +7,44 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A documentation website (#53), published from `site/` to
+  <https://jprybylski.github.io/opncafyr/> by `.github/workflows/docs.yml`.
+  - Jekyll with Just the Docs, in the app's own colours and status meanings, light and
+    dark. It uses system fonts only and loads nothing from other sites.
+  - Pages:
+    - Get started: before you install, macOS and Windows installs, opening the app, and a
+      four-part two-analyte walkthrough with the practice file.
+    - Guides: offline bundles, internal mirrors (for administrators), maintenance,
+      provenance, cleaning/BLQ/units, publishing, reports and decks, troubleshooting.
+    - Reference: glossary, files, platforms, limitations, technical documents.
+  - The screenshots, practice CSV and logo are copied in from the app's own files at build
+    time, so the website and the in-app Guide share one source. The in-app Guide is
+    unchanged and still works offline.
+  - CI builds with the Pages base path and checks links, anchors, images and alt text
+    (html-proofer).
+  - `scripts/site_smoke.py` opens key pages at laptop and phone widths, light and dark,
+    under `/opncafyr/`. It checks loading, images, alt text, sideways scrolling, keyboard,
+    search and axe WCAG 2.2 AA.
+  - Merges to `main` deploy through `deploy-pages`.
+  - `scripts/guide_review.py` warns (advisory) when user-facing files change without both
+    guides, or when the UI is newer than the screenshots.
+  - `site/README.md` has the owner, an update checklist and a release review. CLAUDE.md
+    points to it.
+- The woven logo is used everywhere (#54).
+  - The macOS `.app` now has an icon (`CFBundleIconFile`), and the Windows shortcuts use
+    `opncafyr.ico` instead of Python's icon. A repair adds the icon to an older `.app`.
+    The installer CI checks both icons.
+  - The launcher has a 32 px PNG favicon next to the SVG one.
+  - The README shows the wordmark (with a dark-background variant, `logo-dark.svg`) above
+    the research-use notice. It now links both guides, and its status section describes
+    what works today.
+  - The docs website uses the mark and wordmark.
+  - `scripts/export_logo.py` exports every PNG, `.ico` and `.icns` from the SVGs (pure
+    Python packing, offline). It also writes `docs/design/logo-sizes.png`, the visual
+    check at 16–256 px on light and dark, and records hashes that a test checks.
+- `scripts/guide_screenshots.py` captures from a folder under `/tmp`, so the study path in
+  the top bar is no longer a per-user temp folder.
+- CI's test matrix also runs on `ci/**` branches.
 - `repair --build-from-source` (#34): installs afresh with opnca-r built from its vendored
   source tarball instead of the prebuilt binary, for when the binary can't be used.
   - It uses the pinned standalone Rust toolchain and, on Windows, Rtools45 run as the

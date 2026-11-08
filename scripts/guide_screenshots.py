@@ -563,7 +563,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.runtime is None or not args.runtime.is_file():
         parser.error("--runtime must name a runtime record")
     out.mkdir(parents=True, exist_ok=True)
-    tmp = Path(tempfile.mkdtemp(prefix="opncafyr-guide-"))
+    # The top bar shows the study folder's path, and the images are published (the guide
+    # and the docs site): use a shared, neutral folder rather than the per-user temp
+    # folder (on macOS, /var/folders/<per-user id>/T/).
+    # mkdtemp still makes a private (0700), randomly named folder inside it.
+    shared = Path("/tmp")  # noqa: S108
+    neutral = shared if os.name == "posix" and shared.is_dir() else None
+    tmp = Path(tempfile.mkdtemp(prefix="opncafyr-guide-", dir=neutral))
     # Before anything from opncafyr is imported: keep the app's files out of the real root.
     os.environ["OPNCAFYR_APP_ROOT"] = str(tmp / "app root")
     sys.path.insert(0, str(TESTS))  # reuse the test helpers rather than copying them

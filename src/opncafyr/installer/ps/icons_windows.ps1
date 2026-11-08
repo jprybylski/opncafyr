@@ -11,6 +11,8 @@
 #   OPNCAFYR_ICON_ARGUMENTS    "-m opncafyr launch" (create)
 #   OPNCAFYR_ICON_WORKDIR      working folder (create)
 #   OPNCAFYR_ICON_DESCRIPTION  tooltip (create)
+#   OPNCAFYR_ICON_ICON         opncafyr.ico in the version folder (create; optional: the
+#                              target's own icon when it is missing)
 # Creating a .lnk through WScript.Shell is plain file I/O: no elevation, no registry.
 $ErrorActionPreference = 'Stop'
 $shell = New-Object -ComObject WScript.Shell
@@ -28,9 +30,13 @@ foreach ($dir in ($env:OPNCAFYR_ICON_DIRS -split ';' | Where-Object { $_ })) {
     $lnk.Arguments = $env:OPNCAFYR_ICON_ARGUMENTS
     $lnk.WorkingDirectory = $env:OPNCAFYR_ICON_WORKDIR
     $lnk.Description = $env:OPNCAFYR_ICON_DESCRIPTION
-    $lnk.IconLocation = "$($env:OPNCAFYR_ICON_TARGET),0"
+    if ($env:OPNCAFYR_ICON_ICON -and (Test-Path -LiteralPath $env:OPNCAFYR_ICON_ICON)) {
+        $lnk.IconLocation = "$($env:OPNCAFYR_ICON_ICON),0"
+    } else {
+        $lnk.IconLocation = "$($env:OPNCAFYR_ICON_TARGET),0"
+    }
     $lnk.Save()
     $check = $shell.CreateShortcut($path)
     if ($check.TargetPath -ne $env:OPNCAFYR_ICON_TARGET) { throw "shortcut $path points at $($check.TargetPath)" }
-    Write-Output "created $path -> $($check.TargetPath) $($check.Arguments)"
+    Write-Output "created $path -> $($check.TargetPath) $($check.Arguments) icon $($check.IconLocation)"
 }

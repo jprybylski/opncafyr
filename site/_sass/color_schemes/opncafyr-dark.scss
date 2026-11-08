@@ -1,0 +1,40 @@
+// Dark presentation, from the app's dark tokens (app.css). Loaded by
+// assets/css/just-the-docs-opncafyr-dark.scss when the reader's system prefers dark.
+$color-scheme: dark;
+
+$ocf-bg: #0c1413;
+$ocf-surface: #13201f;
+$ocf-surface-2: #182725;
+$ocf-fg: #e3ecea;
+$ocf-muted: #a3b3b1;
+$ocf-border: #273836;
+$ocf-accent: #5eead4;
+$ocf-accent-strong: #7ff0dd;
+$ocf-accent-soft: #123532;
+$ocf-accent-fg: #0c1413;
+$ocf-thread: #d98a72;
+$ocf-ok: #7fd9a1;
+$ocf-ok-soft: #123222;
+$ocf-warn: #f5c16b;
+$ocf-warn-soft: #3a2a0e;
+$ocf-danger: #ff9a92;
+$ocf-danger-soft: #3d1a1c;
+$ocf-info: #8db8ff;
+$ocf-info-soft: #1d2f52;
+
+@import "./color_schemes/dark";
+
+$body-background-color: $ocf-surface;
+$sidebar-color: $ocf-bg;
+$search-background-color: $ocf-surface-2;
+$table-background-color: $ocf-surface;
+$code-background-color: $ocf-surface-2;
+$feedback-color: $ocf-bg;
+$body-heading-color: $ocf-fg;
+$body-text-color: $ocf-fg;
+$link-color: $ocf-accent;
+$nav-child-link-color: $ocf-muted;
+$border-color: $ocf-border;
+$btn-primary-color: #0f766e;
+$base-button-color: $ocf-surface-2;
+$search-result-preview-color: $ocf-muted;

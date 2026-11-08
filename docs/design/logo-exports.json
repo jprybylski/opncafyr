@@ -1,0 +1,17 @@
+{
+  "about": "Written by scripts/export_logo.py; do not edit. SHA-256 of each file.",
+  "sources": {
+    "src/opncafyr/web/static/logo.svg": "c8c1fc2847e40ec296dd50a98b5d871f6ee9441d51c8bfeb828ccb817813ec41",
+    "src/opncafyr/web/static/logo-dark.svg": "d70bf62c9cbcef54ef83eec37d81b424522b728655c165b062953bb414632afe",
+    "src/opncafyr/web/static/logo-mark.svg": "68bed05d40ae60fa2fe8d477ff7cda2d5933ffffb240dbb06fe20952bd0f56a9"
+  },
+  "exports": {
+    "src/opncafyr/web/static/logo.png": "ac00178379e545efc3628358fb077c1b9ab194f1554fb26eb2fdb165acdd71aa",
+    "src/opncafyr/web/static/logo-dark.png": "a057b5d4eb4f3576d9caa2e26fb3322a3fee6b934ec6c5d5b9b0091614da1389",
+    "src/opncafyr/web/static/logo-mark.png": "635834b6e9773f343bd6db49346d41582c0370bcf597bf3e1688c562b8255cb8",
+    "src/opncafyr/web/static/favicon-32.png": "d2778ab8a41f1dafb7f5b2b62e3f0d350a2938ac56c8749403af4e51dfc75e60",
+    "src/opncafyr/installer/assets/opncafyr.ico": "e3c92a4cdc1980d843457d778e5e7b6f916a87b8f84976bae2d937b144a416c7",
+    "src/opncafyr/installer/assets/opncafyr.icns": "4457977a672983665bdd52f8a489dcdc1a1b9157b817031d7c4b4fe65882f369",
+    "docs/design/logo-sizes.png": "d3b069365626685bff3d411b07847854577260d6c1e91545ab917a22e10d90e2"
+  }
+}

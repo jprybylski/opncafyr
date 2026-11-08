@@ -1,8 +1,17 @@
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/opncafyr/web/static/logo-dark.png">
+    <img src="src/opncafyr/web/static/logo.png" alt="opncafyr" width="375">
+  </picture>
+</h1>
+
+> **Research use only.** This workspace has not been validated for clinical or regulatory
+> decisions. A report or deck that builds shows the files were assembled as recorded, not
+> that the analysis is right.
+
 > [!WARNING]
 > **Under development.** opncafyr and opnca are not yet released. Public installation is
 > not supported.
-
-# opncafyr
 
 A local, per-user workspace for noncompartmental analysis and reporting. You click an
 icon, pick a study folder, prepare a CSV, choose **one analyte**, and run it in
@@ -11,16 +20,31 @@ input snapshot, R script, settings, results and a hashed manifest. Completed run
 be published into a Word report ([quartifyr](https://github.com/jprybylski/quartifyr) +
 reportifyr) or a PowerPoint deck ([deckifyr](https://github.com/jprybylski/deckifyr)).
 
-> **Research use only.** opncafyr assembles artifacts; it does not make them scientifically
-> or regulatorily validated.
+## Guides
 
-Using it: the [user guide](docs/user-guide/index.md) (also inside the app, under **Guide**).
+- **Website:** [jprybylski.github.io/opncafyr](https://jprybylski.github.io/opncafyr/):
+  installation on macOS and Windows (online or offline), a two-analyte walkthrough with
+  a practice file, guides and reference.
+- **In the app:** the [user guide](docs/user-guide/index.md), under **Guide** in the
+  app's left-hand navigation. It ships with the app and works without a network.
 
 ## Status
 
-Pre-alpha scaffold. The controller boots, serves `/health` and enforces its loopback
-security checks; everything else is planned. See [docs/plan.md](docs/plan.md) for the
-roadmap and [docs/spec.md](docs/spec.md) for the technical specification.
+Pre-release. What works today:
+
+- A per-user installer for macOS and Windows that needs no admin rights. It installs
+  online or from a verified offline bundle, and it can repair, update and uninstall.
+- Study folders; CSV import with cleaning steps that keep before/after counts and a
+  rejected-row log; column and unit mapping; and data checks for one analyte.
+- One-analyte runs in opnca-r, saved as hashed bundles that are replayed and compared
+  before they are marked complete.
+- Publishing completed runs' tables and figures, then building a Word report or a
+  PowerPoint deck from them.
+- The in-app guide and a redacted support bundle.
+
+Still to come: code signing and notarization, an updater with rollback, and a
+standard-user test matrix. See [docs/plan.md](docs/plan.md) for the roadmap and
+[docs/spec.md](docs/spec.md) for the technical specification.
 
 ## How it fits together
 

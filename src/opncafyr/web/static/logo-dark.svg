@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 160" role="img" aria-labelledby="title description">
+  <title id="title">opncafyr</title>
+  <desc id="description">A concentration-time curve and boxplots in an unfinished woven field beside the opncafyr name, light lettering for dark backgrounds.</desc>
+  <defs>
+    <clipPath id="cloth"><path d="M21 21h87v16h13v18h-10v18h15v18h-13v18h-13v17H21z"/></clipPath>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 21h87v16h13v18h-10v18h15v18h-13v18h-13v17H21z" fill="#EAF2ED"/>
+    <g stroke="#B5CFC4" stroke-width="3">
+      <path d="M28 20v116m14-116v119m14-119v113m14-113v120m14-120v115m14-115v107m14-107v81"/>
+    </g>
+    <g clip-path="url(#cloth)" stroke="#8FB8AC" stroke-width="6" stroke-linecap="butt" stroke-dasharray="10 4">
+      <path d="M21 29h105M27 43h105M21 57h105M27 71h105M21 85h105M27 99h105M21 113h105"/>
+    </g>
+    <g stroke="#B5CFC4" stroke-width="2.5">
+      <path d="M121 43h14m-9 42h14m-13 14h9M28 136v5m28-8v7m28-5v7"/>
+    </g>
+    <g stroke="#B86148" stroke-width="3.2">
+      <path d="M47 40v39m-6-39h12m-12 39h12M47 88v23m-6-23h12m-12 23h12"/>
+      <rect x="39" y="79" width="16" height="9" rx="1.5" fill="#F6E6DD"/><path d="M39 84h16"/>
+      <path d="M84 55v38m-6-38h12m-12 38h12M84 102v17m-6-17h12m-12 17h12"/>
+      <rect x="76" y="93" width="16" height="9" rx="1.5" fill="#F6E6DD"/><path d="M76 98h16"/>
+      <path d="M121 77v29m-6-29h12m-12 29h12M121 115v14m-6-14h12m-12 14h12"/>
+      <rect x="113" y="106" width="16" height="9" rx="1.5" fill="#F6E6DD"/><path d="M113 111h16"/>
+    </g>
+    <path d="M23 105 47 48 66 58 84 73 103 89 121 100 138 108" stroke="#104F4A" stroke-width="6"/>
+    <g fill="#104F4A" stroke="#F7FAF8" stroke-width="2.5">
+      <circle cx="23" cy="105" r="4.5"/><circle cx="47" cy="48" r="4.5"/>
+      <circle cx="84" cy="73" r="4.5"/><circle cx="121" cy="100" r="4.5"/>
+    </g>
+  </g>
+  <text x="174" y="102" fill="#E3ECEA" font-family="Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="75" font-weight="650" letter-spacing="-3">opncafyr</text>
+</svg>

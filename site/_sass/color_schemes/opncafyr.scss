@@ -1,0 +1,23 @@
+// Light presentation. Colours are the app's light tokens (src/opncafyr/web/static/app.css)
+// so a status means the same thing on the site as in the app: ok green, warn amber,
+// danger red, info blue. Contrast pairs are listed in site/README.md.
+$color-scheme: light;
+
+// The $ocf-* palette is defined (light values) in _sass/custom/setup.scss.
+
+$body-background-color: $ocf-surface;
+$sidebar-color: $ocf-bg;
+$search-background-color: $ocf-surface;
+$table-background-color: $ocf-surface;
+$code-background-color: $ocf-surface-2;
+$feedback-color: $ocf-bg;
+$body-heading-color: $ocf-fg;
+$body-text-color: $ocf-fg;
+$link-color: $ocf-accent;
+$nav-child-link-color: $ocf-muted;
+$border-color: $ocf-border;
+$btn-primary-color: $ocf-accent;
+$base-button-color: $ocf-surface-2;
+$search-result-preview-color: $ocf-muted;
+
+@import "./color_schemes/light";

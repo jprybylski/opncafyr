@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # ci/** runs the full matrix on a branch before it is pushed to main (as installer.yml).
+    branches: [main, "ci/**"]
   pull_request:
 
 permissions:

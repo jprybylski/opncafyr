@@ -1,0 +1,8 @@
+{%- comment -%}
+  The site title: the opncafyr wordmark, light or dark to match the page. The wordmark is
+  a PNG export (scripts/export_logo.py); the SVG's lettering depends on installed fonts.
+{%- endcomment -%}
+<picture class="site-logo">
+  <source media="(prefers-color-scheme: dark)" srcset="{{ '/assets/images/logo-dark.png' | relative_url }}">
+  <img src="{{ '/assets/images/logo.png' | relative_url }}" alt="opncafyr" width="150" height="48">
+</picture>

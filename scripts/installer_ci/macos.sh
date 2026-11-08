@@ -106,6 +106,9 @@ as_user bash "$WORK/payload/install.sh" install 2>&1 | tee "$RESULTS/1-install.l
 [ -n "$(active)" ] || fail "nothing is active"
 sudo test -x "$APP/Contents/MacOS/opncafyr" || fail "no .app"
 sudo grep -q "$ROOT" "$APP/Contents/MacOS/opncafyr" || fail ".app does not name the app root"
+sudo test -s "$APP/Contents/Resources/opncafyr.icns" || fail ".app has no icon"
+sudo /usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$APP/Contents/Info.plist" | grep -qx opncafyr.icns \
+  || fail ".app does not name its icon"
 sudo test -x "$RROOT/versions/$(basename "$(active)")/R.framework/Resources/bin/R" || fail "no R"
 test ! -e /Library/Frameworks/R.framework || fail "something wrote /Library/Frameworks/R.framework"
 as_user bash "$WORK/payload/install.sh" status

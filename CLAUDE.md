@@ -141,3 +141,7 @@ Port ideas into Python/R; do not link to it. Useful sources:
   `decision-needed` issues block implementation that depends on them; don't guess the
   answer in code.
 - Fixtures are produced by seeded generator scripts committed alongside them.
+- A change to screens, installer, commands, platforms or research-use wording means
+  reviewing **both** user guides (in-app `docs/user-guide/` and the website `site/`) in
+  the same change or a linked follow-up; see `site/README.md`. The logo's PNG/ICO/ICNS
+  files are exported from its SVGs by `scripts/export_logo.py`, never edited by hand.

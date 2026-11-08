@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="{{ '/assets/css/just-the-docs-opncafyr-dark.css' | relative_url }}" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f2f5f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1413" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/svg+xml" href="{{ '/assets/images/logo-mark.svg' | relative_url }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ '/assets/images/favicon-32.png' | relative_url }}">
+<script>
+  // Wide tables and code blocks scroll sideways; make each one that does reachable by
+  // keyboard so it can be scrolled with the arrow keys (WCAG 2.1.1).
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".table-wrapper, div.highlight").forEach(function (el) {
+      if (el.scrollWidth > el.clientWidth + 1) {
+        el.tabIndex = 0;
+        el.setAttribute("role", "region");
+        el.setAttribute("aria-label", el.classList.contains("table-wrapper") ? "Table (scrolls sideways)" : "Code (scrolls sideways)");
+      }
+    });
+  });
+</script>

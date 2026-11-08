@@ -1,0 +1,16 @@
+# The documentation website: Jekyll with the Just the Docs theme (#53).
+# Local preview and build: see README.md in this folder (./preview.sh).
+source "https://rubygems.org"
+
+gem "jekyll", "~> 4.4"
+gem "just-the-docs", "0.10.1"
+
+group :test do
+  gem "html-proofer", "~> 5.0"
+end
+
+# Default gems that Ruby 3.4+ no longer bundles but Jekyll still loads.
+gem "base64"
+gem "bigdecimal"
+gem "csv"
+gem "logger"

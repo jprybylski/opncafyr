@@ -1,0 +1,30 @@
+// Fonts and layout before the theme's own variables (#53). System fonts only, like the
+// app (ADR 0006): no web fonts, nothing fetched from another site.
+$body-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+$mono-font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+$content-line-height: 1.6;
+$border-radius: 8px;
+$content-width: 52rem;
+
+// The opncafyr palette, light values. The colour schemes in _sass/color_schemes/ set
+// their own; these defaults also cover the theme's stock light and dark stylesheets,
+// which are built with the same custom styles.
+$ocf-bg: #f2f5f4 !default;
+$ocf-surface: #ffffff !default;
+$ocf-surface-2: #f6f9f8 !default;
+$ocf-fg: #14201f !default;
+$ocf-muted: #475755 !default;
+$ocf-border: #d3dddb !default;
+$ocf-accent: #0f766e !default;
+$ocf-accent-strong: #0b5f58 !default;
+$ocf-accent-soft: #dcf2ee !default;
+$ocf-accent-fg: #ffffff !default;
+$ocf-thread: #b86148 !default; // the logo's boxplot colour; decoration only, never text
+$ocf-ok: #17693a !default;
+$ocf-ok-soft: #e2f4e8 !default;
+$ocf-warn: #8a4b00 !default;
+$ocf-warn-soft: #fdf0dc !default;
+$ocf-danger: #a3242a !default;
+$ocf-danger-soft: #fbe5e6 !default;
+$ocf-info: #1d5fd1 !default;
+$ocf-info-soft: #e6eefc !default;

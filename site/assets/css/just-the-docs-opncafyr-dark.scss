@@ -1,0 +1,5 @@
+---
+# The dark presentation: the whole theme built with the opncafyr-dark scheme. The page
+# loads it after the light stylesheet with media="(prefers-color-scheme: dark)".
+---
+{% include css/just-the-docs.scss.liquid color_scheme="opncafyr-dark" %}
