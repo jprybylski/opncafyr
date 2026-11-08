@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 - Optional **Version history** (#56, ADR 0008): Git snapshots of files the user chooses
-  from the open study folder, in gitneighbr 0.2.0's managed mode under
+  from the open study folder, in gitneighbr's managed mode (0.2.1) under
   `/apps/gitneighbr/`.
   - A snapshot is not a run, a publication or a build. Those stay fixed, and no Git
     action may change them in the folder (protected paths).
@@ -31,7 +31,7 @@ All notable changes to this project are documented here. The format follows
     the study-folder and files pages, troubleshooting, limitations and the glossary. All
     guide screenshots are regenerated (`scripts/guide_screenshots.py` now captures the
     version history pages too).
-  - gitneighbr 0.2.0 is pinned as a cellar R package (`[packages.gitneighbr]`, its
+  - gitneighbr 0.2.1 is pinned as a cellar R package (`[packages.gitneighbr]`, its
     release tarball and `SHA256SUMS`); its dependencies were already locked. On Windows
     it keeps Git for Windows' line-ending and certificate-store defaults, so folders
     checked out by other Git tools aren't shown as changed and HTTPS works with a

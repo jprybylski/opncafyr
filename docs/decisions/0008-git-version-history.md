@@ -5,7 +5,7 @@
   owner confirms them.
 - Date: 2026-11-08
 - Issue: #56
-- Upstream: [gitneighbr#35–#44](../upstream.md#jprybylskigitneighbr-public), released in gitneighbr 0.2.0 and pinned
+- Upstream: [gitneighbr#35–#44](../upstream.md#jprybylskigitneighbr-public), released in gitneighbr 0.2.0; 0.2.1 is pinned
 
 ## Context
 

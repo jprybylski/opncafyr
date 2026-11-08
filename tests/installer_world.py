@@ -148,7 +148,7 @@ def make_world(
         ("quartifyr", "0.3.3"),
         ("reportifyr", "0.4.0"),
         ("pyro", "0.1.1"),
-        ("gitneighbr", "0.2.0"),
+        ("gitneighbr", "0.2.1"),
     ):
         name = f"{pkg}_{ver}.tar.gz"
         _, digest = _file(world, pkg, name)

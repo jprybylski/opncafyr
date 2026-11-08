@@ -108,7 +108,8 @@ unchanged. The adapter needs 0.2.0 or later.
 | [#43](https://github.com/jprybylski/gitneighbr/issues/43) | Send/Update with a full, preview-bound history check; HTTPS token via env only | Done (v0.2.0); tested against a real HTTPS `git http-backend` | #56 remote |
 | [#44](https://github.com/jprybylski/gitneighbr/issues/44) | `SHA256SUMS` on releases; `clone --`; sanitised PR stderr | Done (v0.2.0) | pins |
 
-Pinned as a cellar package (`[packages.gitneighbr]`, 0.2.0). Testing on Windows CI also
+Pinned as a cellar package (`[packages.gitneighbr]`, 0.2.1: PR #47 removed GitHub wording
+from the managed status summary, found while making the guide's screenshots). Testing on Windows CI also
 added a managed system configuration that keeps Git for Windows' line-ending and
 certificate defaults (ADR 0008). Its release workflow re-tags and replaces the tarball when
 a later merge leaves `VERSION` unchanged, so pin only a release whose version was bumped.
