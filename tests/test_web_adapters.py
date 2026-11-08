@@ -85,6 +85,7 @@ def test_opnca_argv(tmp_path, runtime, run_dir):
         "--require-blq-rules",
         "--require-explicit-settings",
         "--no-guess-roles",
+        "--require-explicit-units",
         "--api-token-env=OPNCA_API_TOKEN",
         "--shutdown-token-env=OPNCA_SHUTDOWN_TOKEN",
         f"--max-upload-bytes={MAX_UPLOAD_BYTES}",

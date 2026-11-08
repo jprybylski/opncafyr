@@ -172,6 +172,16 @@ def test_the_generated_deck_quotes_data_and_has_no_bom():
     assert "injected" not in doc
 
 
+def test_a_formatted_table_is_a_table_slide():
+    """#59: deckifyr renders a flextable ``.rds`` table source (deckifyr#57)."""
+    items = [
+        D.DeckItem("a_b_summary-formatted.rds", "table", "Summary", "A", "20261103T142512Z-7c4e")
+    ]
+    doc = yaml.safe_load(D.nca_results_presentation(items, "pub-20261104T090000Z-1a2b", None))
+    content = doc["slides"][1]["elements"]["content"]
+    assert content["type"] == "table" and content["source"] == "{rpfy}:a_b_summary-formatted.rds"
+
+
 # --- the workflow --------------------------------------------------------------------------
 
 

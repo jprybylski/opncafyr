@@ -1,10 +1,11 @@
-"""Accepting an opnca-r save: launcher exclusions, in-app exclusions, mean settings (#28)."""
+"""Accepting an opnca-r save: exclusions, mean settings (#28) and unit labels (#57)."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from artifact_docs import SHA, run_manifest
+from artifact_docs import LABELS, SHA, run_manifest
+from opnca_listing import describe
 from opncafyr.adapters.opnca import export
 from opncafyr.core import runs as R
 from opncafyr.workflows.nca import save
@@ -24,13 +25,13 @@ MEAN = {
 }
 
 
-def running_run(root: Path) -> Path:
+def running_run(root: Path, **overrides) -> Path:
     (root / ".opncafyr").mkdir(parents=True)
     run_id, staging = R.stage_run(root)
     (staging / "input").mkdir()
     (staging / "input" / "analysis.csv").write_text(ROWS, "utf-8")
     (staging / "settings.json").write_text("{}", "utf-8")
-    doc = run_manifest(run_id, state="preparing")
+    doc = run_manifest(run_id, state="preparing", **overrides)
     doc["analysis_input"]["sha256"] = R.sha256_file(staging / "input" / "analysis.csv")
     R.write_manifest(staging, doc)
     folder = R.publish_run(staging, run_id)
@@ -47,7 +48,12 @@ def status(record: dict) -> export.ExportStatus:
         state="complete",
         complete={"saved_at": "2026-11-07T17:00:00Z", "artifacts_sha256": SHA},
         artifacts=artifacts,
-        record={"opnca_version": "0.2.9", "r_version": "R version 4.6.2", **record},
+        record={
+            "opnca_version": "0.3.1",
+            "r_version": "R version 4.6.2",
+            "effective_settings": {"units": dict(LABELS), "units_source": "preset"},
+            **record,
+        },
     )
 
 
@@ -100,3 +106,53 @@ def test_the_mean_settings_are_kept_with_the_run(tmp_path):
     record = {"mapping": {"excluded": "NCA_EXCLUDED"}, "mean_profiles": MEAN}
     run = save.accept(folder, status(record))
     assert run["nca_settings"]["mean_profiles"] == MEAN
+
+
+def test_the_run_keeps_the_unit_labels_opnca_r_used(tmp_path):
+    folder = running_run(tmp_path)
+    run = save.accept(folder, status({"mapping": {"excluded": "NCA_EXCLUDED"}}))
+    assert run["state"] == "reviewing"
+    assert run["nca_settings"]["effective_settings"]["units"] == LABELS
+
+
+def test_labels_other_than_the_runs_fail_the_save(tmp_path):
+    labels = {"concentration": "ug/L", "time": "min", "dose": "ug"}
+    folder = running_run(tmp_path, analysis_units=labels)
+    run = save.accept(folder, status({"mapping": {"excluded": "NCA_EXCLUDED"}}))
+    assert run["state"] == "failed"
+    assert "concentration ug/L, time min, dose ug" in run["failure"]["message"]
+
+
+def test_labels_typed_in_the_page_fail_the_save(tmp_path):
+    folder = running_run(tmp_path)
+    page = {"units": dict(LABELS), "units_source": "page"}
+    record = {"mapping": {"excluded": "NCA_EXCLUDED"}, "effective_settings": page}
+    assert save.accept(folder, status(record))["state"] == "failed"
+
+
+def test_a_run_prepared_without_labels_fails_the_save(tmp_path):
+    folder = running_run(tmp_path)
+    doc = R.read_manifest(folder)
+    del doc["analysis_units"]
+    R.write_manifest(folder, doc)
+    run = save.accept(folder, status({"mapping": {"excluded": "NCA_EXCLUDED"}}))
+    assert run["state"] == "failed" and "Make a new run" in run["failure"]["message"]
+
+
+def test_the_manifest_keeps_what_opnca_r_says_each_file_is(tmp_path):
+    """#59: artifacts.json schema 2's fields reach the run manifest, which validates."""
+    folder = running_run(tmp_path)
+    st = status({"mapping": {"excluded": "NCA_EXCLUDED"}})
+    for art in st.artifacts:
+        art.update(describe(art["path"]))
+    st.artifacts.append(
+        {"path": "results/figures/boxplot-cmax.png", "sha256": SHA, "media_type": "image/png"}
+        | {"bytes": 1}
+        | describe("results/figures/boxplot-cmax.png")
+    )
+    run = save.accept(folder, st)
+    assert run["state"] == "reviewing"
+    box = next(a for a in run["artifacts"] if a["path"].endswith("boxplot-cmax.png"))
+    assert box["identifies_subjects"] is False and box["subject_level"] is True
+    assert box["title"] == "Boxplot of cmax by profile" and box["kind"] == "figure"
+    assert R.read_manifest(folder)["artifacts"] == run["artifacts"]  # schema-valid on disk

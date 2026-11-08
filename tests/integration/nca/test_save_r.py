@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -22,9 +23,11 @@ from nca_helpers import (
     start_run,
     wait_job,
 )
+from opnca_listing import SCHEMA_PATH
+from opncafyr.adapters.opnca import export
 from opncafyr.core import runs as R
 from opncafyr.core.manifest import validate
-from opncafyr.workflows.nca.publish.catalog import catalog, missing
+from opncafyr.workflows.nca.publish.catalog import catalog, described, missing
 from publish_helpers import png
 
 pytestmark = pytest.mark.integration
@@ -58,12 +61,31 @@ def test_a_save_moves_the_run_to_review_with_every_artifact(env):
     assert {a["path"] for a in run["artifacts"]} == {a["path"] for a in listing["artifacts"]}
     for art in run["artifacts"]:
         assert art["sha256"] == R.sha256_file(_folder(study, run_id) / art["path"])
+        # opnca-r's own kind: results/tables/*.rds, its flextable copies of the CSVs
+        # (opnca-r#54), are tables (#59).
         assert art["media_type"] and art["kind"] in ("script", "record", "table", "figure")
-    assert run["tools"]["opnca-r"] == "0.2.9" and run["tools"]["R"].startswith("R version")
+    # #59: a schema-2 listing, checked against the schema opnca-r installs, whose fields
+    # the manifest keeps.
+    assert listing["schema_version"] == 2
+    kept = {a["path"]: a for a in run["artifacts"]}
+    for art in listing["artifacts"]:
+        fields = [k for k in export.DESCRIBED if k in art]
+        assert {k: art[k] for k in fields} == {k: kept[art["path"]][k] for k in fields}
+    assert run["tools"]["opnca-r"] == "0.3.1" and run["tools"]["R"].startswith("R version")
     assert run["nca_settings"]["effective_settings"]
+    # The labels opnca-r used are the run's, set by the preset (#57, opnca-r#56).
+    assert run["nca_settings"]["effective_settings"]["units"] == run["analysis_units"]
+    assert run["nca_settings"]["effective_settings"]["units_source"] == "preset"
     assert run["nca_settings"]["settings"]["blq_rules"] == run["nca_settings"]["blq"]["rules"]
     assert run["exclusions"]["launcher"]["rows"] > 0 and run["exclusions"]["session"] == []
     assert R.verify_run(_folder(study, run_id))["ok"] is True
+
+
+def test_the_schema_fixture_is_the_one_opnca_r_installs(runtime):
+    installed = Path(runtime.require_r_library()).joinpath(*export.SCHEMA_FILE)
+    assert installed.read_bytes() == SCHEMA_PATH.read_bytes(), (
+        "Copy opnca-r's schema into tests/fixtures/opnca-r/ again (tests/fixtures/README.md)."
+    )
 
 
 def test_analysis_r_runs_standalone_from_a_copy(env, tmp_path):
@@ -192,9 +214,18 @@ def test_the_mean_figures_are_saved_with_their_choices_and_replayed(env):
     assert job["state"] == "completed", job["message"]
     run = save_status(api, run_id)["run"]
     assert run["replay"]["status"] == "passed"
+    # #59: the catalog is opnca-r's description, under the launcher's stable ids.
+    assert described(run)
     entries = {e.artifact: e for e in catalog(run)}
-    assert entries["mean-linear"].preselected and entries["mean-profiles"].note.startswith(
-        "Arithmetic mean ± SD at each actual time"
+    by_path = {a["path"]: a for a in run["artifacts"]}
+    for entry in entries.values():
+        assert entry.title == by_path[entry.path]["title"]
+        assert entry.contains_subject_ids is by_path[entry.path]["identifies_subjects"]
+    assert entries["mean-linear"].preselected and not entries["mean-linear"].contains_subject_ids
+    assert entries["listing"].contains_subject_ids and entries["summary"].preselected
+    assert any(
+        n.startswith("Arithmetic mean ± SD at each actual time")
+        for n in entries["mean-profiles"].notes
     )
     assert missing(run) == []
 

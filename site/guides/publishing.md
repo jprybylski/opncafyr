@@ -39,20 +39,29 @@ One publication can combine runs of different analytes. Each run still holds onl
   <figcaption>Each completed run offers the tables and figures opnca-r saved. Items that show subject IDs are labelled.</figcaption>
 </figure>
 
+The names are opnca-r's, and so is the flag that says whether a file shows subject IDs. For a run saved by opnca-r 0.3.1, a box typically holds:
+
 | Offered | Ticked to begin with | Shows subject IDs |
 |---|---|---|
-| Parameter summary (table) | Yes | No |
-| Individual parameter listing (table) | Yes | Yes |
-| Individual concentration–time profiles, linear and log (figures) | Yes | Yes |
-| Mean concentration–time profiles, linear and log (figures) | Yes | No |
-| Mean concentration–time table | No | No |
-| Parameter summary by group, for example by dose or route (tables) | No | No |
-| Boxplot of each parameter (figures) | No | No |
+| Summary of the parameters (table) | Yes | No |
+| Parameters, one row per profile (table) | Yes | Yes |
+| Concentration-time profiles, linear and log axis (figures) | Yes | Yes |
+| Mean concentration-time profile, linear and log axis (figures) | Yes | No |
+| Mean concentration-time profile (table) | No | No |
+| Parameters, one row per profile and parameter (table) | No | Yes |
+| Summary of the parameters by group, for example by dose or route (tables) | No | No |
+| Boxplot of each parameter by profile (figures) | No | No |
+| Any of these tables, **(formatted)** | No | As the table |
+
+A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers, a caption and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Runs saved by an earlier opnca-r keep their earlier names, such as "Parameter summary" and "Individual parameter listing".
 
 Items that show subject IDs carry the label **shows subject IDs**. Think about who will see the report or deck before you keep them.
 
 {: .note }
 > opnca-r calculates the mean profiles; this app never draws or recalculates them. You chose their time basis (actual or nominal time), statistic and error when you saved the run in opnca-r, and the published files' footnotes state those choices.
+
+{: .fix }
+> **"…: analysis.R doesn't recompute this table, so the replay didn't check it and it can't be published (opnca-r: …)."** — opnca-r saved a table, such as a bioequivalence table, that the run's script doesn't recalculate. A passed replay says nothing about it, so it isn't offered. Publish the run's other tables and figures.
 
 {: .fix }
 > **"Mean concentration–time (linear and log): This run was saved without the mean figures."** — the mean figures were unticked in opnca-r's **Save to run folder** box. A completed run can't change, so make a new run (**New run from this** on the **Analysis** page) and keep them ticked when you save it.

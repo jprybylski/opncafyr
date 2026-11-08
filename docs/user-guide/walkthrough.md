@@ -70,7 +70,9 @@ Then set the units under **Units**:
 
 1. **Unit of time**: choose **One unit for every row** and type `h`. The file has no time unit column, and `AFRLT` is in hours.
 2. **Unit of concentration**: choose **A unit column**, then `PCSTRESU`. Its only value is `"ng/mL"`.
-3. **Unit of dose**: choose **A unit column**, then `DOSEU`.
+3. **Unit of dose**: choose **A unit column**, then `DOSEU`. Its only value is `"mg"`; its blank cells are skipped.
+
+These become the runs' unit labels: opnca-r will label the results in `ng/mL`, `h` and `mg`. The labels never change a number.
 
 Then say what the flag values mean:
 
@@ -187,7 +189,7 @@ In **6. Start analysis**:
 ## Step 9. Analyse PARENT in opnca-r and save
 
 1. In **7. Runs**, select **Open in opnca-r** on the new run. opnca-r opens inside the app.
-2. Look at **Data** and **Profiles** if you like. The data is the 77 `PARENT` plasma rows, already mapped.
+2. Look at **Data** and **Profiles** if you like. The data is the 77 `PARENT` plasma rows, already mapped. Under **Unit labels**, **Concentration**, **Time** and **Dose** show `ng/mL`, `h` and `mg`, marked "set by the launcher".
 3. Go to **Analyze**. Select the **Standard NCA** preset, then **Run analysis**.
 4. Look at **Results**. Subject `TA-008` has no parameter values, because its whole profile is excluded.
 5. Go to **Export**. In the **Save to run folder** box, keep **Mean concentration-time figures (linear and log) and their table** ticked.

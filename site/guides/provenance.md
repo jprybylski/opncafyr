@@ -61,8 +61,8 @@ A run is one analyte's analysis. Each run is its own folder inside `.opncafyr`, 
 
 - a frozen copy of that analyte's rows, after cleaning and the analyte and specimen filters, which is read-only;
 - the source file's fingerprint, and the recipe it was cleaned with;
-- your mapping, units, BLQ choices and the warnings you acknowledged;
-- once opnca-r saves it: the analysis script opnca-r wrote, opnca-r's record of the analysis, and its result tables and figures;
+- your mapping, units, BLQ choices and the warnings you acknowledged, and the unit labels passed to opnca-r;
+- once opnca-r saves it: the analysis script opnca-r wrote, opnca-r's record of the analysis, and its result tables (as CSV files, with formatted copies) and figures;
 - the tool versions used, such as opnca-r and R;
 - the replay report;
 - a manifest that lists all of the above with their fingerprints.

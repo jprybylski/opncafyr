@@ -36,12 +36,16 @@ def schema_problems(document: Any, schema: dict[str, Any], label: str) -> list[s
 
     A problem names the place and the rule, never the value: jsonschema's own messages
     quote the offending value, and a job or log message must not carry data (ADR 0007).
+    The draft is the one the schema's ``$schema`` names (2020-12 if it names none), so a
+    tool's own schema, such as opnca-r's draft-07 ``artifacts.json`` schema, works too.
     """
     from jsonschema import Draft202012Validator
+    from jsonschema.validators import validator_for
 
+    cls = validator_for(schema, default=Draft202012Validator)
     return [
         f"{label} at /{'/'.join(map(str, e.absolute_path))} fails {e.validator!r}"
-        for e in Draft202012Validator(schema).iter_errors(document)
+        for e in cls(schema).iter_errors(document)
     ]
 
 

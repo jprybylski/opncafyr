@@ -47,6 +47,7 @@ from opncafyr.workflows.nca.checks import (
 )
 from opncafyr.workflows.nca.preset import build_preset
 from opncafyr.workflows.nca.recipe import NUMBER_RE, steps_hash
+from opncafyr.workflows.nca.units import UnitLabelError, analysis_labels
 
 INPUT = "input/analysis.csv"
 FINGERPRINT = "input/source-fingerprint.json"
@@ -211,6 +212,12 @@ def create_run(
             "R would merge them; make the IDs text first.",
         )
     out_header, out_rows = build_rows(header, records, mapping, selection)
+    try:
+        unit_labels = analysis_labels(mapping.get("units") or {}, records)
+    except UnitLabelError as exc:
+        raise SnapshotError(
+            "units_unresolved", f"{exc} Declare it, or add a 'Convert units' step."
+        ) from None
 
     source = next(s for s in workspace_doc["sources"] if s["id"] == recipe["source_id"])
     source_path = resolve_in_root(root, source["path"])
@@ -236,7 +243,7 @@ def create_run(
             "sha256": sha,
         },
     )
-    preset = build_preset(mapping, SNAPSHOT_COLUMNS, blq_choice, out_header)
+    preset = build_preset(mapping, SNAPSHOT_COLUMNS, blq_choice, out_header, unit_labels)
     atomic_write_json(staging / PRESET, preset)
 
     acks = []
@@ -286,6 +293,7 @@ def create_run(
         "analyte": analyte,
         "specimen": specimen,
         "mapping": mapping,
+        "analysis_units": unit_labels,
         "blq": blq_choice,
         "acknowledgements": acks,
         "snapshot": {
@@ -315,6 +323,7 @@ def create_run(
         "specimen": specimen,
         "mapping": mapping,
         "units": mapping.get("units") or {},
+        "analysis_units": unit_labels,
         "acknowledgements": acks,
         "row_accounting": accounting,
         "settings": {"path": SETTINGS, "sha256": settings_sha},

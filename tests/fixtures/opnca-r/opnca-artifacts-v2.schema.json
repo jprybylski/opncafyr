@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/mantra-opnca/opnca-r/inst/schemas/opnca-artifacts-v2.schema.json",
+  "title": "opnca saved-run manifest (artifacts.json, schema_version 2)",
+  "description": "Describes every file a saved run holds, so a downstream tool can title, classify, publish and check it without knowing the analysis that made it. The version 1 fields path, media_type, bytes and sha256 are unchanged.",
+  "type": "object",
+  "required": ["schema_version", "opnca_version", "record", "flextable", "artifacts"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "opnca_version": { "type": "string", "minLength": 1 },
+    "record": { "type": "string", "description": "The analysis record that the settings pointers refer to." },
+    "flextable": {
+      "type": "object",
+      "required": ["written", "reason"],
+      "properties": {
+        "written": { "type": "boolean", "description": "Whether formatted flextable .rds files were written next to the CSV tables." },
+        "reason": { "type": ["string", "null"], "description": "Why none were written, when written is false." }
+      },
+      "additionalProperties": false
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/artifact" }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "column": {
+      "type": "object",
+      "required": ["name", "label", "unit"],
+      "properties": {
+        "name": { "type": "string" },
+        "label": { "type": "string" },
+        "unit": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "replay": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["reproduced", "file"],
+          "properties": { "reproduced": { "const": true }, "file": { "type": "string" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["reproduced", "reason"],
+          "properties": { "reproduced": { "const": false }, "reason": { "type": "string", "minLength": 1 } },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["path", "media_type", "bytes", "sha256", "id", "title", "kind", "format", "analysis",
+                   "grouping_view", "subject_level", "identifies_subjects", "settings", "replay"],
+      "properties": {
+        "path": { "type": "string" },
+        "media_type": { "type": "string" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["table", "figure", "script", "record"] },
+        "format": { "type": "string" },
+        "analysis": { "type": "string", "pattern": "^[a-z][a-z0-9_.]*$" },
+        "grouping_view": { "type": ["string", "null"] },
+        "subject_level": {
+          "type": "boolean",
+          "description": "Whether the rows or marks are per subject or profile, whether or not the file says whose they are. A boxplot has one mark per profile and is subject-level. To decide whether a file can be published without subject identifiers, read identifies_subjects."
+        },
+        "identifies_subjects": {
+          "type": "boolean",
+          "description": "Whether the saved file itself shows subject or profile identifiers: a table with an ID column or rows labelled by ID; a figure with a legend, label, facet or title baked into the image that names a subject. It differs from subject_level, which counts per-subject rows or marks that may name nobody (a boxplot is subject-level and false here; the parameter tables are both). Hover text that exists only in the browser is not in a saved image and does not count. A figure the app's catalog does not know is true, the cautious reading. For the script and the record it is true when the run excluded observations, because both list the excluded profiles."
+        },
+        "settings": {
+          "type": ["string", "null"],
+          "pattern": "^(/[^/]+)+$",
+          "description": "JSON pointer into the analysis record holding the choices that made the file."
+        },
+        "replay": { "$ref": "#/definitions/replay" },
+        "columns": { "type": "array", "items": { "$ref": "#/definitions/column" } },
+        "caption": { "type": ["string", "null"] },
+        "footnote": { "type": ["string", "null"] },
+        "table": { "type": ["string", "null"], "description": "For a figure, the id of the table holding its data." },
+        "derived_from": { "type": "string", "description": "For a formatted table, the id of the CSV table it was built from." }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "table" } } }, "then": { "required": ["columns", "caption", "footnote"] } },
+        { "if": { "properties": { "kind": { "const": "figure" } } }, "then": { "required": ["table"] } }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

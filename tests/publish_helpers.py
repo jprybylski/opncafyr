@@ -1,4 +1,4 @@
-"""Completed, sealed runs with an opnca-r 0.2.9-shaped save, without R (#31-#33)."""
+"""Completed, sealed runs with an opnca-r 0.3.1-shaped save, without R (#31-#33)."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from artifact_docs import SHA, run_manifest
+from opnca_listing import describe
 from opncafyr.core import runs as R
 from opncafyr.core.app import create_app
 from opncafyr.core.jobmanager import JobManager
@@ -38,8 +39,14 @@ def png(note: str, size: int = 8) -> bytes:
     )
 
 
-MEDIA = {".csv": "text/csv", ".png": "image/png", ".R": "text/x-r", ".json": "application/json"}
-KIND = {".csv": "table", ".png": "figure", ".R": "script", ".json": "record"}
+MEDIA = {
+    ".csv": "text/csv",
+    ".png": "image/png",
+    ".R": "text/x-r",
+    ".json": "application/json",
+    ".rds": "application/octet-stream",
+}
+KIND = {".csv": "table", ".png": "figure", ".R": "script", ".json": "record", ".rds": "other"}
 
 
 def writable(root: Path) -> None:
@@ -61,7 +68,21 @@ MEAN_PROFILES = {
 }
 
 
-def saved_files(analyte: str, run_id: str, mean: bool = True) -> dict[str, bytes]:
+# What opnca-r 0.3.1 adds to a described save in these tests: formatted tables, a table
+# the replay doesn't recompute (with its formatted copy), and a figure the launcher has no
+# rule for.
+DESCRIBED_EXTRA = (
+    "results/tables/opnca-summary.rds",
+    "results/tables/opnca-parameters-wide.rds",
+    "results/bioequivalence-summary.csv",
+    "results/tables/bioequivalence-summary.rds",
+    "results/figures/fig-fim-cohort.png",
+)
+
+
+def saved_files(
+    analyte: str, run_id: str, mean: bool = True, described: bool = False
+) -> dict[str, bytes]:
     tag = f"{analyte} {run_id}"
     files = {
         "analysis.R": b'df <- read.csv("input/analysis.csv")\n',
@@ -79,6 +100,9 @@ def saved_files(analyte: str, run_id: str, mean: bool = True) -> dict[str, bytes
             "results/figures/mean-linear.png": png(f"mean linear {tag}"),
             "results/figures/mean-log.png": png(f"mean log {tag}"),
         }
+    if described:
+        for rel in DESCRIBED_EXTRA:
+            files[rel] = png(rel) if rel.endswith(".png") else f"{rel} {tag}\n".encode()
     return files
 
 
@@ -90,8 +114,12 @@ def completed_run(
     state: str = "completed",
     replay: str = "passed",
     mean: bool = True,
+    described: bool = False,
 ) -> tuple[str, Path]:
-    """A run of ``analyte`` moved to ``state`` (reviewing or completed) the real way."""
+    """A run of ``analyte`` moved to ``state`` (reviewing or completed) the real way.
+
+    ``described``: the artifacts carry opnca-r 0.3.1's ``artifacts.json`` schema-2 fields,
+    as ``save.accept`` keeps them (#59); otherwise they are an older save's."""
     (root / ".opncafyr").mkdir(parents=True, exist_ok=True)
     run_id, staging = R.stage_run(root)
     (staging / "input").mkdir()
@@ -106,20 +134,19 @@ def completed_run(
     folder = R.publish_run(staging, run_id)
     R.set_state(folder, "running")
     artifacts = []
-    for rel, data in saved_files(analyte, run_id, mean).items():
+    for rel, data in saved_files(analyte, run_id, mean, described).items():
         path = folder / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
         suffix = Path(rel).suffix
-        artifacts.append(
-            {
-                "path": rel,
-                "sha256": R.sha256_file(path),
-                "kind": KIND[suffix],
-                "media_type": MEDIA[suffix],
-                "bytes": len(data),
-            }
-        )
+        art = {
+            "path": rel,
+            "sha256": R.sha256_file(path),
+            "kind": KIND[suffix],
+            "media_type": MEDIA[suffix],
+            "bytes": len(data),
+        }
+        artifacts.append(art | describe(rel) if described else art)
     R.set_state(
         folder,
         "reviewing",

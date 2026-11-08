@@ -89,8 +89,10 @@ def test_preset_names_every_role():
         {"blq_predose": "zero", "blq_postdose": "exclude", "blq_terminal": "exclude"},
         "conventional",
     )
-    preset = P.build_preset(resolving_mapping(), S.SNAPSHOT_COLUMNS, blq, header)
+    labels = {"concentration": "ug/L", "time": "min", "dose": "ug"}
+    preset = P.build_preset(resolving_mapping(), S.SNAPSHOT_COLUMNS, blq, header, labels)
     assert set(P.REQUIRED + P.OPTIONAL + P.SETTINGS) <= set(preset)
+    assert preset["units"] == labels
     assert preset["concentration"] == "NCA_CONC" and preset["blq"] == "NCA_BLQ"
     assert preset["infusion_duration"] == ""
     with pytest.raises(P.PresetError):
@@ -101,3 +103,31 @@ def test_preset_names_every_role():
     del missing_opt["nominal_time"]
     with pytest.raises(P.PresetError):
         P.check_preset(missing_opt, header)
+
+
+@pytest.mark.parametrize(
+    "units",
+    [
+        None,
+        {"concentration": "ng/mL", "time": "h"},
+        {"concentration": "ng/mL", "time": "h", "dose": "mg", "extra": "x"},
+        {"concentration": "", "time": "h", "dose": "mg"},
+        {"concentration": " ng/mL", "time": "h", "dose": "mg"},
+        {"concentration": "ng/mL", "time": "h\n", "dose": "mg"},
+        {"concentration": "x" * 65, "time": "h", "dose": "mg"},
+    ],
+)
+def test_preset_unit_labels_follow_opnca_units_rules(units):
+    header, _ = _snapshot("PARENT")
+    blq = S._check_blq(
+        {"blq_predose": "zero", "blq_postdose": "exclude", "blq_terminal": "exclude"},
+        "conventional",
+    )
+    labels = {"concentration": "ng/mL", "time": "h", "dose": "mg"}
+    preset = P.build_preset(resolving_mapping(), S.SNAPSHOT_COLUMNS, blq, header, labels)
+    if units is None:
+        del preset["units"]
+    else:
+        preset["units"] = units
+    with pytest.raises(P.PresetError):
+        P.check_preset(preset, header)

@@ -117,7 +117,7 @@ MESSAGES: dict[str, tuple[str, str]] = {
     "route_varies": ("A profile has more than one route.", "One route per profile."),
     "dose_varies": ("A profile has more than one dose.", "One dose per profile."),
     "units_mixed": (
-        "Concentration or dose units differ within the analyte.",
+        "Time, concentration or dose units differ within the analyte.",
         "Add a 'Convert units' step; equivalent units are not merged silently.",
     ),
     "units_undeclared": (
@@ -392,7 +392,7 @@ def _analyte_checks(ctx: Context) -> None:
     if lloq:
         ctx.add("lloq_varies", "analyte", lloq[0], values=", ".join(lloq[1]))
     units = ctx.mapping.get("units") or {}
-    for role, kind in (("CONC", "conc"), ("DOSE", "amount")):
+    for role, kind in (("ACTUAL_TIME", "time"), ("CONC", "conc"), ("DOSE", "amount")):
         column = (units.get(role) or {}).get("column")
         if not column or not ctx.col(role):
             continue

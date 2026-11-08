@@ -18,7 +18,7 @@ schema_version = 1
 # Windows, no Windows 10, no native Linux (Linux only through the container, #42).
 supported = ["windows-x86_64", "macos-arm64", "macos-x86_64"]
 windows_min = "11"
-macos_min = "15"           # opnca-r 0.2.9 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
+macos_min = "15"           # opnca-r 0.3.1 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
                            # this waits on Quarto, uv Python, wheel and CRAN-binary checks (ADR 0003, #1)
 
 # --- Python ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ deckifyr = true
 
 [r]
 license = "GPL-2.0-or-later"
-version = "4.6.2"          # ADR 0003. opnca-r 0.2.9 binaries are built on R 4.6.2.
+version = "4.6.2"          # ADR 0003. opnca-r 0.3.1 binaries are built on R 4.6.2.
 # CRAN installers, used as pinned files only (rig's user mode downloads its own copy).
 # Windows: the Inno Setup installer in /CURRENTUSER mode (#6). macOS: the .pkg payload is
 # expanded and R.framework relocated, editing only text files, to an R root whose path
@@ -138,29 +138,33 @@ sha256 = "eda220a2f39c392f622049de013ddf7b4dfdf019ba877f251be14ce43e5734d1"
 
 [packages.opnca-r]
 license = "Apache-2.0"
-version = "0.2.9"
+version = "0.3.1"
 source = "github:mantra-opnca/opnca-r"
 private = true             # verify_pins.py --network needs GH_TOKEN
-release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.2.9/"
+release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.1/"
 # v0.2.7 (2026-11-06) added the launcher API token, --no-overwrite and --require-blq-rules
 # (#40-#43). v0.2.8 (2026-11-07) sent the whole shutdown response (#47), built macOS
 # binaries for R's own minimum (#45) and added the save lock and effective_settings (#46).
-# v0.2.9 (2026-11-07, commit 1c16d3a) keeps the preset's exclusions when a point is
-# excluded in the app (#49) and saves a mean concentration-time figure and its table
-# (#50). Its R dependencies are unchanged. Select assets by manifest.json fields
+# v0.2.9 (2026-11-07) keeps the preset's exclusions when a point is excluded in the app
+# (#49) and saves a mean concentration-time figure and its table (#50). v0.3.0
+# (2026-11-08) added unit labels (#32), the research-use line in analysis.R (#53) and
+# artifacts.json schema 2 (#54). v0.3.1 (2026-11-08, commit 5cffa65) takes the unit labels
+# in the preset and locks them (#56), refuses unset roles under --no-guess-roles (#57) and
+# adds identifies_subjects to artifacts.json (#58). Imports are unchanged (R6); flextable,
+# a new Suggests, is already in renv.lock. Select assets by manifest.json fields
 # (kind/platform/arch/r_minor), never by file name. manifest.json (schema_version 1) is
 # not in SHA256SUMS, so pin its hash here.
-manifest_sha256 = "227573504e7fd304600a70b5081af8ab5bdef0fdf12d52fa95a8109ca428a02d"
-sha256sums_sha256 = "1468cc38c263ec2411c5122bf5aad0f082a13ac4621a863f576de4ad8b131c32"
-source_commit = "1c16d3aa2dd93f623e713cb2ddda58aa7ee23669"
+manifest_sha256 = "35ca6a8093302989403e13839c8dd3694476480bd40cf042ba743e87165e1500"
+sha256sums_sha256 = "c696e2a6eedf29ef60f4a12d9078edc6fb005e972e836589c90063dde221cf49"
+source_commit = "5cffa6591fd9886ba3be25978fd5e1b3bdd5fb37"
 r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.opnca-r.assets]
-"manifest.json" = "227573504e7fd304600a70b5081af8ab5bdef0fdf12d52fa95a8109ca428a02d"
-"opnca_0.2.9_R4.6_macos-arm64.tgz" = "35d3ee040f516eb1ad4224fe029367aff2d6b4b799d38573d7d3f760904fac1d"
-"opnca_0.2.9_R4.6_macos-x86_64.tgz" = "b3b865627270a1ae05d1b5144393409d75afe3d7dcff889fd2f69641b91cf4ef"
-"opnca_0.2.9_R4.6_windows-x86_64.zip" = "5e4ea8b7006ee11885812a52d0ada66b566ba137130a7644fcae6015f3eddb90"
-"opnca_0.2.9-vendored.tar.gz" = "fb119ea6a64083ffe78810ffa5779d48c2458713ea92cf69f5a0bc094eedf9a3"  # offline source fallback
+"manifest.json" = "35ca6a8093302989403e13839c8dd3694476480bd40cf042ba743e87165e1500"
+"opnca_0.3.1_R4.6_macos-arm64.tgz" = "e6a8c39312a1a2f34af329579572f87ed372d412dac907163c6161b7701dc44c"
+"opnca_0.3.1_R4.6_macos-x86_64.tgz" = "89243141916bcee4f54e1530538a3e241fd36218e5c8d5a6c045a6cb9c5eee03"
+"opnca_0.3.1_R4.6_windows-x86_64.zip" = "60d64bc0c868f78fea31eddd3a5f47ad6ccd3444ad6043b8ead5e0c9b06abd33"
+"opnca_0.3.1-vendored.tar.gz" = "6958d66c31b434562b0ad34e2c851381cde19178798333e21c5a3fce543f7c7d"  # offline source fallback
 
 [packages.deckifyr]
 license = "GPL-3.0-or-later"
@@ -226,7 +230,7 @@ commit = "66065c19a9aad1cf2cc4718aee9da013e6a3209f"
 "manifest.json" = "1b7f258fe0ea1103c6f55a72f4c2c18310a1a71a2218587b472be1e08e4a1528"
 
 # --- Repair path only (ADR 0004) ---------------------------------------------------------
-# Never installed on a normal install. Only to build opnca_0.2.9-vendored.tar.gz when a
+# Never installed on a normal install. Only to build opnca_0.3.1-vendored.tar.gz when a
 # binary can't be used (e.g. macOS below the binary's minimum). macOS also needs the
 # Command Line Tools for this path (#7).
 

@@ -51,7 +51,7 @@ Every file below is pinned to an exact version and checked against a fingerprint
 | uv | 0.13.7 | setting up the app's Python environments |
 | R | 4.6.2 | opnca-r, report building and fragments in decks |
 | Quarto | 1.11.9 | rendering reports and Quarto content in decks |
-| opnca-r | 0.2.9 | the NCA calculations |
+| opnca-r | 0.3.1 | the NCA calculations |
 | quartifyr | 0.3.3 | building the Word report |
 | reportifyr | 0.4.0 | report footnotes from the description files |
 | deckifyr | 0.3.6 | the deck editor and building the PowerPoint deck |

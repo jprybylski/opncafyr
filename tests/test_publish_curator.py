@@ -7,6 +7,7 @@ import os
 
 import pytest
 
+import opnca_listing
 from opncafyr.core import runs as R
 from opncafyr.core.manifest import validate
 from opncafyr.core.workspace import init_workspace
@@ -59,14 +60,95 @@ def test_the_mean_figures_and_table_state_how_they_were_made(study):
     table = entries["mean-profiles"]
     assert table.kind == "table" and not table.preselected and not table.contains_subject_ids
     assert (
-        table.note
-        == entries["mean-log"].note
+        table.notes
+        == entries["mean-log"].notes
         == (
             "Arithmetic mean ± SD at each nominal time (NFRLT), of the observed concentrations "
-            "after the run's BLQ rules and exclusions."
+            "after the run's BLQ rules and exclusions.",
         )
     )
-    assert entries["profiles-log"].note is None
+    assert entries["profiles-log"].notes == ()
+
+
+def _described(study, **kw):
+    run_id, folder = completed_run(study, described=True, **kw)
+    manifest = R.read_manifest(folder)
+    return run_id, manifest, {e.artifact: e for e in catalog(manifest)}
+
+
+def test_a_described_run_is_offered_what_opnca_r_says_it_saved(study):
+    """#59: titles and identifier flags come from opnca-r's artifacts.json, not paths."""
+    _, _, entries = _described(study)
+    # A figure the launcher has no rule for, under opnca-r's title and flag.
+    fim = entries["fig-fim-cohort"]
+    assert fim.title == "Fisher information: cohort candidates"
+    assert fim.kind == "figure" and not fim.contains_subject_ids and not fim.preselected
+    # Boxplots name nobody; profile figures and the per-profile tables do.
+    assert not entries["boxplot-cmax"].contains_subject_ids
+    assert entries["profiles-linear"].contains_subject_ids
+    assert entries["profiles-log"].title == "Concentration-time profiles (log axis)"
+    assert entries["listing"].contains_subject_ids and not entries["summary"].contains_subject_ids
+    # opnca-r's long table is offered now that opnca-r describes it, but not pre-selected.
+    assert entries["opnca-parameters-long"].contains_subject_ids
+    # ADR 0007 pre-selection by the launcher's ids, which keep published names stable.
+    assert {a for a, e in entries.items() if e.preselected} == set(PRESELECTED)
+    assert entries["summary"].path == "results/opnca-summary.csv"
+
+
+def test_the_identifier_flag_is_read_not_guessed(study):
+    run_id, folder = completed_run(study, state="reviewing", described=True)
+    manifest = R.read_manifest(folder)
+    for art in manifest["artifacts"]:
+        if art["path"].startswith("results/figures/"):
+            art["identifies_subjects"] = not art["identifies_subjects"]
+    entries = {e.artifact: e for e in catalog(manifest)}
+    assert entries["boxplot-cmax"].contains_subject_ids
+    assert not entries["profiles-linear"].contains_subject_ids
+
+
+def test_described_notes_come_from_caption_footnote_and_record(study):
+    _, _, entries = _described(study)
+    mean_words = (
+        "Arithmetic mean ± SD at each nominal time (NFRLT), of the observed concentrations "
+        "after the run's BLQ rules and exclusions."
+    )
+    assert entries["mean-profiles"].notes == (opnca_listing.MEAN_NOTE, mean_words)
+    assert entries["mean-log"].notes == (mean_words,)
+    assert entries["summary"].notes == (opnca_listing.SUMMARY_NOTE,)
+    assert entries["profiles-linear"].notes == ()
+
+
+def test_formatted_tables_are_offered_next_to_their_csv(study):
+    _, _, entries = _described(study)
+    formatted = entries["summary-formatted"]
+    assert formatted.kind == "table" and formatted.extension == "rds"
+    assert formatted.title == "Summary of the parameters (selected grouping view) (formatted)"
+    assert not formatted.preselected and not formatted.contains_subject_ids
+    assert entries["listing-formatted"].contains_subject_ids
+
+
+def test_a_table_the_replay_did_not_check_is_not_offered(api):
+    run_id, _ = completed_run(api.study, described=True)
+    row = api.get("/api/nca/publish/runs").json()["runs"][0]
+    offered = {a["artifact"] for a in row["artifacts"]}
+    assert "bioequivalence-summary" not in offered
+    assert "bioequivalence-summary-formatted" not in offered  # nor its formatted copy
+    assert [m["artifact"] for m in row["missing"]] == ["bioequivalence-summary"]
+    assert opnca_listing.BE_REASON in row["missing"][0]["reason"]
+    r = post(api, [{"run_id": run_id, "artifact": "bioequivalence-summary"}])
+    assert r.status_code == 404 and r.json()["detail"]["code"] == "unknown_artifact"
+
+
+def test_a_formatted_table_publishes_with_its_csvs_footnotes(api):
+    run_id, _ = completed_run(api.study, described=True)
+    r = post(api, [{"run_id": run_id, "artifact": "summary-formatted"}])
+    assert r.status_code == 201, r.text
+    item = r.json()["publication"]["items"][0]
+    assert item["published_path"].endswith(f"_{run_id}_summary-formatted.rds")
+    sidecar = json.loads((api.study / item["sidecar_path"]).read_text("utf-8"))
+    assert sidecar["object_meta"]["file_type"] == "rds"
+    assert "SD" in sidecar["object_meta"]["footnotes"]["abbreviations"]  # the summary's
+    assert opnca_listing.SUMMARY_NOTE in sidecar["object_meta"]["footnotes"]["notes"]
 
 
 def test_mean_note_wording():

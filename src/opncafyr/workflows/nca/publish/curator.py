@@ -42,7 +42,7 @@ from opncafyr.core.jobs import JobState
 from opncafyr.core.manifest import atomic_write_json, validate
 from opncafyr.core.workspace import resolve_in_root
 from opncafyr.workflows.nca.publish import sidecars
-from opncafyr.workflows.nca.publish.catalog import Entry, catalog, missing
+from opncafyr.workflows.nca.publish.catalog import FORMATTED, Entry, catalog, missing
 
 SCHEMA = "publication-v1"
 SIDECAR_FORMAT = "reportifyr-0.4.0"
@@ -222,7 +222,8 @@ def build_sidecar(
     sealed = manifest.get("sealed", {}).get("at") or saved
     analyte = manifest["analyte"]
     name = analyte.get("label") or analyte["value"]
-    wanted = ABBREVIATIONS.get(entry.artifact, DEFAULT_ABBREVIATIONS)
+    base = entry.artifact.removesuffix(FORMATTED)  # a formatted table uses its CSV's
+    wanted = ABBREVIATIONS.get(base, DEFAULT_ABBREVIATIONS)
     tools = {f"{k}.version": str(v) for k, v in sorted(manifest.get("tools", {}).items())}
     return {
         "system_meta": {
@@ -247,8 +248,7 @@ def build_sidecar(
             "table1": False,
             "footnotes": {
                 "equations": [],
-                "notes": [f"{entry.title}. Analyte: {name}. Run {run_id}."]
-                + ([entry.note] if entry.note else []),
+                "notes": [f"{entry.title}. Analyte: {name}. Run {run_id}."] + list(entry.notes),
                 "abbreviations": [a for a in wanted if a in footnotes.abbreviations],
             },
         },

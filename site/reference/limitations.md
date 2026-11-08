@@ -24,9 +24,10 @@ These are deliberate and are not expected to change.
 | **One specimen per run.** | If a specimen column is mapped, each run uses one specimen value. |
 | **opncafyr never calculates NCA.** | opnca-r does every calculation, including the mean profiles. |
 | **The app doesn't decide for you.** | It never sets BLQ to zero, puts nominal time in place of actual time, guesses units, fills in a blank route, or resolves duplicate rows by itself. When something is unclear, it asks, and the run waits until you choose. |
+| **Unit labels are only labels.** | opnca-r labels its results in the units you confirmed. It never converts a value and doesn't check that the units fit together. Values change unit only through a **Convert units** step. |
 | **Completed runs never change.** | Any change to cleaning, mapping, exclusions or BLQ rules needs a new run. |
 | **Only completed runs can be published.** | A run must have a matching replay, be confirmed, and still match its recorded fingerprints. |
-| **One run open in opnca-r at a time.** | Opening another run closes the first. A run that has been saved can't be opened in opnca-r again. |
+| **One run open in opnca-r at a time.** | Opening another run closes the first. A run that has been saved can't be opened in opnca-r again, nor can a run made by an older version of the app before it passed unit labels to opnca-r. |
 | **Source files are never changed.** | The app only reads them: cleaning results are written inside the study folder's own records. Importing records a file's fingerprint; it doesn't copy the file. |
 
 ## Not available yet

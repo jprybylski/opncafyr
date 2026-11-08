@@ -60,7 +60,7 @@ LLOQ (lower limit of quantification)
 : The lowest concentration the assay can measure reliably. Results below it are BLQ. It may come from a column in your data.
 
 Mapping
-: Telling the app which column holds each role, such as **Subject (profile) ID**, **Actual time** or **Concentration**, and how units and flag values are given. The app suggests columns but never uses a suggestion until you pick it.
+: Telling the app which column holds each role, such as **Subject (profile) ID**, **Actual time** or **Concentration**, and how units and flag values are given. The units become the run's unit labels. The app suggests columns but never uses a suggestion until you pick it.
 
 NCA (non-compartmental analysis)
 : The standard way of summarising a concentration–time profile with parameters such as Cmax, Tmax and AUC, without fitting a model. opnca-r does every NCA calculation; opncafyr never calculates NCA parameters itself.
@@ -87,7 +87,7 @@ Rejected-row log
 : The list of rows that a **Remove rows** step took out of the cleaned data, each with its source line number, the step and the reason. No row leaves the data without a line in this log.
 
 Replay
-: After opnca-r saves a run, the app runs the run's saved script (`analysis.R`) again on its own copy of the frozen rows and compares every result table with the saved one. A matching replay shows the script reproduces the saved numbers; it does not show the analysis choices were right.
+: After opnca-r saves a run, the app runs the run's saved script (`analysis.R`) again on its own copy of the frozen rows and compares every result table with the saved one, except tables opnca-r says the script doesn't reproduce (such as bioequivalence tables), which the replay report lists. A matching replay shows the script reproduces the saved numbers; it does not show the analysis choices were right.
 
 Run
 : One analyte's analysis: a frozen copy of that analyte's rows, your mapping and BLQ choices, the warnings you acknowledged, and later opnca-r's script and results. Its state is **Preparing**, **Running**, **Reviewing**, **Completed** or **Failed**. A run whose records are damaged shows as **Incomplete**.
@@ -103,6 +103,9 @@ Study folder
 
 Support bundle
 : A zip file that helps whoever supports opncafyr find out why something went wrong. It holds versions, tool health, recent job states and the end of the logs, never your data, results or file names. You see every part before it is saved; it stays on your computer until you send it yourself. See [Make a support bundle]({{ '/guides/troubleshooting/' | relative_url }}#make-a-support-bundle).
+
+Unit labels
+: The concentration, time and dose units of a run, worked out from the units you confirmed in the mapping and passed to opnca-r when the run is made. opnca-r shows them beside its results, tables and charts. They are words only: opnca-r never converts a value. See [Units]({{ '/guides/cleaning/' | relative_url }}#units).
 
 Verified bundle (offline bundle)
 : A folder or zip that holds every file the installer needs, for computers that can't download them. The installer checks every file against the fingerprints built into it and refuses a missing or changed file. See [Offline install]({{ '/guides/offline-install/' | relative_url }}).

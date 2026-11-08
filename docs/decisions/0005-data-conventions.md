@@ -27,7 +27,8 @@ opnca-r is the calculation authority. What it expects:
 - **opnca-r** (`~/opnca/bindings/r`): `opnca()` defaults `blq_predose = "zero"`
   (`R/opnca.R` ~450). BLQ rules take `exclude`, `zero`, `half-lloq`, `lloq-over-sqrt2`;
   `blq_model(method = "conventional" | "censored_lognormal")`. EXCLUDED is a logical
-  column with no reason field. There are no unit arguments. The app QC
+  column with no reason field. There were no unit arguments (labels came in 0.3.0 and
+  the preset `units` in 0.3.1; see Q2). The app QC
   (`.opnca_app_qc`, `R/app-server.R`) separates errors from warnings and needs flags as
   TRUE/FALSE. `check_data_format()` (`R/data_conventions.R`) never transforms data.
   `--require-blq-rules` (`inst/scripts/serve.R`) makes the three BLQ rules a required
@@ -83,11 +84,18 @@ blocking (`specimen_mixed`). Map PCSPEC and pick `PLASMA` to proceed.
 - A unit in a header name is a hint. The user must confirm it.
 - Normalisation is spelling only, from a fixed table: `µ`/`μ` → `u`, `mcg` → `ug`,
   `ml` → `mL`. Anything outside the table asks the user.
-- Mixed concentration or dose units within the analyte are blocking, even when
+- Mixed time, concentration or dose units within the analyte are blocking, even when
   equivalent (`ng/mL` vs `ug/L`). Only an explicit, recorded `convert_units` or `recode`
   step fixes them.
 - Time and dose units must be declared too.
-- opnca-r takes no unit arguments, so units are recorded in the run manifest.
+- ~~opnca-r takes no unit arguments, so units are recorded in the run manifest.~~
+  Amended 2026-11-08 (#57): opnca-r 0.3.1 takes unit labels in its preset and locks them
+  (opnca-r#32, #56). The launcher passes the units of the frozen input: each role's
+  declared unit, or the one unit its column holds across the selected rows, in the
+  table's spelling. The manifest and settings record them as `analysis_units`, next to the
+  declaration. A save labelled otherwise fails. A unit outside the table is still
+  blocked, not forwarded as free text. Labels are metadata: opnca-r converts nothing, and
+  values change only through a recorded step.
 
 ```
 PCSTRESU = "ug/ml"            -> "ug/mL" (spelling table, shown)    (pharmaversesdtm)

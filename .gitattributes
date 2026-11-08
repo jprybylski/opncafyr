@@ -2,3 +2,4 @@
 # their line endings on checkout.
 tests/fixtures/*.csv -text
 tests/fixtures/*.json -text
+tests/fixtures/opnca-r/*.json -text

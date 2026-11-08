@@ -30,7 +30,9 @@ Under **Units**, say how each unit is given, for time, concentration and dose:
 - **A unit column**: choose the column that holds the unit on each row, for example `PCSTRESU`. Its values are shown next to it.
 - **One unit for every row**: type the unit, for example `h`, `ng/mL` or `mg`.
 
-The app never guesses a unit. If a column name contains a unit, the app says "The header says ng/mL: confirm it above." You still have to choose. The app tidies spelling only (for example `ng/ml` becomes `ng/mL`). Different units within one analyte, even equivalent ones such as `ng/mL` and `ug/L`, block the run until you add a **Convert units** step.
+The app never guesses a unit. If a column name contains a unit, the app says "The header says ng/mL: confirm it above." You still have to choose. The app tidies spelling only (for example `ng/ml` becomes `ng/mL`, `µg/l` becomes `ug/L`, `mcg` becomes `ug` and `hr` becomes `h`). Blank cells in a unit column are skipped. Different units within one analyte, for time, concentration or dose, even equivalent ones such as `ng/mL` and `ug/L`, block the run until you add a **Convert units** step. So does a unit the app does not know.
+
+These units become the run's *unit labels*. When you select **Start analysis**, the app works out each label from this analyte's cleaned rows: the unit you typed, or the one unit its unit column holds. opnca-r then labels its results, tables and charts with them. The labels are words only: opnca-r never converts or rescales a value, and it does not check that the units fit together. Values change unit only through a **Convert units** step, which is recorded.
 
 ### Flag columns: BLQ, missing and excluded
 
@@ -80,7 +82,7 @@ A blocking finding stops the run until you change the recipe or the mapping. The
 | route missing | The route is blank. | Remove the row, or replace the value, with a reason. |
 | route unrecognised | opnca-r does not know this route. | Add a **Replace values** step. |
 | route varies, dose varies | A profile has more than one route or dose. | One route and one dose per profile. |
-| units mixed, units undeclared | Units differ, or a unit is missing or unknown. | Add **Convert units**, or declare the unit. |
+| units mixed, units undeclared | Time, concentration or dose units differ, or a unit is missing or unknown. | Add **Convert units**, or declare the unit. |
 | duplicate key | Two or more rows share a subject and actual time. | Exclude or remove all but one, with a reason. |
 | blq and missing | A row is flagged both BLQ and missing. | A row is one or the other. |
 | flag value unmapped | A flag value has no TRUE or FALSE. | Say what it means in the mapping. |
@@ -122,4 +124,4 @@ Card 6 sets the run's choices.
 
 While **Start analysis** is greyed out, the line above it says why: the checks have not run, something still blocks, a warning is not acknowledged, or a BLQ choice is missing.
 
-**Start analysis** freezes this analyte's rows and your choices into a new run. It does not open opnca-r yet. The next step is in [Analyte runs in opnca-r](analyte-runs.md).
+**Start analysis** freezes this analyte's rows and your choices, including the unit labels, into a new run. It does not open opnca-r yet. The next step is in [Analyte runs in opnca-r](analyte-runs.md).

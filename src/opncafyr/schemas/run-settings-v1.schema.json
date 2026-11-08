@@ -131,6 +131,33 @@
       "type": "object",
       "description": "The recipe's mapping block (recipe-v1 $defs/mapping)."
     },
+    "analysis_units": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "concentration",
+        "time",
+        "dose"
+      ],
+      "description": "The unit labels of the frozen analysis input, passed to opnca-r as its preset `units` (opnca-r 0.3.1, #57): each role's declared unit, or the one unit its unit column holds across the selected rows, in the launcher's spelling (units.normalise). Labels only: values are scaled only by a recorded 'Convert units' step. Absent on runs made before 0.3.1 was pinned.",
+      "properties": {
+        "concentration": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "time": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "dose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
     "blq": {
       "type": "object",
       "additionalProperties": false,

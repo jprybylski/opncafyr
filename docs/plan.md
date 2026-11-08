@@ -102,7 +102,8 @@ scheduled first.
 - **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and
   deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
   [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7, opnca-r#45–#47 in 0.2.8,
-  opnca-r#49–#50 in 0.2.9 and deckifyr#88–#91 in 0.3.5, so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
+  opnca-r#49–#50 in 0.2.9, opnca-r#32 and #53–#54 in 0.3.0, opnca-r#56–#58 in 0.3.1
+  and deckifyr#88–#91 in 0.3.5, so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
   children run behind `/apps/<tool>/` with no rewriting ([spike result](spikes/basepath.md)).
 - **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
   can run Docker. opnca-r is compiled once, when the image is built. The same image gives
@@ -120,7 +121,7 @@ scheduled first.
   opnca-r changes land.
 
 **opnca adapter (#27, #28)**
-- Use opnca-r 0.2.9 directly: `scripts/serve.R` with the launcher flags (#27) and the
+- Use opnca-r 0.3.1 directly: `scripts/serve.R` with the launcher flags (#27) and the
   server-side export (#28). The earlier temporary paths are no longer needed.
 - Never read browser downloads. #29 checks the saved `analysis.R` against the UI's
   results.
@@ -151,7 +152,7 @@ scheduled first.
   fixture and checks that none of its subject IDs or concentrations reach the bundle.
 - #40 is done (2026-11-07): [user-guide/](user-guide/index.md), shown inside the app
   under **Guide**, with a two-analyte walkthrough and screenshots from the fixture flow.
-  opnca-r's `analysis.R` research-use line is opnca-r#53.
+  opnca-r's `analysis.R` has carried the same research-use line since 0.3.0 (opnca-r#53).
 - #34 is done (2026-11-07): opnca-r installs from its verified binary with base R, never
   touching the user's R library (ADR 0004 amendment), and `repair --build-from-source`
   builds the vendored tarball. CI's `source-build-*` jobs prove both on macOS (offline) and

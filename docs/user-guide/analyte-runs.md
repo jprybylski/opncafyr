@@ -29,7 +29,7 @@ While opnca-r is open, the strip above it has **Reload** and **Open in new tab �
 
 opnca-r has its own views along the top: **Data**, **Profiles**, **Analyze**, **Results** and **Export**. Each has a **?** button with help for that view.
 
-- **Data** already holds this run's rows and the column choices you made. You cannot load other data here.
+- **Data** already holds this run's rows and the column choices you made. You cannot load other data here. Its **Unit labels** show the run's units, marked "set by the launcher"; they cannot be changed here. opnca-r uses them to label results, tables and charts, and converts nothing.
 - **Profiles** shows each subject's concentration–time curve and the terminal phase.
 - **Analyze** is where you choose what to calculate. The BLQ rules you chose in the app are already set. Choose the metrics (for example the **Standard NCA** preset), then select **Run analysis**.
 - **Results** shows the parameters, a summary, profiles and boxplots.
@@ -44,14 +44,16 @@ Samples you exclude inside opnca-r are recorded, but opnca-r does not record a r
 3. Choose the **Time basis** of the mean figures: **Actual time** or **Nominal time**. Nominal time is usually the better choice, because with actual times most time points hold one sample. Also check **Statistic** and **Error**. opnca-r will not save the mean figures until a time basis is chosen.
 4. Select **Save to run folder**.
 
-Do not use the **Download** buttons to save a run. The app only accepts what opnca-r writes into the run folder.
+Do not use the **Download** buttons to save a run. The app only accepts what opnca-r writes into the run folder. A save whose unit labels are not the run's is refused, and the run is **Failed**.
+
+The saved run holds opnca-r's script `analysis.R` (its header says "Research use only"), its record of the analysis, the result tables as CSV files with formatted copies in `results/tables/`, and the figures.
 
 ## Review and replay
 
 When the save is complete, opnca-r closes and the app checks the saved files. Go back to the **Analysis** page to follow along in card **7. Runs**:
 
 1. "Run … was saved by opnca-r and is ready for review." The run is now **Reviewing**.
-2. The app replays the run. It runs the saved analysis script again, on its own copy of the frozen data, and compares every result table with the saved one. This takes a short while and shows as a job.
+2. The app replays the run. It runs the saved analysis script again, on its own copy of the frozen data, and compares every result table with the saved one. Tables that opnca-r says its script does not reproduce, such as bioequivalence tables, are skipped and listed in the replay report. This takes a short while and shows as a job.
 3. "Run … replayed and matches its saved results. Confirm it to complete the run."
 4. Select **Confirm and complete**. The run is now **Completed** and sealed.
 

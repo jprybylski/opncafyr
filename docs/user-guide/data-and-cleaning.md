@@ -64,7 +64,7 @@ Every value you type is matched exactly, including spaces and letter case.
 | **Join columns** | Joins columns into a new column, with a separator you choose. |
 | **Add a constant column** | Adds a new column with the same value on every row. |
 | **Derive elapsed time** | Works out time since dose from a sample date-time and a dose date-time, in the unit you choose. You also describe the time zones in words. |
-| **Convert units** | Converts values whose unit is exactly the text you give into another unit. |
+| **Convert units** | Converts values whose unit is exactly the text you give into another unit. This is the only way a value changes unit. |
 | **Make a TRUE/FALSE column** | Makes a new TRUE/FALSE column from the values of another column. You say what each value means. |
 | **Exclude rows (they stay, marked)** | Marks rows as excluded, with a reason. They stay in the data and opnca-r sees them as excluded. |
 | **Remove rows to the rejected-row log** | Takes rows out of the cleaned data, with a reason. They are listed in the rejected-row log. |
@@ -106,7 +106,7 @@ When you change a step, the result is cleared and the app says "The recipe chang
 - It never drops a row without a reason.
 - It never sets a below-the-limit (BLQ) or blank concentration to zero.
 - It never puts nominal time in place of actual time.
-- It never guesses units.
+- It never guesses units, and never converts them unless you add a **Convert units** step.
 - It never resolves duplicates by itself. You choose which row to keep.
 
 Derived values always go into a new column, so the original column is still there to compare.

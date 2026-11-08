@@ -7,6 +7,28 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Runs pass their unit labels to opnca-r (#57). Results in other units are no longer
+  labelled with opnca-r's defaults (ng/mL, h, mg).
+  - When a run is made, the labels come from its frozen one-analyte rows. Each role's
+    declared unit is used, or the one unit its unit column holds across those rows, in
+    the spelling table's form. Blank unit cells are skipped.
+  - A missing, unknown or mixed unit still blocks the run (ADR 0005 Q2, amended).
+    Nothing is guessed, defaulted or forwarded as free text. Labels are metadata: only a
+    recorded 'Convert units' step changes values.
+  - The labels go to opnca-r in the preset's `units`. opnca-r 0.3.1 shows them read-only
+    and refuses requests with other labels. The launcher now also passes
+    `--require-explicit-units`.
+  - `settings.json` and `manifest.json` record the labels as `analysis_units`, next to
+    the declared `units`. The field is optional in `run-settings-v1` and
+    `run-manifest-v1`, so older runs still validate.
+  - A save fails when opnca-r's `effective_settings.units` aren't the run's labels with
+    `units_source: "preset"`.
+  - A run prepared before this change won't open in opnca-r (`run_outdated`). Make a new
+    run from it.
+  - A time unit given as a column is now checked for unknown and mixed values, like
+    concentration and dose.
+  - Tests cover a run converted from ng/mL to ug/L end to end: the same estimates, every
+    concentration unit relabelled, and the replay passes.
 - A documentation website (#53), published from `site/` to
   <https://jprybylski.github.io/opncafyr/> by `.github/workflows/docs.yml`.
   - Jekyll with Just the Docs, in the app's own colours and status meanings, light and
@@ -78,7 +100,7 @@ All notable changes to this project are documented here. The format follows
 - The generated cleaning script (`clean.R`) states "Research use only" in its header
   (#40). Its text changed, so a recipe's cleaned result made before this change counts as
   stale: apply the recipe again. Completed runs are not affected. opnca-r's saved
-  `analysis.R` doesn't say it yet ([opnca-r#53](https://github.com/mantra-opnca/opnca-r/issues/53)).
+  `analysis.R` says the same since opnca-r 0.3.0 ([opnca-r#53](https://github.com/mantra-opnca/opnca-r/issues/53)).
 - A redacted support bundle (#38): **Settings → Support → Create support bundle…** or
   `opncafyr doctor --bundle` (`--preview` prints it without saving).
   - It holds versions, the install's components, smoke results and hash check, tool
@@ -737,6 +759,40 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- opnca-r is pinned at 0.3.1, which releases opnca-r#32, #53 and #54 (0.3.0) and #56–#58
+  (0.3.1). Imports are unchanged. flextable, a new suggested package, is already in
+  `renv.lock`.
+  - **Saved runs.** `artifacts.json` is schema 2, an additive change. A save also holds
+    `results/tables/*.rds`, the formatted flextable copies of the CSVs. Replay no longer
+    compares a table that opnca-r marks `replay.reproduced: false`, such as the
+    bioequivalence tables. `replay.json` lists those under `not_reproduced` with
+    opnca-r's reason.
+- The publishing curator offers what opnca-r says a run saved, not what file-name
+  patterns suggest (#59).
+  - A save's `artifacts.json` schema 2 is validated against the schema opnca-r installs
+    (`opnca/schemas/opnca-artifacts-v2.schema.json` in the app's R library). A listing
+    that breaks it, or a missing schema, fails the save. A problem names the place and
+    the rule, never a value.
+  - The run manifest keeps each file's schema-2 fields (`id`, `title`, `kind`,
+    `identifies_subjects`, `caption`, `footnote`, `replay`, `derived_from` and the rest).
+    They are optional in `run-manifest-v1`, so older runs still validate. `kind` is
+    opnca-r's, so a formatted `.rds` table is now `table`.
+  - For such a run, each item takes opnca-r's title, and "shows subject IDs" comes from
+    `identifies_subjects`. Sidecar notes come from the caption, the footnote and the
+    mean-profile choices. A figure or table that a later opnca-r saves is offered without
+    launcher changes. Ids, and so published file names and ADR 0007's pre-selection, stay
+    as they were.
+  - Formatted `.rds` tables are offered next to their CSV, as "… (formatted)". They are
+    never pre-selected and carry the CSV's identifier flag. reportifyr places them in a
+    report, and deckifyr renders them in a deck.
+  - A CSV table that the replay doesn't recompute is not offered, nor is its formatted
+    copy. The Publish page says why.
+  - Runs saved before opnca-r 0.3.1 have no `identifies_subjects` and keep the path
+    rules.
+  - **API numbers.** opnca-r's API no longer rounds numbers to 4 decimals. The test that
+    checks the replay against opnca-r's own results now uses 1e-10.
+  - **Roles.** Under `--no-guess-roles`, opnca-r's server refuses a request that omits a
+    role (opnca-r#57). The launcher's preset already names every role.
 - Adapters can bundle their job schemas (#55).
   - A descriptor's `jobs.<capability>` schema name is now looked up in the adapter's own
     `schemas/` folder, then among the launcher's schemas. A name in both places, or in

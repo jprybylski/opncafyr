@@ -7,7 +7,8 @@ browser download.
 
 When ``COMPLETE`` appears the session is stopped first, so nothing else can be written,
 then the folder is inspected (``adapters.opnca.export``). A complete save moves the run to
-``reviewing`` with its script, record, artifacts (path, media type, bytes, SHA-256),
+``reviewing`` with its script, record, artifacts (path, media type, bytes, SHA-256, and
+what opnca-r's ``artifacts.json`` schema 2 says each file is),
 opnca-r's settings and effective settings, the tool versions and the exclusions. A save
 that can't be complete moves it to ``failed``; the user makes a new run from it.
 
@@ -18,6 +19,11 @@ replacing them, and the record keeps the mapping. A save whose record maps anoth
 while the run has launcher exclusions would have dropped them, so it fails. The points
 excluded inside opnca-r are the record's observations with any other source; they are kept
 in the manifest with a warning, because opnca-r records no reason for them.
+
+The other is the unit labels (#57). The preset declares the run's ``analysis_units`` and
+opnca-r 0.3.1 locks them (opnca-r#56); the record must state exactly those labels, with
+``units_source`` ``preset``. A save labelled otherwise fails rather than publishing results
+labelled in units the numbers are not in.
 """
 
 from __future__ import annotations
@@ -45,14 +51,40 @@ def launcher_exclusions(folder: Path) -> dict[str, Any]:
     return {"rows": len(rows), "reasons": sorted({r.get(reason_col, "") for r in rows})}
 
 
-def check(folder: Path, session_alive: bool) -> export.ExportStatus:
+def artifacts_schema(runtime: Any) -> dict[str, Any] | None:
+    """opnca-r's ``artifacts.json`` schema from the pinned R library, if it is installed."""
+    return export.shipped_schema(getattr(runtime, "r_library", None))
+
+
+def check(
+    folder: Path, session_alive: bool, artifacts_schema: dict[str, Any] | None = None
+) -> export.ExportStatus:
     manifest = runs_core.read_manifest(folder)
     return export.inspect_export(
         folder,
         own=OWN,
         snapshot_sha256=manifest["analysis_input"]["sha256"],
         session_alive=session_alive,
+        artifacts_schema=artifacts_schema,
     )
+
+
+def unit_problem(manifest: dict[str, Any], record: dict[str, Any]) -> str | None:
+    """Why the record's unit labels are not the run's, or None when they are."""
+    expected = manifest.get("analysis_units")
+    effective = record.get("effective_settings") or {}
+    recorded = effective.get("units")
+    if not expected:
+        return (
+            "This run was prepared before its unit labels were passed to opnca-r. Make a new run."
+        )
+    if recorded != expected or effective.get("units_source") != "preset":
+        want = ", ".join(f"{k} {expected.get(k)}" for k in ("concentration", "time", "dose"))
+        return (
+            f"opnca-r labelled the results in other units than the run's ({want}). "
+            "Make a new run from this one."
+        )
+    return None
 
 
 def accept(folder: Path, status: export.ExportStatus) -> dict[str, Any]:
@@ -68,6 +100,10 @@ def accept(folder: Path, status: export.ExportStatus) -> dict[str, Any]:
             f"{ours['rows']} excluded rows with its own exclusions. Make a new run and "
             "exclude points with a recipe step instead."
         )
+    problem = unit_problem(manifest, record)
+    if status.state == "complete" and problem:
+        status.state = "failed"
+        status.problems.append(problem)
     if status.state != "complete":
         return runs_core.set_state(
             folder,
@@ -116,18 +152,22 @@ def accept(folder: Path, status: export.ExportStatus) -> dict[str, Any]:
             "saved_at": str(status.complete.get("saved_at", "")),
             "artifacts_sha256": status.complete["artifacts_sha256"],
         },
-        artifacts=[
-            {
-                "path": a["path"],
-                "sha256": a["sha256"],
-                "kind": a["kind"],
-                "media_type": a.get("media_type", "application/octet-stream"),
-                "bytes": a["bytes"],
-            }
-            for a in status.artifacts
-        ],
+        artifacts=[_artifact(a) for a in status.artifacts],
         nca_settings=nca_settings,
         exclusions={"launcher": ours, "session": in_session},
         tools=tools,
         warnings=warnings,
     )
+
+
+def _artifact(art: dict[str, Any]) -> dict[str, Any]:
+    """A manifest artifact: the file's hash and size, and what opnca-r says it is (#59)."""
+    out = {k: art[k] for k in export.DESCRIBED if k in art}
+    out.update(
+        path=art["path"],
+        sha256=art["sha256"],
+        kind=art["kind"],
+        media_type=art.get("media_type", "application/octet-stream"),
+        bytes=art["bytes"],
+    )
+    return out

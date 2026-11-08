@@ -81,9 +81,9 @@ def test_an_altered_result_fails_the_replay_with_a_readable_diff(env):
     assert r.status_code == 409 and r.json()["detail"]["code"] == "replay_required"
 
 
-# opnca-r's API writes numbers with 4 decimal places (jsonlite's default), so the page's
-# values match the replay to that precision; the saved CSVs are compared at 1e-10.
-API_DECIMALS = 4
+# Since opnca-r 0.3.0 the API writes numbers unrounded (15 significant digits), so the
+# page's values match the replay to the CSVs' own tolerance.
+API_RTOL = 1e-10
 
 
 def test_replay_matches_opncas_own_calculation(env):
@@ -105,7 +105,7 @@ def test_replay_matches_opncas_own_calculation(env):
             assert row["value"] in ("", "NA")
         else:
             a, b = float(row["value"]), float(calc["value"])
-            assert abs(round(a, API_DECIMALS) - b) <= 1e-9 * max(1.0, abs(b)), (row, calc)
+            assert abs(a - b) <= API_RTOL * max(abs(a), abs(b)), (row, calc)
 
 
 def test_gate_2_two_analytes_two_independent_runs(env):
