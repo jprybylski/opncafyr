@@ -68,6 +68,22 @@ def test_registry_finds_the_toy_by_scanning_the_adapters_package():
     assert tool.executables == ("python",)
 
 
+def test_toy_declares_its_job_with_a_schema_bundled_in_the_adapter():
+    """#55: a descriptor ``jobs`` contract can name a schema the adapter bundles."""
+    from importlib import resources
+
+    contract = load_descriptors()["example_echo"].jobs["summarize_csv"]
+    assert contract.output_schema == "summary-v1"
+    assert contract.input_schema is None
+    assert contract.timeout_s == 120
+    assert contract.output_document["title"] == "example_echo CSV summary"
+    launcher_schemas = resources.files("opncafyr.schemas")
+    assert not launcher_schemas.joinpath("summary-v1.schema.json").is_file()
+    request = example_echo.summarize_request("source-data/pk.csv", "summaries/pk")
+    assert request.timeout_s == 120
+    assert request.output_document == "summary.json"
+
+
 def test_tile_is_listed_with_its_health(app_root):
     security = SecurityConfig(port=PORT)
     app = create_app(security, runtime=PY)

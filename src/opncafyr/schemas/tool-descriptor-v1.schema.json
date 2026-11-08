@@ -73,13 +73,13 @@
       }
     },
     "jobs": {
-      "description": "Job contracts. Every schema name must be a schema bundled with the launcher.",
+      "description": "Job contracts. A schema name is resolved in the adapter's own schemas/ folder, then among the launcher's schemas; a name found in both is an error. input_schema is optional (#55): a job whose input is not a JSON document has none.",
       "type": "object",
       "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"},
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["input_schema", "output_schema"],
+        "required": ["output_schema"],
         "properties": {
           "input_schema": {"type": "string", "pattern": "^[a-z][a-z0-9-]*-v[0-9]+$"},
           "output_schema": {"type": "string", "pattern": "^[a-z][a-z0-9-]*-v[0-9]+$"},

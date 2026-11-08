@@ -62,6 +62,8 @@ JOB_SCHEMA = "job-v1"
 JOB_ID_RE = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{6}$")
 _KIND_RE = re.compile(r"^[a-z][a-z0-9_.-]*$")
 _POOL_RE = re.compile(r"^[a-z][a-z0-9_-]*$")
+# A plain file name inside the output folder: no folders, no "..", no hidden files.
+_DOCUMENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*\.json$")
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 PROGRESS_PREFIX = "OPNCAFYR-PROGRESS: "
@@ -137,7 +139,10 @@ class JobRequest:
     the job's context, so it can read the tool's own error report from the job's
     ``stdout.log``/``stderr.log``; its message wins over ``explain``'s. ``ok_exit_codes``
     are the exit codes that count as a clean exit (a check tool may exit 1 to say it found
-    something). None of these callables are persisted.
+    something). ``output_document`` names a JSON file in ``output`` that ``output_check``
+    validates before ``review`` runs, usually a descriptor job contract's
+    ``JobContract.check_output``; its problems fail the job like a failed review. None of
+    these callables are persisted.
     """
 
     kind: str
@@ -152,6 +157,8 @@ class JobRequest:
     explain: Callable[[int], str] | None = None
     diagnose: Callable[[JobContext, int], str | None] | None = None
     ok_exit_codes: tuple[int, ...] = (0,)
+    output_document: str | None = None
+    output_check: Callable[[Any, str], list[str]] | None = None
 
     def check(self) -> None:
         if not _KIND_RE.match(self.kind):
@@ -166,6 +173,13 @@ class JobRequest:
             raise ValueError("A job's timeout must be positive.")
         if not self.ok_exit_codes or not all(isinstance(c, int) for c in self.ok_exit_codes):
             raise ValueError("ok_exit_codes must list at least one integer exit code.")
+        if (self.output_document is None) != (self.output_check is None):
+            raise ValueError("output_document and output_check go together.")
+        if self.output_document is not None:
+            if self.output is None:
+                raise ValueError("An output_document needs an output folder.")
+            if not _DOCUMENT_RE.match(self.output_document):
+                raise ValueError(f"Invalid output_document {self.output_document!r}.")
 
 
 @dataclass
@@ -531,6 +545,14 @@ class JobManager:
 
         self._check_cancel(job)
         self._set(job, JobState.REVIEWING, f"Checking the results of {job.label}.")
+        problems = self._check_output(job, request, ctx)
+        if problems:
+            raise _Stop(
+                JobState.FAILED,
+                "review_failed",
+                f"The {job.label} job finished, but its results did not pass the check: "
+                + "; ".join(problems[:3]),
+            )
         if request.review is not None:
             try:
                 result = request.review(ctx)
@@ -558,6 +580,21 @@ class JobManager:
                     f"The {job.label} job finished, but its results could not be moved into "
                     f"{request.output}.",
                 ) from None
+
+    def _check_output(self, job: _Job, request: JobRequest, ctx: JobContext) -> list[str]:
+        """Validate the request's ``output_document`` in staging; empty when it passes."""
+        name = request.output_document
+        if name is None or request.output_check is None or ctx.staging is None:
+            return []
+        try:
+            document = json.loads((ctx.staging / name).read_text("utf-8"))
+        except (OSError, ValueError):
+            return [f"{name} is missing or not JSON."]
+        try:
+            return request.output_check(document, name)
+        except Exception as exc:  # noqa: BLE001 - a broken check never passes
+            log.error("job %s output check raised %s", job.id, type(exc).__name__)
+            return ["the results could not be checked."]
 
     def _prepare(
         self, job: _Job, request: JobRequest, workspace: Path

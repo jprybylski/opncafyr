@@ -76,6 +76,8 @@ runtime: python
 capabilities: [summarize_csv, echo_app]
 executables: [python]
 health: {kind: python_import, executable: python, target: csv}
+jobs:
+  summarize_csv: {output_schema: summary-v1, timeout_s: 120}
 web_app:
   route: /apps/example_echo/
   readiness: /api/health
@@ -93,7 +95,7 @@ web_app:
 | `executables` | yes | The executables the tool needs, as **symbolic names** from the installed `runtime.json`, never paths. If one is missing, the tool is `unavailable`. See [Which Python, which R](#which-python-which-r). |
 | `health` | yes | The health probe; see [2](#2-the-health-check). |
 | `web_app` | no | `route`, `readiness` and optional `max_body_bytes`. Write `route` as `/apps/<id>/` with your own id: the proxy routes by tool id but gives the child the route as its base path, and nothing checks at startup that they agree (a mismatch shows as 404s). `readiness` is required; it documents the child's health path, and the adapter's `is_ready` does the check. The proxy refuses bodies over `max_body_bytes` (default 10 MiB) with 413. |
-| `jobs` | no | `{<capability>: {input_schema, output_schema, timeout_s}}`: a job contract. Workflows read `timeout_s` from here. The registry only checks that both schemas exist in `opncafyr.schemas`; nothing validates against them, so validate in your job's `review`. See [Known limits](#known-limits). |
+| `jobs` | no | `{<capability>: {output_schema, input_schema?, timeout_s?}}`: a job contract. Each schema name is looked up in the adapter's own `schemas/` folder (`adapters/<id>/schemas/<name>.schema.json`), then in `opncafyr.schemas`; a name in both places, or in neither, stops startup. Leave out `input_schema` when the input isn't a JSON document. Workflows read `timeout_s` from here, and a request can have the job manager check its output against `output_schema` (see [3b](#3b-jobs)). |
 | `project_editor` | no | Lets the launcher's project-file editor open the tool's project files (#52): `capability`, `project_root` (a top-level study folder, never `OUTPUTS`), `file_profile` and optional `settings_schema`. The adapter package must then have `project_editor()`, returning a `core.adapter.ProjectEditor`. See `adapters/quartifyr/editor.py`. |
 | `optional_requirements` | no | `[{name, executable, message, capabilities?}]`: an executable that some features need, such as LibreOffice for slide previews. When it is missing, the tile shows `message` and the capabilities it turns off; the tool stays `ok`. |
 
@@ -248,7 +250,9 @@ def summarize_command(runtime: Runtime, source: Path, out: Path) -> CommandSpec:
     )
 
 
-def summarize_request(source: str, output: str) -> JobRequest:
+def summarize_request(source: str, output: str, contract: JobContract | None = None) -> JobRequest:
+    contract = contract or summary_contract()  # the descriptor's jobs.summarize_csv
+
     def build(ctx: JobContext) -> CommandSpec:
         try:
             path = resolve_in_root(ctx.workspace, source)
@@ -256,17 +260,14 @@ def summarize_request(source: str, output: str) -> JobRequest:
             raise JobPrepareError("the CSV must be a file inside the study folder.") from None
         return summarize_command(ctx.runtime, path, ctx.staging)
 
-    def review(ctx: JobContext) -> ReviewResult:
-        problems = check_summary(ctx.staging / "summary.json")
-        return ReviewResult(not problems, "; ".join(problems[:3]))
-
     return JobRequest(
         kind="example_echo.summarize",
         label=f"Summarize {Path(source).name}",
         build=build,
-        timeout_s=SUMMARY_TIMEOUT_S,
+        timeout_s=contract.timeout_s,
         output=output,
-        review=review,
+        output_document="summary.json",
+        output_check=contract.check_output,
         explain=_explain,
     )
 ```
@@ -295,10 +296,15 @@ def summarize_request(source: str, output: str) -> JobRequest:
     user; the job's label is put in front of it. Anything else `build` raises, such as
     `WorkspaceAccessError` from `resolve_in_root`, becomes a generic "could not be
     prepared", so catch it and raise `JobPrepareError` instead.
-  - `review(ctx)`: check the staged output, e.g. against a schema. It may also add files
-    to the staging folder. Its message, like every job message, must not quote data:
+  - `output_document` and `output_check`: a plain `*.json` file name in the output folder
+    and a function `(document, name) -> list[str]` of problems, usually the job
+    contract's `JobContract.check_output`. The job manager reads and checks the document
+    in staging before `review`; any problem fails the job (`review_failed`). The
+    contract's problems name the place and the rule, never the value.
+  - `review(ctx)`: any other check of the staged output. It may also add files to the
+    staging folder. Its message, like every job message, must not quote data:
     jsonschema's own messages quote the bad value, so report the path and the rule
-    instead (see `check_summary` in the toy).
+    instead (`core.manifest.schema_problems` does this).
   - `progress(line)`: turn a stdout line into a progress message. By default, lines
     starting with `OPNCAFYR-PROGRESS: ` are used.
   - `progress`, `explain` and `diagnose` messages are cut to 300 characters, without
@@ -318,7 +324,10 @@ def summarize_request(source: str, output: str) -> JobRequest:
 
 Parse a tool's machine-readable result in the adapter (for example deckifyr's
 `parse_cli`, quartifyr's `parse_render`), not in the workflow. If the tool has a
-descriptor `jobs` contract, read its `timeout_s` from `tool.jobs[capability]`.
+descriptor `jobs` contract, read its `timeout_s` from `tool.jobs[capability]`, and pass
+`output_check=contract.check_output` with the document's name to have the output checked.
+Bundle any schema of your own in `adapters/<id>/schemas/`; never add a tool's schema to
+`src/opncafyr/schemas/`.
 
 ## 4. Giving users a way in: workflow packs
 
@@ -458,20 +467,13 @@ A test-only tool that needs no web app can instead live under `tests/`, loaded w
 
 ## Known limits
 
-- **Job schemas must be in `opncafyr.schemas`.** A descriptor `jobs` contract names its
-  input and output schemas, and the registry looks for them in `src/opncafyr/schemas/`
-  only (it checks that they exist, nothing more). An adapter that wants to bundle its
-  own schema leaves out `jobs` and checks its output in `review`, as the toy does with
-  `summary-v1.schema.json`. Its time limit then lives in the adapter.
 - **No WebSockets** through the proxy (see [3a](#3a-a-web-app)).
 - **New executables need installer work.** The symbolic names come from `runtime.json`,
   which the installer writes (`installer/steps/runtimes.py`). A tool that needs a new
   runtime (a new binary, a new Python environment) also needs pins in
   `runtime/pins.toml`, an install step and an offline bundle entry.
-- **`core.adapter.Adapter` is not used.** That Protocol (`prepare`, `validate`, `run`,
-  `status`, `cancel`, `artifacts`, `shutdown`) predates the job manager. The contract is
-  the one described here: `WebAppAdapter` for web apps, and `CommandSpec`/`JobRequest`
-  for jobs. Removing the Protocol is a follow-up.
+- **The job manager checks one output document.** `output_document` names a single
+  JSON file; check anything else (several files, tables, figures) in `review`.
 
 ## Testing checklist
 

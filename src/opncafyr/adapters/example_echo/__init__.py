@@ -7,8 +7,10 @@ It is the worked example in ``docs/adding-a-tool.md`` and is left out of release
   ``/apps/example_echo/``: ``EchoWebApp`` builds its command line, checks readiness and
   stops it.
 - **A job** (``summarize.py``): ``summarize_request`` describes a job that summarizes a
-  CSV's columns into ``summary.json`` (``summary-v1.schema.json``, bundled here). The
-  job manager runs it; a workflow pack, or a test, submits it.
+  CSV's columns into ``summary.json``. The descriptor's ``jobs.summarize_csv`` contract
+  gives its timeout and its output schema, ``schemas/summary-v1.schema.json``, bundled
+  here; the job manager checks ``summary.json`` against it before the job completes. A
+  workflow pack, or a test, submits the job.
 
 Nothing under ``opncafyr.core`` names this adapter. The registry finds it by scanning
 ``opncafyr.adapters`` for ``descriptor.yaml``. Its only executable is the pinned
@@ -19,11 +21,12 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from functools import cache
 from pathlib import Path
 from typing import Any
 
 import httpx
-from jsonschema import Draft202012Validator
+import yaml
 
 from opncafyr.core.adapter import ChildView, LaunchContext, LaunchSpec
 from opncafyr.core.jobmanager import (
@@ -31,19 +34,19 @@ from opncafyr.core.jobmanager import (
     JobContext,
     JobPrepareError,
     JobRequest,
-    ReviewResult,
 )
+from opncafyr.core.registry import JobContract, ToolDescriptor
 from opncafyr.core.runtime import Runtime
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
 
 HERE = Path(__file__).resolve().parent
 SERVER = HERE / "server.py"
 SUMMARIZE = HERE / "summarize.py"
-SUMMARY_SCHEMA = HERE / "summary-v1.schema.json"
+SUMMARY_CAPABILITY = "summarize_csv"
+SUMMARY_DOCUMENT = "summary.json"
 TOKEN_ENV = "EXAMPLE_ECHO_TOKEN"  # noqa: S105 - a variable name, not a secret
 TOKEN_HEADER = "X-Example-Echo-Token"  # noqa: S105 - a header name, not a secret
 READY_PREFIX = "ECHO_READY "
-SUMMARY_TIMEOUT_S = 120
 
 
 # --- web app -----------------------------------------------------------------------------
@@ -93,21 +96,32 @@ def summarize_command(runtime: Runtime, source: Path, out: Path) -> CommandSpec:
     )
 
 
+@cache
+def summary_contract() -> JobContract:
+    """The ``summarize_csv`` contract from this adapter's own descriptor.
+
+    A workflow would take it from the registry (``tool.jobs["summarize_csv"]``); the toy
+    reads its descriptor the same way the registry does, so tests need no app.
+    """
+    data = yaml.safe_load((HERE / "descriptor.yaml").read_text("utf-8"))
+    descriptor = ToolDescriptor.from_mapping(
+        data, "adapters/example_echo/descriptor.yaml", bundle=HERE
+    )
+    assert descriptor.jobs is not None  # noqa: S101 - the descriptor declares the job
+    return descriptor.jobs[SUMMARY_CAPABILITY]
+
+
 def check_summary(path: Path) -> list[str]:
     """Problems with a written ``summary.json``; empty when it matches the bundled schema.
 
-    A problem names where and which rule, never the value: jsonschema's own messages quote
-    the offending value, and a job message must not carry data (ADR 0007).
+    The job manager runs the same check on the staged output. A problem names where and
+    which rule, never the value (ADR 0007).
     """
     try:
         doc = json.loads(path.read_text("utf-8"))
     except (OSError, ValueError):
-        return ["summary.json is missing or not JSON."]
-    schema = json.loads(SUMMARY_SCHEMA.read_text("utf-8"))
-    return [
-        f"summary.json at /{'/'.join(map(str, e.absolute_path))} fails {e.validator!r}"
-        for e in Draft202012Validator(schema).iter_errors(doc)
-    ]
+        return [f"{SUMMARY_DOCUMENT} is missing or not JSON."]
+    return summary_contract().check_output(doc, SUMMARY_DOCUMENT)
 
 
 def _explain(code: int) -> str:
@@ -116,12 +130,16 @@ def _explain(code: int) -> str:
     return f"The summary script stopped with exit code {code}."
 
 
-def summarize_request(source: str, output: str) -> JobRequest:
+def summarize_request(source: str, output: str, contract: JobContract | None = None) -> JobRequest:
     """A job that summarizes the workspace CSV ``source`` into the folder ``output``.
 
-    Both paths are workspace-relative. The job manager stages the output and moves it
-    into place only after a clean exit and a passing review.
+    Both paths are workspace-relative. ``contract`` is the descriptor's ``summarize_csv``
+    job contract (default: read from this adapter's descriptor); it gives the timeout and
+    the schema ``summary.json`` must match. The job manager stages the output and moves it
+    into place only after a clean exit and a passing check.
     """
+    contract = contract or summary_contract()
+    assert contract.timeout_s is not None  # noqa: S101 - the descriptor sets one
 
     def build(ctx: JobContext) -> CommandSpec:
         assert ctx.staging is not None  # noqa: S101 - the request has an output
@@ -133,17 +151,13 @@ def summarize_request(source: str, output: str) -> JobRequest:
             raise JobPrepareError("the CSV doesn't exist.")
         return summarize_command(ctx.runtime, path, ctx.staging)
 
-    def review(ctx: JobContext) -> ReviewResult:
-        assert ctx.staging is not None  # noqa: S101
-        problems = check_summary(ctx.staging / "summary.json")
-        return ReviewResult(not problems, "; ".join(problems[:3]))
-
     return JobRequest(
         kind="example_echo.summarize",
         label=f"Summarize {Path(source).name}",
         build=build,
-        timeout_s=SUMMARY_TIMEOUT_S,
+        timeout_s=contract.timeout_s,
         output=output,
-        review=review,
+        output_document=SUMMARY_DOCUMENT,
+        output_check=contract.check_output,
         explain=_explain,
     )

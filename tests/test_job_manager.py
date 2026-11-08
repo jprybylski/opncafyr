@@ -16,7 +16,7 @@ from opncafyr.core.jobmanager import (
     ReviewResult,
 )
 from opncafyr.core.jobs import JobState
-from opncafyr.core.manifest import validate
+from opncafyr.core.manifest import schema_problems, validate
 
 PY = sys.executable
 HERE = Path(__file__).parent
@@ -207,6 +207,78 @@ def test_failed_review_is_not_promoted(manager, workspace):
     assert job["reason"] == "review_failed"
     assert "the results table is missing" in job["message"]
     assert not (workspace / "runs" / "r1").exists()
+
+
+WRITE_DOC = (
+    "import json, pathlib, sys\n"
+    "(pathlib.Path(sys.argv[1]) / 'doc.json').write_text(json.dumps({'rows': 'secret-value'}))\n"
+)
+ROWS_SCHEMA = {"type": "object", "properties": {"rows": {"type": "integer"}}}
+
+
+def test_output_document_is_checked_before_promotion(manager, workspace):
+    """A contract's output check fails the job like a review, naming place and rule only."""
+    reviewed = []
+    request = py_job(
+        WRITE_DOC,
+        output="runs/r1",
+        output_document="doc.json",
+        output_check=lambda doc, label: schema_problems(doc, ROWS_SCHEMA, label),
+        review=lambda ctx: reviewed.append(1) or ReviewResult(True),
+    )
+    job_id = manager.submit(request)
+    assert manager.wait(job_id, 20) is JobState.FAILED
+    job = manager.get(job_id)
+    assert job["reason"] == "review_failed"
+    assert "doc.json at /rows fails 'type'" in job["message"]
+    assert "secret-value" not in job["message"]
+    assert reviewed == []  # the review runs only after the output check passes
+    assert not (workspace / "runs" / "r1").exists()
+
+
+def test_missing_output_document_fails_the_job(manager, workspace):
+    request = py_job(
+        WRITE_RESULT, output="runs/r1", output_document="doc.json", output_check=lambda d, n: []
+    )
+    job_id = manager.submit(request)
+    assert manager.wait(job_id, 20) is JobState.FAILED
+    assert "doc.json is missing or not JSON" in manager.get(job_id)["message"]
+
+
+def test_passing_output_document_is_promoted(manager, workspace):
+    code = (
+        "import pathlib, sys\n"
+        "(pathlib.Path(sys.argv[1]) / 'doc.json').write_text('{\"rows\": 3}')\n"
+    )
+    request = py_job(
+        code,
+        output="runs/r1",
+        output_document="doc.json",
+        output_check=lambda doc, label: schema_problems(doc, ROWS_SCHEMA, label),
+    )
+    job_id = manager.submit(request)
+    assert manager.wait(job_id, 20) is JobState.COMPLETED
+    assert json.loads((workspace / "runs" / "r1" / "doc.json").read_text()) == {"rows": 3}
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"output_document": "doc.json"},  # no check
+        {"output_check": lambda d, n: []},  # no document
+        {"output_document": "../doc.json", "output_check": lambda d, n: []},
+        {"output_document": "sub/doc.json", "output_check": lambda d, n: []},
+        {"output_document": "doc.txt", "output_check": lambda d, n: []},
+    ],
+)
+def test_output_document_must_be_a_plain_json_name_with_a_check(manager, changes):
+    with pytest.raises(ValueError):
+        py_job(WRITE_RESULT, output="runs/r1", **changes).check()
+
+
+def test_output_document_needs_an_output_folder():
+    with pytest.raises(ValueError, match="output folder"):
+        py_job(WRITE_RESULT, output_document="doc.json", output_check=lambda d, n: []).check()
 
 
 def test_review_sees_the_staged_outputs(manager, workspace):

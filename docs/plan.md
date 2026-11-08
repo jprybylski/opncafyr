@@ -97,9 +97,8 @@ scheduled first.
   ADR 0004).
 - **Gate 1 shell work (#9–#18).** None of it depends on upstream changes. The scaffold
   covered part of it; the controller core (#9), local-origin hardening (#11), the job
-  manager (#12) and the tool registry (#13) are done. The run, status and cancel methods of
-  `core.adapter.Adapter` will move onto `JobRequest` when the first job adapter lands
-  (#22, #32).
+  manager (#12) and the tool registry (#13) are done. Jobs run as `JobRequest`s through
+  the job manager; the old `core.adapter.Adapter` Protocol was removed (#55).
 - **Upstream work.** opnca-r#23–#30, quartifyr#69–#72 and #75–#78 (0.3.2), and
   deckifyr#82–#86 (0.3.4) landed on 2026-11-05. The review follow-ups are in
   [upstream.md](upstream.md). opnca-r#40–#43 shipped in 0.2.7, opnca-r#45–#47 in 0.2.8,

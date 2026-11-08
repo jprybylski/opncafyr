@@ -36,7 +36,9 @@ The registry (`core/registry.py`) reads descriptors only from the installed
 `opncafyr.adapters` package, never from a workspace or the working directory. A descriptor
 names its format (`schema_version: "1.0"`), the adapter's own `version`, its capabilities,
 the runtime executables it needs (symbolic names from `runtime-v1`, never paths), a health
-probe, an optional web app, job contracts (each schema must be bundled) and optional
+probe, an optional web app, job contracts (each schema is bundled in the adapter's own
+`schemas/` folder or with the launcher, never both; a `JobRequest` can have the job
+manager check an output document against the contract before the job completes) and optional
 requirements (an executable that enables some capabilities, e.g. LibreOffice for
 previews). Descriptors ship with the launcher, so there are no migrations: an unknown
 format or any invalid field stops startup with an error naming the file and field.

@@ -10,6 +10,11 @@ runtime: python
 capabilities: [summarize_csv, echo_app]
 executables: [python]
 health: {kind: python_import, executable: python, target: csv}
+# The job's output schema is bundled here, in schemas/summary-v1.schema.json; the
+# registry finds it there before looking among the launcher's schemas. The input is a CSV,
+# not a JSON document, so the job has no input_schema.
+jobs:
+  summarize_csv: {output_schema: summary-v1, timeout_s: 120}
 web_app:
   route: /apps/example_echo/
   readiness: /api/health

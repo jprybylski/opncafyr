@@ -1,9 +1,17 @@
-"""The adapter contract every tool implements.
+"""What a tool adapter implements for the core.
 
 The controller knows capabilities and file contracts, not package-specific screens or
 calculation logic (docs/spec.md, "Stable adapters make delivery and reuse testable").
-Adapters translate these calls into absolute-path process invocations or narrowly
-scoped loopback HTTP calls. Workspace files supply data and options only.
+An adapter can provide two things here:
+
+- a **web app** (``WebAppAdapter``): the supervisor starts it on a loopback port and the
+  proxy serves it under ``/apps/<tool>/``;
+- a **project editor** (``ProjectEditor``): the files of one project folder that the
+  generic editor may show and change.
+
+Jobs are not part of this module: an adapter builds a ``core.jobmanager.CommandSpec``
+and a workflow submits it as a ``JobRequest``, so the job manager owns running, status,
+cancelling and outputs (ADR 0002). Workspace files supply data and options only.
 """
 
 from __future__ import annotations
@@ -13,55 +21,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from opncafyr.core.jobs import JobState
 from opncafyr.core.runtime import Runtime
 
 if TYPE_CHECKING:
     import httpx
-
-
-@dataclass(frozen=True)
-class ValidationResult:
-    ok: bool
-    errors: list[str] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class Artifact:
-    path: Path
-    kind: str
-    media_type: str
-    sha256: str
-
-
-@dataclass
-class JobHandle:
-    job_id: str
-    capability: str
-    state: JobState = JobState.QUEUED
-    message: str = ""
-
-
-@runtime_checkable
-class Adapter(Protocol):
-    """Implemented by each tool adapter under ``opncafyr.adapters``."""
-
-    id: str
-
-    def prepare(self, workspace: Path) -> None: ...
-
-    def validate(self, capability: str, job_input: dict[str, Any]) -> ValidationResult: ...
-
-    def run(self, capability: str, job_input: dict[str, Any]) -> JobHandle: ...
-
-    def status(self, job: JobHandle) -> JobHandle: ...
-
-    def cancel(self, job: JobHandle) -> JobHandle: ...
-
-    def artifacts(self, job: JobHandle) -> list[Artifact]: ...
-
-    def shutdown(self) -> None: ...
 
 
 # --- Managed web apps (children served under /apps/<tool>/) --------------------------

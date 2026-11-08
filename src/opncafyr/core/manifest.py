@@ -31,6 +31,20 @@ def validate(document: Any, schema_name: str) -> None:
     Draft202012Validator(load_schema(schema_name)).validate(document)
 
 
+def schema_problems(document: Any, schema: dict[str, Any], label: str) -> list[str]:
+    """Where ``document`` breaks ``schema``, as "<label> at /path fails 'rule'" lines.
+
+    A problem names the place and the rule, never the value: jsonschema's own messages
+    quote the offending value, and a job or log message must not carry data (ADR 0007).
+    """
+    from jsonschema import Draft202012Validator
+
+    return [
+        f"{label} at /{'/'.join(map(str, e.absolute_path))} fails {e.validator!r}"
+        for e in Draft202012Validator(schema).iter_errors(document)
+    ]
+
+
 def atomic_write_json(path: str | Path, document: Any, schema_name: str | None = None) -> Path:
     """Validate (optionally) then write ``document`` so readers never see a partial file."""
     if schema_name is not None:

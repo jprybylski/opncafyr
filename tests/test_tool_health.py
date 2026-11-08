@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import sys
 import time
@@ -124,6 +125,71 @@ def test_descriptor_id_must_match_its_folder(tmp_path):
     root = _adapter_root(tmp_path, {"other": _desc()})
     with pytest.raises(DescriptorError, match="field 'id'"):
         load_descriptors(root)
+
+
+# --- job contracts and their schemas (#55) ------------------------------------------
+
+SUMMARY = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["rows"],
+    "properties": {"rows": {"type": "integer"}},
+}
+
+
+def _with_job(tmp_path, job: dict, bundled: dict[str, object] | None = None) -> Path:
+    root = _adapter_root(tmp_path, {"toy": _desc(jobs={"make_toy": job})})
+    for name, doc in (bundled or {}).items():
+        folder = root / "toy" / "schemas"
+        folder.mkdir(exist_ok=True)
+        text = doc if isinstance(doc, str) else json.dumps(doc)
+        (folder / f"{name}.schema.json").write_text(text, "utf-8")
+    return root
+
+
+def test_job_schema_can_be_bundled_with_the_adapter(tmp_path):
+    root = _with_job(tmp_path, {"output_schema": "toy-summary-v1"}, {"toy-summary-v1": SUMMARY})
+    contract = load_descriptors(root)["toy"].jobs["make_toy"]
+    assert contract.output_schema == "toy-summary-v1"
+    assert contract.input_schema is None
+    assert contract.check_output({"rows": 2}, "summary.json") == []
+    assert contract.check_output({"rows": "x-secret"}, "summary.json") == [
+        "summary.json at /rows fails 'type'"
+    ]
+
+
+def test_job_schema_falls_back_to_the_launcher_schemas(tmp_path):
+    root = _with_job(tmp_path, {"input_schema": "publication-v1", "output_schema": "job-v1"})
+    contract = load_descriptors(root)["toy"].jobs["make_toy"]
+    assert contract.input_schema == "publication-v1"
+    assert contract.output_document == registry.load_schema("job-v1")
+
+
+def test_job_schema_in_both_places_is_refused(tmp_path):
+    root = _with_job(tmp_path, {"output_schema": "job-v1"}, {"job-v1": SUMMARY})
+    with pytest.raises(DescriptorError, match=r"field 'jobs\.make_toy\.output_schema'.*both"):
+        load_descriptors(root)
+
+
+def test_missing_job_schema_names_both_places(tmp_path):
+    root = _with_job(tmp_path, {"output_schema": "nope-v1"})
+    with pytest.raises(DescriptorError, match="schemas/ folder or the launcher's schemas"):
+        load_descriptors(root)
+
+
+def test_invalid_bundled_job_schema_is_refused(tmp_path):
+    root = _with_job(tmp_path, {"output_schema": "toy-v1"}, {"toy-v1": "{not json"})
+    with pytest.raises(DescriptorError, match="not a valid JSON Schema"):
+        load_descriptors(root)
+    root = _with_job(tmp_path / "b", {"output_schema": "toy-v1"}, {"toy-v1": {"type": 3}})
+    with pytest.raises(DescriptorError, match="not a valid JSON Schema"):
+        load_descriptors(root)
+
+
+def test_bundled_job_schema_is_not_found_without_the_adapter_folder():
+    """``from_mapping`` without a bundle only knows the launcher's schemas."""
+    with pytest.raises(DescriptorError, match="field 'jobs.make_toy.output_schema'"):
+        ToolDescriptor.from_mapping(_desc(jobs={"make_toy": {"output_schema": "toy-v1"}}))
 
 
 def test_invalid_descriptor_stops_the_launch_before_binding(tmp_path, monkeypatch, capsys):

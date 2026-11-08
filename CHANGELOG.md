@@ -699,6 +699,20 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- Adapters can bundle their job schemas (#55).
+  - A descriptor's `jobs.<capability>` schema name is now looked up in the adapter's own
+    `schemas/` folder, then among the launcher's schemas. A name in both places, or in
+    neither, stops startup with the field named. `input_schema` is optional, for jobs
+    whose input isn't a JSON document.
+  - A `JobRequest` can name one output document (`output_document`) and a check
+    (`output_check`, usually the contract's `JobContract.check_output`). The job manager
+    checks the staged document before the review, and a problem fails the job without
+    quoting values.
+  - `example_echo` declares `jobs.summarize_csv` with its bundled `summary-v1` schema and
+    a 120 s timeout. Nothing was added to `src/opncafyr/schemas/`.
+  - The unused `core.adapter.Adapter` Protocol and its `JobHandle`, `ValidationResult` and
+    `Artifact` types were removed. ADR 0002, `docs/architecture.md` and
+    `docs/adding-a-tool.md` describe the contract adapters actually implement.
 - opnca-r is pinned at 0.2.9 (PR #51), which releases opnca-r#49 and #50. Its R
   dependencies are unchanged, and the installer smoke values are the same.
   - **Exclusions (#49).** A point excluded inside opnca-r is now added to the launcher's

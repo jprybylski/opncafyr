@@ -9,15 +9,21 @@ the launcher, so there is nothing to migrate: a format the registry does not kno
 startup. A new format gets a new schema file; ``tool-descriptor-v1`` is never changed
 incompatibly. Optional keys may be added (``project_editor``, #52): every existing
 descriptor stays valid.
+
+Job contracts (``jobs``) name their schemas by file stem. A name is looked up first in the
+adapter's own ``schemas/`` folder (``adapters/<tool>/schemas/<name>.schema.json``), then
+among the launcher's ``opncafyr.schemas``; a name found in both places is refused, so a
+contract never depends on lookup order (#55).
 """
 
 from __future__ import annotations
 
 import importlib
+import json
 import pkgutil
 import re
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib import resources
 from importlib.resources.abc import Traversable
 from pathlib import Path
@@ -25,10 +31,10 @@ from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import best_match
+from jsonschema.exceptions import SchemaError, best_match
 
 from opncafyr.core.datasets import DatasetAnnotator, Importer
-from opncafyr.core.manifest import load_schema
+from opncafyr.core.manifest import load_schema, schema_problems
 
 DESCRIPTOR_SCHEMA = "tool-descriptor-v1"
 ADAPTERS_PACKAGE = "opncafyr.adapters"
@@ -60,11 +66,29 @@ class OptionalRequirement:
     capabilities: tuple[str, ...] = ()
 
 
+# The folder inside an adapter package that holds the JSON Schemas it bundles.
+BUNDLED_SCHEMAS = "schemas"
+
+
 @dataclass(frozen=True)
 class JobContract:
-    input_schema: str
+    """A job capability's declared input and output schemas and its timeout.
+
+    ``output_document`` is the resolved output schema (bundled with the adapter or with
+    the launcher), so a caller can check a job's output without looking it up again.
+    """
+
     output_schema: str
+    input_schema: str | None = None
     timeout_s: int | None = None
+    output_document: dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
+
+    def check_output(self, document: Any, label: str) -> list[str]:
+        """Where ``document`` breaks the output schema; empty when it conforms.
+
+        Problems name the place and the rule, never a value (``manifest.schema_problems``).
+        """
+        return schema_problems(document, self.output_document, label)
 
 
 @dataclass(frozen=True)
@@ -99,9 +123,17 @@ class ToolDescriptor:
     project_editor: ProjectEditorSpec | None = None
 
     @classmethod
-    def from_mapping(cls, data: Any, source: str = "<descriptor>") -> ToolDescriptor:
+    def from_mapping(
+        cls, data: Any, source: str = "<descriptor>", bundle: Traversable | Path | None = None
+    ) -> ToolDescriptor:
+        """Build a descriptor from its parsed YAML.
+
+        ``bundle`` is the adapter's folder; job schemas may be resolved from its
+        ``schemas/`` folder. Without it, only the launcher's schemas are available.
+        """
         _check_schema(data, source)
         _check_references(data, source)
+        jobs = _job_contracts(data, source, bundle)
         web = data.get("web_app") or {}
         health = data["health"]
         editor = data.get("project_editor")
@@ -116,10 +148,7 @@ class ToolDescriptor:
             display_name=data.get("display_name"),
             executables=tuple(data["executables"]),
             health=HealthProbe(health["kind"], health["executable"], health.get("target")),
-            jobs={
-                name: JobContract(job["input_schema"], job["output_schema"], job.get("timeout_s"))
-                for name, job in (data.get("jobs") or {}).items()
-            },
+            jobs=jobs,
             optional_requirements=tuple(
                 OptionalRequirement(
                     req["name"],
@@ -174,16 +203,9 @@ def _check_references(data: dict[str, Any], source: str) -> None:
         raise DescriptorError(
             source, "health.executable", "must be one of the descriptor's executables"
         )
-    for name, job in (data.get("jobs") or {}).items():
+    for name in data.get("jobs") or {}:
         if name not in capabilities:
             raise DescriptorError(source, f"jobs.{name}", "a job must be a declared capability")
-        for key in ("input_schema", "output_schema"):
-            try:
-                load_schema(job[key])
-            except FileNotFoundError:
-                raise DescriptorError(
-                    source, f"jobs.{name}.{key}", f"no bundled schema named {job[key]!r}"
-                ) from None
     for i, req in enumerate(data.get("optional_requirements", ())):
         for j, cap in enumerate(req.get("capabilities", ())):
             if cap not in capabilities:
@@ -204,6 +226,61 @@ def _check_references(data: dict[str, Any], source: str) -> None:
             )
 
 
+def _job_contracts(
+    data: dict[str, Any], source: str, bundle: Traversable | Path | None
+) -> dict[str, JobContract]:
+    contracts: dict[str, JobContract] = {}
+    for name, job in (data.get("jobs") or {}).items():
+        documents: dict[str, dict[str, Any]] = {}
+        for key in ("input_schema", "output_schema"):
+            if job.get(key) is not None:
+                documents[key] = _resolve_schema(job[key], bundle, source, f"jobs.{name}.{key}")
+        contracts[name] = JobContract(
+            output_schema=job["output_schema"],
+            input_schema=job.get("input_schema"),
+            timeout_s=job.get("timeout_s"),
+            output_document=documents["output_schema"],
+        )
+    return contracts
+
+
+def _resolve_schema(
+    name: str, bundle: Traversable | Path | None, source: str, where: str
+) -> dict[str, Any]:
+    """A job schema by name: the adapter's ``schemas/`` folder, else the launcher's."""
+    own = None
+    if bundle is not None:
+        candidate = bundle / BUNDLED_SCHEMAS / f"{name}.schema.json"
+        if candidate.is_file():
+            own = candidate
+    try:
+        launcher = load_schema(name)
+    except FileNotFoundError:
+        launcher = None
+    if own is not None and launcher is not None:
+        raise DescriptorError(
+            source,
+            where,
+            f"{name!r} is both bundled with the adapter and a launcher schema; rename the "
+            "adapter's schema",
+        )
+    if launcher is not None:
+        return launcher
+    if own is None:
+        raise DescriptorError(
+            source,
+            where,
+            f"no schema named {name!r} in the adapter's {BUNDLED_SCHEMAS}/ folder or the "
+            "launcher's schemas",
+        )
+    try:
+        schema = json.loads(own.read_text("utf-8"))
+        Draft202012Validator.check_schema(schema)
+    except (ValueError, SchemaError):
+        raise DescriptorError(source, where, f"{name!r} is not a valid JSON Schema") from None
+    return schema
+
+
 def load_descriptors(root: Traversable | Path | None = None) -> dict[str, ToolDescriptor]:
     """Load every ``adapters/<tool>/descriptor.yaml`` shipped with the package.
 
@@ -220,7 +297,7 @@ def load_descriptors(root: Traversable | Path | None = None) -> dict[str, ToolDe
             data = yaml.safe_load(desc.read_text("utf-8"))
         except yaml.YAMLError as exc:
             raise DescriptorError(source, "(file)", f"not valid YAML ({exc})") from None
-        descriptor = ToolDescriptor.from_mapping(data, source)
+        descriptor = ToolDescriptor.from_mapping(data, source, bundle=entry)
         if descriptor.id != entry.name:
             raise DescriptorError(source, "id", f"must match its folder name {entry.name!r}")
         found[descriptor.id] = descriptor
