@@ -53,13 +53,6 @@ while (($#)); do
   shift
 done
 
-if [[ -z "$engine" ]]; then
-  if command -v docker > /dev/null; then engine=docker
-  elif command -v podman > /dev/null; then engine=podman
-  else die "neither docker nor podman is installed"; fi
-fi
-case "$engine" in docker | podman) ;; *) die "--engine must be docker or podman" ;; esac
-command -v "$engine" > /dev/null || die "$engine is not installed"
 [[ "$port" =~ ^[0-9]+$ ]] && ((port > 0 && port < 65536)) || die "--port must be a port number"
 
 if [[ -d "$study_arg" ]]; then
@@ -74,6 +67,18 @@ hash="$(printf '%s' "$study" | "${sum[@]}" | cut -c1-12)"
 name="opncafyr-$hash"
 state="${XDG_STATE_HOME:-$HOME/.local/state}/opncafyr-container/$hash"
 
+# The engine: --engine, else the one this folder was started with (a VM may have both
+# Docker and Podman), else docker if installed, else podman.
+if [[ -z "$engine" && "$cmd" != start && -f "$state/engine" ]]; then
+  engine="$(cat "$state/engine")"
+fi
+if [[ -z "$engine" ]]; then
+  if command -v docker > /dev/null; then engine=docker
+  elif command -v podman > /dev/null; then engine=podman
+  else die "neither docker nor podman is installed"; fi
+fi
+case "$engine" in docker | podman) ;; *) die "--engine must be docker or podman" ;; esac
+command -v "$engine" > /dev/null || die "$engine is not installed"
 running() { [[ "$("$engine" container inspect --format '{{.State.Running}}' "$name" 2> /dev/null)" == true ]]; }
 exists() { "$engine" container inspect "$name" > /dev/null 2>&1; }
 # Stop, then wait until the engine has removed the container (--rm): removing its
@@ -172,6 +177,7 @@ chmod 700 "$state"
 printf '%s\n' "${launch[@]}" > "$state/launch-args"
 echo "$port" > "$state/port"
 echo "$access" > "$state/access"
+echo "$engine" > "$state/engine"
 if [[ -n "$local_port" ]]; then echo "$local_port" > "$state/local-port"; else rm -f "$state/local-port"; fi
 
 # A stopped container left behind (a failed --rm cleanup) would block the name.

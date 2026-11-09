@@ -335,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
             client = signed_in(link_from(again), origin + "/")
             check(client.get("api/nca/runs").status_code == 200, "reconnecting after a drop works")
         not_reachable_externally(port)
-        wrapper("forget", str(studies[0]))
+        wrapper("forget", str(studies[0]), "--engine", args.engine)
 
         print("== prefix proxy (strips /proxy/<port>/, rewrites Host)", flush=True)
         prefix = f"/proxy/{port}/"
@@ -348,12 +348,12 @@ def main(argv: list[str] | None = None) -> int:
             check(client.get("api/tools").status_code == 200, "API through the prefix proxy")
             security_holds(client, origin, port)
             drive_flow(client, origin, studies[1], deck=True)
-        wrapper("forget", str(studies[1]))
+        wrapper("forget", str(studies[1]), "--engine", args.engine)
     except (CheckFailed, AssertionError, KeyError, httpx.HTTPError) as exc:
         print(f"FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         for study in studies:
             subprocess.run(  # noqa: S603 - our own script
-                [str(SCRIPT), "forget", str(study)],
+                [str(SCRIPT), "forget", str(study), "--engine", args.engine],
                 env={**os.environ, "XDG_STATE_HOME": STATE_HOME},
                 check=False,
             )
