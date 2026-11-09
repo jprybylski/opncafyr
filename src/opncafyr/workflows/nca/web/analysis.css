@@ -25,3 +25,14 @@
 /* Event records (#58): grid items default to their content's width; let wide tables scroll. */
 .nca-events, .nca-events div { min-width: 0; }
 .nca-events h4 { margin: var(--space-3) 0 var(--space-1); }
+/* A step open for editing (#63). */
+.nca-steps li .nca-form { border-style: solid; border-color: var(--accent, var(--border-strong)); }
+/* Findings pinned under the cleaning steps (#63). Native <details>: keyboard and screen
+   reader operable. Scrolls inside itself, and stays in view beside the steps on wide screens. */
+.nca-pinned { border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); }
+.nca-pinned > summary { cursor: pointer; padding: var(--space-2) var(--space-3); }
+.nca-pinned-body { padding: var(--space-2) var(--space-3) var(--space-3); display: grid; gap: var(--space-2); max-height: 18rem; overflow: auto; }
+@media (min-width: 64rem) {
+  .nca-pinned { position: sticky; bottom: var(--space-2); z-index: 1; }
+  .nca-pinned-body { max-height: 40vh; }
+}

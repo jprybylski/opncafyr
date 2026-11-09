@@ -96,6 +96,10 @@ A blocking finding stops the run until you change the recipe or the mapping. The
 
 After you change the recipe, select **Apply to all rows** again, then **Run checks** again.
 
+While you work on the recipe, the blocking findings and warnings of the last check, with their hints, are also shown in a **Findings** panel directly below the step adder in **2. Cleaning steps**. Open it with Enter or Space on its title. It names the analyte and specimen it was checked for and the time. It has no acknowledgement boxes: those stay under **5. Analyte and checks**, and **Back to the full findings and acknowledgements** takes you there.
+
+When you change a step, the mapping or the source, the findings are from an earlier version of the recipe. The panel then says **Out of date**, hides them, and says to apply the recipe and run the checks again. The same message replaces the list under **5. Analyte and checks**, and any acknowledgement you ticked must be given again after the new check.
+
 ### Warnings
 
 A warning may be right for your data, but you must look at it. Each warning has a box, **I have reviewed this and want to go on**. Tick it for every warning before you can start the run. Your acknowledgements are recorded with the run.

@@ -5,6 +5,7 @@
 import {
   button, choice, el, field, getJSON, post, section, setStatus, waitForJob,
 } from "./common.js";
+import { findingItem } from "./findings.js";
 
 const BLQ_RULES = [
   ["exclude", "Exclude the sample"],
@@ -14,7 +15,6 @@ const BLQ_RULES = [
 ];
 const BLQ_METHODS = [["conventional", "Conventional (rules above)"], ["censored_lognormal", "Censored log-normal"]];
 const RULE_NAMES = { blq_predose: "BLQ before the dose", blq_postdose: "BLQ after the dose", blq_terminal: "BLQ at the end of the profile" };
-const LEVEL_WORD = { blocking: "Blocking", warning: "Warning", info: "Note" };
 
 export function initChecks(stack, state) {
   const pick = section(stack, "nca-analyte", "5. Analyte and checks",
@@ -28,8 +28,34 @@ export function initChecks(stack, state) {
 
   let generation = 0;
 
+  // Findings belong to the recipe hash the checks ran against (#63). When the recipe, the
+  // mapping or the source changes, they are from an earlier check: hidden, never current,
+  // and no acknowledgement carries over (the server refuses one made under another hash).
+  function markStale() {
+    if (!result || result.sha === state.sha256) return;
+    state.checks = { stale: true, selection: result.selection };
+    result = null;
+    acked.clear();
+    const box = document.getElementById("nca-findings");
+    if (box) {
+      box.replaceChildren(el("p", "These findings are from an earlier version of the recipe or mapping. " +
+        "Apply the recipe to all rows, then run the checks again.", "nca-finding info"));
+    }
+    updateStart();
+    state.changed("checks");
+  }
+
+  function shareChecks() {
+    state.checks = result && {
+      stale: false, selection: result.selection, summary: result.summary, findings: result.findings,
+      checkedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+    state.changed("checks");
+  }
+
   async function load() {
     const mine = ++generation; // a later load wins; an earlier one that finishes late is dropped
+    markStale();
     if (!state.recipe) {
       pick.body.replaceChildren();
       start.body.replaceChildren();
@@ -42,6 +68,11 @@ export function initChecks(stack, state) {
       if (mine !== generation) return;
       pick.body.replaceChildren();
       start.body.replaceChildren();
+      analytes = null;
+      result = null;
+      acked.clear();
+      if (state.checks && !state.checks.stale) state.checks = null;
+      state.changed("checks");
       return setStatus(pick.status, e.status === 404 || e.status === 409 ? "Apply the recipe and map the analyte column first." : e.message, e.status >= 500);
     }
     if (mine !== generation) return;
@@ -51,6 +82,8 @@ export function initChecks(stack, state) {
     start.body.replaceChildren();
     result = null;
     acked.clear();
+    state.checks = null;
+    state.changed("checks");
     setStatus(pick.status, "");
     const analyteSel = choice(analytes.values.map((v) => [v.value, `"${v.value}" (${v.rows} rows)`]));
     const specimenSel = choice([]);
@@ -77,6 +110,8 @@ export function initChecks(stack, state) {
   function clearFindings() {
     result = null;
     acked.clear();
+    state.checks = null;
+    state.changed("checks");
     document.getElementById("nca-findings")?.replaceChildren();
     updateStart();
   }
@@ -89,8 +124,10 @@ export function initChecks(stack, state) {
       const body = { analyte_value: analyte, specimen_value: specimen };
       result = await post(`api/nca/recipes/${encodeURIComponent(state.recipe.id)}/checks`, body);
       result.selection = body;
+      result.sha = result.recipe_sha256;
       acked.clear();
       renderFindings();
+      shareChecks();
       setStatus(pick.status, `${result.summary.blocking} blocking, ${result.summary.warning} to acknowledge, ${result.summary.info} notes.`);
       if (result.format.job_id) {
         const job = await waitForJob(result.format.job_id);
@@ -98,6 +135,7 @@ export function initChecks(stack, state) {
           const more = await post(`api/nca/recipes/${encodeURIComponent(state.recipe.id)}/format-check`, body);
           result.findings.push(...(more.findings || []));
           renderFindings();
+          shareChecks();
         }
       }
     } catch (e) {
@@ -110,31 +148,10 @@ export function initChecks(stack, state) {
     box.replaceChildren();
     const list = el("ul", null, "nca-list");
     for (const f of result.findings) {
-      const li = el("li", null, `nca-finding ${f.level}`);
-      const head = el("div", null, "nca-row");
-      head.append(el("strong", `${LEVEL_WORD[f.level]}: ${f.check.replaceAll("_", " ")}`));
-      if (f.subject) head.append(el("span", `subject ${f.subject}`, "muted"));
-      li.append(head, el("p", f.message));
-      const detail = [];
-      if (f.lines.length) detail.push(`lines ${f.lines.slice(0, 20).join(", ")}${f.lines.length > 20 ? "…" : ""}`);
-      if (f.column) detail.push(`${f.column} = "${f.value}"`);
-      if (f.values) detail.push(`values: ${f.values}`);
-      if (f.kind) detail.push(f.kind);
-      if (f.role) detail.push(f.role);
-      if (detail.length) li.append(el("p", detail.join(" · "), "nca-args"));
-      if (f.fix_hint) li.append(el("p", f.fix_hint, "nca-args"));
-      if (f.level === "warning") {
-        const box2 = el("input");
-        box2.type = "checkbox";
-        box2.checked = acked.has(f.key);
-        box2.addEventListener("change", () => {
-          if (box2.checked) acked.add(f.key); else acked.delete(f.key);
-          updateStart();
-        });
-        li.append(field("I have reviewed this and want to go on", box2));
-      }
-      if (f.accounting) li.append(el("p", Object.entries(f.accounting).map(([k, v]) => `${k.replaceAll("_", " ")}: ${v}`).join(" · "), "nca-args"));
-      list.append(li);
+      list.append(findingItem(f, {
+        checked: acked.has(f.key),
+        onChange: (on) => { if (on) acked.add(f.key); else acked.delete(f.key); updateStart(); },
+      }));
     }
     box.append(list);
     updateStart();
@@ -165,7 +182,7 @@ export function initChecks(stack, state) {
   }
 
   function why() {
-    if (!result) return "Run the checks first.";
+    if (!result) return state.checks?.stale ? "The recipe or mapping changed: run the checks again." : "Run the checks first.";
     if (result.summary.blocking) return `${result.summary.blocking} blocking findings: change the recipe or mapping.`;
     const open = result.findings.filter((f) => f.level === "warning" && !acked.has(f.key)).length;
     if (open) return `${open} warnings still to acknowledge.`;
