@@ -207,9 +207,12 @@ def test_remote_launch_listens_on_loopback_only_and_prints_a_link(tmp_path):
         assert "(remote, on this machine's loopback)" in text
         link = next(line for line in lines if line.startswith("Open: ")).split()[1]
         assert link.startswith("http://127.0.0.1:9100/open")  # the forward's port, not ours
+        # A venv's python.exe is a stub on Windows: the listener is in a child process.
+        tree = [psutil.Process(proc.pid), *psutil.Process(proc.pid).children(recursive=True)]
         listening = [
             c.laddr
-            for c in psutil.Process(proc.pid).net_connections(kind="inet")
+            for p in tree
+            for c in p.net_connections(kind="inet")
             if c.status == psutil.CONN_LISTEN
         ]
         assert [(a.ip, a.port) for a in listening] == [("127.0.0.1", port)]
