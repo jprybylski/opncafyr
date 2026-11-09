@@ -52,8 +52,10 @@ built from them:
 Two rules are the launcher's own:
 - **Formatted tables.** When flextable is installed, opnca-r also saves each table as a
   formatted flextable, `results/tables/<id>.rds` (`derived_from` its CSV). It is offered
-  next to its CSV, never pre-selected, and only when the CSV itself is offered. reportifyr
-  0.4.0 places `.rds` tables in a report, and deckifyr renders them in a deck. The CSV
+  next to its CSV, never pre-selected, and only when the CSV itself is offered. deckifyr
+  renders them in a deck (as a `reportifyr` element). In a report, a formatted table that
+  carries its own caption left its placeholder unfilled (#62); the report check and
+  render refuse it (see Check below), and opnca-r#59 asks for the caption to go. The CSV
   stays the table the replay checks.
 - **Tables the replay didn't check.** A CSV table that opnca-r marks
   `replay.reproduced: false` (the bioequivalence tables) is not offered, and neither is
@@ -150,6 +152,16 @@ one publication.
 3. **Check** runs two sets of checks on a copy of the project that holds exactly the
    publication's files, each checked against its recorded hash:
    - the launcher's sidecar checks;
+   - the formatted-table check (#62): a small R program (`r/report_rds_check.R`) reads each
+     `.rds` copy, which was matched to its hash when copied, and reports a table that isn't
+     a flextable, can't be read, or carries a caption. Each is a blocking finding, and
+     Render refuses before it starts. Only a status per file is written. The likely cause
+     (reportifyr 0.4.0 finds a table by the paragraph before it, and the caption sits
+     there) is read from the code, not confirmed;
+   - a warning when `report/config.yaml` still says `use_artifact_size: true`. The bundled
+     template says `false`: with `true`, reportifyr inserts each figure at its pixel size,
+     and opnca-r's 2000 px PNGs come out about 27 inches wide. An existing project's file
+     is never rewritten;
    - quartifyr's `check.R`.
 
    It lists what would block or weaken the render.

@@ -165,6 +165,24 @@ def test_a_formatted_table_is_placed_like_a_csv_one():
     assert lines[i - 2] == '{{< tbl_caption "Tbl1" "Summary (formatted), A" >}}'
 
 
+def test_parse_render_names_the_files_whose_placeholders_stayed_unfilled():
+    # #62: "Unfilled placeholders: 1." didn't say which table.
+    doc = {
+        "schema_version": 1,
+        "status": "error",
+        "error_class": "quartifyr_render_incomplete",
+        "errors": [],
+        "artifacts": [],
+        "unfilled_placeholders": [f"{{rpfy}}:t{i}.rds" for i in range(7)],
+    }
+    result = Q.parse_render(1, json.dumps(doc), None, None)
+    assert not result.ok
+    assert "Unfilled placeholders: 7 (t0.rds, t1.rds, t2.rds, t3.rds, t4.rds and 2 more)." in (
+        result.message
+    )
+    assert "{rpfy}" not in result.message
+
+
 def test_parse_render_decides_on_exit_code_and_status(tmp_path):
     ok = {"schema_version": 1, "status": "ok", "errors": [], "artifacts": [{"role": "draft"}]}
     assert Q.parse_render(0, json.dumps(ok), None, None).ok
@@ -210,6 +228,83 @@ def test_check_combines_launcher_and_quartifyr_findings(api, ready):
     validate(report, "preflight-v1")
     assert [f["check"] for f in report["findings"]] == ["placeholder-last-in-section"]
     assert report["findings"][0]["path"] == "report.qmd"  # not the staging path
+
+
+def _with_formatted_table(api, state: str):
+    run, _ = completed_run(api.study, "Drug A", described=True)
+    pub = publish(api, run, artifacts=("summary", "summary-formatted"))
+    set_up(api, pub)
+    (api.fake / "rds.txt").write_text(state, "utf-8")
+    return pub, run
+
+
+def test_check_names_a_captioned_formatted_table(api):
+    # #62: a flextable that carries its own caption left its placeholder unfilled.
+    _with_formatted_table(api, "captioned")
+    job = wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    hit = [f for f in findings if f["check"] == "rds-captioned"]
+    assert len(hit) == 1 and hit[0]["severity"] == "error"
+    assert hit[0]["path"].endswith("summary-formatted.rds")
+    assert "CSV" in hit[0]["message"] and "deck" in hit[0]["message"]
+
+
+@pytest.mark.parametrize(
+    ("state", "check"), [("not_flextable", "rds-not-flextable"), ("unreadable", "rds-unreadable")]
+)
+def test_check_names_an_rds_that_is_not_a_formatted_table(api, state, check):
+    _with_formatted_table(api, state)
+    job = wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    assert [f["check"] for f in findings if f["check"].startswith("rds-")] == [check]
+
+
+def test_render_refuses_a_captioned_formatted_table_and_makes_no_build(api):
+    _with_formatted_table(api, "captioned")
+    mode(api, "ok")
+    r = api.post("/api/nca/report/render", json={"status": "draft"})
+    assert r.status_code == 200, r.text
+    job = wait_job(api, r.json()["job_id"], 60)
+    assert job["state"] == "failed"
+    assert "summary-formatted.rds" in job["message"] and "CSV" in job["message"]
+    assert api.get("/api/nca/report").json()["builds"] == []
+
+
+def test_a_formatted_table_without_a_caption_renders(api):
+    _with_formatted_table(api, "ok")
+    mode(api, "ok")
+    out, job = render(api)
+    assert job["state"] == "completed", job["message"]
+
+
+def test_a_report_without_formatted_tables_never_starts_the_rds_check(api, ready):
+    (api.fake / "rds.txt").write_text("captioned", "utf-8")  # would block if it were run
+    mode(api, "ok")
+    out, job = render(api)
+    assert job["state"] == "completed", job["message"]
+
+
+def test_new_report_projects_size_figures_by_the_page_not_their_pixels(api, ready):
+    # #62: opnca-r's 2000 x 1200 PNG came out about 27 inches wide.
+    text = (api.study / "report" / "report" / "config.yaml").read_text("utf-8")
+    assert "use_artifact_size: false" in text
+
+
+def test_check_warns_about_an_older_projects_pixel_sized_figures(api, ready):
+    config = api.study / "report" / "report" / "config.yaml"
+    config.write_text(
+        config.read_text("utf-8").replace("use_artifact_size: false", "use_artifact_size: true"),
+        "utf-8",
+    )
+    job = wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    hit = [f for f in findings if f["check"] == "figure-size"]
+    assert len(hit) == 1 and hit[0]["severity"] == "warning"
+    assert hit[0]["path"] == "report/config.yaml"
+    assert "use_artifact_size: true" in config.read_text("utf-8")  # never rewritten
 
 
 def test_render_builds_a_docx_with_a_manifest_of_exact_runs(api, ready):

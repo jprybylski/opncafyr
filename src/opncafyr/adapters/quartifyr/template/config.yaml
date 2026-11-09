@@ -23,7 +23,7 @@ keep_caption_next: true
 add_alt_text: true
 skip_unchanged: true
 fig_alignment: center
-use_artifact_size: true
+use_artifact_size: false
 default_fig_width: 6
 use_embedded_dimensions: true
 label_multi_figures: false

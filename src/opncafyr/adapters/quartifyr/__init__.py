@@ -344,7 +344,10 @@ def parse_render(
         if missing:
             parts.append(f"Missing metadata: {', '.join(map(str, missing))}.")
         if unfilled:
-            parts.append(f"Unfilled placeholders: {len(unfilled)}.")
+            # Each entry is "{rpfy}:<file name>". Name the first few: which file is the clue (#62).
+            names = [str(u).removeprefix("{rpfy}:") for u in unfilled]
+            more = f" and {len(names) - 5} more" if len(names) > 5 else ""
+            parts.append(f"Unfilled placeholders: {len(unfilled)} ({', '.join(names[:5])}{more}).")
         return RenderResult(False, " ".join(parts) or f"The render failed (status {status}).", doc)
     return RenderResult(True, "Rendered.", doc, list(doc.get("artifacts") or []))
 

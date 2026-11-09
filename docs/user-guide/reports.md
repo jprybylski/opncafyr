@@ -19,6 +19,10 @@ To use a different publication later, choose it and select **Use this publicatio
 
 Select **Check**. The check looks for anything that would block or weaken the build, such as a missing or broken description file. It works on a copy that holds exactly the publication's files, each checked against its fingerprint. When nothing is wrong, the card says "The last check found nothing to fix." Otherwise it lists each problem with **Blocks** or **Warning**.
 
+**Formatted tables (`.rds`).** The app checks every formatted table in the publication. A formatted table that carries its own caption is refused, with a message naming the file: a report that included one left its place in the report unfilled, so Render stops. Use the CSV version of that table in the report, or use the formatted one in a deck. This is a limit of the tools for now, not a problem with your data. A plain **Check** also warns when an older report project still sizes figures by their pixels (`use_artifact_size: true` in `report/config.yaml`); set it to `false` and render again.
+
+**Page layout.** New reports fit figures to the page width (6 inches). A table with many columns is squeezed to the page width too, so a column can become very narrow, and there is no landscape page yet. Both are tracked with the report tools; for now, choose fewer columns, or open the DOCX in Word to adjust it. Whatever you change there isn't recorded in the build.
+
 ## Edit the report
 
 Select **Edit report**. The report text opens in the app's project-file editor:

@@ -982,6 +982,21 @@ All notable changes to this project are documented here. The format follows
     name and email in that file are kept. The container also warns at start when the
     study folder's owner isn't the user running opncafyr, and the cloud container guide
     says how to match them. Not reproduced here: needs a mount with a different owner.
+  - **Report: formatted tables and figure width.**
+    - A formatted table (`.rds`) that carries its own caption is refused by the report
+      Check and Render with a message naming the file; use its CSV, or put it in a deck.
+      A fixed R program inspects each file (`r/report_rds_check.R`); only a status is
+      written. A table that isn't a flextable, or can't be read, is refused too. The cause
+      is read from reportifyr's code and not confirmed on the failing install; opnca-r#59
+      asks for the caption to go.
+    - The render error now names the files whose placeholders stayed unfilled, not just
+      their number.
+    - Figures use the 6 inch default width instead of their pixel size
+      (`use_artifact_size: false` in the bundled `config.yaml`); opnca-r's 2000 px PNGs came
+      out about 27 inches wide. Check warns about an older project that still says `true`
+      and never rewrites it.
+    - Wide tables squeezed to 6 inches, and landscape pages, wait for quartifyr#88 and
+      stay open in #62.
 - Two offline bundles built from the same pins could differ: the SBOM recorded the
   build time to the second. It now records `SOURCE_DATE_EPOCH`, or the archive's fixed
   entry time (#36).

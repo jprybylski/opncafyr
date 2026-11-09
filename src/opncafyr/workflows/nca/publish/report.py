@@ -36,6 +36,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -59,6 +60,7 @@ from opncafyr.core.runtime import RuntimeUnavailable
 from opncafyr.paths import WORKSPACE_META_DIR, app_root
 from opncafyr.workflows.nca.publish import projects, sidecars
 from opncafyr.workflows.nca.publish.curator import PublishError
+from opncafyr.workflows.nca.publish.rds_check import rds_findings
 
 if TYPE_CHECKING:
     from opncafyr.workflows.nca.api import Context
@@ -314,7 +316,11 @@ class ReportService(projects.ProjectJobs):
         def build(ctx: JobContext):
             try:
                 listed = self._assemble(root, publication, ctx.cwd)
-                launcher = _sidecar_findings(ctx.cwd, listed)
+                launcher = (
+                    _sidecar_findings(ctx.cwd, listed)
+                    + rds_findings(ctx.runtime, ctx.cwd, listed, ctx.tmpdir)
+                    + config_findings(ctx.cwd)
+                )
                 (ctx.tmpdir / "launcher.json").write_text(json.dumps(launcher), "utf-8")
                 return Q.check_command(ctx.runtime, ctx.cwd, ctx.tmpdir / "home", cache)
             except (PublishError, RuntimeUnavailable) as exc:
@@ -399,6 +405,16 @@ class ReportService(projects.ProjectJobs):
                         "sidecars_invalid",
                         f"{len(errors)} metadata problem(s), such as: {errors[0]['message']} "
                         "Run Check for the full list.",
+                    )
+                tables = [
+                    f
+                    for f in rds_findings(ctx.runtime, ctx.cwd, listed, ctx.tmpdir)
+                    if f["severity"] == "error"
+                ]
+                if tables:
+                    raise PublishError(
+                        "rds_table",
+                        f"{tables[0]['path']}: {tables[0]['message']} Run Check for the full list.",
                     )
                 missing = [
                     p
@@ -526,6 +542,34 @@ class ReportService(projects.ProjectJobs):
             stale = sorted(p for p, sha in recorded.items() if now(p) != sha)
             out["stale_inputs"][build["build_id"]] = stale
         return out
+
+
+def config_findings(project: Path) -> list[dict[str, Any]]:
+    """Warn when an older report project still sizes figures by their pixels (#62).
+
+    Projects set up before the template changed keep their own ``report/config.yaml``; the
+    launcher never rewrites it. With ``use_artifact_size: true`` an opnca-r PNG (2000 x 1200
+    pixels, no resolution) is inserted about 27 inches wide.
+    """
+    path = project / Q.CONFIG
+    try:
+        doc = yaml.safe_load(path.read_text("utf-8"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        return []
+    if isinstance(doc, dict) and doc.get("use_artifact_size") is True:
+        return [
+            {
+                "check": "figure-size",
+                "severity": "warning",
+                "path": Q.CONFIG,
+                "message": (
+                    "use_artifact_size is true, so figures are inserted at their pixel size "
+                    "and can run past the page. Set it to false to use default_fig_width "
+                    "(6 inches), then render again."
+                ),
+            }
+        ]
+    return []
 
 
 def _sidecar_findings(project: Path, listed: list[str]) -> list[dict[str, Any]]:
