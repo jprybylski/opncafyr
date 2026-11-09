@@ -208,7 +208,7 @@ if [[ "$engine" == podman ]]; then
   user+=(--security-opt label=disable)
 fi
 
-"$engine" run --detach --rm --name "$name" "${network[@]}" \
+"$engine" run --detach --rm --name "$name" ${network[@]+"${network[@]}"} \
   --publish "127.0.0.1:$port:$port" \
   --volume "$study:/workspace" --volume "$name-state:/state" \
   --cap-drop ALL --security-opt no-new-privileges \
