@@ -72,8 +72,12 @@ the first time on a laptop; most of it is the R library and opnca-r built from s
   a container path (deckifyr's own `deck-manifest.json` is excepted until deckifyr#97);
 - the size, compressed and uncompressed, is printed.
 
-Measured (arm64, 2026-11-08): slim is 2672 MiB uncompressed and 788 MiB gzip; full is 3727 MiB
-and 1076 MiB gzip. Both are under GitHub's 2 GiB limit per release file (#43).
+Measured 2026-11-08 (gzip / uncompressed), all under GitHub's 2 GiB limit per release file (#43):
+
+| | slim | full |
+|---|---|---|
+| amd64 (CI) | 860 / 1808 MiB | 1172 / 2516 MiB |
+| arm64 (local) | 788 / 2672 MiB | 1076 / 3727 MiB |
 
 `--apt-mirror URL` (build argument `APT_MIRROR`) takes the Ubuntu packages from a mirror,
 such as an internal one (#36) or Azure's, which the amd64 CI runners use because they can't
