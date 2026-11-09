@@ -13,9 +13,15 @@ state() { dpkg-query -W -f '${Package}=${Version}\n' | sort; }
 tmp="$(mktemp -d)"
 state > "$tmp/before"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
+# A failed index download is an error, not a warning (it would otherwise surface as a
+# misleading "version not found"); retry it, since mirrors drop connections.
+for attempt in 1 2 3 4; do
+  if apt-get update -qq --error-on=any; then break; fi
+  if ((attempt == 4)); then echo "apt-get update failed 4 times" >&2; exit 1; fi
+  sleep $((attempt * 15))
+done
 if ((${#pkgs[@]})); then
-  apt-get install -y -qq --no-install-recommends "${pkgs[@]}"
+  apt-get install -y -qq --no-install-recommends -o Acquire::Retries=4 "${pkgs[@]}"
 fi
 state > "$tmp/after"
 comm -13 "$tmp/before" "$tmp/after" > "$tmp/added"
