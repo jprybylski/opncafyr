@@ -20,7 +20,7 @@ opncafyr keeps two kinds of files apart. Your **study folders** hold your data, 
 | `source-data/` | you make it | your data files (CSV). The app also lists CSV files sitting directly in the study folder. | Add files freely. Don't change a file after importing it; a changed file imported again is recorded as a new source. |
 | `.opncafyr/` | you select **Create workspace here** | the app's records (below). Hidden on most computers because its name starts with a dot. | **No.** Don't edit, move or delete anything in it. |
 | `OUTPUTS/tables/`, `OUTPUTS/figures/` | you publish | published copies, named `<analyte>_<run-id>_<item>.<ext>`, each with a description file `<name>_<ext>_metadata.json` | **No.** Open or copy them, but don't change, rename or delete them. |
-| `report/` | you select **Set up report** | the Word report project | Edit `report.qmd` with **Edit report**. Leave the rest as the app set it up. |
+| `report/` | you select **Set up report** | the Word report project | Edit `report.qmd`, `report/config.yaml` (settings) and `report/standard_footnotes.yaml` (footnotes) with **Edit report**. Leave the rest as the app set it up. |
 | `report/builds/<build-id>/` | you select **Render** | one recorded build: `report-draft.docx` or `report-final.docx`, `build.json`, `render-result.json` | **No.** Download or copy the DOCX instead. |
 | `deck/` | you select **Set up deck** | the PowerPoint deck project: `presentation.yaml` (the slides), design files, standard footnotes, `fragments/` | Edit slides in the deck editor (**Open editor**) and fragments with **Edit fragments**. |
 | `deck/build/` | you build inside the deck editor | unrecorded draft builds | Yours to look at; the app doesn't use them. |

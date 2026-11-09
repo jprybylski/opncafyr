@@ -123,6 +123,7 @@ class Opened:
     max_bytes: int
     data: bytes  # the whole file, or its first max_bytes + 1 bytes when larger
     size: int
+    help: str = ""
 
     @property
     def sha256(self) -> str:
@@ -133,6 +134,7 @@ class Opened:
         out: dict[str, Any] = {
             "path": self.path,
             "label": self.label,
+            "help": self.help,
             "syntax": self.syntax,
             "bytes": self.size,
             "max_bytes": self.max_bytes,
@@ -249,7 +251,9 @@ class ProjectFiles:
         # Read a little past the cap so an oversized file is reported, not loaded whole.
         with open(path, "rb") as fh:
             data = fh.read(min(size, entry.max_bytes) + 1)
-        return path, Opened(entry.path, entry.label, entry.syntax, entry.max_bytes, data, size)
+        return path, Opened(
+            entry.path, entry.label, entry.syntax, entry.max_bytes, data, size, entry.help
+        )
 
     # --- the API's operations ----------------------------------------------------------
 

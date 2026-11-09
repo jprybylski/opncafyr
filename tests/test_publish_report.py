@@ -323,6 +323,83 @@ def test_check_warns_about_an_older_projects_pixel_sized_figures(api, ready):
     assert "use_artifact_size: true" in config.read_text("utf-8")  # never rewritten
 
 
+def test_the_editor_offers_the_two_yaml_files_after_the_report(api, ready):
+    # #64: bounded exceptions to "sources only"; nothing else in the subfolder.
+    files = api.get(EDIT).json()["files"]
+    paths = [f["path"] for f in files]
+    assert paths[:3] == ["report.qmd", "report/config.yaml", "report/standard_footnotes.yaml"]
+    assert not any(
+        p.startswith(("builds", "OUTPUTS", "_extensions", "report/draft")) for p in paths
+    )
+    by = {f["path"]: f for f in files}
+    assert by["report/config.yaml"]["label"] == "Report settings (config.yaml)"
+    assert by["report/config.yaml"]["syntax"] == "yaml"
+    assert "figure width" in by["report/config.yaml"]["help"]
+    assert "abbreviations" in by["report/standard_footnotes.yaml"]["help"]
+
+
+def _open_config(api):
+    return api.post(f"{EDIT}/read", json={"path": "report/config.yaml"}).json()
+
+
+def _save_config(api, doc, text):
+    return api.post(
+        f"{EDIT}/save",
+        json={"path": "report/config.yaml", "text": text, "expected_sha256": doc["sha256"]},
+    )
+
+
+def test_saving_a_setting_checks_it_in_plain_words(api, ready):
+    doc = _open_config(api)
+    good = _save_config(
+        api, doc, doc["text"].replace("default_fig_width: 6", "default_fig_width: 5")
+    )
+    assert good.status_code == 200 and good.json()["warnings"] == []
+    doc = _open_config(api)
+    bad = _save_config(api, doc, doc["text"] + 'use_artifact_size: "no"\nfig_aligment: left\n')
+    assert bad.status_code == 200  # a warning never stops a save
+    notes = " ".join(bad.json()["warnings"])
+    assert "fig_aligment" in notes and "spelling" in notes
+    broken = _save_config(api, _open_config(api), "strict: [\n")
+    assert "not valid YAML" in broken.json()["warnings"][0]
+
+
+def test_check_reports_the_settings_problems_and_where_to_fix_them(api, ready):
+    config = api.study / "report" / "report" / "config.yaml"
+    config.write_text(config.read_text("utf-8") + "fig_aligment: left\n", "utf-8")
+    job = wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    hit = [f for f in findings if f["check"] == "config-yaml"]
+    assert len(hit) == 1 and hit[0]["severity"] == "warning"
+    assert hit[0]["path"] == "report/config.yaml" and "Report settings" in hit[0]["message"]
+
+
+@pytest.mark.parametrize(
+    "text", ["strict: [\n", "report_dir_name: elsewhere\n", "outputs_dir_name: ../x\n"]
+)
+def test_render_refuses_a_settings_file_that_would_break_the_project(api, ready, text):
+    config = api.study / "report" / "report" / "config.yaml"
+    config.write_text(text, "utf-8")
+    mode(api, "ok")
+    out, job = render(api)
+    assert job["state"] == "failed"
+    assert "Report settings" in job["message"] and "Run Check" in job["message"]
+    assert api.get("/api/nca/report").json()["builds"] == []
+
+
+def test_the_figure_size_finding_points_at_the_editor(api, ready):
+    config = api.study / "report" / "report" / "config.yaml"
+    config.write_text(
+        config.read_text("utf-8").replace("use_artifact_size: false", "use_artifact_size: true"),
+        "utf-8",
+    )
+    wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    (hit,) = [f for f in findings if f["check"] == "figure-size"]
+    assert "Edit report" in hit["message"] and "Report settings" in hit["message"]
+
+
 def test_render_builds_a_docx_with_a_manifest_of_exact_runs(api, ready):
     pub, a, b = ready
     mode(api, "ok")
@@ -517,16 +594,20 @@ def set_status(api, value):
     return out.json()["sha256"]
 
 
-def test_the_report_editor_offers_only_the_report_sources(api, ready):
+def test_the_report_editor_offers_only_the_report_sources_and_two_yaml_files(api, ready):
     (api.study / "report" / "notes.md").write_text("Notes\n", "utf-8")
     doc = api.get(EDIT).json()
     assert doc["title"] == "Report source"
-    assert [f["path"] for f in doc["files"]] == ["report.qmd", "notes.md"]
+    assert [f["path"] for f in doc["files"]] == [
+        "report.qmd",
+        "report/config.yaml",
+        "report/standard_footnotes.yaml",
+        "notes.md",
+    ]
     assert doc["settings"]["values"] == {"status": None, "reference_doc": "bundled"}
     for path in (
         "_quarto.yml",
-        "report/config.yaml",
-        "report/standard_footnotes.yaml",
+        "report/draft/report.docx",
         "OUTPUTS/tables/x.csv",
         "builds/x/build.json",
         "_extensions/quartifyr/a.lua",

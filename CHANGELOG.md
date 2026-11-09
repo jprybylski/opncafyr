@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Edit the report's settings and footnotes in the app** (#64). The project-file editor
+  now lists two YAML files after the report, as bounded exceptions to "report sources
+  only": **Report settings** (`report/config.yaml`) and **Footnotes**
+  (`report/standard_footnotes.yaml`). Each shows a short description above it. A save is
+  checked in plain words and never refused: not valid YAML (with the line), a setting
+  the bundled template doesn't have, a value of the wrong kind, or a changed
+  `report_dir_name`/`outputs_dir_name`. **Check** repeats these as `config-yaml` findings;
+  **Render** refuses a settings file that isn't YAML or changes the two folder names. The
+  figure-size finding (#62) now says where to change it. New report projects get comments
+  in `config.yaml`; existing projects keep theirs. Nothing else under `report/` is offered;
+  deckifyr keeps its own editor and opnca-r's stays off. Both guides list the files.
 - **Container image and cloud container mode** (#42, ADR 0009).
   - `container/Dockerfile` builds slim and full (LibreOffice) images for linux/amd64 and
     linux/arm64 from `runtime/pins.toml` only. Inputs: a digest-pinned Ubuntu base, Ubuntu

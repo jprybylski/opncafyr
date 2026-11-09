@@ -57,6 +57,13 @@ The new report has one captioned table or figure for each published file, with f
 3. Select **Save** (or press Ctrl+S, or Cmd+S on a Mac) to keep your changes, or **Discard changes**.
 4. Select **Publish** on the left to go back to the report card.
 
+The editor lists two more files after the report, and they open as plain text with a short description above them:
+
+- **Report settings (config.yaml)** holds how tables, figures and footnotes are filled in: the figure width, the footnote style and similar. Most reports need no change. Each line reads `setting: value`, where a value is `true` or `false`, a number or text, as the file's own comments say. Keep `report_dir_name` and `outputs_dir_name` as they are.
+- **Footnotes (standard_footnotes.yaml)** holds the abbreviations and footnote wording that a published file's description may name.
+
+Saving one of them notes anything that looks wrong, such as a misspelled setting or text where `true` or `false` belongs; the save still happens. **Check** lists the same notes, and **Render** stops if the settings file isn't valid YAML or changes the two folder names.
+
 You can also open the editor from the quartifyr tile on **Home**, with **Edit project files**.
 
 If the file changed on disk while you were editing, nothing is overwritten. The editor shows "The file changed on disk" with both versions. Choose **Keep mine (replace the disk version)** or **Use the disk version (discard mine)**.
@@ -81,7 +88,7 @@ Otherwise the card lists **Report check findings**, each marked **Blocks** or **
 {: .fix }
 > **A formatted table (`.rds`) is listed as Blocks** — the report tools can't place a formatted table that carries its own caption: a report that included one left that table's place unfilled. Runs saved by opnca-r 0.3.2 or later don't have this caption, so make a new run and publish that. Or use the CSV version of the table in the report, or the formatted one in a deck. **Render** stops for the same reason.
 >
-> **A warning about `use_artifact_size`** — an older report project still sizes figures by their pixels, which can run past the page. Set `use_artifact_size: false` in `report/config.yaml` and render again. New reports already have it.
+> **A warning about `use_artifact_size`** — an older report project still sizes figures by their pixels, which can run past the page. Select **Edit report**, then **Report settings (config.yaml)**, change `use_artifact_size: true` to `false`, save, and render again. New reports already have it.
 
 ### Step 5. Render and download
 

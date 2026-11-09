@@ -176,7 +176,11 @@ one publication.
    - a warning when `report/config.yaml` still says `use_artifact_size: true`. The bundled
      template says `false`: with `true`, reportifyr inserts each figure at its pixel size,
      and opnca-r's 2000 px PNGs come out about 27 inches wide. An existing project's file
-     is never rewritten;
+     is never rewritten; the finding says to change it in **Edit report**, **Report
+     settings**;
+   - the settings file's plain-language checks (`config-yaml`, #64): not YAML or a changed
+     `report_dir_name`/`outputs_dir_name` is an error, a setting the template lacks or of the
+     wrong kind is a warning;
    - quartifyr's `check.R`.
 
    It lists what would block or weaken the render.
@@ -185,6 +189,16 @@ one publication.
    - **visual mode** edits only plain headings, paragraphs and lists, and keeps the
      front matter, shortcodes, divs, chunks and placeholders exactly as they are;
    - the **preview** is approximate and runs nothing.
+
+   The same editor offers two YAML files as bounded exceptions (#64), after the report:
+   **Report settings** (`report/config.yaml`) and **Footnotes** (`report/standard_footnotes.yaml`).
+   Each opens in source mode with a short description above it. A save is checked in plain
+   words: not YAML, a setting the template doesn't have (a likely typo), or a value of the
+   wrong kind are shown as notes and the save still happens. Check repeats the check as
+   findings (`config-yaml`), and Render refuses a settings file that isn't YAML or that
+   changes `report_dir_name` or `outputs_dir_name`, which the app builds the project around.
+   Nothing else under `report/` is offered. Both files are copied into every render and
+   recorded as build inputs.
 
    Save writes only if the file hasn't changed on disk since you opened it; otherwise
    both versions stay on screen until you choose. Check and Render wait while the editor

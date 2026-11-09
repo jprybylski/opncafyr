@@ -1,9 +1,12 @@
 """The report's contribution to the launcher's project-file editor (#52).
 
-Offered files: ``report.qmd`` first, then any other ``.qmd``/``.rmd``/``.md`` file in the
-top of the report project. Nothing in a subfolder is offered, so ``builds/``,
-``OUTPUTS/``, ``_extensions/`` and quartifyr's own outputs (``report/draft`` and the
-rest) stay out of reach, as do ``_quarto.yml``, the footnotes and ``config.yaml``.
+Offered files: ``report.qmd`` first, then ``report/config.yaml`` and
+``report/standard_footnotes.yaml`` (the two bounded exceptions, #64), then any other
+``.qmd``/``.rmd``/``.md`` file in the top of the report project. Nothing else in a subfolder
+is offered, so ``builds/``, ``OUTPUTS/``, ``_extensions/`` and quartifyr's own outputs
+(``report/draft`` and the rest) stay out of reach, as does ``_quarto.yml``. A save of either
+YAML file is checked in plain words (``config_yaml.py``); the report's Check repeats the check
+and Render refuses what would break it.
 
 Report projects are trusted, user-authored projects (docs/plan.md, risk table), so the
 source mode may change any part of these files, chunks and shortcodes included. Renders
@@ -26,6 +29,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import best_match
 
+from opncafyr.adapters.quartifyr import CONFIG, FOOTNOTES, config_yaml
 from opncafyr.core.adapter import EditableFile, SettingsField, SettingsInvalid
 
 FILE_PROFILE = "report-source-v1"
@@ -34,6 +38,24 @@ SETTINGS_FILE = "opncafyr-settings.json"
 REPORT_QMD = "report.qmd"
 SOURCE_SUFFIXES = {".qmd": "qmd", ".rmd": "rmd", ".md": "md"}
 MAX_SOURCE_BYTES = 256 * 1024
+MAX_YAML_BYTES = 128 * 1024
+YAML_FILES = (
+    (
+        CONFIG,
+        "Report settings (config.yaml)",
+        "How tables, figures and footnotes are filled in: figure width, footnote style and "
+        "table placement. Most reports need no change. Each line is “setting: value”, a "
+        "value being true or false, a number or text, as in the bundled file. Check and "
+        "Render read this file, and a build records which version it used.",
+    ),
+    (
+        FOOTNOTES,
+        "Footnotes (standard_footnotes.yaml)",
+        "The abbreviations and footnote wording that a published file's description may "
+        "name. Changing it changes which footnotes Check and Render accept. Each entry is a "
+        "name followed by its indented text.",
+    ),
+)
 REFERENCE_DOCS = (("bundled", "Installed with quartifyr"),)
 
 
@@ -93,11 +115,23 @@ class ReportEditor:
             label = "Report" if path.name == REPORT_QMD else path.name
             found.append(EditableFile(path.name, label, syntax, MAX_SOURCE_BYTES))
         found.sort(key=lambda f: (f.path != REPORT_QMD, f.path.lower()))
-        return found
+        extra = []
+        for rel, label, help_ in YAML_FILES:
+            path = project / rel
+            if path.is_file() and not path.is_symlink() and not path.parent.is_symlink():
+                extra.append(EditableFile(rel, label, "yaml", MAX_YAML_BYTES, help_))
+        head = [f for f in found if f.path == REPORT_QMD]
+        return head + extra + [f for f in found if f.path != REPORT_QMD]
 
     def check_text(self, file_profile: str, path: str, text: str) -> list[str]:
-        # quartifyr's check (Check on the report screen) is the authority; nothing to add.
-        return []
+        # For a source file quartifyr's check (Check on the report screen) is the authority.
+        if path == CONFIG:
+            problems = config_yaml.check_config(text)
+        elif path == FOOTNOTES:
+            problems = config_yaml.check_footnotes(text)
+        else:
+            return []
+        return [p.message for p in problems]
 
     def settings_file(self, settings_schema: str) -> str:
         return SETTINGS_FILE

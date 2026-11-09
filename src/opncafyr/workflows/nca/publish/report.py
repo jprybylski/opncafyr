@@ -36,12 +36,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from opncafyr.adapters import quartifyr as Q
+from opncafyr.adapters.quartifyr import config_yaml
 from opncafyr.adapters.quartifyr import editor as QE
 from opncafyr.core import runs as runs_core
 from opncafyr.core.adapter import SettingsInvalid
@@ -411,6 +411,12 @@ class ReportService(projects.ProjectJobs):
                         f"{len(errors)} metadata problem(s), such as: {errors[0]['message']} "
                         "Run Check for the full list.",
                     )
+                bad_config = [f for f in config_findings(ctx.cwd) if f["severity"] == "error"]
+                if bad_config:
+                    raise PublishError(
+                        "config_invalid",
+                        f"{bad_config[0]['message']} Run Check for the full list.",
+                    )
                 tables = [
                     f
                     for f in rds_findings(ctx.runtime, ctx.cwd, listed, ctx.tmpdir)
@@ -550,31 +556,43 @@ class ReportService(projects.ProjectJobs):
 
 
 def config_findings(project: Path) -> list[dict[str, Any]]:
-    """Warn when an older report project still sizes figures by their pixels (#62).
+    """Findings for ``report/config.yaml`` (#62, #64); the file never changes here.
 
-    Projects set up before the template changed keep their own ``report/config.yaml``; the
-    launcher never rewrites it. With ``use_artifact_size: true`` an opnca-r PNG (2000 x 1200
-    pixels, no resolution) is inserted about 27 inches wide.
+    Errors (not YAML, or a changed folder setting) block Render. A setting that looks wrong is
+    a warning. Projects set up before the template changed keep their own file: with
+    ``use_artifact_size: true`` an opnca-r PNG (2000 x 1200 pixels, no resolution) is inserted
+    about 27 inches wide, which has its own finding.
     """
     path = project / Q.CONFIG
     try:
-        doc = yaml.safe_load(path.read_text("utf-8"))
-    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        text = path.read_text("utf-8")
+    except (OSError, UnicodeDecodeError):
         return []
+    out = [
+        {
+            "check": "config-yaml",
+            "severity": p.severity,
+            "path": Q.CONFIG,
+            "message": f"{p.message} Open it with Edit report, then Report settings.",
+        }
+        for p in config_yaml.check_config(text)
+    ]
+    doc, _ = config_yaml.parse(text, "")
     if isinstance(doc, dict) and doc.get("use_artifact_size") is True:
-        return [
+        out.append(
             {
                 "check": "figure-size",
                 "severity": "warning",
                 "path": Q.CONFIG,
                 "message": (
                     "use_artifact_size is true, so figures are inserted at their pixel size "
-                    "and can run past the page. Set it to false to use default_fig_width "
-                    "(6 inches), then render again."
+                    "and can run past the page. Choose Edit report, then Report settings "
+                    "(config.yaml), change it to false (the figure width is then "
+                    "default_fig_width, 6 inches), save, and render again."
                 ),
             }
-        ]
-    return []
+        )
+    return out
 
 
 def _sidecar_findings(project: Path, listed: list[str]) -> list[dict[str, Any]]:

@@ -204,3 +204,38 @@ def test_a_2000_pixel_figure_is_sized_by_the_page_not_its_pixels(api):
     widths = [int(w) for w in re.findall(r'<wp:extent cx="(\d+)"', body)]
     assert widths, "the figure is not in the document"
     assert max(widths) <= 5943600, widths  # 6.5 inches in EMU
+
+
+def test_a_setting_saved_in_the_editor_changes_the_render_and_is_recorded(api):
+    # #64: default_fig_width edited in the app is what reportifyr uses, and the build
+    # records the file it used.
+    figure = "results/figures/profiles-linear.png"
+    run, _ = completed_run(api.study, "Drug A", formatted={figure: _big_png()})
+    pub = api.post("/api/nca/publications", json={"items": picks(run, ["profiles-linear"])})
+    assert pub.status_code == 201, pub.text
+    pub = pub.json()["publication"]
+    job = api.post("/api/nca/report", json={"publication_id": pub["publication_id"]}).json()
+    assert wait_job(api, job["job_id"])["state"] == "completed"
+    editor = "/api/tools/quartifyr/project"
+    doc = api.post(f"{editor}/read", json={"path": "report/config.yaml"}).json()
+    assert "default_fig_width: 6" in doc["text"]
+    saved = api.post(
+        f"{editor}/save",
+        json={
+            "path": "report/config.yaml",
+            "text": doc["text"].replace("default_fig_width: 6", "default_fig_width: 3"),
+            "expected_sha256": doc["sha256"],
+        },
+    )
+    assert saved.status_code == 200 and saved.json()["warnings"] == [], saved.text
+    out = api.post("/api/nca/report/render", json={"status": "draft"}).json()
+    done = wait_job(api, out["job_id"], timeout=900)
+    assert done["state"] == "completed", done["message"]
+    build = api.get("/api/nca/report").json()["builds"][0]
+    config = next(i for i in build["inputs"] if i["role"] == "config")
+    assert config["sha256"] == saved.json()["sha256"]
+    docx = api.study / "report" / "builds" / out["build_id"] / "report-draft.docx"
+    with zipfile.ZipFile(docx) as z:
+        body = z.read("word/document.xml").decode("utf-8")
+    widths = [int(w) for w in re.findall(r'<wp:extent cx="(\d+)"', body)]
+    assert widths and max(widths) <= 3 * 914400, widths

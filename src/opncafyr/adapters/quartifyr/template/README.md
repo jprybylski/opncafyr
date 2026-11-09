@@ -20,7 +20,11 @@ footnote.
 When the quartifyr pin changes, compare these files with the new demo-report and update
 them on purpose. They are never refreshed automatically.
 
-`config.yaml` differs from the demo in one setting: `use_artifact_size: false`. With `true`,
+`config.yaml` differs from the demo in one setting, `use_artifact_size: false`, and carries
+comments for a person reading it in the app's editor (#64), written from reportifyr's own
+comments and its source. The editor offers `config.yaml` and `standard_footnotes.yaml` to the
+user (`editor.py`); `config_yaml.py` checks `config.yaml` against this file's setting names
+and kinds, so a setting added here is a setting the check knows. With `true`,
 reportifyr gives each figure the size of its pixels, and opnca-r's PNGs (2000 x 1200, no
 resolution) come out about 27 in wide, far past a page. `false` uses `default_fig_width`
 (6 in) and keeps the aspect ratio. Keep it when comparing with a new demo-report.

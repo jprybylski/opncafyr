@@ -180,3 +180,27 @@ def test_new_fragment_from_the_page(page, home):
     page.locator("#files-status", has_text="already exists").wait_for()
     _axe(page)
     assert [e for e in page.errors if "409 (Conflict)" not in e] == []
+
+
+def test_the_settings_file_opens_with_its_description_and_notes_a_bad_value(editor):
+    # #64: config.yaml is offered next to the report, described, and checked on save.
+    page, _ = editor
+    folder = editor[1].parent / "report"
+    folder.mkdir()
+    config = folder / "config.yaml"
+    config.write_text(Q.template().joinpath("config.yaml").read_text("utf-8"), "utf-8")
+    page.reload()
+    page.get_by_role("button", name="Report settings (config.yaml)").click()
+    page.locator("#files-editor-heading", has_text="Report settings (config.yaml)").wait_for()
+    page.get_by_text("Most reports need no change.").wait_for()
+    area = page.get_by_role("textbox", name="Source of Report settings (config.yaml)")
+    area.wait_for()
+    assert "# Figures." in area.input_value()  # the file's own comments are shown
+    area.press("ControlOrMeta+End")
+    area.type("use_artifact_size: maybe\nfig_aligment: left\n")
+    page.keyboard.press("ControlOrMeta+s")
+    page.locator("#files-status", has_text="Saved, with notes").wait_for()
+    notes = page.locator("#files-status").inner_text()
+    assert "fig_aligment" in notes and "spelling" in notes
+    assert config.read_text("utf-8").endswith("fig_aligment: left\n")  # saved as typed
+    assert page.errors == []

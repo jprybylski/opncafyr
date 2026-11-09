@@ -1,10 +1,18 @@
+# Report settings read by reportifyr and quartifyr. Most reports need no change here.
+# Edit this file in the app with Edit report, then Report settings. A value is true or
+# false, a number, or text, as below. Keep the two folder names as they are.
+
+# Folder names: the app builds the report project around them. Don't change them.
 report_dir_name: report
 outputs_dir_name: OUTPUTS
+
+# Stop on a duplicate artifact. The app's own checks cover duplicates.
 strict: false
-# Match inst/python/styles/default.yaml's fonts.body/fonts.sizes.footnote --
-# reportifyr doesn't read quartifyr's style YAML, so these two are only
-# kept in sync by hand. Left at reportifyr's own scaffolded defaults
-# (Arial Narrow/10) they visually clash with the reference-doc's font.
+
+# Footnotes. The font is set here because reportifyr doesn't read quartifyr's styles; keep
+# it in step with the body font of the Word styles (inst/python/styles/default.yaml's
+# fonts.body and fonts.sizes.footnote). At reportifyr's own defaults (Arial Narrow, 10) the
+# footnotes clash with the reference document's font.
 footnotes_font: Times New Roman
 footnotes_font_size: 9
 use_object_path_as_source: false
@@ -12,19 +20,29 @@ add_hash_to_footnotes: false
 wrap_path_in_[]: true
 combine_duplicate_footnotes: true
 abbreviation_delimiter: ','
+# The order of the parts of a footnote.
 footnote_order:
 - Source
 - Object
 - Notes
 - Abbreviations
 - Hash
+
+# Tables.
 save_table_rtf: false
+
+# Captions and alt text.
 keep_caption_next: true
 add_alt_text: true
 skip_unchanged: true
+
+# Figures. With use_artifact_size false, a figure is inserted default_fig_width inches
+# wide (the height follows its shape). With true, it is inserted at its pixel size, and
+# opnca-r's 2000-pixel figures then run far past the page (#62).
 fig_alignment: center
 use_artifact_size: false
 default_fig_width: 6
 use_embedded_dimensions: true
 label_multi_figures: false
+# Stamp a path onto saved PNGs: none, source (script path) or object (image path).
 add_path_overlay: none

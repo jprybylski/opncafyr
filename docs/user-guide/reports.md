@@ -31,6 +31,13 @@ Select **Edit report**. The report text opens in the app's project-file editor:
 - **Visual** edits only plain headings, paragraphs and lists. The parts that place tables, figures and footnotes are locked, so you cannot break them by accident.
 - **Preview** is an approximate view. The real report may look different.
 
+Two more files are listed after the report. Both open as plain text, with a short description above them:
+
+- **Report settings (config.yaml)** holds how tables, figures and footnotes are filled in: the figure width, the footnote style, and similar. Most reports need no change. Each line reads `setting: value`, where a value is `true` or `false`, a number, or text, as the file's own comments say. Keep `report_dir_name` and `outputs_dir_name` as they are.
+- **Footnotes (standard_footnotes.yaml)** holds the abbreviations and footnote wording that a published file's description may name.
+
+When you save one of them, the app notes anything that looks wrong, such as a setting that is misspelled, or text where `true` or `false` belongs. The save still happens. **Check** lists the same notes, and **Render** stops if the settings file isn't valid YAML or changes the two folder names. A figure-size warning from **Check** (`use_artifact_size`) is fixed here: open **Report settings**, change `use_artifact_size: true` to `false`, and save.
+
 Select **Save** to keep your changes, or **Discard changes**. If the file changed on disk while you were editing, nothing is overwritten: the app shows both versions and you choose which one to keep.
 
 While the editor has unsaved changes, **Check** and **Render** wait. The card says "The report editor has unsaved changes. Save or discard them first."
