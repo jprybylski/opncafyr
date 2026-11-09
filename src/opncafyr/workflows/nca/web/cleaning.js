@@ -6,6 +6,7 @@ import {
   button, cell, choice, el, field, getJSON, post, raw, section, send, setStatus, table,
   waitForJob,
 } from "./common.js";
+import { eventsPanel } from "./events.js";
 
 // One entry per step kind the user can add. "derive" has three forms in the UI.
 const OPS = {
@@ -414,6 +415,23 @@ export function initCleaning(stack, state) {
     }
     const head = data.head.map((r) => r.map((v) => cell(raw(v))));
     result.body.append(el("h3", "First rows after cleaning"), table(data.columns, head, "First rows after cleaning"));
+    if (data.events) {
+      const p = data.events.partitions;
+      result.body.append(el("p", `Event records: ${p.selected} PK observations selected of ${data.events.rows_in} records; ${p.unresolved} unresolved.` +
+        (kind === "preview" ? " On the first rows only, doses may be cut off: apply to all rows before you rely on this." : ""), "card-note"));
+    }
+    if (kind === "full") {
+      // Event records (#58). "Declare one analyte" adds an ordinary, visible step.
+      result.body.append(await eventsPanel(state, (value) => {
+        const copy = structuredClone(state.recipe);
+        copy.steps.push({
+          op: "derive",
+          note: "The file holds one analyte and names none.",
+          args: { target: "analyte", fn: "constant", value },
+        });
+        save(copy);
+      }));
+    }
   }
 
   function issuesText(st) {

@@ -143,6 +143,22 @@ The app never picks between duplicate rows. Two or more rows that share a subjec
 
 To look for duplicates on other columns, add a **Report duplicate rows** step. It lists rows with the same values in the columns you pick, and removes nothing.
 
+## Event records
+
+NONMEM-style files keep doses and samples on separate rows: a record-kind column (`EVID`) says which is which, `AMT` holds the dose, `CMT` or `DVID` the endpoint, and `EVENTU` can hold mg on dose rows and ng/mL on sample rows. After **Apply to all rows**, the **Event records** panel in **3. Result** says whether your file looks like this, and why. It suggests the columns and the usual meanings of EVID 0, 1 and 2; nothing is used until you save it.
+
+- **You say what every code means.** Each record-kind value is an observation, a dose or another record. Each endpoint value on observation rows is a PK analyte or another endpoint. A code seen only on dose rows is never an analyte. EVID 3 and 4 are never suggested.
+- **You make the choices the data needs**, with no default: the dosing interval (**First dose**, **Last dose** or **Dose number…**) when a subject has more than one dose; whether to **sum** dose records at the same time; whether to **keep** or **set aside** samples before the first dose; whether a sample at a dose time belongs **before** or **after** it; and whether to **reject** samples with no dose.
+- **Every record is counted.** **Where every record went** shows the selected samples, doses, other endpoints, samples set aside or in another interval, rejected samples (only by your choice, in the rejected-row log), and unresolved records. Unresolved records block every analyte until a choice or a recipe step settles them.
+- **Only the selected PK samples go on**, each with its dose, dose unit and route from its dose record and its **time after dose**: its actual time minus the dose's actual time. Map those prepared columns in **4. Column mapping**; mapping the raw `TIME` or `AMT` blocks the run.
+- **Nothing silent.** No zero sample is added at the dose time, no dose is summed or chosen for you, no undosed subject is dropped, and no route is filled in. A file with no route column needs an **Add a constant column** step for it.
+
+The run keeps the record-by-record partition and the generated script with its inputs, so you can see later which dose each sample was matched to.
+
+## A file without an analyte column
+
+If no column looks like an analyte code, the panel offers **Declare one analyte**. It adds an ordinary **Add a constant column** step named `analyte` with the name you type, which you can see and remove like any other step. Units in headers such as `Conc.(ng/mL)` stay hints: you still declare each unit.
+
 ## When the app asks you to choose
 
 When a choice is unclear, the app asks rather than guessing:
@@ -181,6 +197,9 @@ Select **Save mapping** to keep your choices. Anything that still blocks is list
 | time nominal as actual | The actual time column is nominal time. | Map an actual elapsed time column. |
 | time clock format | Actual time holds clock times. | Map elapsed time, or use **Derive elapsed time**. |
 | profile no dose | A profile has no dose or no route. | Add the dose, or exclude the profile with a reason. |
+| event (unknown code, choice needed, dose with no amount, …) | The event stage could not settle these records. Blocks every analyte. | Make the choice, or fix the records with a step and a reason. |
+| event mapping mismatch | With event records, actual time, dose or route is not the prepared column. | Map `opncafyr_time_after_dose`, `opncafyr_dose` and `opncafyr_route`. |
+| analyte endpoints mixed | The analyte column keeps more than one endpoint code. | Map the endpoint column itself as the analyte code. |
 
 After you change the recipe, select **Apply to all rows** again, then **Run checks** again.
 

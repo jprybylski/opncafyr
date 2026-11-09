@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "opncafyr/recipe-v1",
   "title": "Cleaning and mapping recipe (.opncafyr/recipes/<id>.yaml)",
-  "description": "Ordered, explicit cleaning steps for one imported source (#22). The source file is never rewritten; a row leaves the data only through a filter_rows step with a reason, and lands in the rejected-row log. Steps carry data, never code: the launcher compiles them to a fixed R program. Semantic rules the schema cannot express (new-column targets, no numeric zero for BLQ values, column existence) are checked by workflows/nca/recipe.py. The optional mapping block (#23) names the column for each role, the units and the value tables of the flag columns; the user confirms every entry.",
+  "description": "Ordered, explicit cleaning steps for one imported source (#22). The source file is never rewritten; a row leaves the data only through a filter_rows step with a reason, and lands in the rejected-row log. Steps carry data, never code: the launcher compiles them to a fixed R program. Semantic rules the schema cannot express (new-column targets, no numeric zero for BLQ values, column existence) are checked by workflows/nca/recipe.py. The optional mapping block (#23) names the column for each role, the units and the value tables of the flag columns; the user confirms every entry. The optional events block (#58, schema_version 1.1) describes NONMEM-style event records: which columns hold the subject, time, record kind, amount, endpoint and route, what each record-kind, endpoint and MDV code means, and the user's choices for ambiguous dosing cases. The launcher turns it into a fixed R stage after the steps; nothing in it is code.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,7 +13,11 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "1.0"
+      "enum": [
+        "1.0",
+        "1.1"
+      ],
+      "description": "1.1 exactly when the recipe has an events block (#58); 1.0 recipes are unchanged."
     },
     "id": {
       "type": "string",
@@ -33,6 +37,9 @@
     },
     "mapping": {
       "$ref": "#/$defs/mapping"
+    },
+    "events": {
+      "$ref": "#/$defs/events"
     }
   },
   "$defs": {
@@ -1008,6 +1015,205 @@
             }
           }
         }
+      }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "columns",
+        "record_kinds",
+        "endpoints"
+      ],
+      "description": "Event-record preparation (#58, ADR 0005 Q9). Every record lands in exactly one partition; only selected PK observations go on to mapping and checks.",
+      "properties": {
+        "columns": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "subject",
+            "time",
+            "record_kind",
+            "amount",
+            "endpoint",
+            "route"
+          ],
+          "description": "Columns after the cleaning steps. route, dose_unit are read on dose records; dv, mdv, occasion and time_unit are optional.",
+          "properties": {
+            "subject": {
+              "$ref": "#/$defs/column"
+            },
+            "time": {
+              "$ref": "#/$defs/column"
+            },
+            "record_kind": {
+              "$ref": "#/$defs/column"
+            },
+            "amount": {
+              "$ref": "#/$defs/column"
+            },
+            "endpoint": {
+              "$ref": "#/$defs/column"
+            },
+            "route": {
+              "$ref": "#/$defs/column"
+            },
+            "dv": {
+              "$ref": "#/$defs/column"
+            },
+            "mdv": {
+              "$ref": "#/$defs/column"
+            },
+            "occasion": {
+              "$ref": "#/$defs/column"
+            },
+            "dose_unit": {
+              "$ref": "#/$defs/column"
+            },
+            "time_unit": {
+              "$ref": "#/$defs/column"
+            }
+          }
+        },
+        "record_kinds": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 100,
+          "propertyNames": {
+            "$ref": "#/$defs/value"
+          },
+          "additionalProperties": {
+            "enum": [
+              "observation",
+              "dose",
+              "other"
+            ]
+          },
+          "description": "Every value of the record-kind column (such as EVID) and what it means. A value not listed is unresolved."
+        },
+        "endpoints": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 200,
+          "propertyNames": {
+            "$ref": "#/$defs/value"
+          },
+          "additionalProperties": {
+            "enum": [
+              "pk",
+              "other"
+            ]
+          },
+          "description": "Every endpoint value (such as CMT or DVID) seen on observation records: a PK analyte or another endpoint. A dose record's endpoint is never an analyte."
+        },
+        "mdv": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 20,
+          "propertyNames": {
+            "$ref": "#/$defs/value"
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "description": "The MDV value table (true = no observation on the record); given exactly when columns.mdv is."
+        },
+        "choices": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Choices with no default. Each is needed only when the data has the case; absent means not chosen, which blocks.",
+          "properties": {
+            "dose_interval": {
+              "enum": [
+                "first",
+                "last",
+                "number"
+              ]
+            },
+            "dose_number": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "same_time_doses": {
+              "enum": [
+                "sum"
+              ]
+            },
+            "predose": {
+              "enum": [
+                "keep",
+                "set_aside"
+              ]
+            },
+            "observation_at_dose_time": {
+              "enum": [
+                "before",
+                "after"
+              ]
+            },
+            "unmatched": {
+              "enum": [
+                "reject"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "dose_interval": {
+                    "const": "number"
+                  }
+                },
+                "required": [
+                  "dose_interval"
+                ]
+              },
+              "then": {
+                "required": [
+                  "dose_number"
+                ]
+              }
+            },
+            {
+              "if": {
+                "required": [
+                  "dose_number"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "dose_interval": {
+                    "const": "number"
+                  }
+                },
+                "required": [
+                  "dose_interval"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "if": {
+    "required": [
+      "events"
+    ]
+  },
+  "then": {
+    "properties": {
+      "schema_version": {
+        "const": "1.1"
+      }
+    }
+  },
+  "else": {
+    "properties": {
+      "schema_version": {
+        "const": "1.0"
       }
     }
   }

@@ -90,6 +90,9 @@ A blocking finding stops the run until you change the recipe or the mapping. The
 | time nominal as actual | The actual time column is nominal time. | Map an actual elapsed time column. |
 | time clock format | Actual time holds clock times. | Map elapsed time, or use **Derive elapsed time**. |
 | profile no dose | A profile has no dose or no route. | Add the dose, or exclude the profile with a reason. |
+| event … | For event records: a record the event stage could not settle, such as an unknown code, a missing choice or a dose with no amount. It blocks every analyte of the recipe. | See [Event records and files without an analyte](event-records.md). |
+| event mapping mismatch | With event records, actual time, dose or route is not the prepared column. | Map `opncafyr_time_after_dose`, `opncafyr_dose` and `opncafyr_route`. |
+| analyte endpoints mixed | The analyte column keeps more than one endpoint code. | Map the endpoint column itself as the analyte code. |
 
 After you change the recipe, select **Apply to all rows** again, then **Run checks** again.
 

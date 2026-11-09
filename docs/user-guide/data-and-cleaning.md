@@ -100,6 +100,10 @@ For every step, rows in always equal rows out plus rows rejected. No row is drop
 
 When you change a step, the result is cleared and the app says "The recipe changed. Preview or apply it again."
 
+### Event records
+
+Below the result, the **Event records** panel says whether the file looks like NONMEM-style event records, with separate dose and sample rows, and why. For such a file you say what each code means and make the choices the data needs; only the selected samples, each with its dose, go on to mapping. When no column looks like an analyte, the panel offers **Declare one analyte**. See [Event records and files without an analyte](event-records.md).
+
 ## What cleaning never does
 
 - It never changes the source file.
@@ -111,4 +115,4 @@ When you change a step, the result is cleared and the app says "The recipe chang
 
 Derived values always go into a new column, so the original column is still there to compare.
 
-Next: [Mapping columns and running checks](mapping-and-checks.md).
+Next: [Event records and files without an analyte](event-records.md), if your file has separate dose rows or no analyte column; otherwise [Mapping columns and running checks](mapping-and-checks.md).

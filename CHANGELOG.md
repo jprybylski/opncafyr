@@ -7,6 +7,56 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Event records and files without an analyte column** (#58, ADR 0005 Q9). NONMEM-style
+  files, with separate dose and sample records, now reach a replayable one-analyte run.
+  - The recipe gets an optional `events` block (recipe-v1 `schema_version` 1.1; 1.0
+    recipes and their hashes are unchanged). It names the subject, time, record-kind,
+    amount, endpoint and route columns, and optionally DV, MDV, occasion, dose unit and
+    time unit. It says what each record-kind, endpoint and MDV value means, and holds the
+    user's choices.
+  - Each choice has no default and is asked only when the data has the case: dosing
+    interval (first, last or dose number N); summing same-time dose records; keeping or
+    setting aside predose samples; whether a sample at a dose time comes before or after
+    it; and rejecting PK samples with no dose.
+  - A fixed R stage (`r/nca_events_lib.R`) runs after the cleaning steps in the same
+    standalone `clean.R`. It puts every record in one partition: selected, predose set
+    aside, outside the interval, dose (used or unused), other endpoint, other record,
+    rejected (by choice, to the rejected-row log) or unresolved.
+  - It writes `prepared.csv`: the selected PK samples, raw columns unchanged, with new
+    `opncafyr_dose`, `_dose_unit`, `_route`, `_dose_time`, `_time_after_dose`,
+    `_dose_number` and `_dose_lines` columns. `records.csv` holds every line's partition,
+    and `events.json` the counts.
+  - Nothing is inserted, summed, dropped or filled in without a choice. A dose's CMT is
+    never an analyte, and EVENTU is read per record.
+  - Unresolved records give new blocking checks that apply to every analyte:
+    `event_kind_unknown`, `event_endpoint_unknown`, `event_mdv_unmapped`,
+    `event_flag_conflict`, `event_time_not_numeric`, `event_dose_amount_invalid`,
+    `event_excluded_dose`, `event_dose_unresolved`, `event_multiple_doses`,
+    `event_same_time_doses`, `event_same_time_doses_differ`, `event_predose`,
+    `event_at_dose_time`, `event_unmatched` and `event_time_units_differ`.
+  - Mapping must use the prepared time, dose and route columns (`event_mapping_mismatch`),
+    and TAU and infusion duration are refused for event records (`event_role_unsupported`).
+    An analyte column that keeps two endpoint codes blocks (`analyte_endpoints_mixed`), and
+    a mapped nominal time is a warning (`event_nominal_basis`). The nominal-as-actual block
+    follows the event time through the prepared column's lineage.
+  - Runs prepared from event records keep `input/event-records.csv` and `input/prepare.R`.
+    Their `settings.json` (run-settings-v1 1.1) has a `preparation` block with the rules,
+    hash, accounting and both files' hashes, and the manifest's lineage has
+    `events_sha256`. Other runs are unchanged.
+  - The Analysis page's **3. Result** card has an **Event records** panel. It shows the
+    suggested layout, columns and EVID meanings with reasons, applied only by an explicit
+    action. It also has the code tables with counts and labels, only the choices the data
+    needs, where every record went, unresolved lines, and a dose-to-sample preview.
+  - For a file with no analyte column, **Declare one analyte** adds a visible
+    **Add a constant column** step.
+  - API: `GET /api/nca/recipes/{id}/events-help`, `PUT /api/nca/recipes/{id}/events`. A
+    steps save keeps the saved events block.
+  - Seeded fixtures `nonmem_events.csv`, `nonmem_events_planted.csv` and
+    `generic_single.csv` (`tests/fixtures/make_event_fixtures.py`). Unit tests and R-backed
+    tests cover every check, the partitions, the standalone script and complete,
+    replayed opnca-r runs for an event file and a generic file.
+  - Docs: ADR 0005 Q9 (plus Q7 rows, a Q8 amendment and rejected options), the spec,
+    architecture, a new in-app guide chapter, the website's cleaning guide and glossary.
 - Optional **Version history** (#56, ADR 0008): Git snapshots of files the user chooses
   from the open study folder, in gitneighbr's managed mode (0.2.1) under
   `/apps/gitneighbr/`.

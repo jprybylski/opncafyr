@@ -22,3 +22,6 @@
 .nca-finding p { margin: var(--space-1) 0 0; font-size: var(--text-sm); }
 .nca-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
 #nca-runs .card-status { white-space: pre-line; }
+/* Event records (#58): grid items default to their content's width; let wide tables scroll. */
+.nca-events, .nca-events div { min-width: 0; }
+.nca-events h4 { margin: var(--space-3) 0 var(--space-1); }

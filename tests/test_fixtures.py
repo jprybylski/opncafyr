@@ -185,3 +185,62 @@ def test_every_case_is_documented(expected):
     for ss in expected["scenarios"].values():
         for s in ss:
             assert f"`{s['id']}`" in readme, s["id"]
+
+
+# --- Event-record fixtures (#58) ---------------------------------------------------------
+
+EVENT_GENERATOR = FIXTURES / "make_event_fixtures.py"
+EVENT_FILES = (
+    "nonmem_events.csv",
+    "nonmem_events_planted.csv",
+    "generic_single.csv",
+    "events.expected.json",
+)
+
+
+def _event_generator():
+    spec = importlib.util.spec_from_file_location("make_event_fixtures", EVENT_GENERATOR)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_committed_event_fixtures_match_their_generator(tmp_path):
+    subprocess.run([sys.executable, str(EVENT_GENERATOR), "--out", str(tmp_path)], check=True)
+    for name in EVENT_FILES:
+        assert (tmp_path / name).read_bytes() == (FIXTURES / name).read_bytes(), (
+            f"{name} differs from a fresh run of tests/fixtures/make_event_fixtures.py"
+        )
+
+
+def test_event_generator_is_deterministic():
+    gen = _event_generator()
+    assert gen.generate() == gen.generate()
+
+
+def test_event_expectations_cover_every_line():
+    expected = json.loads((FIXTURES / "events.expected.json").read_text("utf-8"))
+    main = expected["files"]["nonmem_events.csv"]
+    rows = _rows("nonmem_events.csv")
+    assert main["rows"] == len(rows) and len(main["lines"]) == len(rows)
+    assert sum(main["partitions"].values()) == len(rows)
+    for line, want in main["lines"].items():
+        row = _line(rows, int(line))
+        if want["partition"] == "selected":
+            assert row["EVID"] == "0" and row["CMT"] == want["endpoint"]
+            assert _line(rows, int(want["dose_lines"]))["EVID"] == "1"
+        if want["partition"] == "dose":
+            assert row["EVID"] == "1"
+    planted = _rows("nonmem_events_planted.csv")
+    for case in expected["files"]["nonmem_events_planted.csv"]["cases"]:
+        for line in case["lines"]:
+            _line(planted, line)
+
+
+def test_every_event_case_is_documented():
+    expected = json.loads((FIXTURES / "events.expected.json").read_text("utf-8"))
+    readme = (FIXTURES / "README.md").read_text("utf-8")
+    for name in ("nonmem_events_planted.csv", "generic_single.csv"):
+        for case in expected["files"][name]["cases"]:
+            assert f"`{case['id']}`" in readme, case["id"]

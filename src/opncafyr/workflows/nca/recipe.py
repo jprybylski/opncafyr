@@ -15,6 +15,13 @@ schema can't express, against the source's header:
 
 ``plan_columns`` also returns each column's lineage (which source column it came from
 and through which ops), which the pre-analysis checks use to block nominal-as-actual time.
+
+An optional ``events`` block (#58, ADR 0005 Q9; ``schema_version`` 1.1) adds a fixed
+event-record stage after the steps (``r/nca_events_lib.R``). It writes the prepared
+columns ``EVENT_COLUMNS`` onto the selected PK observations; those names are reserved like
+the fixed columns. ``check`` returns them in ``analysis_columns``, with the lineage of
+``opncafyr_time_after_dose`` taken from the event time column, so a nominal time used as the
+event time is still blocked.
 """
 
 from __future__ import annotations
@@ -37,6 +44,26 @@ LINE_COLUMN = "opncafyr_line"
 EXCLUDED_COLUMN = "opncafyr_excluded"
 EXCLUSION_REASON_COLUMN = "opncafyr_exclusion_reason"
 FIXED_COLUMNS = (LINE_COLUMN, EXCLUDED_COLUMN, EXCLUSION_REASON_COLUMN)
+# Written by the event stage on each selected observation (#58); never by a step.
+DOSE_COLUMN = "opncafyr_dose"
+DOSE_UNIT_COLUMN = "opncafyr_dose_unit"
+ROUTE_COLUMN = "opncafyr_route"
+DOSE_TIME_COLUMN = "opncafyr_dose_time"
+TIME_AFTER_DOSE_COLUMN = "opncafyr_time_after_dose"
+DOSE_NUMBER_COLUMN = "opncafyr_dose_number"
+DOSE_LINES_COLUMN = "opncafyr_dose_lines"
+EVENT_COLUMNS = (
+    DOSE_COLUMN,
+    DOSE_UNIT_COLUMN,
+    ROUTE_COLUMN,
+    DOSE_TIME_COLUMN,
+    TIME_AFTER_DOSE_COLUMN,
+    DOSE_NUMBER_COLUMN,
+    DOSE_LINES_COLUMN,
+)
+RESERVED_COLUMNS = (*FIXED_COLUMNS, *EVENT_COLUMNS)
+EVENTS_VERSION = "1.1"
+BASE_VERSION = "1.0"
 RECIPE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
 # The importer's missing-value tokens (importers/csv.py), the same set R is given.
@@ -86,8 +113,16 @@ class Lineage:
 
 @dataclass
 class ColumnPlan:
+    """``columns``: after the steps. ``analysis_columns``: what mapping and checks see, the
+    columns plus the prepared ones when the recipe has an events block."""
+
     columns: list[str]
     lineage: dict[str, Lineage]
+    analysis_columns: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not self.analysis_columns:
+            self.analysis_columns = list(self.columns)
 
 
 def new_recipe(recipe_id: str, source_id: str) -> dict[str, Any]:
@@ -101,8 +136,33 @@ def recipe_hash(doc: dict[str, Any]) -> str:
 
 
 def steps_hash(doc: dict[str, Any]) -> str:
-    """The hash of the cleaning part only: a mapping change never re-runs cleaning."""
+    """The hash of the cleaning part only (steps and events): a mapping change never re-runs
+    cleaning."""
     return recipe_hash({k: v for k, v in doc.items() if k != "mapping"})
+
+
+def events_hash(doc: dict[str, Any]) -> str | None:
+    """SHA-256 of the events block alone (canonical JSON), or None without one."""
+    events = doc.get("events")
+    if not events:
+        return None
+    canonical = json.dumps(events, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def set_events(doc: dict[str, Any], events: dict[str, Any] | None) -> dict[str, Any]:
+    """``doc`` with its events block set or removed, and the matching schema version.
+
+    The recorded migration (#58): a 1.0 recipe becomes 1.1 when it gets an events block,
+    and goes back to 1.0, with the same hash as before, when the block is removed.
+    """
+    out = {k: v for k, v in doc.items() if k != "events"}
+    if events:
+        out["events"] = events
+        out["schema_version"] = EVENTS_VERSION
+    else:
+        out["schema_version"] = BASE_VERSION
+    return out
 
 
 def loads(text: str) -> dict[str, Any]:
@@ -219,7 +279,7 @@ def plan_columns(doc: dict[str, Any], header: list[str]) -> ColumnPlan:
     """
     validate_schema(doc)
     for name in header:
-        if name in FIXED_COLUMNS:
+        if name in RESERVED_COLUMNS:
             raise RecipeError(f"The source already has a column named {name}, which is reserved.")
     if len(set(header)) != len(header):
         raise RecipeError("The source has two columns with the same name. Fix the header first.")
@@ -241,6 +301,10 @@ def plan_columns(doc: dict[str, Any], header: list[str]) -> ColumnPlan:
         for name in writes:
             if name in FIXED_COLUMNS and op != "exclude":
                 raise fail(f"{name} is managed by the launcher and can't be changed.")
+        if op in ("derive", "derive_elapsed_time", "flag") and a["target"] in EVENT_COLUMNS:
+            raise fail(f"{a['target']} is written only by the event stage; choose another name.")
+        if op == "rename" and a["to"] in RESERVED_COLUMNS:
+            raise fail(f"{a['to']} is managed by the launcher; choose another name.")
         if op == "clean_names":
             renamed = clean_names(columns)
             lineage = {new: lineage[old] for old, new in zip(columns, renamed, strict=True)}
@@ -298,6 +362,9 @@ def plan_columns(doc: dict[str, Any], header: list[str]) -> ColumnPlan:
         elif op in ("trim", "parse_type"):
             for name in writes:
                 lineage[name].ops.append(op)
+        for name in columns:
+            if name in EVENT_COLUMNS:
+                raise fail(f"this step makes {name}, which is reserved for the event stage.")
         ever.update(columns)
     return ColumnPlan(columns=columns, lineage=lineage)
 
@@ -324,13 +391,75 @@ def check(doc: dict[str, Any], header: list[str]) -> ColumnPlan:
     if not RECIPE_ID_RE.match(str(doc.get("id", ""))):
         raise RecipeError("A recipe id is lower-case letters, digits and dashes.")
     plan = plan_columns(doc, header)
+    if doc.get("events"):
+        plan = check_events(doc["events"], plan)
     if doc.get("mapping"):
         from opncafyr.workflows.nca.mapping import mapping_columns
 
         for where, name in mapping_columns(doc["mapping"]):
-            if name not in plan.columns:
+            if name not in plan.analysis_columns:
                 raise RecipeError(
                     f"The mapping names {name} ({where}), which is not a column after the "
                     "cleaning steps."
                 )
     return plan
+
+
+EVENT_COLUMN_ROLES = (
+    "subject",
+    "time",
+    "record_kind",
+    "amount",
+    "endpoint",
+    "route",
+    "dv",
+    "mdv",
+    "occasion",
+    "dose_unit",
+    "time_unit",
+)
+
+
+def check_events(events: dict[str, Any], plan: ColumnPlan) -> ColumnPlan:
+    """The rules for an events block that the schema can't express (#58).
+
+    Every named column exists after the steps and plays one part only; there is at least
+    one observation kind, one dose kind and one PK endpoint; the MDV table is given exactly
+    when an MDV column is. Returns the plan with the prepared columns added.
+    """
+
+    def fail(message: str) -> RecipeError:
+        return RecipeError(f"Event records: {message}")
+
+    named = events["columns"]
+    used: dict[str, str] = {}
+    for part in EVENT_COLUMN_ROLES:
+        column = named.get(part)
+        if not column:
+            continue
+        if column not in plan.columns:
+            raise fail(f"there is no column {column} ({part}) after the cleaning steps.")
+        if column in FIXED_COLUMNS:
+            raise fail(f"{column} is managed by the launcher and can't be the {part}.")
+        if column in used:
+            raise fail(f"{column} is named as both {used[column]} and {part}.")
+        used[column] = part
+    kinds = set(events["record_kinds"].values())
+    for kind in ("observation", "dose"):
+        if kind not in kinds:
+            raise fail(f"say which record-kind value means {kind}.")
+    if "pk" not in set(events["endpoints"].values()):
+        raise fail("say which endpoint value is a PK analyte.")
+    if bool(named.get("mdv")) != bool(events.get("mdv")):
+        raise fail("an MDV column needs its value table, and the table needs the column.")
+    lineage = dict(plan.lineage)
+    time = lineage[named["time"]]
+    for name in EVENT_COLUMNS:
+        lineage[name] = Lineage(None, ["events"])
+    lineage[TIME_AFTER_DOSE_COLUMN] = Lineage(time.origin, [*time.ops, "time_after_dose"])
+    lineage[DOSE_TIME_COLUMN] = Lineage(time.origin, [*time.ops, "dose_time"])
+    return ColumnPlan(
+        columns=plan.columns,
+        lineage=lineage,
+        analysis_columns=[*plan.columns, *EVENT_COLUMNS],
+    )

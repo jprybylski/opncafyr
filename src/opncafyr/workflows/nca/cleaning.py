@@ -8,6 +8,14 @@ Each run of a recipe on a source writes one immutable folder,
 - ``cleaned.csv``, ``rejected.csv`` (line, step, reason) and ``steps.json`` (per-step
   counts, changes, issues and duplicate groups), written by R.
 
+A recipe with an events block (#58) also gets, from its event stage:
+
+- ``prepared.csv``: the selected PK observations with the prepared dose columns, which is
+  what mapping, checks and the snapshot read (``analysis_table``);
+- ``records.csv`` (line, partition, category, dose_lines; no values) and ``events.json``
+  (counts per partition and the unresolved records). ``cleaned.csv`` stays every row after
+  the steps.
+
 ``key`` covers the recipe hash, the source SHA-256, the sample size and the script hash,
 so a changed recipe, source or launcher never reuses an old result. A preview is the
 same script on the first ``PREVIEW_ROWS`` rows. A job's ``review`` checks the files, that
@@ -48,13 +56,24 @@ from opncafyr.workflows.nca.clean_compile import (
 )
 from opncafyr.workflows.nca.importers.csv import sniff_delimiter
 from opncafyr.workflows.nca.recipe import check as check_recipe
-from opncafyr.workflows.nca.recipe import steps_hash
+from opncafyr.workflows.nca.recipe import events_hash, steps_hash
 
 CLEANED_DIR = ".opncafyr/cleaned"
 PREVIEW_ROWS = 200
 CLEAN_TIMEOUT_S = 1800.0
 SNIFF_BYTES = 64 * 1024
 OUTPUT_FILES = ("clean.R", "meta.json", "cleaned.csv", "rejected.csv", "steps.json")
+EVENT_FILES = ("prepared.csv", "records.csv", "events.json")
+PARTITIONS = (
+    "selected",
+    "predose_set_aside",
+    "outside_interval",
+    "dose",
+    "other_endpoint",
+    "other_record",
+    "rejected",
+    "unresolved",
+)
 
 
 class CleaningError(ValueError):
@@ -81,8 +100,16 @@ class CleanTarget:
     def output(self) -> str:
         return f"{CLEANED_DIR}/{self.recipe['id']}-{self.key}"
 
+    @property
+    def events_sha256(self) -> str | None:
+        return events_hash(self.recipe)
+
+    @property
+    def files(self) -> tuple[str, ...]:
+        return OUTPUT_FILES + (EVENT_FILES if self.events_sha256 else ())
+
     def meta(self) -> dict[str, Any]:
-        return {
+        out = {
             "recipe_id": self.recipe["id"],
             "steps_sha256": self.steps_sha256,
             "source_id": self.source["id"],
@@ -92,6 +119,9 @@ class CleanTarget:
             "script_sha256": _sha(self.script),
             "key": self.key,
         }
+        if self.events_sha256:
+            out["events_sha256"] = self.events_sha256
+        return out
 
 
 def _sha(text: str) -> str:
@@ -145,7 +175,7 @@ def plan(
 
 def check_output(folder: Path, target: CleanTarget) -> str | None:
     """Why ``folder`` is not a complete, consistent result for ``target`` (None if it is)."""
-    for name in OUTPUT_FILES:
+    for name in target.files:
         if not (folder / name).is_file():
             return f"{name} is missing."
     try:
@@ -173,8 +203,44 @@ def check_output(folder: Path, target: CleanTarget) -> str | None:
         return "The totals in steps.json don't add up."
     if _count_rows(folder / "cleaned.csv") != rows:
         return "cleaned.csv has a different number of rows."
+    if target.events_sha256:
+        problem = _check_events(folder, target, rows)
+        if problem:
+            return problem
+        rejected += json.loads((folder / "events.json").read_text("utf-8"))["rows_rejected"]
     if _count_rows(folder / "rejected.csv") != rejected:
         return "rejected.csv has a different number of rows."
+    return None
+
+
+def _check_events(folder: Path, target: CleanTarget, rows: int) -> str | None:
+    """Every record that entered the event stage is in exactly one partition (#58)."""
+    try:
+        report = json.loads((folder / "events.json").read_text("utf-8"))
+        with (folder / "records.csv").open(newline="", encoding="utf-8") as fh:
+            records = list(csv.DictReader(fh))
+    except (OSError, ValueError, csv.Error):
+        return "The event result files can't be read."
+    if report.get("events_sha256") != target.events_sha256:
+        return "events.json names a different events block."
+    counts = report.get("partitions") or {}
+    if set(counts) != set(PARTITIONS):
+        return "events.json does not list every partition."
+    if report.get("rows_in") != rows or sum(counts.values()) != rows:
+        return "The event partitions don't add up to the rows after the steps."
+    if len(records) != rows or len({r["line"] for r in records}) != rows:
+        return "records.csv does not list every record once."
+    seen = {p: 0 for p in PARTITIONS}
+    for r in records:
+        if r["partition"] not in seen:
+            return "records.csv names an unknown partition."
+        seen[r["partition"]] += 1
+    if seen != counts:
+        return "records.csv and events.json disagree."
+    if report.get("rows_rejected") != counts["rejected"]:
+        return "events.json counts rejected records twice or not at all."
+    if _count_rows(folder / "prepared.csv") != counts["selected"]:
+        return "prepared.csv has a different number of rows."
     return None
 
 
@@ -183,12 +249,28 @@ def _count_rows(path: Path) -> int:
         return max(sum(1 for _ in csv.reader(fh)) - 1, 0)
 
 
-def read_cleaned(folder: Path) -> tuple[list[str], list[list[str]]]:
-    """The header and every row of ``cleaned.csv``, as text."""
-    with (folder / "cleaned.csv").open(newline="", encoding="utf-8") as fh:
+def read_cleaned(folder: Path, name: str = "cleaned.csv") -> tuple[list[str], list[list[str]]]:
+    """The header and every row of ``cleaned.csv`` (or another result CSV), as text."""
+    with (folder / name).open(newline="", encoding="utf-8") as fh:
         reader = csv.reader(fh)
         header = next(reader, [])
         return header, list(reader)
+
+
+def analysis_name(recipe: dict[str, Any]) -> str:
+    """The result file mapping and checks read: the prepared observations for a recipe with
+    an events block (#58), else every cleaned row."""
+    return "prepared.csv" if recipe.get("events") else "cleaned.csv"
+
+
+def analysis_table(folder: Path, recipe: dict[str, Any]) -> tuple[list[str], list[list[str]]]:
+    return read_cleaned(folder, analysis_name(recipe))
+
+
+def read_events(folder: Path) -> dict[str, Any] | None:
+    """``events.json`` of a result, or None for a recipe without events."""
+    path = folder / "events.json"
+    return json.loads(path.read_text("utf-8")) if path.is_file() else None
 
 
 def load_result(folder: Path, head_rows: int = 20) -> dict[str, Any]:
@@ -199,7 +281,16 @@ def load_result(folder: Path, head_rows: int = 20) -> dict[str, Any]:
         head = [row for _, row in zip(range(head_rows), reader, strict=False)]
     with (folder / "rejected.csv").open(newline="", encoding="utf-8") as fh:
         rejected = list(csv.DictReader(fh))
-    return {"summary": steps, "columns": columns, "head": head, "rejected": rejected}
+    out = {"summary": steps, "columns": columns, "head": head, "rejected": rejected}
+    events = read_events(folder)
+    if events is not None:
+        with (folder / "prepared.csv").open(newline="", encoding="utf-8") as fh:
+            reader = csv.reader(fh)
+            prepared_columns = next(reader, [])
+            prepared = [row for _, row in zip(range(head_rows), reader, strict=False)]
+        out["events"] = events
+        out["prepared"] = {"columns": prepared_columns, "head": prepared}
+    return out
 
 
 def _stderr_error(job_dir: Path) -> str | None:

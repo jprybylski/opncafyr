@@ -27,7 +27,11 @@
   },
   "properties": {
     "schema_version": {
-      "const": "1.0"
+      "enum": [
+        "1.0",
+        "1.1"
+      ],
+      "description": "1.1 exactly for a run prepared from event records (#58), which has a preparation block."
     },
     "run_id": {
       "type": "string",
@@ -280,6 +284,94 @@
         "type": "integer",
         "minimum": 0
       }
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "How the analysis input was prepared from event records (#58, ADR 0005 Q9): the events block as saved, the partition of every source record, and the script that did it.",
+      "required": [
+        "kind",
+        "events_sha256",
+        "rules",
+        "accounting",
+        "records",
+        "script"
+      ],
+      "properties": {
+        "kind": {
+          "const": "event_records"
+        },
+        "events_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "rules": {
+          "type": "object",
+          "description": "The recipe's events block, verbatim (validated by recipe-v1)."
+        },
+        "accounting": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "records": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "description": "input/event-records.csv: line, partition, category and dose lines of every record; no data values."
+        },
+        "script": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "description": "input/prepare.R: the generated cleaning and event script that made the input."
+        }
+      }
+    }
+  },
+  "if": {
+    "properties": {
+      "schema_version": {
+        "const": "1.1"
+      }
+    },
+    "required": [
+      "schema_version"
+    ]
+  },
+  "then": {
+    "required": [
+      "preparation"
+    ]
+  },
+  "else": {
+    "not": {
+      "required": [
+        "preparation"
+      ]
     }
   }
 }

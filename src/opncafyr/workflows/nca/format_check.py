@@ -37,10 +37,14 @@ def _program() -> str:
     return resources.files("opncafyr.r").joinpath("nca_format_check.R").read_text("utf-8")
 
 
-def output_for(cleaned: Path, mapping: dict[str, Any], selection: Selection) -> str:
+def output_for(
+    cleaned: Path, mapping: dict[str, Any], selection: Selection, table: str = "cleaned.csv"
+) -> str:
+    # The prepared table of an event recipe (#58) is its own input; cleaned.csv keys stay.
+    name = cleaned.name if table == "cleaned.csv" else f"{cleaned.name}/{table}"
     text = json.dumps(
         [
-            cleaned.name,
+            name,
             M.role(mapping, "ANALYTE"),
             selection.analyte_value,
             M.role(mapping, "SPECIMEN"),
@@ -83,8 +87,9 @@ class FormatChecks:
         cleaned: Path,
         mapping: dict[str, Any],
         selection: Selection,
+        table: str = "cleaned.csv",
     ) -> dict[str, Any]:
-        output = output_for(cleaned, mapping, selection)
+        output = output_for(cleaned, mapping, selection, table)
         folder = resolve_in_root(root, output)
         with self._lock:
             if folder.is_dir():
@@ -100,18 +105,18 @@ class FormatChecks:
                     pass
             if folder.exists():  # left over without a readable report
                 return {"job_id": None, "findings": []}
-            job_id = jobs.submit(_request(cleaned, mapping, selection, output))
+            job_id = jobs.submit(_request(cleaned / table, mapping, selection, output))
             self._inflight[output] = job_id
             return {"job_id": job_id, "findings": None}
 
 
-def _request(cleaned: Path, mapping: dict[str, Any], selection: Selection, output: str):
+def _request(table: Path, mapping: dict[str, Any], selection: Selection, output: str):
     def build(ctx: JobContext):
         assert ctx.staging is not None  # noqa: S101
         script = ctx.staging / "nca_format_check.R"
         script.write_text(_program(), "utf-8", newline="\n")
         env = {
-            "FORMAT_INPUT": str(cleaned / "cleaned.csv"),
+            "FORMAT_INPUT": str(table),
             "FORMAT_OUTPUT": str(ctx.staging),
             "FORMAT_ANALYTE_COLUMN": M.role(mapping, "ANALYTE") or "",
             "FORMAT_ANALYTE_VALUE": selection.analyte_value,

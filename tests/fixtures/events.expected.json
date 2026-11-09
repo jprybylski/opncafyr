@@ -1,0 +1,985 @@
+{
+  "fixture": "event-records",
+  "generator": "tests/fixtures/make_event_fixtures.py",
+  "seed": 20261108,
+  "standard_setup": {
+    "steps": [
+      {
+        "op": "derive",
+        "note": "The file has no route column; every dose is oral.",
+        "args": {
+          "target": "route",
+          "fn": "constant",
+          "value": "extravascular"
+        }
+      }
+    ],
+    "events": {
+      "columns": {
+        "subject": "ID",
+        "time": "TIME",
+        "record_kind": "EVID",
+        "amount": "AMT",
+        "endpoint": "CMT",
+        "route": "route",
+        "dv": "DV",
+        "mdv": "MDV",
+        "dose_unit": "EVENTU",
+        "time_unit": "TIMEUNIT"
+      },
+      "record_kinds": {
+        "0": "observation",
+        "1": "dose"
+      },
+      "endpoints": {
+        "2": "pk",
+        "3": "pk",
+        "4": "other"
+      },
+      "mdv": {
+        "0": false,
+        "1": true
+      },
+      "choices": {
+        "predose": "keep"
+      }
+    },
+    "mapping": {
+      "roles": {
+        "SUBJECT_ID": "ID",
+        "ANALYTE": "CMT",
+        "ANALYTE_LABEL": "NAME",
+        "ACTUAL_TIME": "opncafyr_time_after_dose",
+        "CONC": "DV",
+        "BLQ": "CENS",
+        "MISSING": "MDV",
+        "DOSE": "opncafyr_dose",
+        "ROUTE": "opncafyr_route"
+      },
+      "units": {
+        "ACTUAL_TIME": {
+          "column": "TIMEUNIT"
+        },
+        "CONC": {
+          "column": "EVENTU"
+        },
+        "DOSE": {
+          "column": "opncafyr_dose_unit"
+        }
+      },
+      "flags": {
+        "BLQ": {
+          "table": {
+            "0": false,
+            "1": true
+          }
+        },
+        "MISSING": {
+          "table": {
+            "0": false,
+            "1": true
+          }
+        }
+      }
+    }
+  },
+  "files": {
+    "nonmem_events.csv": {
+      "rows": 120,
+      "columns": [
+        "ID",
+        "TIME",
+        "NOMTIME",
+        "TIMEUNIT",
+        "AMT",
+        "DV",
+        "MDV",
+        "EVID",
+        "CMT",
+        "NAME",
+        "EVENTU",
+        "CENS"
+      ],
+      "partitions": {
+        "selected": 96,
+        "dose": 6,
+        "other_endpoint": 18
+      },
+      "lines": {
+        "2": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "-0.245",
+          "endpoint": "2"
+        },
+        "3": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "-0.245",
+          "endpoint": "3"
+        },
+        "4": {
+          "partition": "dose"
+        },
+        "5": {
+          "partition": "other_endpoint"
+        },
+        "6": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "0.505",
+          "endpoint": "2"
+        },
+        "7": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "0.505",
+          "endpoint": "3"
+        },
+        "8": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "1.009",
+          "endpoint": "2"
+        },
+        "9": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "1.009",
+          "endpoint": "3"
+        },
+        "10": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "2.003",
+          "endpoint": "2"
+        },
+        "11": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "2.003",
+          "endpoint": "3"
+        },
+        "12": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "4.061",
+          "endpoint": "2"
+        },
+        "13": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "4.061",
+          "endpoint": "3"
+        },
+        "14": {
+          "partition": "other_endpoint"
+        },
+        "15": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "7.928",
+          "endpoint": "2"
+        },
+        "16": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "7.928",
+          "endpoint": "3"
+        },
+        "17": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "11.996",
+          "endpoint": "2"
+        },
+        "18": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "11.996",
+          "endpoint": "3"
+        },
+        "19": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "24.221",
+          "endpoint": "2"
+        },
+        "20": {
+          "partition": "selected",
+          "dose_lines": "4",
+          "time_after_dose": "24.221",
+          "endpoint": "3"
+        },
+        "21": {
+          "partition": "other_endpoint"
+        },
+        "22": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "-0.304",
+          "endpoint": "2"
+        },
+        "23": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "-0.304",
+          "endpoint": "3"
+        },
+        "24": {
+          "partition": "dose"
+        },
+        "25": {
+          "partition": "other_endpoint"
+        },
+        "26": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "0.501",
+          "endpoint": "2"
+        },
+        "27": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "0.501",
+          "endpoint": "3"
+        },
+        "28": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "1.006",
+          "endpoint": "2"
+        },
+        "29": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "1.006",
+          "endpoint": "3"
+        },
+        "30": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "1.988",
+          "endpoint": "2"
+        },
+        "31": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "1.988",
+          "endpoint": "3"
+        },
+        "32": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "4.001",
+          "endpoint": "2"
+        },
+        "33": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "4.001",
+          "endpoint": "3"
+        },
+        "34": {
+          "partition": "other_endpoint"
+        },
+        "35": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "8.149",
+          "endpoint": "2"
+        },
+        "36": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "8.149",
+          "endpoint": "3"
+        },
+        "37": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "11.922",
+          "endpoint": "2"
+        },
+        "38": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "11.922",
+          "endpoint": "3"
+        },
+        "39": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "24.301",
+          "endpoint": "2"
+        },
+        "40": {
+          "partition": "selected",
+          "dose_lines": "24",
+          "time_after_dose": "24.301",
+          "endpoint": "3"
+        },
+        "41": {
+          "partition": "other_endpoint"
+        },
+        "42": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "-0.324",
+          "endpoint": "2"
+        },
+        "43": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "-0.324",
+          "endpoint": "3"
+        },
+        "44": {
+          "partition": "dose"
+        },
+        "45": {
+          "partition": "other_endpoint"
+        },
+        "46": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "0.511",
+          "endpoint": "2"
+        },
+        "47": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "0.511",
+          "endpoint": "3"
+        },
+        "48": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "0.99",
+          "endpoint": "2"
+        },
+        "49": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "0.99",
+          "endpoint": "3"
+        },
+        "50": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "2.011",
+          "endpoint": "2"
+        },
+        "51": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "2.011",
+          "endpoint": "3"
+        },
+        "52": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "4",
+          "endpoint": "2"
+        },
+        "53": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "4",
+          "endpoint": "3"
+        },
+        "54": {
+          "partition": "other_endpoint"
+        },
+        "55": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "8.11",
+          "endpoint": "2"
+        },
+        "56": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "8.11",
+          "endpoint": "3"
+        },
+        "57": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "12.098",
+          "endpoint": "2"
+        },
+        "58": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "12.098",
+          "endpoint": "3"
+        },
+        "59": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "24.317",
+          "endpoint": "2"
+        },
+        "60": {
+          "partition": "selected",
+          "dose_lines": "44",
+          "time_after_dose": "24.317",
+          "endpoint": "3"
+        },
+        "61": {
+          "partition": "other_endpoint"
+        },
+        "62": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "-0.201",
+          "endpoint": "2"
+        },
+        "63": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "-0.201",
+          "endpoint": "3"
+        },
+        "64": {
+          "partition": "dose"
+        },
+        "65": {
+          "partition": "other_endpoint"
+        },
+        "66": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "0.5",
+          "endpoint": "2"
+        },
+        "67": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "0.5",
+          "endpoint": "3"
+        },
+        "68": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "0.991",
+          "endpoint": "2"
+        },
+        "69": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "0.991",
+          "endpoint": "3"
+        },
+        "70": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "2.026",
+          "endpoint": "2"
+        },
+        "71": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "2.026",
+          "endpoint": "3"
+        },
+        "72": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "4.033",
+          "endpoint": "2"
+        },
+        "73": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "4.033",
+          "endpoint": "3"
+        },
+        "74": {
+          "partition": "other_endpoint"
+        },
+        "75": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "7.901",
+          "endpoint": "2"
+        },
+        "76": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "7.901",
+          "endpoint": "3"
+        },
+        "77": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "12.138",
+          "endpoint": "2"
+        },
+        "78": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "12.138",
+          "endpoint": "3"
+        },
+        "79": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "24.129",
+          "endpoint": "2"
+        },
+        "80": {
+          "partition": "selected",
+          "dose_lines": "64",
+          "time_after_dose": "24.129",
+          "endpoint": "3"
+        },
+        "81": {
+          "partition": "other_endpoint"
+        },
+        "82": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "-0.346",
+          "endpoint": "2"
+        },
+        "83": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "-0.346",
+          "endpoint": "3"
+        },
+        "84": {
+          "partition": "dose"
+        },
+        "85": {
+          "partition": "other_endpoint"
+        },
+        "86": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "0.499",
+          "endpoint": "2"
+        },
+        "87": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "0.499",
+          "endpoint": "3"
+        },
+        "88": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "1.002",
+          "endpoint": "2"
+        },
+        "89": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "1.002",
+          "endpoint": "3"
+        },
+        "90": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "2.033",
+          "endpoint": "2"
+        },
+        "91": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "2.033",
+          "endpoint": "3"
+        },
+        "92": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "4.026",
+          "endpoint": "2"
+        },
+        "93": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "4.026",
+          "endpoint": "3"
+        },
+        "94": {
+          "partition": "other_endpoint"
+        },
+        "95": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "8.157",
+          "endpoint": "2"
+        },
+        "96": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "8.157",
+          "endpoint": "3"
+        },
+        "97": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "12.114",
+          "endpoint": "2"
+        },
+        "98": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "12.114",
+          "endpoint": "3"
+        },
+        "99": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "24.344",
+          "endpoint": "2"
+        },
+        "100": {
+          "partition": "selected",
+          "dose_lines": "84",
+          "time_after_dose": "24.344",
+          "endpoint": "3"
+        },
+        "101": {
+          "partition": "other_endpoint"
+        },
+        "102": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "-0.24",
+          "endpoint": "2"
+        },
+        "103": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "-0.24",
+          "endpoint": "3"
+        },
+        "104": {
+          "partition": "dose"
+        },
+        "105": {
+          "partition": "other_endpoint"
+        },
+        "106": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "0.503",
+          "endpoint": "2"
+        },
+        "107": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "0.503",
+          "endpoint": "3"
+        },
+        "108": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "0.997",
+          "endpoint": "2"
+        },
+        "109": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "0.997",
+          "endpoint": "3"
+        },
+        "110": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "1.988",
+          "endpoint": "2"
+        },
+        "111": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "1.988",
+          "endpoint": "3"
+        },
+        "112": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "4.053",
+          "endpoint": "2"
+        },
+        "113": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "4.053",
+          "endpoint": "3"
+        },
+        "114": {
+          "partition": "other_endpoint"
+        },
+        "115": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "8.085",
+          "endpoint": "2"
+        },
+        "116": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "8.085",
+          "endpoint": "3"
+        },
+        "117": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "12.141",
+          "endpoint": "2"
+        },
+        "118": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "12.141",
+          "endpoint": "3"
+        },
+        "119": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "23.878",
+          "endpoint": "2"
+        },
+        "120": {
+          "partition": "selected",
+          "dose_lines": "104",
+          "time_after_dose": "23.878",
+          "endpoint": "3"
+        },
+        "121": {
+          "partition": "other_endpoint"
+        }
+      }
+    },
+    "nonmem_events_planted.csv": {
+      "rows": 37,
+      "columns": [
+        "ID",
+        "TIME",
+        "NOMTIME",
+        "TIMEUNIT",
+        "AMT",
+        "DV",
+        "MDV",
+        "EVID",
+        "CMT",
+        "NAME",
+        "EVENTU",
+        "CENS"
+      ],
+      "cases": [
+        {
+          "id": "multiple_doses",
+          "check": "event_multiple_doses",
+          "lines": [
+            3,
+            4,
+            6,
+            7,
+            8
+          ],
+          "description": "Two dose records (0 h and 24 h) and no interval rule.",
+          "doses": [
+            2,
+            5
+          ],
+          "first": [
+            3,
+            4
+          ],
+          "at_dose_time": 6,
+          "last": [
+            7,
+            8
+          ]
+        },
+        {
+          "id": "same_time_doses",
+          "check": "event_same_time_doses",
+          "lines": [
+            9,
+            10
+          ],
+          "description": "Two dose records at the same time and no same-time rule; summed, the dose is 0.3.",
+          "observations": [
+            11,
+            12
+          ],
+          "observation_check": "event_dose_unresolved",
+          "summed": "0.3"
+        },
+        {
+          "id": "unmatched",
+          "check": "event_unmatched",
+          "lines": [
+            13,
+            14
+          ],
+          "description": "A subject with observations and no dose record."
+        },
+        {
+          "id": "dose_amount_invalid",
+          "check": "event_dose_amount_invalid",
+          "lines": [
+            15
+          ],
+          "description": "A dose record whose amount is 0.",
+          "observations": [
+            16
+          ],
+          "observation_check": "event_dose_unresolved"
+        },
+        {
+          "id": "kind_unknown",
+          "check": "event_kind_unknown",
+          "lines": [
+            18
+          ],
+          "description": "EVID 4 is not in the record-kind table."
+        },
+        {
+          "id": "endpoint_unknown",
+          "check": "event_endpoint_unknown",
+          "lines": [
+            19
+          ],
+          "description": "CMT 9 is not in the endpoint table."
+        },
+        {
+          "id": "flag_conflict",
+          "check": "event_flag_conflict",
+          "lines": [
+            21,
+            23
+          ],
+          "description": "A dose record with MDV 0, and an observation with MDV 1 and a numeric DV.",
+          "observations": [
+            22
+          ],
+          "observation_check": "event_dose_unresolved"
+        },
+        {
+          "id": "time_units_differ",
+          "check": "event_time_units_differ",
+          "lines": [
+            27
+          ],
+          "description": "An observation in minutes; its dose is in hours."
+        },
+        {
+          "id": "predose",
+          "check": "event_predose",
+          "lines": [
+            25
+          ],
+          "description": "A sample before the first dose and no predose rule."
+        },
+        {
+          "id": "time_not_numeric",
+          "check": "event_time_not_numeric",
+          "lines": [
+            29
+          ],
+          "description": "An observation with no time."
+        },
+        {
+          "id": "conc_units_mixed",
+          "check": "units_mixed",
+          "lines": [
+            33
+          ],
+          "description": "Two observations of one endpoint with different EVENTU units.",
+          "found_by": "checks"
+        },
+        {
+          "id": "same_time_doses_differ",
+          "check": "event_same_time_doses",
+          "lines": [
+            34,
+            35
+          ],
+          "description": "Two dose records at one time in mg and ug; with 'sum' they still can't be summed.",
+          "with_sum": "event_same_time_doses_differ"
+        },
+        {
+          "id": "mdv_unmapped",
+          "check": "event_mdv_unmapped",
+          "lines": [
+            38
+          ],
+          "description": "MDV 9 is not in the MDV table."
+        }
+      ]
+    },
+    "generic_single.csv": {
+      "rows": 48,
+      "columns": [
+        "Subject ID",
+        "Time (hr)",
+        "Conc.(ng/mL)",
+        "Dose mg",
+        "Weight kg"
+      ],
+      "steps": [
+        {
+          "op": "clean_names",
+          "args": {}
+        },
+        {
+          "op": "derive",
+          "note": "The file holds one analyte and names none.",
+          "args": {
+            "target": "analyte",
+            "fn": "constant",
+            "value": "DRUGX"
+          }
+        },
+        {
+          "op": "derive",
+          "note": "Every dose is oral.",
+          "args": {
+            "target": "route",
+            "fn": "constant",
+            "value": "extravascular"
+          }
+        }
+      ],
+      "mapping": {
+        "roles": {
+          "SUBJECT_ID": "subject_id",
+          "ANALYTE": "analyte",
+          "ACTUAL_TIME": "time_hr",
+          "CONC": "conc_ng_ml",
+          "DOSE": "dose_mg",
+          "ROUTE": "route"
+        },
+        "units": {
+          "ACTUAL_TIME": {
+            "value": "h"
+          },
+          "CONC": {
+            "value": "ng/mL"
+          },
+          "DOSE": {
+            "value": "mg"
+          }
+        }
+      },
+      "cases": [
+        {
+          "id": "conc_not_analysed",
+          "check": "conc_unclassified_blank",
+          "lines": [
+            31
+          ],
+          "description": "A sample written '.', with no flag saying why it is missing."
+        }
+      ]
+    }
+  }
+}

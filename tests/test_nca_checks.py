@@ -19,6 +19,7 @@ from nca_helpers import (
     standard_mapping,
 )
 from opncafyr.workflows.nca import checks as C
+from opncafyr.workflows.nca import events as E
 from opncafyr.workflows.nca.recipe import Lineage
 
 ANALYTES = EXPECTED["standard_setup"]["analyte_values"]
@@ -51,6 +52,8 @@ def test_levels_follow_adr_0005():
         assert C.LEVELS[check] == level, check
     counts = {lvl: 0 for lvl in ("blocking", "warning", "info")}
     for check, level in C.LEVELS.items():
+        if check in E.LEVELS:  # the event checks (#58) are counted in test_nca_events.py
+            continue
         if check not in ("flag_table_missing", "column_reused", "opnca_format_check"):
             counts[level] += 1
     assert counts == {"blocking": 21, "warning": 6, "info": 4}

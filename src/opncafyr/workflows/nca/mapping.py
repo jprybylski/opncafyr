@@ -40,8 +40,14 @@ def mapping_columns(mapping: dict[str, Any]) -> list[tuple[str, str]]:
     return out
 
 
-def problems(mapping: dict[str, Any] | None) -> list[dict[str, Any]]:
+def problems(
+    mapping: dict[str, Any] | None, events: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
     """What stops the mapping from being used, as findings-style dicts (ADR 0005 Q7).
+
+    With an events block (#58), also ``event_mapping_mismatch`` when time, dose, route or
+    subject don't use the prepared columns, and ``event_role_unsupported`` for TAU and
+    INFUSION_DURATION (``events.mapping_problems``).
 
     ``role_unmapped`` for a required role; ``units_undeclared`` for a mapped time,
     concentration or dose without a unit, or with a declared unit the launcher doesn't
@@ -122,4 +128,8 @@ def problems(mapping: dict[str, Any] | None) -> list[dict[str, Any]]:
                 }
             )
         used[column] = name
+    if events:
+        from opncafyr.workflows.nca.events import mapping_problems
+
+        out.extend(mapping_problems(mapping, events))
     return out

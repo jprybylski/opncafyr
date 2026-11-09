@@ -44,6 +44,9 @@ Completed run
 Description file (metadata sidecar)
 : A small `<name>_<ext>_metadata.json` file next to each published table or figure in `OUTPUTS`. Reports and decks take footnotes from it: where the result came from, the analyte and run, and abbreviations. The app checks it before every publish, report check, render, deck check and build.
 
+Event records
+: A NONMEM-style file with separate dose and sample rows (`EVID`, `AMT`, `CMT` or `DVID`). The app prepares one sample table from it only after you say what every code means and make the choices the data needs; every record is counted in one partition. See [Cleaning, BLQ and units]({{ '/guides/cleaning/' | relative_url }}#event-records).
+
 Exclusion
 : A row marked as not counting in the analysis, with a reason. Excluded rows stay in the run's data and opnca-r sees them as excluded. Compare **removed** rows, which go to the rejected-row log. Samples you exclude inside opnca-r are recorded too, but without a reason, and the app adds a warning to the run.
 
@@ -106,6 +109,9 @@ Study folder
 
 Support bundle
 : A zip file that helps whoever supports opncafyr find out why something went wrong. It holds versions, tool health, recent job states and the end of the logs, never your data, results or file names. You see every part before it is saved; it stays on your computer until you send it yourself. See [Make a support bundle]({{ '/guides/troubleshooting/' | relative_url }}#make-a-support-bundle).
+
+Time after dose
+: For event records, a sample's actual time minus the actual time of the dose it was matched to, in the chosen dosing interval. The app works it out only from actual times you confirmed. Predose samples you keep have a negative time after dose.
 
 Unit labels
 : The concentration, time and dose units of a run, worked out from the units you confirmed in the mapping and passed to opnca-r when the run is made. opnca-r shows them beside its results, tables and charts. They are words only: opnca-r never converts a value. See [Units]({{ '/guides/cleaning/' | relative_url }}#units).

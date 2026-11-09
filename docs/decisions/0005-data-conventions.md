@@ -5,6 +5,9 @@
 - Date: 2026-11-05
 - Issue: #2
 - Unblocks: #20, #22, #23, #24, #25
+- Extended 2026-11-08 (#58): Q9, event records and files without an analyte column. The
+  owner chose the interval rules (first, last, dose number N) and "reject" as the only
+  choice for unmatched observations.
 
 ## Context
 `docs/spec.md` ("Each analyte run produces a replayable artifact set") says the handling
@@ -56,6 +59,11 @@ None is committed. Each is named by package or path and version.
 | `datasets::Theoph` | R 4.6.1 | Real, deidentified, no BLQ, no unit columns |
 
 None has two PK analytes. #20 generates that fixture (`tests/fixtures/two_analyte.csv`).
+None has two PK endpoints in event records either; #58 generates
+`tests/fixtures/nonmem_events.csv` (parent CMT 2, metabolite CMT 3, dosing CMT 1, a
+biomarker CMT 4), `nonmem_events_planted.csv` (one case per Q9 check) and
+`generic_single.csv` (units in headers, no analyte or route column), with
+`tests/fixtures/make_event_fixtures.py`.
 Rows marked **synthetic** below are made up because no reference set shows the rule.
 
 ## Decision
@@ -223,6 +231,26 @@ manifest. Info is shown, not acknowledged. Check ids are snake_case for reuse in
 | `profile_flag_counts` | info | BLQ, missing and excluded counts per profile |
 | `subject_accountability` | info | subjects and rows in/out after each step |
 | `too_few_points` | info | fewer than 3 measurable post-dose points; opnca-r still warns in-session |
+| `event_kind_unknown` | blocking | Q9: a record-kind value with no confirmed meaning |
+| `event_endpoint_unknown` | blocking | Q9: an observation endpoint with no confirmed meaning |
+| `event_mdv_unmapped` | blocking | Q9: an MDV value outside its table |
+| `event_flag_conflict` | blocking | Q9: EVID, MDV and DV disagree; the launcher never picks one |
+| `event_time_not_numeric` | blocking | Q9: no time after dose without a numeric time |
+| `event_dose_amount_invalid` | blocking | Q9: a missing, zero or negative AMT on a dose record |
+| `event_excluded_dose` | blocking | Q9: exclusion is for observations; remove a dose with a reason |
+| `event_dose_unresolved` | blocking | Q9: the subject's doses are unresolved, so its samples can't be matched |
+| `event_multiple_doses` | blocking | Q9: more than one dose and no interval rule |
+| `event_same_time_doses` | blocking | Q9: split dose records and no rule; never summed by default |
+| `event_same_time_doses_differ` | blocking | Q9: same-time records with different routes or units |
+| `event_predose` | blocking | Q9: samples before the first dose and no predose rule |
+| `event_at_dose_time` | blocking | Q9: a sample at an interval's dose time and no rule |
+| `event_unmatched` | blocking | Q9: PK observations with no dose for the interval; never dropped |
+| `event_time_units_differ` | blocking | Q9: an observation's time unit is not its dose's |
+| `event_mapping_mismatch` | blocking | Q9: time, dose, route and subject must use the prepared columns |
+| `event_role_unsupported` | blocking | Q9: TAU and infusion duration are not carried from dose records yet |
+| `analyte_endpoints_mixed` | blocking | Q9: an analyte filter that keeps two endpoint codes |
+| `event_nominal_basis` | warning | Q9: nominal time is copied as written, not re-based on the dose |
+| `event_accounting` | info | Q9: every record's partition, counted |
 
 ### Q8. Subjects with no dose
 - The profile is kept, never dropped.
@@ -235,6 +263,80 @@ USUBJID  TIME CONC DOSE ROUTE           -> profile_no_dose, blocking           (
 S-301    1    2.4
 ```
 
+Amended 2026-11-08 (#58): for event records, an observation with no dose record is
+`event_unmatched` (Q9). It still blocks; the one in-stage resolution is the explicit
+`unmatched: reject` choice, which moves the rows to the rejected-row log with a reason.
+Excluding them is not offered: an excluded row still reaches opnca-r, which needs its
+time after dose and route, and an unmatched observation has neither.
+
+### Q9. Event records and files without an analyte column
+NONMEM-style files keep doses and observations on separate records (`EVID`, `AMT`,
+`MDV`), code the endpoint in `CMT` or `DVID`, and use one unit column (`EVENTU`) for the
+concentration on observations and the amount on doses. Mapping them as they are would
+read dose rows as blank concentrations and leave the dose off the observations.
+
+- **An explicit, fixed-vocabulary stage.** The recipe's optional `events` block
+  (recipe-v1, `schema_version` 1.1) names the subject, time, record-kind, amount, endpoint
+  and route columns (and optionally DV, MDV, occasion, dose unit and time unit). It also
+  says what every record-kind, endpoint and MDV value means, and holds the user's choices.
+  The launcher suggests a layout, columns and the EVID 0, 1 and 2 meanings with reasons.
+  EVID 3 and 4 are never suggested, and nothing is applied until the user saves it.
+  The stage runs in R after the cleaning steps, inside the same standalone `clean.R`.
+- **Every record lands in one partition:** selected PK observation, predose set aside,
+  outside the chosen interval, dose (used or unused), other endpoint, other record,
+  rejected (only by the `reject` choice, with a reason in the rejected-row log), or
+  unresolved (a blocking check). A record that is not selected is not called rejected.
+  `records.csv` lists each source line's partition and, for a selected observation, the
+  source lines of its dose. The counts reconcile with the rows after the steps.
+- **Only selected PK observations go on** (`prepared.csv`), every raw column unchanged,
+  plus new columns: `opncafyr_dose` (the dose record's AMT text, or an exact sum),
+  `opncafyr_dose_unit` and `opncafyr_route` (from the dose record), `opncafyr_dose_time`,
+  `opncafyr_time_after_dose` (actual time minus the dose's actual time),
+  `opncafyr_dose_number` and `opncafyr_dose_lines`. Mapping must use them (Q7
+  `event_mapping_mismatch`). The analyte is the endpoint's exact raw value, as in Q1.
+  A dose record's CMT is never an analyte.
+- **No defaults for science choices.** Each is asked only when the data has the case:
+  - the dosing interval: first [t1, t2), last [tn, ∞) or dose number N [tN, tN+1);
+  - same-time dose records: `sum` (their routes and units must agree);
+  - samples before the first dose: `keep` (negative time after dose, which raises the
+    `time_negative` warning) or `set_aside`;
+  - a sample exactly at an interval's dose time: `before` or `after`;
+  - observations with no dose for the interval: `reject`.
+
+  A missing or non-positive AMT, an excluded dose record, MDV/DV conflicts and unknown
+  codes have no in-stage choice. They are fixed with a visible recipe step, with a reason.
+- **Units per record.** The dose unit is read on the dose record and the concentration
+  unit on the observation, so EVENTU is never one unit for every record. Mixed units are
+  still `units_mixed` (Q2). An observation whose time unit is not its dose's blocks.
+- **Time.** Time after dose comes only from the confirmed actual time of both records.
+  A nominal column used as the event time is `time_nominal_as_actual` (Q6), through the
+  prepared column's lineage. A mapped nominal time is copied as written, which is a
+  warning (`event_nominal_basis`).
+- **Nothing silent.** No zero sample is inserted, a same-time dose is never summed
+  without the choice, no unmatched observation or undosed subject is dropped, and no
+  route is filled in. A route is a source column read on dose records; a file with no
+  route column declares one with an explicit `derive constant` step. BLQ and missing
+  stay as Q3 says.
+- **Provenance.** The run's `settings.json` (`run-settings-v1` 1.1) holds a `preparation`
+  block: the events block as saved, its hash, the partition counts, and the hashes of
+  `input/event-records.csv` and `input/prepare.R`, which the run keeps. A changed choice
+  changes the recipe and steps hashes, so it is a new cleaning result and a new run.
+- **One occasion per run** still holds (`occasion_unsupported`). An occasion column
+  groups the dose matching only.
+- **Files without an analyte column.** A single-analyte table declares its analyte with
+  an explicit `derive constant` step; the page offers it as **Declare one analyte**. A
+  header unit stays a hint (Q2), and a missing route or dose is never invented.
+
+```
+ID  TIME   AMT DV    MDV EVID CMT EVENTU   -> partition                    (nonmem_events.csv)
+101 -0.245 0   .     1   0    2   ng/mL       selected (predose: keep), dose line 4
+101 0      100 .     1   1    1   mg          dose, used
+101 0      0   11.11 0   0    4   IU/L        other_endpoint (CMT 4 is "other")
+101 0.505  0   1209  0   0    2   ng/mL       selected: dose 100 mg, time after dose 0.505
+P01 doses at 0 and 24 h, no rule            -> event_multiple_doses (planted)
+P02 0.1 mg + 0.2 mg at 0 h, "sum"           -> one dose "0.3", dose lines "9;10" (planted)
+```
+
 ### What each answer unblocks
 | Issue | Uses |
 |---|---|
@@ -243,6 +345,7 @@ S-301    1    2.4
 | #23 mapping | Q1 analyte/specimen roles, Q2 unit declarations, Q3 LLOQ, Q4 exclusion source |
 | #24 validation | Q7 table and check ids |
 | #25 snapshot and session | Q3 BLQ/LLOQ columns and BLQ presets, Q4 EXCLUDED, units in the manifest |
+| #58 event records | Q9: the events block, partitions, prepared columns and the run's `preparation` |
 
 ## Rejected options
 - **Filter on the label.** Labels change between deliveries and are not unique.
@@ -257,6 +360,15 @@ S-301    1    2.4
   silent changes.
 - **Follow opnca-r's warning levels for duplicates, dose/route variation and
   non-numeric conc.** The session would run on data the user has not reviewed.
+- **Default to the first or last dose interval** (makecoolplots defaults to the last).
+  The interval decides every result, so it is the user's choice.
+- **Sum same-time dose records automatically, insert a zero-concentration row at the dose
+  time, or drop observations before the first dose** (all makecoolplots behaviour). Each
+  is a silent change of the data.
+- **Exclude unmatched observations.** They have no time after dose or route, so opnca-r
+  can't read them even as excluded rows; rejecting them with a reason is the honest form.
+- **Treat EVENTU as one unit column for every record.** On dose records it is an amount
+  unit and on observations a concentration unit.
 
 ## Still to confirm
 - Recheck every rule on the first sponsor dataset.

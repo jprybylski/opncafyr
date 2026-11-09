@@ -30,6 +30,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+from opncafyr.workflows.nca import events as E
 from opncafyr.workflows.nca import mapping as M
 from opncafyr.workflows.nca.recipe import (
     EXCLUDED_COLUMN,
@@ -181,6 +182,10 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "opnca-r will warn in the session.",
     ),
 }
+
+# The event stage's checks (#58, ADR 0005 Q9).
+LEVELS.update(E.LEVELS)
+MESSAGES.update(E.MESSAGES)
 
 CLOCK_RE = re.compile(r"^\s*\d{1,2}:\d{2}(:\d{2})?\s*$")
 BLQ_TEXT_PATTERNS = {"^<": re.compile(r"^\s*<")}
@@ -571,6 +576,24 @@ def _specimen_check(ctx: Context, records: list[dict[str, str]], header: list[st
             )
 
 
+def _event_checks(ctx: Context, events: dict[str, Any], report: dict[str, Any] | None) -> None:
+    ctx.findings.extend(E.findings(report, ctx.selection.analyte_value))
+    endpoint = events["columns"]["endpoint"]
+    if ctx.col("ANALYTE") and ctx.col("ANALYTE") != endpoint:
+        mixed = _minority(ctx, ctx.rows, lambda r: r.data.get(endpoint, ""))
+        if mixed:
+            ctx.add(
+                "analyte_endpoints_mixed",
+                "analyte",
+                mixed[0],
+                subject=None,
+                column=endpoint,
+                values=", ".join(mixed[1]),
+            )
+    if ctx.col("NOMINAL_TIME"):
+        ctx.add("event_nominal_basis", "analyte", [], subject=None)
+
+
 def run_checks(
     header: list[str],
     rows: list[list[str]],
@@ -579,11 +602,18 @@ def run_checks(
     *,
     lineage: dict[str, Lineage] | None = None,
     steps: dict[str, Any] | None = None,
+    events: dict[str, Any] | None = None,
+    events_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Every check for one analyte selection. ``steps`` is the cleaning ``steps.json``."""
+    """Every check for one analyte selection. ``steps`` is the cleaning ``steps.json``.
+
+    For a recipe with an events block (#58), ``header`` and ``rows`` are the prepared
+    observations, ``events`` the block and ``events_report`` its ``events.json``: every
+    unresolved record blocks, whatever the analyte.
+    """
     mapping = mapping or M.empty_mapping()
     ctx = Context(mapping=mapping, selection=selection, rows=[], lineage=lineage or {})
-    for problem in M.problems(mapping):
+    for problem in M.problems(mapping, events):
         ctx.findings.append(
             {
                 "analyte": selection.analyte_value,
@@ -608,6 +638,8 @@ def run_checks(
     _analyte_checks(ctx)
     _duplicates(ctx)
     _profile_checks(ctx)
+    if events:
+        _event_checks(ctx, events, events_report)
     subjects = {ctx.get(r, "SUBJECT_ID") for r in ctx.rows}
     ctx.findings.append(
         {

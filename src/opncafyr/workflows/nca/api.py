@@ -13,7 +13,15 @@ Recipes (#22):
   return a still-valid earlier result.
 - ``GET  /api/nca/recipes/{id}/result?kind=preview|full``: counts, first rows, rejected.
 
-Mapping (#23), on the full cleaned data:
+Event records (#58), for a source with separate dose and observation records:
+- ``GET  /api/nca/recipes/{id}/events-help``: the suggested layout and columns with their
+  reasons, every record-kind and endpoint code with counts and labels, and, once the
+  recipe has run, the partition counts, what is unresolved and a preview of the prepared
+  observations.
+- ``PUT  /api/nca/recipes/{id}/events {events}``: check and save the events block (or
+  ``null`` to remove it). Mapping, checks and runs then read the prepared observations.
+
+Mapping (#23), on the full cleaned data (the prepared observations for event records):
 - ``GET  /api/nca/recipes/{id}/mapping-help``: suggestions and ``needs_choice`` questions
   for every role, each column's distinct values (for flag tables and units), the route
   values with opnca-r's reading of each, and what still blocks the saved mapping.
@@ -72,6 +80,7 @@ from opncafyr.core.manifest import atomic_write_text
 from opncafyr.core.redaction import REDACTOR
 from opncafyr.core.workspace import Workspace, resolve_in_root
 from opncafyr.workflows.nca import checks as checks_mod
+from opncafyr.workflows.nca import events as events_mod
 from opncafyr.workflows.nca import mapping as mappings
 from opncafyr.workflows.nca import recipe as recipes
 from opncafyr.workflows.nca import replay as replay_mod
@@ -80,13 +89,17 @@ from opncafyr.workflows.nca.cleaning import (
     PREVIEW_ROWS,
     CleaningError,
     CleaningService,
+    analysis_name,
+    analysis_table,
     check_output,
     load_result,
     plan,
     read_cleaned,
+    read_events,
 )
 from opncafyr.workflows.nca.format_check import FormatChecks
 from opncafyr.workflows.nca.preset import PresetError
+from opncafyr.workflows.nca.recipe import EVENT_COLUMNS
 from opncafyr.workflows.nca.roles import (
     BY_ID,
     ROLES,
@@ -148,6 +161,10 @@ class SaveRecipe(BaseModel):
 
 class SaveMapping(BaseModel):
     mapping: dict[str, Any]
+
+
+class SaveEvents(BaseModel):
+    events: dict[str, Any] | None
 
 
 class SelectionBody(BaseModel):
@@ -238,17 +255,31 @@ class Context:
         doc = self.load_recipe(recipe_id)
         folder = self.require_cleaned(doc)
         target = self.plan(doc)
-        header, rows = read_cleaned(folder)
+        header, rows = analysis_table(folder, doc)
         steps = load_result(folder, head_rows=0)["summary"]
         lineage = recipes.check(doc, target.header).lineage
         mapping = doc.get("mapping") or {}
+        events = doc.get("events")
         ids = [c for r in ("SUBJECT_ID", "SECONDARY_ID") if (c := mappings.role(mapping, r))]
         if ids:
             # Subject IDs are data: keep them out of every log line from here on.
             idx = [header.index(c) for c in ids if c in header]
             REDACTOR.register_values(row[i] for row in rows for i in idx if i < len(row))
+        if events:
+            # A subject with dose records only is in cleaned.csv, not the prepared rows.
+            all_header, all_rows = read_cleaned(folder)
+            if events["columns"]["subject"] in all_header:
+                i = all_header.index(events["columns"]["subject"])
+                REDACTOR.register_values(r[i] for r in all_rows if i < len(r))
         result = checks_mod.run_checks(
-            header, rows, doc.get("mapping"), selection, lineage=lineage, steps=steps
+            header,
+            rows,
+            doc.get("mapping"),
+            selection,
+            lineage=lineage,
+            steps=steps,
+            events=events,
+            events_report=read_events(folder),
         )
         digest = recipes.recipe_hash(doc)
         for finding in result["findings"]:
@@ -345,6 +376,9 @@ def mount(app: FastAPI) -> Context:
         if doc.get("id") != recipe_id:
             raise error("recipe_invalid", "The recipe's id does not match the URL.")
         with ctx.lock:
+            # The events block changes only through PUT .../events (#58); a steps save
+            # keeps the saved one, so a page holding an older copy can't drop it.
+            doc = recipes.set_events(doc, ctx.load_recipe(recipe_id).get("events"))
             target = ctx.save(doc)
         return {"recipe": doc, **_summary(doc), "columns": target.columns}
 
@@ -383,9 +417,10 @@ def mount(app: FastAPI) -> Context:
     @app.get("/api/nca/recipes/{recipe_id}/mapping-help")
     def mapping_help(recipe_id: str = RECIPE_ID) -> dict[str, Any]:
         doc = ctx.load_recipe(recipe_id)
-        header, rows = read_cleaned(ctx.require_cleaned(doc))
+        header, rows = analysis_table(ctx.require_cleaned(doc), doc)
         columns = [c for c in columns_from_rows(header, rows)]
         mapping = doc.get("mapping") or mappings.empty_mapping()
+        events = doc.get("events")
         by_name = {c.name: c for c in columns}
         route_col = mappings.role(mapping, "ROUTE")
         hints = {}
@@ -394,12 +429,28 @@ def mount(app: FastAPI) -> Context:
             hint = header_hint(column, kind) if column else None
             if hint:
                 hints[name] = hint
+        help_ = suggest(columns)
+        if events:
+            # The prepared columns are the only right answer for these roles; still only
+            # suggested, so the user confirms each one.
+            own = events_mod.mapping_suggestions(events)
+            mine = {s["role"] for s in own}
+            help_["suggestions"] = [
+                s
+                for s in help_["suggestions"]
+                if s["role"] not in mine and s["column"] not in {o["column"] for o in own}
+            ] + own
+            help_["needs_choice"] = [q for q in help_["needs_choice"] if q["role"] not in mine]
         return {
             "roles": [{"id": r.id, "label": r.label, "required": r.required} for r in ROLES],
-            **suggest(columns),
+            **help_,
             "mapping": mapping,
-            "problems": mappings.problems(mapping),
-            "columns": [distinct_values(c) for c in columns if not c.name.startswith("opncafyr_")],
+            "problems": mappings.problems(mapping, events),
+            "columns": [
+                distinct_values(c)
+                for c in columns
+                if not c.name.startswith("opncafyr_") or c.name in EVENT_COLUMNS
+            ],
             "routes": route_values(by_name[route_col].values) if route_col in by_name else [],
             "unit_hints": hints,
         }
@@ -413,9 +464,39 @@ def mount(app: FastAPI) -> Context:
         return {
             "mapping": doc["mapping"],
             "sha256": recipes.recipe_hash(doc),
-            "problems": mappings.problems(doc["mapping"]),
+            "problems": mappings.problems(doc["mapping"], doc.get("events")),
             "labels": {r: BY_ID[r].label for r in BY_ID},
         }
+
+    @app.get("/api/nca/recipes/{recipe_id}/events-help")
+    def events_help(recipe_id: str = RECIPE_ID) -> dict[str, Any]:
+        doc = ctx.load_recipe(recipe_id)
+        folder = ctx.require_cleaned(doc)
+        header, rows = read_cleaned(folder)
+        events = doc.get("events")
+        out: dict[str, Any] = {
+            "events": events,
+            "columns": [c for c in header if not c.startswith("opncafyr_")],
+            "suggestion": events_mod.suggest_layout(header, rows, events),
+            "choices": {choice: list(options) for choice, options in events_mod.CHOICES.values()},
+            "report": None,
+            "findings": [],
+            "preview": None,
+        }
+        report = read_events(folder)
+        if events and report is not None:
+            out["report"] = report
+            out["findings"] = events_mod.findings(report, "")
+            p_header, p_rows = read_cleaned(folder, "prepared.csv")
+            out["preview"] = events_mod.preview(p_header, p_rows, events)
+        return out
+
+    @app.put("/api/nca/recipes/{recipe_id}/events")
+    def save_events(body: SaveEvents, recipe_id: str = RECIPE_ID) -> dict[str, Any]:
+        with ctx.lock:
+            doc = recipes.set_events(ctx.load_recipe(recipe_id), body.events)
+            target = ctx.save(doc)
+        return {"recipe": doc, **_summary(doc), "columns": target.columns}
 
     @app.get("/api/nca/recipes/{recipe_id}/analytes")
     def analytes(recipe_id: str = RECIPE_ID) -> dict[str, Any]:
@@ -424,7 +505,7 @@ def mount(app: FastAPI) -> Context:
         column = mappings.role(mapping, "ANALYTE")
         if not column:
             raise error("needs_choice", "Map the analyte column first.")
-        header, rows = read_cleaned(ctx.require_cleaned(doc))
+        header, rows = analysis_table(ctx.require_cleaned(doc), doc)
         a = header.index(column)
         specimen = mappings.role(mapping, "SPECIMEN")
         s = header.index(specimen) if specimen in header else None
@@ -469,6 +550,7 @@ def mount(app: FastAPI) -> Context:
                 result["cleaned"],
                 mapping,
                 body.selection(),
+                table=analysis_name(result["recipe"]),
             )
         except JobManagerError as exc:
             raise error("jobs_unavailable", str(exc)) from None

@@ -250,6 +250,42 @@ old result is never reused for a changed recipe. The job's review checks the fil
 A preview is the same script on the first 200 rows. Routes: `/api/nca/recipes...`
 (`workflows/nca/api.py`); page: Analysis (`workflows/nca/web/`).
 
+### Event records (#58)
+
+An optional `events` block (recipe `schema_version` 1.1; ADR 0005 Q9) adds a fixed stage
+after the steps for NONMEM-style files with separate dose and observation records. It
+names the subject, time, record-kind, amount, endpoint and route columns, plus optional
+DV, MDV, occasion, dose-unit and time-unit columns. It gives the meaning of every
+record-kind, endpoint and MDV value, and holds the user's choices: dosing interval,
+same-time doses, predose samples, samples at a dose time, and unmatched observations.
+
+The compiler appends the fixed library `r/nca_events_lib.R` and the block as string
+literals to the same `clean.R`, so the script still replays the whole preparation offline.
+Recipes without events compile byte for byte as before.
+
+The stage puts every record in one partition: selected, `predose_set_aside`,
+`outside_interval`, `dose`, `other_endpoint`, `other_record`, `rejected` (only by the
+`reject` choice; appended to `rejected.csv` as step n+1) or `unresolved` (with a check
+id). It writes three files:
+
+- `prepared.csv`: the selected PK observations, raw columns unchanged, plus the
+  reserved `opncafyr_dose`, `_dose_unit`, `_route`, `_dose_time`, `_time_after_dose`,
+  `_dose_number` and `_dose_lines` columns;
+- `records.csv`: line, partition, category and dose lines; no values;
+- `events.json`: the counts and the unresolved groups.
+
+`cleaned.csv` stays every row after the steps, which the event page reads for the code
+counts. The job's review also checks that the partitions add up to the rows after the
+steps, that `records.csv` lists each line once, and that `prepared.csv` and
+`rejected.csv` agree with the counts. Mapping, checks, the analyte list, opnca-r's format
+check and the snapshot read `prepared.csv` for an event recipe (`cleaning.analysis_table`).
+
+`workflows/nca/events.py` suggests the layout, columns and EVID meanings with reasons; it
+never applies them. It also turns `events.json` into blocking findings, global to every
+analyte, each naming the choice or recipe fix that settles it. Routes:
+`GET/PUT /api/nca/recipes/{id}/events-help` and `.../events`. A steps save keeps the
+saved block.
+
 ## Column mapping (#23)
 
 The recipe's `mapping` block names the column for each role (`SUBJECT_ID`, `ANALYTE`,
@@ -268,7 +304,10 @@ Nothing is saved until the user picks it. `units.py` normalises spelling only (A
 Q2); a unit in a header is a hint to confirm. `routes.py` reads routes exactly as opnca-r
 does and lists any other value for an explicit recode. `mapping.problems()` blocks on an
 unmapped required role, a missing or unknown unit, a flag column without a value table
-and a column used for two roles.
+and a column used for two roles. With an events block it also blocks unless actual time,
+dose, route and subject use the prepared columns and the event subject
+(`event_mapping_mismatch`), and while TAU or infusion duration is mapped
+(`event_role_unsupported`). The prepared columns are suggested with that reason.
 
 ## Pre-analysis checks (#24)
 
@@ -287,7 +326,11 @@ opnca-r's `check_data_format()` also runs on the selection as an R job
 `POST /api/nca/runs` answer 409 `checks_blocking` with the findings; every warning needs
 its own acknowledgement (a key over the check, analyte, subject, lines and recipe hash),
 or the answer is 409 `warnings_unacknowledged`. Subject IDs read by the checks are
-registered with the log redactor.
+registered with the log redactor (for event records also those of `cleaned.csv`, since a
+subject with dose records only is not in the prepared rows). For an event recipe, every
+unresolved record in `events.json` blocks every analyte, an analyte column that keeps two
+endpoint codes blocks (`analyte_endpoints_mixed`), and a mapped nominal time is a warning
+(`event_nominal_basis`).
 
 ## Analyte snapshot (#25)
 
@@ -314,6 +357,13 @@ preset's labels in its page and refuses a request with others (opnca-r#56). It u
 for every result, table, axis, `analysis.R` and `effective_settings.units`. Labels are
 metadata; nothing is converted. The manifest and settings record them next to the
 declared `units`.
+
+For an event recipe the run also keeps `input/event-records.csv` (the cleaning result's
+`records.csv`) and `input/prepare.R` (its `clean.R`). `settings.json` and `manifest.json`
+are then `schema_version` 1.1: settings gain a `preparation` block (the events block,
+its hash, the partition counts and both files' hashes) and the manifest's lineage gains
+`events_sha256`. Row accounting adds `rows_rejected_by_events` and the `events_*`
+partitions. Other runs are unchanged.
 
 The input files and `settings.json` are read-only. Row accounting runs from the source
 through the recipe, the analyte and specimen filters to the snapshot; other analytes and

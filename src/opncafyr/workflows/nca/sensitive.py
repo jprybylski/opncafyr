@@ -17,7 +17,8 @@ from opncafyr.workflows.nca import recipe as recipes
 from opncafyr.workflows.nca.cleaning import CLEANED_DIR
 
 ID_ROLES = ("SUBJECT_ID", "SECONDARY_ID")
-CSV_FILES = ("cleaned.csv", "rejected.csv")
+# prepared.csv: the event stage's observations (#58). records.csv holds line numbers only.
+CSV_FILES = ("cleaned.csv", "rejected.csv", "prepared.csv")
 
 
 def _column_values(path: Path, columns: list[str]) -> set[str]:

@@ -102,7 +102,11 @@
   },
   "properties": {
     "schema_version": {
-      "const": "1.0"
+      "enum": [
+        "1.0",
+        "1.1"
+      ],
+      "description": "1.1 exactly for a run prepared from event records (#58): lineage then carries events_sha256."
     },
     "run_id": {
       "type": "string",
@@ -180,6 +184,10 @@
             "string",
             "null"
           ]
+        },
+        "events_sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "SHA-256 of the recipe's events block (#58)."
         }
       }
     },
@@ -679,6 +687,38 @@
         "required": [
           "failure"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "1.1"
+          }
+        },
+        "required": [
+          "schema_version"
+        ]
+      },
+      "then": {
+        "properties": {
+          "lineage": {
+            "required": [
+              "events_sha256"
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "lineage": {
+            "not": {
+              "required": [
+                "events_sha256"
+              ]
+            }
+          }
+        }
       }
     }
   ]

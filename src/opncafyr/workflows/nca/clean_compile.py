@@ -21,15 +21,15 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from opncafyr.workflows.nca.recipe import steps_hash
+from opncafyr.workflows.nca.recipe import EVENT_COLUMN_ROLES, events_hash, steps_hash
 
 ENV_INPUT = "CLEAN_INPUT"
 ENV_OUTPUT = "CLEAN_OUTPUT"
 ENV_SAMPLE = "CLEAN_SAMPLE_ROWS"
 
 
-def library_source() -> str:
-    return resources.files("opncafyr.r").joinpath("nca_clean_lib.R").read_text("utf-8")
+def library_source(name: str = "nca_clean_lib.R") -> str:
+    return resources.files("opncafyr.r").joinpath(name).read_text("utf-8")
 
 
 def r_string(text: str) -> str:
@@ -150,6 +150,36 @@ RESEARCH_NOTICE = (
 )
 
 
+def _table(table: dict[str, Any], values: str, logical: bool = False) -> str:
+    keys = list(table)
+    mapped = (
+        r_logicals([table[k] for k in keys]) if logical else r_strings([table[k] for k in keys])
+    )
+    return f"list(values = {r_strings(keys)}, {values} = {mapped})"
+
+
+def events_args(events: dict[str, Any]) -> str:
+    """The events block as an R ``list(...)`` of literals only (#58)."""
+    cols = events["columns"]
+    named = ", ".join(
+        f"{part} = {r_string(cols[part])}" for part in EVENT_COLUMN_ROLES if cols.get(part)
+    )
+    parts = [
+        f"  columns = list({named})",
+        f"  kinds = {_table(events['record_kinds'], 'kinds')}",
+        f"  endpoints = {_table(events['endpoints'], 'kinds')}",
+    ]
+    if events.get("mdv"):
+        parts.append(f"  mdv = {_table(events['mdv'], 'flags', logical=True)}")
+    choices = []
+    for key, value in (events.get("choices") or {}).items():
+        choices.append(
+            f"{key} = {value}L" if key == "dose_number" else f"{key} = {r_string(value)}"
+        )
+    parts.append(f"  choices = list({', '.join(choices)})")
+    return "list(\n" + ",\n".join(parts) + "\n)"
+
+
 def compile_recipe(doc: dict[str, Any], *, source_rel: str, delimiter: str) -> str:
     """The full ``clean.R`` text for ``doc`` reading ``source_rel`` (workspace-relative)."""
     lines = [
@@ -182,14 +212,30 @@ def compile_recipe(doc: dict[str, Any], *, source_rel: str, delimiter: str) -> s
             f"       args = {_args(step)})"
         )
     lines.append(",\n".join(calls))
+    events = doc.get("events")
     lines += [
         ")",
         "",
-        f"oc_run(input, output, sep = {r_string(delimiter)}, sample_rows = sample_rows,",
+        f"{'df <- ' if events else ''}oc_run(input, output, sep = {r_string(delimiter)}, "
+        "sample_rows = sample_rows,",
         f"       recipe_id = {r_string(doc['id'])}, steps_sha256 = {r_string(steps_hash(doc))},",
         "       steps = steps)",
         "",
     ]
+    if events:
+        lines += [
+            "# --- Event records (#58) ---------------------------------------------------------",
+            "# prepared.csv: the selected PK observations, with their dose; records.csv: the",
+            "# partition of every source line; events.json: counts and what is unresolved.",
+            "",
+            library_source("nca_events_lib.R").rstrip("\n"),
+            "",
+            f"events <- {events_args(events)}",
+            "",
+            "oc_prepare_events(df, output, events, n_steps = length(steps),",
+            f"                  events_sha256 = {r_string(events_hash(doc) or '')})",
+            "",
+        ]
     return "\n".join(lines)
 
 

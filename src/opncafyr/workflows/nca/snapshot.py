@@ -13,6 +13,12 @@
 - ``settings.json`` (``run-settings-v1``) and ``manifest.json`` (``run-manifest-v1``,
   state ``preparing``).
 
+For a recipe with event records (#58), also ``input/event-records.csv`` (the partition of
+every source record, from the cleaning result's ``records.csv``; no values) and
+``input/prepare.R`` (the generated script that made the input); ``settings.json`` gets a
+``preparation`` block naming the events block, its hash, the accounting and both files,
+and both documents are written as ``schema_version`` 1.1. Other runs are unchanged.
+
 Everything is written in the run's staging folder (``core.runs.stage_run``), the input
 files are made read-only, and the folder is renamed into place in one step
 (``core.runs.publish_run``), so a half-written run never appears under its id. Nothing
@@ -24,7 +30,9 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import json
 import re
+import shutil
 import stat
 from pathlib import Path
 from typing import Any
@@ -46,7 +54,7 @@ from opncafyr.workflows.nca.checks import (
     select,
 )
 from opncafyr.workflows.nca.preset import build_preset
-from opncafyr.workflows.nca.recipe import NUMBER_RE, steps_hash
+from opncafyr.workflows.nca.recipe import NUMBER_RE, events_hash, steps_hash
 from opncafyr.workflows.nca.units import UnitLabelError, analysis_labels
 
 INPUT = "input/analysis.csv"
@@ -54,6 +62,8 @@ FINGERPRINT = "input/source-fingerprint.json"
 PRESET = "input/opnca-mapping.json"
 SETTINGS = "settings.json"
 MANIFEST = "manifest.json"
+EVENT_RECORDS = "input/event-records.csv"
+PREPARE_SCRIPT = "input/prepare.R"
 SNAPSHOT_COLUMNS = {
     "CONC": "NCA_CONC",
     "BLQ": "NCA_BLQ",
@@ -179,6 +189,37 @@ def to_csv(header: list[str], rows: list[list[str]]) -> str:
     return buf.getvalue()
 
 
+def _sha_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _preparation(recipe: dict[str, Any], cleaned: Path, staging: Path) -> dict[str, Any]:
+    """Copy the event stage's records and script into the run; describe them (#58)."""
+    report = json.loads((cleaned / "events.json").read_text("utf-8"))
+    digest = events_hash(recipe)
+    if report.get("events_sha256") != digest:
+        raise SnapshotError("input_changed", "The event result is not for this recipe.")
+    if report["partitions"]["unresolved"]:
+        raise SnapshotError(
+            "checks_blocking", "Some event records are unresolved; settle them first."
+        )
+    shutil.copyfile(cleaned / "records.csv", staging / EVENT_RECORDS)
+    shutil.copyfile(cleaned / "clean.R", staging / PREPARE_SCRIPT)
+    return {
+        "kind": "event_records",
+        "events_sha256": digest,
+        "rules": recipe["events"],
+        "accounting": {
+            "rows_in": report["rows_in"],
+            **report["partitions"],
+            "doses_used": report["doses_used"],
+            "doses_unused": report["doses_unused"],
+        },
+        "records": {"path": EVENT_RECORDS, "sha256": _sha_file(staging / EVENT_RECORDS)},
+        "script": {"path": PREPARE_SCRIPT, "sha256": _sha_file(staging / PREPARE_SCRIPT)},
+    }
+
+
 def create_run(
     root: Path,
     workspace_doc: dict[str, Any],
@@ -245,6 +286,9 @@ def create_run(
     )
     preset = build_preset(mapping, SNAPSHOT_COLUMNS, blq_choice, out_header, unit_labels)
     atomic_write_json(staging / PRESET, preset)
+    preparation = (
+        _preparation(recipe, checked["cleaned"], staging) if recipe.get("events") else None
+    )
 
     acks = []
     wanted = set(acknowledged)
@@ -268,6 +312,20 @@ def create_run(
         "rows_snapshot": len(out_rows),
         "rows_excluded": sum(1 for r in out_rows if r[-2] == "TRUE"),
     }
+    if preparation:
+        counts = preparation["accounting"]
+        accounting["rows_rejected_by_events"] = counts["rejected"]
+        for name in (
+            "rows_in",
+            "selected",
+            "predose_set_aside",
+            "outside_interval",
+            "dose",
+            "other_endpoint",
+            "other_record",
+            "unresolved",
+        ):
+            accounting[f"events_{name}"] = counts[name]
     analyte = {
         "column": M.role(mapping, "ANALYTE"),
         "value": selection.analyte_value,
@@ -279,8 +337,9 @@ def create_run(
         if specimen_col and selection.specimen_value is not None
         else None
     )
+    version = "1.1" if preparation else "1.0"
     settings = {
-        "schema_version": "1.0",
+        "schema_version": version,
         "run_id": run_id,
         "created_at": created,
         "parent_run_id": parent_run_id,
@@ -304,10 +363,12 @@ def create_run(
         },
         "row_accounting": accounting,
     }
+    if preparation:
+        settings["preparation"] = preparation
     atomic_write_json(staging / SETTINGS, settings, "run-settings-v1")
     settings_sha = hashlib.sha256((staging / SETTINGS).read_bytes()).hexdigest()
     manifest = {
-        "schema_version": "1.0",
+        "schema_version": version,
         "run_id": run_id,
         "created_at": created,
         "state": "preparing",
@@ -317,6 +378,7 @@ def create_run(
             "recipe_sha256": checked["recipe_sha256"],
             "steps_sha256": steps_hash(recipe),
             "parent_run_id": parent_run_id,
+            **({"events_sha256": preparation["events_sha256"]} if preparation else {}),
         },
         "analysis_input": {"path": INPUT, "sha256": snapshot_sha, "rows": len(out_rows)},
         "analyte": analyte,
@@ -333,5 +395,8 @@ def create_run(
     atomic_write_json(staging / MANIFEST, manifest, "run-manifest-v1")
     for name in (INPUT, FINGERPRINT, PRESET, SETTINGS):
         read_only(staging / name)
+    if preparation:
+        for name in (EVENT_RECORDS, PREPARE_SCRIPT):
+            read_only(staging / name)
     publish_run(staging, run_id)
     return manifest
