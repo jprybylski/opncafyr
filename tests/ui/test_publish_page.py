@@ -103,3 +103,32 @@ def test_deck_card_without_tools(published_page, home):
     assert card.get_by_role("button", name="Open editor").is_disabled()
     assert card.get_by_role("checkbox", name="with slide previews").is_disabled()
     assert page.errors == []
+
+
+def test_a_failed_publications_list_does_not_outlive_a_later_success(published_page):
+    # The list is requested when the page opens, before a study folder may be open. A failed
+    # request showed an error that no later success cleared (#62).
+    page, _ = published_page
+    publications = page.locator("#nca-publications")
+    calls = {"n": 0}
+
+    def fail_once(route):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            route.fulfill(
+                status=409,
+                content_type="application/json",
+                body='{"detail": {"code": "other", "message": "Not ready yet."}}',
+            )
+        else:
+            route.continue_()
+
+    page.route("**/api/nca/publications", fail_once)
+    page.goto(page.url.split("#")[0] + "#/")
+    page.goto(page.url.split("#")[0] + "#/publish")
+    publications.get_by_text("Not ready yet.").wait_for()
+    page.goto(page.url.split("#")[0] + "#/")
+    page.goto(page.url.split("#")[0] + "#/publish")
+    publications.get_by_role("table").wait_for()  # the home study already lists one
+    assert publications.get_by_text("Not ready yet.").count() == 0
+    assert publications.get_by_text("Error:").count() == 0

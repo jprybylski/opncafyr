@@ -969,6 +969,11 @@ All notable changes to this project are documented here. The format follows
   `upstream-blocked` removed from #27.
 
 ### Fixed
+- **Cloud `-full` walkthrough failures** (#62).
+  - The Publications list and the file picker on the Publish page no longer keep an
+    error after a later request succeeds. The first request can run before a study folder
+    is open; that case now says "Open a study folder…" instead of showing an error, and a
+    slow earlier request can't overwrite a newer one.
 - Two offline bundles built from the same pins could differ: the SBOM recorded the
   build time to the second. It now records `SOURCE_DATE_EPOCH`, or the archive's fixed
   entry time (#36).

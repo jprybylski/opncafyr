@@ -73,13 +73,35 @@ export function initCurator(stack, state) {
     }
   }
 
+  // A refresh error is shown until the next refresh succeeds (#62). Other messages here,
+  // such as "Recorded pub-…", are left alone. A newer refresh supersedes an older one, so a
+  // slow early failure can't overwrite a later success.
+  let seq = 0;
+  let refreshFailed = false;
   async function refresh() {
+    const mine = ++seq;
     let data;
     try {
       data = await getJSON("api/nca/publish/runs");
     } catch (e) {
+      if (mine !== seq) return;
+      boxes = [];
+      checkedKey = null;
+      publish.disabled = true;
+      plan.replaceChildren();
+      picker.replaceChildren();
+      if (e.code === "no_workspace") {
+        refreshFailed = false;
+        setStatus(sec.status, "");
+        picker.append(el("p", "Open a study folder to choose files to publish.", "muted"));
+        return;
+      }
+      refreshFailed = true;
       return setStatus(sec.status, e.message, true);
     }
+    if (mine !== seq) return;
+    if (refreshFailed) setStatus(sec.status, "");
+    refreshFailed = false;
     boxes = [];
     checkedKey = null;
     publish.disabled = true;
@@ -129,13 +151,27 @@ export function initPublications(stack, state) {
   const sec = section(stack, "nca-publications", "2. Publications",
     "Each publication is a fixed set of files from exact runs. Reports and decks are built from one publication.");
 
+  // The first refresh can run before a study folder is open. Its error must not outlive a
+  // later successful refresh, and a slow earlier request must not overwrite a later one (#62).
+  let seq = 0;
   async function refresh() {
+    const mine = ++seq;
     let data;
     try {
       data = await getJSON("api/nca/publications");
     } catch (e) {
+      if (mine !== seq) return;
+      state.publications = [];
+      sec.body.replaceChildren();
+      if (e.code === "no_workspace") {
+        setStatus(sec.status, "");
+        sec.body.append(el("p", "Open a study folder to see its publications.", "muted"));
+        return;
+      }
       return setStatus(sec.status, e.message, true);
     }
+    if (mine !== seq) return;
+    setStatus(sec.status, "");
     state.publications = data.publications.filter((p) => p.state === "recorded");
     sec.body.replaceChildren();
     if (!data.publications.length) {

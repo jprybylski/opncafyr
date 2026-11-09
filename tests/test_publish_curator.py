@@ -42,6 +42,15 @@ def post(api, items, **kw):
     )
 
 
+def test_the_publication_lists_say_no_workspace_until_one_is_open(client):
+    # The Publish page asks for both lists as soon as it opens, before a study folder may be
+    # open. The page shows a plain prompt for this code and clears it later (#62).
+    for url in ("/api/nca/publications", "/api/nca/publish/runs"):
+        r = client.get(url)
+        assert r.status_code == 409
+        assert r.json()["detail"]["code"] == "no_workspace"
+
+
 def test_catalog_preselects_what_adr_0007_names(study):
     _, folder = completed_run(study)
     entries = {e.artifact: e for e in catalog(R.read_manifest(folder))}
