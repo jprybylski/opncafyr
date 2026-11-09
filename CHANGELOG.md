@@ -7,6 +7,39 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Native Linux install: Ubuntu 24.04, x86_64 and aarch64, no root, apt, compiler or
+  container** (#65, ADR 0003 amended). It is built and tested but **not released**: it waits
+  for opnca-r's Linux binary (opnca-r#61), and until then the installer refuses Linux
+  (`[platforms].pending` in `runtime/pins.toml`).
+  - **Installer.** `install.sh` runs on Linux and reads a ZIP bundle with `unzip`, `bsdtar` or
+    `python3`. Preflight checks Ubuntu 24.04, glibc 2.39 or later and not root, then the 36
+    shared libraries the stack links (`installer/linux_libs.py`), and names the missing ones
+    with the Ubuntu packages to ask an administrator for; it never runs apt. R is Posit's
+    `.deb`, unpacked in Python (links refused) and relocated, with `Rscript` replaced by a
+    wrapper that names `RHOME`. The library is Posit's noble binaries, pinned per
+    architecture with the User-Agent that selects them, and installed one at a time (no
+    `make`). `<app root>/bin/opncafyr` starts it. LibreOffice and `repair
+    --build-from-source` are refused on Linux. Update, repair, rollback and uninstall are the
+    existing code paths.
+  - **Launch.** `opncafyr launch --remote` is the native counterpart of `--container`: the
+    listener stays on the VM's `127.0.0.1`, reached through an SSH forward or an IDE proxy,
+    with a fixed `--workspace` (no folder picker on a headless VM). Every Host, Origin,
+    session-secret and `Sec-Fetch-Site` check is the container's, and the tests run for both.
+  - **Pins.** `linux-x86_64` and `linux-aarch64` in `runtime/pins.toml` (Linux runtimes are
+    pinned once, under `[ci.<platform>]`), 126 R package binaries per architecture in
+    `binaries.toml` (the generator fails when a download is not a binary built for its
+    architecture), manylinux wheels, and dugite-native Git. Existing platforms' pins are
+    unchanged. `--allow-pending` (development) installs everything but opnca-r.
+  - **Checked** on a developer Mac in Ubuntu 24.04 containers, as an unprivileged user with
+    no network, no compiler and no `make`. On arm64 the whole install ran end to end: a
+    computer missing one library refused by name; install; a no-op second run; repair; a
+    native launch reached through its forward (a foreign Host, a foreign Origin and a missing
+    session secret refused); a tampered and a missing asset refused with the old install still
+    running; an update killed part-way, then completed; uninstall leaving a workspace; and no
+    connection attempt in seven strace logs. The DOCX and PPTX smoke builds passed. On x86_64
+    (emulated) the relocated R and all 126 binaries load. `installer-linux.yml` runs the same
+    legs natively on both architectures. Not yet run: a real firewalled VM, and any
+    calculation, replay or run-based publishing (they need opnca-r).
 - **Edit the report's settings and footnotes in the app** (#64). The project-file editor
   now lists two YAML files after the report, as bounded exceptions to "report sources
   only": **Report settings** (`report/config.yaml`) and **Footnotes**

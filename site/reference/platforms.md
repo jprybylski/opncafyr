@@ -17,7 +17,7 @@ Which computers opncafyr runs on, and the exact versions it installs.
 |---|---|---|
 | macOS | macOS 15 or later, on Apple silicon (arm64) or Intel (x86_64) | macOS 14 and earlier |
 | Windows | Windows 11, 64-bit Intel or AMD (x86_64) | Windows 10; Windows on Arm, including running under emulation |
-| Linux | In a container on a cloud computer (x86_64 or arm64) with Docker or Podman: [Run on a cloud computer]({{ '/get-started/install-cloud-container/' | relative_url }}) | A desktop install |
+| Linux | In a container on a cloud computer (x86_64 or arm64) with Docker or Podman: [Run on a cloud computer]({{ '/get-started/install-cloud-container/' | relative_url }}). A native install on Ubuntu 24.04 (x86_64 or aarch64, glibc 2.39 or later), from an offline bundle, as an ordinary user, is not available yet: [Install on Linux]({{ '/get-started/install-linux/' | relative_url }}) | Other distributions and versions; a desktop install; slide previews and `repair --build-from-source` on a native Linux install |
 
 You also need:
 

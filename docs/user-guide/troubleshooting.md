@@ -2,6 +2,10 @@
 
 Most problems show up as a message on the page you are using, or as a failed job. Start there: the app writes its messages for you to read, and they usually say what to do.
 
+## The Linux installer lists missing libraries
+
+On Ubuntu 24.04 the installer checks, before it changes anything, that the system libraries opncafyr needs are installed. It cannot add them without administrator rights. If some are missing it prints their names and the Ubuntu packages to ask for. Send that list to your administrator and run the installer again. The same message appears if the computer is not Ubuntu 24.04 or its C library is older than the installer needs; in that case use the container (see [Running on a cloud computer](cloud-container.md)).
+
 ## A tool shows Unavailable
 
 On **Home**, each tool in the **Tools** card shows its health. **Unavailable** means the app could not start or find that tool. The tile shows a short reason underneath.

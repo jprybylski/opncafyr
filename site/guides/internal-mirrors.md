@@ -77,7 +77,7 @@ Options:
 
 | Option | Meaning |
 |---|---|
-| `--platform` | `windows-x86_64`, `macos-arm64` (Apple silicon) or `macos-x86_64` (Intel). Default: this machine's platform. |
+| `--platform` | `windows-x86_64`, `macos-arm64` (Apple silicon), `macos-x86_64` (Intel), `linux-x86_64` or `linux-aarch64` (Ubuntu 24.04; not available yet). Default: this machine's platform. |
 | `--out DIR` | The folder to write the bundle in (required). |
 | `--archive` | Also write `opncafyr-bundle-<version>-<platform>.zip`. |
 | `--assets DIR` | A folder of pinned files to use before downloading, such as the opnca-r files. Can be repeated. |

@@ -27,6 +27,12 @@ If the installer stops with an error, it has changed nothing: your previous inst
 > **Your computer can't reach the internet at all** — install from an offline bundle instead: see [Install offline from a bundle]({{ '/guides/offline-install/' | relative_url }}).
 
 {: .fix }
+> **The Linux installer says libraries are missing** — it found fewer system libraries than opncafyr needs, and it can't add them without administrator rights. It printed the library names and the Ubuntu packages to ask for. Send that list to your administrator, then run the installer again. It changed nothing. See [Install on Linux]({{ '/get-started/install-linux/' | relative_url }}).
+
+{: .fix }
+> **The Linux installer says Linux isn't released yet, or this isn't Ubuntu 24.04** — the native Linux install isn't available yet, and it supports Ubuntu 24.04 only. On other Linux computers with Docker or Podman, use the [container]({{ '/get-started/install-cloud-container/' | relative_url }}).
+
+{: .fix }
 > **The Windows installer window closed before you could read it** — run `install.bat` from Command Prompt so the messages stay on screen. See [Install on Windows]({{ '/get-started/install-windows/' | relative_url }}).
 
 ### If the install failed

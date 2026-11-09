@@ -34,6 +34,9 @@ Pre-release. What works today:
 
 - A per-user installer for macOS and Windows that needs no admin rights. It installs
   online or from a verified offline bundle, and it can repair, update and uninstall.
+  A native Linux install (Ubuntu 24.04, x86_64 and aarch64; no root, apt, compiler or
+  container) from an offline bundle is built and tested but waits for opnca-r's Linux
+  binary (opnca-r#61); on Linux the container works today.
 - Study folders; CSV import with cleaning steps that keep before/after counts and a
   rejected-row log; column and unit mapping; and data checks for one analyte.
 - One-analyte runs in opnca-r, saved as hashed bundles that are replayed and compared

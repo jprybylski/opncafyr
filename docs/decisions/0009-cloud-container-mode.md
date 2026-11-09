@@ -103,3 +103,12 @@ repository is public.
 - On arm64, the slim image measured 788 MiB gzip and full 1076 MiB, both under GitHub's
   2 GiB limit per release file. That is input for #43, which still decides whether
   archives may be attached to releases.
+
+## Amendment (2026-11-09, #65): a native launcher on the VM
+`opncafyr launch --remote` is the native Linux counterpart of `--container` (ADR 0003
+amendment). It takes the same explicit options (`--access`, `--public-url`, `--local-port`,
+`--allowed-host`, `--allowed-origin`) and, like them, never from the environment. It differs in
+two ways only: the listener binds the VM's `127.0.0.1` (nothing publishes a port, so the
+container interface isn't needed), and it requires `--workspace` and a fixed `--port` (a headless
+VM has no folder picker). The two modes are exclusive. Every check in point 3 is unchanged and
+the security tests run against both. One user per VM still holds.

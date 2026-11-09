@@ -8,7 +8,7 @@ permalink: /get-started/install-cloud-container/
 
 # Run on a cloud computer
 
-If your study data lives on a Linux cloud computer where you can run Docker or Podman, run opncafyr there in a container. Your browser shows the pages; the data and the tools stay on the cloud computer.
+If your study data lives on a Linux cloud computer where you can run Docker or Podman, run opncafyr there in a container. (Where you can't, a [native Linux install]({{ '/get-started/install-linux/' | relative_url }}) is planned.) Your browser shows the pages; the data and the tools stay on the cloud computer.
 {: .fs-5 .fw-300 }
 
 {: .research }

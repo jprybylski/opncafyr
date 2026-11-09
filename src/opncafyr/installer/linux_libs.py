@@ -6,7 +6,7 @@ what to ask an administrator for. Nothing is bundled and nothing is installed he
 
 The list is every library the pinned R, its 126 packages and the Python wheels link directly
 (``DT_NEEDED``), found by reading their ELF headers on Ubuntu 24.04 for both architectures:
-the same 40 sonames on x86_64 and aarch64. Libraries only R's X11 and Tcl/Tk modules need
+the same 36 on x86_64 and aarch64. Libraries only R's X11 and Tcl/Tk modules need
 (libX11, libXt, libtcl8.6, libtk8.6) are left out: opncafyr never loads those modules.
 ``glibc`` itself is checked by ``platforms.check_linux``.
 
