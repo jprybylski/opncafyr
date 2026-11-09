@@ -100,6 +100,10 @@ This repository is public, and the image contains private opnca-r. So:
 
 ### One-time setup: create both packages as private
 
+Done on 2026-11-08: both packages exist and are private (placeholder tag `bootstrap`).
+Granting the repository Actions access (step 3 below) has no API and is done on GitHub.
+
+
 CI refuses to push until `opncafyr` and `opncafyr-cache` exist and are private, so a
 first push can never create a public package. Create both once with an **empty** image,
 so nothing private is exposed even if a package came out public by mistake:

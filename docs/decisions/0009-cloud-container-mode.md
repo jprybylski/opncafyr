@@ -1,8 +1,8 @@
 # 0009. Cloud container mode and remote access
 
 - Status: accepted (owner, 2026-11-08): the scope (all of #42), a private GHCR image
-  built on native amd64 and arm64, slim and full variants, Docker and Podman, and the
-  storage policy. **Proposed, for the owner:** one user per VM (point 4).
+  built on native amd64 and arm64, slim and full variants, Docker and Podman, the
+  storage policy, and one user per VM as the intended design.
 - Date: 2026-11-08
 - Issue: #42 (release archives: #43, still pending its licence review)
 - Upstream: [deckifyr#97](../upstream.md) (project-relative paths in `deck-manifest.json`)
