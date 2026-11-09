@@ -997,6 +997,11 @@ All notable changes to this project are documented here. The format follows
       and never rewrites it.
     - Wide tables squeezed to 6 inches, and landscape pages, wait for quartifyr#88 and
       stay open in #62.
+  - **Deck: formatted tables.** A formatted table (`.rds`) is a `reportifyr` element (a
+    picture), as deckifyr requires; as a `table` element it failed with a content error.
+    deckifyr's `E_INTERNAL` now reads as an unexpected error in the deck tool, with the
+    exception's name, instead of "deckifyr reported an error". The deckifyr 0.3.7 pin (empty
+    CSV cells, deckifyr#96) follows its release.
 - Two offline bundles built from the same pins could differ: the SBOM recorded the
   build time to the second. It now records `SOURCE_DATE_EPOCH`, or the archive's fixed
   entry time (#36).
