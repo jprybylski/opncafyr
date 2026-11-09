@@ -1,6 +1,7 @@
 """Cloud container mode, end to end against a real container (#42).
 
     uv run python scripts/container/mode_check.py --image <ref> [--engine docker|podman]
+        [--keep DIR]
 
 Starts the image with ``container/opncafyr-container`` on a fresh study folder and drives
 it the way a browser would, through each access route:
@@ -25,6 +26,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import json
 import os
 import re
 import shutil
@@ -233,7 +235,9 @@ def wait_replay(client: httpx.Client, run_id: str, timeout: float = 900) -> str:
     raise CheckFailed(f"{run_id}: replay did not finish")
 
 
-def drive_flow(client: httpx.Client, origin: str, study: Path, deck: bool) -> None:
+def drive_flow(
+    client: httpx.Client, origin: str, study: Path, deck: bool, image_id: str = ""
+) -> None:
     """Open the study, make one run, save it in opnca-r through /apps/opnca/, and (with
     ``deck``) complete it, publish it and open the deck editor under /apps/deckifyr/."""
     N.same_origin = lambda _c: {"origin": origin, "sec-fetch-site": "same-origin"}
@@ -270,6 +274,9 @@ def drive_flow(client: httpx.Client, origin: str, study: Path, deck: bool) -> No
         return
     check(wait_replay(client, run_id) == "passed", "the run replays")
     check(client.post(f"api/nca/runs/{run_id}/complete").status_code == 200, "run completed")
+    manifest = json.loads((study / ".opncafyr" / "runs" / run_id / "manifest.json").read_text())
+    recorded = manifest["tools"].get("container_image")
+    check(recorded == image_id, f"the run records the image ID ({recorded})")
     r = client.post("api/nca/publications", json={"items": P.picks(run_id, [FIGURE])})
     check(r.status_code == 201, "publication made")
     pub = r.json()["publication"]["publication_id"]
@@ -310,7 +317,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--image", required=True)
     parser.add_argument("--engine", default="docker", choices=("docker", "podman"))
+    parser.add_argument(
+        "--keep", type=Path, help="copy the first study (made through the forward) here"
+    )
     args = parser.parse_args(argv)
+    image_id = subprocess.run(  # noqa: S603 - the chosen engine, argv only
+        [args.engine, "image", "inspect", "--format", "{{.Id}}", args.image],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    image_id = image_id if image_id.startswith("sha256:") else f"sha256:{image_id}"
     work = Path(tempfile.mkdtemp(prefix="opncafyr-mode-"))
     STATE_HOME = str(work / "state")
     studies = [N.make_study(work / "a"), N.make_study(work / "b")]
@@ -327,7 +344,7 @@ def main(argv: list[str] | None = None) -> int:
             client = signed_in(link_from(out), origin + "/")
             check(client.get("api/tools").status_code == 200, "API through the forward")
             security_holds(client, origin, port)
-            drive_flow(client, origin, studies[0], deck=True)
+            drive_flow(client, origin, studies[0], deck=True, image_id=image_id)
             client.close()  # a dropped tunnel
         again = wrapper("start", str(studies[0]), *image)
         check("Already running" in again and "/open?token=" in again, "a second start reattaches")
@@ -336,6 +353,8 @@ def main(argv: list[str] | None = None) -> int:
             check(client.get("api/nca/runs").status_code == 200, "reconnecting after a drop works")
         not_reachable_externally(port)
         wrapper("forget", str(studies[0]), "--engine", args.engine)
+        if args.keep:
+            shutil.copytree(studies[0], args.keep / studies[0].name, symlinks=True)
 
         print("== prefix proxy (strips /proxy/<port>/, rewrites Host)", flush=True)
         prefix = f"/proxy/{port}/"
@@ -347,7 +366,7 @@ def main(argv: list[str] | None = None) -> int:
             client = signed_in(link_from(out), origin + prefix)
             check(client.get("api/tools").status_code == 200, "API through the prefix proxy")
             security_holds(client, origin, port)
-            drive_flow(client, origin, studies[1], deck=True)
+            drive_flow(client, origin, studies[1], deck=True, image_id=image_id)
         wrapper("forget", str(studies[1]), "--engine", args.engine)
     except (CheckFailed, AssertionError, KeyError, httpx.HTTPError) as exc:
         print(f"FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)

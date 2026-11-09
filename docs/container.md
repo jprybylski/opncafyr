@@ -199,3 +199,9 @@ Supported storage for the study folder:
 | opnca-r | prebuilt binary | built from the vendored source, in the image |
 | Slide previews | optional LibreOffice download | the `full` image |
 | Runs replay in the other | yes | yes |
+
+Checked 2026-11-09: a run made through `opncafyr-container` (the arm64 `edge` image,
+`mode_check.py --keep`) verified with `opncafyr runs verify` on a native Windows 11 x86_64
+install, and its `analysis.R` replayed there with the launcher's replay job. All three
+result tables matched exactly (largest relative difference 0, tolerance 1e-10).
+`mode_check.py` also checks that each run records the running image's ID.
