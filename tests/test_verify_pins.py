@@ -64,10 +64,30 @@ def test_every_supported_platform_has_runtimes():
 
 def test_a_pending_platform_needs_no_opnca_binary_but_a_supported_one_does(tree):
     pins = tomllib.loads((tree / "runtime/pins.toml").read_text("utf-8"))
-    assert set(pins["platforms"]["pending"]) <= set(pins["platforms"]["supported"])
-    _edit(tree, "runtime/pins.toml", 'pending = ["linux-x86_64", "linux-aarch64"]', "pending = []")
+    assert pins["platforms"]["pending"] == []  # opnca-r 0.3.3 published its Linux binaries
+    # Without its binary a supported platform is an error ...
+    _edit(
+        tree,
+        "runtime/pins.toml",
+        '"opnca_0.3.3_R4.6_linux-x86_64.tar.gz" = ',
+        '"opnca_0.3.3_R4.6_linux-i686.tar.gz" = ',
+    )
     errors, _ = _check(tree)
     assert "[packages.opnca-r] has no binary for linux-x86_64" in errors
+    # ... and only listing it as pending excuses it, for that platform alone.
+    _edit(tree, "runtime/pins.toml", "pending = []", 'pending = ["linux-x86_64"]')
+    errors, _ = _check(tree)
+    assert not any("has no binary" in e for e in errors)
+
+
+def test_the_arm_binary_is_matched_under_opnca_rs_own_name_for_it(tree):
+    _edit(
+        tree,
+        "runtime/pins.toml",
+        '"opnca_0.3.3_R4.6_linux-arm64.tar.gz" = ',
+        '"opnca_0.3.3_R4.6_linux-aarch64.tar.gz" = ',
+    )
+    errors, _ = _check(tree)
     assert "[packages.opnca-r] has no binary for linux-aarch64" in errors
 
 
@@ -125,7 +145,7 @@ def test_malformed_sha_is_rejected(tree):
 
 
 def test_opnca_needs_a_binary_per_platform(tree):
-    _edit(tree, "runtime/pins.toml", '"opnca_0.3.2_R4.6_windows-x86_64.zip" = ', '"x.zip" = ')
+    _edit(tree, "runtime/pins.toml", '"opnca_0.3.3_R4.6_windows-x86_64.zip" = ', '"x.zip" = ')
     errors, _ = _check(tree)
     assert "[packages.opnca-r] has no binary for windows-x86_64" in errors
 

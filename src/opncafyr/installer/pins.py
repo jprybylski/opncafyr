@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from opncafyr.installer.platforms import SUPPORTED
+from opncafyr.installer.platforms import SUPPORTED, opnca_name
 from opncafyr.installer.verify import InstallError
 
 # R packages that don't come from CRAN; their tarballs go in the cellar.
@@ -187,7 +187,8 @@ class Pins:
 
     def _opnca(self, platform: str) -> list[Asset]:
         pin = self.pins["packages"][OPNCA]
-        binary = [f for f in pin["assets"] if f"_{platform}." in f]
+        plat, arch = opnca_name(platform)
+        binary = [f for f in pin["assets"] if f"_{plat}-{arch}." in f]
         if len(binary) != 1:
             raise PinsError(f"Expected one opnca-r binary for {platform}, found {binary}")
         return [

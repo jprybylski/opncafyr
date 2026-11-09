@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs inside the minimal Ubuntu 24.04 container as an unprivileged user, with no network
 # (scripts/installer_ci/linux.sh, #65). /b is the bundle (read-only), /newer a bundle of a later
-# payload, /results is writable. Every installer command runs under strace so that a connection
+# payload, /flowrepo the flow driver, /results is writable. Every installer command runs under strace so that a connection
 # attempt is visible even if a tool swallows the failure.
 set -euo pipefail
 
@@ -25,17 +25,17 @@ for c in gcc cc make rustc cargo sudo; do ! command -v "$c" >/dev/null || fail "
 echo "user $(id -un), no compiler, no make, no sudo; glibc $(getconf GNU_LIBC_VERSION)"
 
 echo "== install from the bundle"
-traced install "$INSTALL" install --from-bundle /b --allow-pending
+traced install "$INSTALL" install --from-bundle /b
 FIRST="$(active)"
 [ -n "$FIRST" ] || fail "no active install"
 echo "active: $FIRST"
 
 echo "== a second install is a no-op"
-traced noop "$INSTALL" install --from-bundle /b --allow-pending | tee "$TR/noop.log"
+traced noop "$INSTALL" install --from-bundle /b | tee "$TR/noop.log"
 grep -q "already installed" "$TR/noop.log" || fail "the second install was not a no-op"
 
 echo "== repair finds nothing to fix"
-traced repair "$INSTALL" repair --from-bundle /b --allow-pending | tee "$TR/repair.log"
+traced repair "$INSTALL" repair --from-bundle /b | tee "$TR/repair.log"
 grep -q "nothing to repair" "$TR/repair.log" || fail "repair"
 
 echo "== the installed runtime works as this user"
@@ -43,7 +43,16 @@ PY="$ROOT/current/launcher/bin/python"
 "$PY" -I -c 'import opncafyr, sys; print("launcher", opncafyr.__version__)'
 "$ROOT/bin/opncafyr" doctor | tee "$TR/doctor.log" | head -20
 grep -q "rscript" "$TR/doctor.log" && fail "doctor says the runtime has no Rscript"
+grep -q "tool opnca .*unavailable" "$TR/doctor.log" && fail "doctor says opnca-r is unavailable"
 grep -q "git " "$TR/doctor.log" || true
+
+echo "== the Gate 2 flow on this install: two real opnca-r runs, replay, publish, DOCX report, PPTX deck"
+mkdir -p /tmp/flow
+traced flow env OPNCAFYR_RUNTIME_FILE="$ROOT/current/runtime/runtime.json" \
+  "$PY" -I /flowrepo/scripts/offline/flow_check.py /tmp/flow/w --results "$TR" | tee "$TR/flow.log"
+grep -q '^flow complete' "$TR/flow.log" || fail "the flow did not complete"
+grep -q '"replay": "passed"' "$TR/flow.log" || fail "a replay did not pass"
+! grep -q 'stand-in' "$TR/flow.log" || fail "the flow used stand-in runs: opnca-r did not run"
 
 echo "== a native launch is reachable through its forward and refuses foreign callers"
 mkdir -p /tmp/study
@@ -77,7 +86,7 @@ echo "== a tampered asset is refused and the old install still runs"
 cp -a /b /tmp/bundle-bad
 QF="$(ls /tmp/bundle-bad/assets/quarto/* | head -1)"
 printf 'x' >>"$QF"
-if traced tamper "$INSTALL" install --reinstall --from-bundle /tmp/bundle-bad --allow-pending >"$TR/tamper.log" 2>&1; then
+if traced tamper "$INSTALL" install --reinstall --from-bundle /tmp/bundle-bad >"$TR/tamper.log" 2>&1; then
   fail "a tampered Quarto archive was accepted"
 fi
 grep -qi "does not match\|sha-256\|doesn't match" "$TR/tamper.log" || { cat "$TR/tamper.log"; fail "no checksum message"; }
@@ -88,7 +97,7 @@ rm -rf /tmp/bundle-bad
 echo "== a missing asset is refused"
 cp -a /b /tmp/bundle-missing
 rm -f "$(ls /tmp/bundle-missing/assets/uv/* | head -1)"
-if traced missing "$INSTALL" install --reinstall --from-bundle /tmp/bundle-missing --allow-pending >"$TR/missing.log" 2>&1; then
+if traced missing "$INSTALL" install --reinstall --from-bundle /tmp/bundle-missing >"$TR/missing.log" 2>&1; then
   fail "a bundle without uv was accepted"
 fi
 [ "$(active)" = "$FIRST" ] || fail "the active install changed after a bundle with a missing file"
@@ -96,14 +105,14 @@ rm -rf /tmp/bundle-missing
 
 echo "== an update killed part-way keeps the old install runnable"
 NEWER_INSTALL=/newer/installer/install.sh
-if OPNCAFYR_INSTALL_FAIL_AFTER=r_library traced killed "$NEWER_INSTALL" install --from-bundle /newer --allow-pending >"$TR/killed.log" 2>&1; then
+if OPNCAFYR_INSTALL_FAIL_AFTER=r_library traced killed "$NEWER_INSTALL" install --from-bundle /newer >"$TR/killed.log" 2>&1; then
   fail "the simulated failure did not fail the update"
 fi
 [ "$(active)" = "$FIRST" ] || fail "a failed update changed the active install"
 "$PY" -I -c 'import opncafyr' || fail "the old install does not run after a failed update"
 
 echo "== the update completes"
-traced update "$NEWER_INSTALL" install --from-bundle /newer --allow-pending
+traced update "$NEWER_INSTALL" install --from-bundle /newer
 SECOND="$(active)"
 [ "$SECOND" != "$FIRST" ] || fail "the update did not activate a new install"
 "$ROOT/bin/opncafyr" doctor >/dev/null

@@ -233,7 +233,7 @@ s_r_repo() {
   awk -F'\t' '$1=="r-binary"{print $3}' "$ASSETS/assets.tsv" | while read -r f; do ln -sf "$(asset_file "$f")" "$contrib/"; done
   "$ROOT/bin/Rscript" -e 'tools::write_PACKAGES(commandArgs(TRUE)[1], type = "mac.binary"); tools::write_PACKAGES(commandArgs(TRUE)[2], type = "source")' "$contrib" "$RREPO/src/contrib"
   # Cellar: opnca-r binary under the name renv expects, and the pure-R tarballs.
-  cp "$(asset_file "opnca_0.3.2_R4.6_${PLATFORM}.tgz")" "$CELLAR/opnca_0.3.2.tgz"
+  cp "$(asset_file "opnca_0.3.3_R4.6_${PLATFORM}.tgz")" "$CELLAR/opnca_0.3.3.tgz"
   for p in quartifyr reportifyr pyro; do cp "$(asset "package:$p")" "$CELLAR/"; done
   ls "$CELLAR"; echo "binaries: $(find "$contrib" -name '*.tgz' | wc -l | tr -d ' ')"
 }
@@ -282,7 +282,7 @@ s_r_install() {
     from_repo <- names(Filter(function(e) identical(e$Source, "Repository"), lock))
     install.packages(setdiff(from_repo, "jsonlite"), lib = lib, repos = repo, type = "binary",
                      dependencies = FALSE, quiet = TRUE)
-    install.packages(file.path(cellar, "opnca_0.3.2.tgz"), lib = lib, repos = NULL, type = "binary")
+    install.packages(file.path(cellar, "opnca_0.3.3.tgz"), lib = lib, repos = NULL, type = "binary")
     for (f in c("pyro_0.1.1.tar.gz", "reportifyr_0.4.0.tar.gz", "quartifyr_0.3.4.tar.gz"))
       install.packages(file.path(cellar, f), lib = lib, repos = NULL, type = "source")
     bad <- Filter(function(p) !identical(tryCatch(packageDescription(p, lib.loc = lib, fields = "Version"),
@@ -412,7 +412,7 @@ s_quarantine() {
 }
 
 s_vendored() {
-  # Repair path only (ADR 0004): build opnca_0.3.2-vendored.tar.gz. Needs a C toolchain.
+  # Repair path only (ADR 0004): build opnca_0.3.3-vendored.tar.gz. Needs a C toolchain.
   echo "CLT: $(xcode-select -p 2>&1)"; echo "clang: $(/usr/bin/clang --version 2>&1 | head -1)"
   local rs; rs="$(asset rust-standalone)"
   [ -n "$rs" ] || { echo "no rust standalone asset in assets.tsv"; return 1; }
@@ -424,7 +424,7 @@ s_vendored() {
   "$rust/bin/cargo" --version; "$rust/bin/rustc" --version
   mkdir -p "$ROOT/tmp/vlib"
   PATH="$rust/bin:$PATH" NOT_CRAN="" R_LIBS="$RLIB" "$ROOT/bin/R" CMD INSTALL --library="$ROOT/tmp/vlib" \
-    "$(asset_file opnca_0.3.2-vendored.tar.gz)"
+    "$(asset_file opnca_0.3.3-vendored.tar.gz)"
 }
 
 s_libreoffice() {

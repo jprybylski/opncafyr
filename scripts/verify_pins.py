@@ -60,7 +60,9 @@ CRAN_BIN = "https://cran.r-project.org/bin/macosx/"
 CELLAR = ("opnca-r", "quartifyr", "reportifyr", "pyro", "gitneighbr")
 CELLAR_R_NAMES = {"opnca-r": "opnca"}
 # Release packages a platform binary must exist for, and how to spot it in a file name.
+# opnca-r's file names spell the Linux arm architecture arm64; our platform is linux-aarch64.
 PLATFORM_BINARIES = {"opnca-r": "_{platform}."}
+OPNCA_NAMES = {"linux-aarch64": "linux-arm64"}
 
 
 @dataclass(frozen=True)
@@ -174,7 +176,8 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
             for platform in supported:
                 if platform in pending:
                     continue  # its binary is not released yet (opnca-r#61): see [platforms]
-                if not any(pattern.format(platform=platform) in f for f in files):
+                name = OPNCA_NAMES.get(platform, platform)
+                if not any(pattern.format(platform=name) in f for f in files):
                     errors.append(f"[packages.{pkg}] has no binary for {platform}")
     for pkg in CELLAR:
         if pkg not in pins.get("packages", {}):

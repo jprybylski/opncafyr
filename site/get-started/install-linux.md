@@ -14,8 +14,8 @@ Install opncafyr for your own user on an Ubuntu 24.04 cloud computer, with no ad
 {: .research }
 > **Research use only.** This workspace has not been validated for clinical or regulatory decisions.
 
-{: .warning }
-**Not available yet.** The Linux install waits for one part from opnca-r, the calculation engine's Linux build. Until it is released, the installer stops with a message saying so. If you can run Docker or Podman on the cloud computer, [run opncafyr in a container]({{ '/get-started/install-cloud-container/' | relative_url }}) now.
+{: .note }
+If you can run Docker or Podman on the cloud computer, [running opncafyr in a container]({{ '/get-started/install-cloud-container/' | relative_url }}) is the simpler route. This page is for computers where you can't.
 
 ## What you need
 

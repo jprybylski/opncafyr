@@ -50,9 +50,7 @@ Options for `install` and `repair`:
 ## Native Linux (Ubuntu 24.04)
 
 For a single-user cloud VM where Docker and Podman are not allowed (ADR 0003, amended for
-#65). **It is not released yet:** it waits for opnca-r's Linux binary (mantra-opnca/opnca-r#61),
-and until then the installer refuses Linux with a message saying so. Everything else is
-built and tested.
+#65), supported since opnca-r 0.3.3 published its Linux binaries (mantra-opnca/opnca-r#61).
 
 What it needs: **Ubuntu 24.04** (x86_64 or aarch64) with **glibc 2.39 or later**, a standard
 user (never root), about 4 GB free on a local filesystem, and these **system libraries**,

@@ -39,6 +39,7 @@ from pathlib import Path
 from opncafyr.installer import opnca_release, proc
 from opncafyr.installer.archives import link_or_copy
 from opncafyr.installer.pins import CELLAR, OPNCA
+from opncafyr.installer.platforms import opnca_name
 from opncafyr.installer.steps import WINDOWS, Context
 
 FRAMEWORK = "/Library/Frameworks/R.framework"
@@ -314,7 +315,7 @@ def _opnca_binary(ctx: Context) -> tuple[Path, str, str]:
     pin = ctx.pins.pins["packages"][OPNCA]
     manifest_path = ctx.file(OPNCA, "manifest.json")
     manifest = opnca_release.verify_manifest(manifest_path, pin)
-    plat, arch = ctx.platform.split("-")
+    plat, arch = opnca_name(ctx.platform)
     entry = opnca_release.select_asset(
         manifest, platform=plat, arch=arch, r_minor=pin.get("r_minor")
     )

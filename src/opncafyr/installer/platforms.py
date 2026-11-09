@@ -48,6 +48,13 @@ def detect() -> str:
     )
 
 
+def opnca_name(platform: str) -> tuple[str, str]:
+    """(platform, arch) as opnca-r's ``manifest.json`` spells them: ``linux-aarch64`` is
+    ``linux`` / ``arm64`` there, and its file names say ``linux-arm64`` (#65)."""
+    plat, _, arch = platform.partition("-")
+    return plat, "arm64" if arch == "aarch64" else arch
+
+
 def check_os_version(platform: str) -> str:
     """Raise if the OS is older than the minimum; return a description of it."""
     if platform.startswith("macos"):

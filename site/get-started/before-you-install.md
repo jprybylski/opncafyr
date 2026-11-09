@@ -38,7 +38,7 @@ The installer also needs the opnca-r release, which is not public. Ask whoever p
 |---|---|---|
 | macOS | macOS 15 or later, on Apple silicon or Intel | macOS 14 and earlier |
 | Windows | Windows 11, 64-bit (x86_64) | Windows 10; Windows on Arm |
-| Linux | Ubuntu 24.04 (x86_64 or aarch64) with no desktop, installed from an offline bundle. Not available yet: [Install on Linux]({{ '/get-started/install-linux/' | relative_url }}). In a container with Docker or Podman today: [Run on a cloud computer]({{ '/get-started/install-cloud-container/' | relative_url }}) | Other distributions and versions; a desktop install |
+| Linux | Ubuntu 24.04 (x86_64 or aarch64) with no desktop, installed from an offline bundle: [Install on Linux]({{ '/get-started/install-linux/' | relative_url }}). Or in a container with Docker or Podman: [Run on a cloud computer]({{ '/get-started/install-cloud-container/' | relative_url }}) | Other distributions and versions; a desktop install |
 
 The installer checks this first. On a computer it doesn't support, it stops before changing anything and says why.
 

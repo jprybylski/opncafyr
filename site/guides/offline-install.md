@@ -25,8 +25,8 @@ This page is for the person installing. If you prepare bundles for others, see [
   | Mac with Apple silicon | `opncafyr-bundle-<version>-macos-arm64.zip` |
   | Mac with an Intel processor | `opncafyr-bundle-<version>-macos-x86_64.zip` |
   | Windows 11 PC | `opncafyr-bundle-<version>-windows-x86_64.zip` |
-  | Ubuntu 24.04 cloud computer (Intel or AMD) | `opncafyr-bundle-<version>-linux-x86_64.zip` (not available yet; see [Install on Linux]({{ '/get-started/install-linux/' | relative_url }})) |
-  | Ubuntu 24.04 cloud computer (Arm) | `opncafyr-bundle-<version>-linux-aarch64.zip` (same) |
+  | Ubuntu 24.04 cloud computer (Intel or AMD) | `opncafyr-bundle-<version>-linux-x86_64.zip` (see [Install on Linux]({{ '/get-started/install-linux/' | relative_url }})) |
+  | Ubuntu 24.04 cloud computer (Arm) | `opncafyr-bundle-<version>-linux-aarch64.zip` (same page) |
 
   To check which Mac you have, open the Apple menu and choose **About This Mac**: **Chip** means Apple silicon, **Processor** means Intel.
 

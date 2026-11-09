@@ -303,32 +303,60 @@ def pins():
     return Pins.load(ROOT / "runtime")
 
 
-@pytest.mark.parametrize("platform", ["linux-x86_64", "linux-aarch64"])
-def test_a_pending_platform_is_refused_until_opnca_r_has_a_binary(pins, platform):
-    assert platform in pins.pending
-    with pytest.raises(PinsError, match=r"not released yet.*opnca-r#61"):
-        pins.assets(platform)
+@pytest.fixture
+def pending(pins):
+    """The pins as they were before opnca-r 0.3.3: Linux supported, but waiting for opnca-r."""
+    waiting = Pins(pins.runtime_dir, dict(pins.pins), pins.lock, pins.binaries, pins.wheels)
+    waiting.pins["platforms"] = {**pins.pins["platforms"], "pending": ["linux-x86_64"]}
+    return waiting
 
 
-@pytest.mark.parametrize("platform", ["linux-x86_64", "linux-aarch64"])
-def test_a_development_install_has_everything_but_opnca_r(pins, platform):
-    assets = pins.assets(platform, allow_pending=True)
+@pytest.mark.parametrize(
+    ("platform", "binary"),
+    [
+        ("linux-x86_64", "opnca_0.3.3_R4.6_linux-x86_64.tar.gz"),
+        ("linux-aarch64", "opnca_0.3.3_R4.6_linux-arm64.tar.gz"),  # opnca-r says arm64
+    ],
+)
+def test_linux_installs_opnca_r_from_its_published_binary(pins, platform, binary):
+    assert pins.pending == []
+    assets = pins.assets(platform)
+    opnca = [a.file for a in assets if a.component == "opnca-r"]
+    assert opnca == ["manifest.json", binary]
     parts = {a.component for a in assets}
     assert {"uv", "python", "r", "quarto", "r-packages", "wheels", "git", "quartifyr"} <= parts
-    assert "opnca-r" not in parts
     r = next(a for a in assets if a.component == "r")
     assert r.file.endswith(".deb") and "/ubuntu-2404/" in r.url  # one pin, read from [ci.*]
     assert r.version == PINS["r"]["version"]
 
 
+def test_opnca_r_names_the_arm_architecture_arm64_where_the_platform_says_aarch64():
+    assert platforms.opnca_name("linux-aarch64") == ("linux", "arm64")
+    assert platforms.opnca_name("linux-x86_64") == ("linux", "x86_64")
+    assert platforms.opnca_name("macos-arm64") == ("macos", "arm64")
+    assert platforms.opnca_name("windows-x86_64") == ("windows", "x86_64")
+
+
+def test_a_pending_platform_is_refused_until_opnca_r_has_a_binary(pending):
+    with pytest.raises(PinsError, match=r"not released yet.*opnca-r#61"):
+        pending.assets("linux-x86_64")
+    assert pending.assets("linux-aarch64")  # only the listed platform waits
+
+
+def test_a_development_install_of_a_pending_platform_has_everything_but_opnca_r(pending):
+    assets = pending.assets("linux-x86_64", allow_pending=True)
+    parts = {a.component for a in assets}
+    assert "opnca-r" not in parts and {"r", "r-packages", "wheels", "git"} <= parts
+
+
 @pytest.mark.parametrize("platform", ["linux-x86_64", "linux-aarch64"])
 def test_linux_r_packages_carry_the_user_agent_that_selects_the_binary(pins, platform):
-    packages = [a for a in pins.assets(platform, allow_pending=True) if a.component == "r-packages"]
+    packages = [a for a in pins.assets(platform) if a.component == "r-packages"]
     assert len(packages) == 126
     assert {a.user_agent for a in packages} == {pins.binaries["user_agents"][platform]}
     assert all("/__linux__/noble/" in a.url for a in packages)
     # Nothing else needs one: only R's own User-Agent gets a binary from P3M.
-    others = [a for a in pins.assets(platform, allow_pending=True) if a.component != "r-packages"]
+    others = [a for a in pins.assets(platform) if a.component != "r-packages"]
     assert not any(a.user_agent for a in others)
 
 
@@ -340,9 +368,9 @@ def test_other_platforms_are_unchanged_by_the_linux_pins(pins):
 
 def test_libreoffice_and_a_source_build_are_refused_on_linux(pins):
     with pytest.raises(PinsError, match="LibreOffice is not offered"):
-        pins.assets("linux-x86_64", libreoffice=True, allow_pending=True)
+        pins.assets("linux-x86_64", libreoffice=True)
     with pytest.raises(PinsError, match="source build is not offered"):
-        pins.assets("linux-x86_64", source_build=True, allow_pending=True)
+        pins.assets("linux-x86_64", source_build=True)
 
 
 def test_the_download_sends_the_pinned_user_agent(pins, tmp_path):

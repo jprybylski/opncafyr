@@ -11,9 +11,9 @@
 # linux_inner.sh in it with `--network none`. The preflight's negative leg uses a second image
 # with one package removed. check_trace.py then fails on any connection attempt in the trace.
 #
-# Until opnca-r publishes a Linux binary (opnca-r#61, [platforms].pending in runtime/pins.toml)
-# every bundle is built and installed with --allow-pending, which leaves opnca-r out: the
-# calculation, replay and run-based publishing legs wait for the binary.
+# opnca-r is private: the bundle build needs GH_TOKEN (its Linux binary, opnca-r 0.3.3), and
+# the flow leg runs two real opnca-r analyses, replays them and publishes a DOCX and a PPTX.
+#   env: GH_TOKEN  read access to the private opnca-r release
 set -euo pipefail
 
 ARCH="$1"
@@ -35,9 +35,19 @@ mkdir -p "$WORK"
 VERSION="$(cat "$REPO/VERSION")"
 fail() { echo "::error::$*"; exit 1; }
 
+[ -n "${GH_TOKEN:-}" ] || { echo "::error::GH_TOKEN (read access to the opnca-r release) is required"; exit 1; }
+
+# The Gate 2 flow driver and the fixture helpers it imports, in the repository layout.
+mkdir -p "$WORK/flow/scripts/offline" "$WORK/flow/tests/fixtures/opnca-r"
+cp "$REPO/scripts/offline/flow_check.py" "$WORK/flow/scripts/offline/"
+cp "$REPO"/tests/{nca_helpers,publish_helpers,artifact_docs,opnca_listing}.py "$WORK/flow/tests/"
+cp "$REPO"/tests/fixtures/two_analyte.{csv,expected.json} "$WORK/flow/tests/fixtures/"
+cp "$REPO"/tests/fixtures/opnca-r/* "$WORK/flow/tests/fixtures/opnca-r/"
+chmod -R a+rX "$WORK/flow"
+
 # ---- bundles (online) ------------------------------------------------------------------
 build_bundle() { # <payload dir> <out dir> <app root for the download cache>
-  OPNCAFYR_APP_ROOT="$3" bash "$1/install.sh" bundle --platform "$PLATFORM" --out "$2" --allow-pending
+  OPNCAFYR_APP_ROOT="$3" bash "$1/install.sh" bundle --platform "$PLATFORM" --out "$2"
 }
 build_bundle "$PAYLOAD" "$WORK/bundle-a" "$WORK/cache-a" >"$RESULTS/bundle-a.log" 2>&1 || { tail -30 "$RESULTS/bundle-a.log"; fail "bundle build failed"; }
 build_bundle "$PAYLOAD" "$WORK/bundle-b" "$WORK/cache-b" >"$RESULTS/bundle-b.log" 2>&1 || { tail -30 "$RESULTS/bundle-b.log"; fail "second bundle build failed"; }
@@ -50,7 +60,7 @@ echo "bundle $ID_A built twice from independent downloads: identical"
 cmp "$A/SHA256SUMS" "$B/SHA256SUMS" || fail "SHA256SUMS differ between the two builds"
 # The newer payload reuses the first build's downloads, so this is quick.
 OPNCAFYR_APP_ROOT="$WORK/cache-a" bash "$NEWER/install.sh" bundle --platform "$PLATFORM" \
-  --out "$WORK/bundle-newer" --allow-pending >"$RESULTS/bundle-newer.log" 2>&1 || { tail -30 "$RESULTS/bundle-newer.log"; fail "newer bundle build failed"; }
+  --out "$WORK/bundle-newer" >"$RESULTS/bundle-newer.log" 2>&1 || { tail -30 "$RESULTS/bundle-newer.log"; fail "newer bundle build failed"; }
 NEW="$(ls -d "$WORK"/bundle-newer/opncafyr-bundle-*)"
 rm -rf "$WORK/bundle-b" "$WORK/cache-b"
 
@@ -87,7 +97,7 @@ docker run --rm --platform "$DOCKER_PLATFORM" -v opncafyr-linux-ci-home:/home/u 
 
 echo "--- preflight refuses a computer with a library missing"
 if docker run --rm --platform "$DOCKER_PLATFORM" --network none --user u -e HOME=/home/u \
-     -v "$A:/b:ro" opncafyr-linux-ci-missing /b/installer/install.sh install --from-bundle /b --allow-pending \
+     -v "$A:/b:ro" opncafyr-linux-ci-missing /b/installer/install.sh install --from-bundle /b \
      >"$RESULTS/inner/preflight-negative.log" 2>&1; then
   fail "the installer ran on a computer without libwebpmux.so.3"
 fi
@@ -100,7 +110,8 @@ echo "--- install, repair, launch, tamper, update (no network)"
 docker run --rm --platform "$DOCKER_PLATFORM" --network none --user u -e HOME=/home/u \
   --cap-add SYS_PTRACE \
   -v opncafyr-linux-ci-home:/home/u -v "$A:/b:ro" -v "$NEW:/newer:ro" \
-  -v "$RESULTS/inner:/results" -v "$REPO/scripts/installer_ci/linux_inner.sh:/inner.sh:ro" \
+  -v "$RESULTS/inner:/results" -v "$WORK/flow:/flowrepo:ro" \
+  -v "$REPO/scripts/installer_ci/linux_inner.sh:/inner.sh:ro" \
   opncafyr-linux-ci bash /inner.sh "$VERSION" | tee "$RESULTS/inner/inner.log"
 
 echo "--- no connection attempt left the machine"

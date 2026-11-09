@@ -51,7 +51,7 @@ ADR" is answered by this amendment.
 | R | **Posit's Ubuntu 24.04 R 4.6.2 `.deb`, unpacked in user space and relocated.** No root, dpkg or apt. | It is already pinned (`[ci.linux-*.r]`). Relocation follows the macOS recipe: rewrite the original prefix in R's text files, and replace `Rscript`, which has the prefix compiled in, with a wrapper that names `RHOME`. |
 | R library | **Posit's noble binaries, pinned per architecture** (126 packages), installed one at a time. | P3M serves a binary at the source URL only to R's own User-Agent; each pin is URL + User-Agent + SHA-256. No compiler runs: a parallel install needs `make`, so installs are serial. |
 | System libraries | **Preflight only.** The installer checks the 36 shared libraries the stack links directly, and names the missing ones and the Ubuntu packages to ask an administrator for. Nothing is bundled and nothing is installed. | A user without root can't add a library, and bundling about 40 `.deb` files per architecture needs hash-pinned archives the distribution doesn't keep, plus the redistribution review in #43. |
-| opnca-r | **Needs a Linux binary from opnca-r** (mantra-opnca/opnca-r#61). Until it is pinned, Linux is listed under `[platforms].pending` and the installer refuses it. | The only other Linux route is the vendored source build, which needs Rust and a C compiler, so it contradicts "no compiler". |
+| opnca-r | **A prebuilt Linux binary from opnca-r**, published since 0.3.3 (mantra-opnca/opnca-r#61): x86_64 and arm64, built on Ubuntu 24.04, `glibc_min` 2.39, linking only glibc, libstdc++, libgcc and R. While a platform's binary isn't pinned it sits under `[platforms].pending` and the installer refuses it; the list is empty now. | The only other Linux route is the vendored source build, which needs Rust and a C compiler, so it contradicts "no compiler". |
 | Not on Linux | LibreOffice (slide previews) and `repair --build-from-source`. Both are refused with a message. | Previews need root-installed libraries; a source build needs a C toolchain. The container has both. |
 | Access | `opncafyr launch --remote`: the listener stays on the VM's `127.0.0.1`, reached through an SSH forward or an IDE proxy on the VM, with a fixed `--workspace` (there is no folder picker on a headless VM). Every Host, Origin, session-secret and `Sec-Fetch-Site` check is the one the container uses. | One user per VM, as in ADR 0009. |
 
@@ -60,6 +60,8 @@ Ubuntu 24.04 aarch64} × R 4.6.2**, recorded in `runtime/pins.toml` (`[platforms
 `supported`, `pending`, `linux_*`).
 
 Checked in an Ubuntu 24.04 container as an unprivileged user with no network, no compiler
-and no `make`, on both architectures: the relocated R starts, all 126 binaries install and
-load, Quarto, uv, Python and the pinned Git run, and the installer completes, including its
-DOCX and PPTX smoke builds. A real firewalled VM has not been tried.
+and no `make`, and in CI on native runners for both architectures: the relocated R starts, all
+126 binaries and opnca-r's Linux binary install and load, and the installer completes, including
+its calculation, DOCX and PPTX smoke tests, a repair, an update, a refused tampered or missing
+asset, and the Gate 2 flow (two real analyses, replay, publish, report, deck) with no connection
+attempt in the traces. A real firewalled VM has not been tried.

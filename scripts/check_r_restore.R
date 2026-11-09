@@ -8,7 +8,7 @@
 # plus the four tool packages (bin/.../contrib/4.6 and src/contrib). Its *source* index
 # must list all 130 packages, using the binary entry where there is no source tarball:
 # renv plans the install from the source index and looks anything missing up on
-# crandb.r-pkg.org. <cellar> holds opnca_0.3.2.<tgz|zip> and the quartifyr, reportifyr
+# crandb.r-pkg.org. <cellar> holds opnca_0.3.3.<tgz|zip> and the quartifyr, reportifyr
 # and pyro source tarballs. Run it with the network blocked (macOS: sandbox-exec with a
 # deny network-outbound profile) to show the restore needs nothing but those files.
 # docs/dependency-graph.md has the steps.

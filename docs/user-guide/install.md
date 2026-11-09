@@ -10,7 +10,7 @@ The installer downloads each part it needs and checks every file against a finge
 - About 4 GB of free disk space.
 - The installer zip, `opncafyr-installer-<version>.zip`, from the person who supports opncafyr at your site.
 
-If your study data lives on a Linux cloud computer where you can run Docker or Podman, you can run opncafyr there instead: see [Running on a cloud computer (container mode)](cloud-container.md). Where you cannot run Docker, a native install on Ubuntu 24.04 from an offline bundle is built but not released yet: it waits for opnca-r's Linux build. It needs no administrator rights, but it does need some system libraries; the installer checks for them first and lists what an administrator must add.
+If your study data lives on a Linux cloud computer where you can run Docker or Podman, you can run opncafyr there instead: see [Running on a cloud computer (container mode)](cloud-container.md). Where you cannot run Docker, you can install natively on Ubuntu 24.04 from an offline bundle. It needs no administrator rights, but it does need some system libraries; the installer checks for them first and lists what an administrator must add. The developer documentation (`install.md`) has the steps.
 
 If your computer cannot reach the internet, or your organisation blocks downloads, ask your IT team; they can use the offline bundle described in the developer documentation. The app works the same way after an offline install.
 

@@ -101,8 +101,8 @@ def make_world(
         pins += ["", f"[{name}]", f'version = "{ver}"', 'license = "MIT"']
         pins += [f"[{name}.assets.{PLATFORM}]", f'url = "{url}"', f'sha256 = "{digest}"']
 
-    manifest = {"schema_version": 1, "package": "opnca", "version": "0.3.2"}
-    binary = "opnca_0.3.2_R4.6_macos-arm64.tgz"
+    manifest = {"schema_version": 1, "package": "opnca", "version": "0.3.3"}
+    binary = "opnca_0.3.3_R4.6_macos-arm64.tgz"
     _, bin_sha = _file(world, "opnca-r", binary)
     entries = [
         {
@@ -114,7 +114,7 @@ def make_world(
             "sha256": bin_sha,
         }
     ]
-    vendored = "opnca_0.3.2-vendored.tar.gz"
+    vendored = "opnca_0.3.3-vendored.tar.gz"
     if source_build:
         _, vendored_sha = _file(world, "opnca-r", vendored)
         entries.append({"asset": vendored, "kind": "source-vendored", "sha256": vendored_sha})
@@ -126,7 +126,7 @@ def make_world(
     pins += [
         "",
         "[packages.opnca-r]",
-        'version = "0.3.2"',
+        'version = "0.3.3"',
         'license = "Apache-2.0"',
         "private = true",
         f'release_url = "{BASE}/opnca-r/"',
@@ -171,7 +171,7 @@ def make_world(
         "R": {"Version": "4.6.2"},
         "Packages": {
             "R6": {"Package": "R6", "Version": "2.6.1", "Source": "Repository"},
-            "opnca": {"Package": "opnca", "Version": "0.3.2", "Source": "Cellar"},
+            "opnca": {"Package": "opnca", "Version": "0.3.3", "Source": "Cellar"},
         },
     }
     (runtime / "r" / "renv.lock").write_text(json.dumps(lock), "utf-8")

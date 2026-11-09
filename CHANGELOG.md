@@ -8,9 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 - **Native Linux install: Ubuntu 24.04, x86_64 and aarch64, no root, apt, compiler or
-  container** (#65, ADR 0003 amended). It is built and tested but **not released**: it waits
-  for opnca-r's Linux binary (opnca-r#61), and until then the installer refuses Linux
-  (`[platforms].pending` in `runtime/pins.toml`).
+  container** (#65, ADR 0003 amended). It uses opnca-r 0.3.3, which publishes the Linux
+  binaries (opnca-r#61); opnca-r is pinned at 0.3.3 for every platform. opnca-r's manifest
+  calls the arm architecture `arm64`, where our platform is `linux-aarch64`; one function maps
+  it (`installer/platforms.py`). `[platforms].pending` stays as a mechanism and is empty.
   - **Installer.** `install.sh` runs on Linux and reads a ZIP bundle with `unzip`, `bsdtar` or
     `python3`. Preflight checks Ubuntu 24.04, glibc 2.39 or later and not root, then the 36
     shared libraries the stack links (`installer/linux_libs.py`), and names the missing ones
@@ -28,18 +29,20 @@ All notable changes to this project are documented here. The format follows
   - **Pins.** `linux-x86_64` and `linux-aarch64` in `runtime/pins.toml` (Linux runtimes are
     pinned once, under `[ci.<platform>]`), 126 R package binaries per architecture in
     `binaries.toml` (the generator fails when a download is not a binary built for its
-    architecture), manylinux wheels, and dugite-native Git. Existing platforms' pins are
-    unchanged. `--allow-pending` (development) installs everything but opnca-r.
+    architecture), manylinux wheels, dugite-native Git, and opnca-r 0.3.3's Linux binaries
+    (hashes checked against the release's `SHA256SUMS` and manifest). Existing platforms'
+    pins are unchanged except opnca-r's version. `--allow-pending` (development) installs a
+    platform that is still pending, without opnca-r.
   - **Checked** on a developer Mac in Ubuntu 24.04 containers, as an unprivileged user with
-    no network, no compiler and no `make`. On arm64 the whole install ran end to end: a
-    computer missing one library refused by name; install; a no-op second run; repair; a
-    native launch reached through its forward (a foreign Host, a foreign Origin and a missing
-    session secret refused); a tampered and a missing asset refused with the old install still
-    running; an update killed part-way, then completed; uninstall leaving a workspace; and no
-    connection attempt in seven strace logs. The DOCX and PPTX smoke builds passed. On x86_64
-    (emulated) the relocated R and all 126 binaries load. `installer-linux.yml` runs the same
-    legs natively on both architectures. Not yet run: a real firewalled VM, and any
-    calculation, replay or run-based publishing (they need opnca-r).
+    no network, no compiler and no `make`: on arm64 the install ran end to end with opnca-r's
+    own smoke calculation, the DOCX and PPTX smoke builds, and the full Gate 2 flow (two real
+    analyses, replay, publish, DOCX report, PPTX deck). `installer-linux.yml` runs the same
+    legs natively on both architectures under strace: a computer missing one library refused
+    by name; install; a no-op second run; repair; the flow; a native launch reached through
+    its forward (a foreign Host, a foreign Origin and a missing session secret refused);
+    a tampered and a missing asset refused with the old install still running; an update
+    killed part-way, then completed; uninstall leaving a workspace; and no connection attempt
+    in any trace. Not run: a real firewalled VM.
 - **Edit the report's settings and footnotes in the app** (#64). The project-file editor
   now lists two YAML files after the report, as bounded exceptions to "report sources
   only": **Report settings** (`report/config.yaml`) and **Footnotes**

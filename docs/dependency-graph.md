@@ -10,7 +10,7 @@ and why. Edges come from each tool's DESCRIPTION / pyproject at the pinned relea
 launcher (opncafyr)        uv 0.13.7 ─► Python 3.13.18 ─► launcher venv (uv.lock)
  │
  ├─ opnca adapter ────────► R 4.6.2 ─► private library (runtime/r/renv.lock)
- │                                       └─ opnca 0.3.2 (binary, cellar)
+ │                                       └─ opnca 0.3.3 (binary, cellar)
  │                                          + R6, plumber2, httpuv, reqres, jsonlite, processx
  │
  ├─ deckifyr adapter ─────► tools venv (runtime/python/tools/uv.lock)
@@ -28,7 +28,7 @@ launcher (opncafyr)        uv 0.13.7 ─► Python 3.13.18 ─► launcher venv 
                             optional: Git 2.56.0 (dugite-native, [optional.git], #56)
 
 repair path only (ADR 0004): Rust 1.99.1 (+ Rtools45 on Windows, Command Line Tools on
-macOS) to build opnca_0.3.2-vendored.tar.gz
+macOS) to build opnca_0.3.3-vendored.tar.gz
 ```
 
 ## Components
@@ -36,7 +36,7 @@ macOS) to build opnca_0.3.2-vendored.tar.gz
 | Component | Needs | Pinned as | Notes |
 |---|---|---|---|
 | Launcher | uv, Python 3.13 | `[uv]`, `[python]`, `[python_envs.launcher]` (repo `uv.lock`) | fastapi, uvicorn, httpx, pydantic, jsonschema, pyyaml, platformdirs, psutil, blake3 (reportifyr sidecar hashes, #30) |
-| opnca-r 0.3.2 | R ≥ 4.2 (we pin 4.6.2); R6; for the web app (`scripts/serve.R`): plumber2 ≥ 0.2.0, httpuv, reqres, jsonlite, processx | `[packages.opnca-r]`: `manifest.json`, one binary per platform, vendored source tarball | Binary chosen from `manifest.json` by fields (`opncafyr.adapters.opnca.release`). Its web app packages are only `Suggests`, so `scripts/lock_r.R` adds them. Source build needs Cargo, rustc ≥ 1.87.0, xz. |
+| opnca-r 0.3.3 | R ≥ 4.2 (we pin 4.6.2); R6; for the web app (`scripts/serve.R`): plumber2 ≥ 0.2.0, httpuv, reqres, jsonlite, processx | `[packages.opnca-r]`: `manifest.json`, one binary per platform, vendored source tarball | Binary chosen from `manifest.json` by fields (`opncafyr.adapters.opnca.release`). Its web app packages are only `Suggests`, so `scripts/lock_r.R` adds them. Source build needs Cargo, rustc ≥ 1.87.0, xz. |
 | deckifyr 0.3.7 | Python ≥ 3.10; python-pptx, pydantic, PyYAML, Pillow; extras `web` (fastapi, uvicorn) and `preview` (pymupdf) | `[packages.deckifyr]` wheel; tools venv | Calls Rscript (flextable `.rds`), quarto and soffice. The adapter passes absolute `--rscript-bin`, `--quarto-bin`, `--soffice-bin` with `--trusted-binaries-only`. `deckifyr build` needs none of LibreOffice. Its R wrapper package is not installed. |
 | quartifyr 0.3.4 | R ≥ 4.1; cli, jsonlite, openssl, quarto (R pkg), withr, processx, pyro, reportifyr, yaml; Quarto ≥ 1.6.36; Python: python-docx, PyYAML | `[packages.quartifyr]` source tarball (pure R) | Both Quarto extensions ship inside the tarball (`inst/extensions/`): `quartifyr` (GPL-3.0-or-later) and an unmodified copy of `A2-ai/quarto-plus` at be6ac44 (MIT). Offline init uses `QUARTIFYR_PYTHON_ENV`; render takes `--offline` (quartifyr#72, #76). LibreOffice from `--soffice-bin` / `QUARTIFYR_SOFFICE_BIN`, else `PATH` (quartifyr#83). |
 | reportifyr 0.4.0 (external) | R ≥ 4.1; assertthat, cli, digest, dplyr, flextable, fs, pyro, gert, ggplot2, here, jsonlite, log4r, officer, processx, purrr, rlang, this.path, tictoc, xml2, yaml; Python: python-docx, PyYAML, Pillow | `[packages.reportifyr]` source tarball from its GitHub release (pure R) | Never modified. r-universe keeps only the latest build, so it is pinned to the release tarball. Runs `uv run -m reportipyr.cli` without `--no-sync`: see [offline.md](offline.md). |

@@ -22,14 +22,15 @@ schema_version = 1
 supported = ["windows-x86_64", "macos-arm64", "macos-x86_64", "linux-x86_64", "linux-aarch64"]
 # A supported platform whose opnca-r binary is not pinned yet. The pins check skips only that
 # requirement for it, and the installer refuses it (unless told, for development, that
-# opnca-r will be missing). Linux waits for opnca-r#61; remove a platform from this list in
-# the commit that pins its opnca-r binary.
-pending = ["linux-x86_64", "linux-aarch64"]
+# opnca-r will be missing). Empty since opnca-r 0.3.3 published its Linux binaries (#61);
+# the mechanism stays for the next platform. Remove a platform from this list in the commit
+# that pins its opnca-r binary.
+pending = []
 windows_min = "11"
 linux_os = "ubuntu"        # /etc/os-release ID and VERSION_ID of the one supported Linux (#65)
 linux_os_version = "24.04"
 linux_glibc_min = "2.39"   # Posit's R and Posit's noble R binaries are built on Ubuntu 24.04
-macos_min = "15"           # opnca-r 0.3.2 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
+macos_min = "15"           # opnca-r 0.3.3 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
                            # this waits on Quarto, uv Python, wheel and CRAN-binary checks (ADR 0003, #1)
 
 # --- Python ---------------------------------------------------------------------------
@@ -86,7 +87,7 @@ deckifyr = true
 
 [r]
 license = "GPL-2.0-or-later"
-version = "4.6.2"          # ADR 0003. opnca-r 0.3.2 binaries are built on R 4.6.2.
+version = "4.6.2"          # ADR 0003. opnca-r 0.3.3 binaries are built on R 4.6.2.
 # CRAN installers, used as pinned files only (rig's user mode downloads its own copy).
 # Windows: the Inno Setup installer in /CURRENTUSER mode (#6). macOS: the .pkg payload is
 # expanded and R.framework relocated, editing only text files, to an R root whose path
@@ -149,10 +150,10 @@ sha256 = "eda220a2f39c392f622049de013ddf7b4dfdf019ba877f251be14ce43e5734d1"
 
 [packages.opnca-r]
 license = "Apache-2.0"
-version = "0.3.2"
+version = "0.3.3"
 source = "github:mantra-opnca/opnca-r"
 private = true             # verify_pins.py --network needs GH_TOKEN
-release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.2/"
+release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.3/"
 # v0.2.7 (2026-11-06) added the launcher API token, --no-overwrite and --require-blq-rules
 # (#40-#43). v0.2.8 (2026-11-07) sent the whole shutdown response (#47), built macOS
 # binaries for R's own minimum (#45) and added the save lock and effective_settings (#46).
@@ -162,22 +163,27 @@ release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.2/
 # artifacts.json schema 2 (#54). v0.3.1 (2026-11-08, commit 5cffa65) takes the unit labels
 # in the preset and locks them (#56), refuses unset roles under --no-guess-roles (#57) and
 # adds identifies_subjects to artifacts.json (#58). v0.3.2 (2026-11-09, commit aacae2a)
-# leaves the flextable caption off the saved formatted tables (#59). Imports are
-# unchanged (R6); flextable,
-# a new Suggests, is already in renv.lock. Select assets by manifest.json fields
+# leaves the flextable caption off the saved formatted tables (#59). v0.3.3 (2026-11-09,
+# commit 9f7cd63) publishes Linux binaries for x86_64 and arm64, built on Ubuntu 24.04 with
+# glibc_min 2.39 and linking only glibc, libstdc++, libgcc and R (#61), and fixes row states
+# in FIM (#60). Imports are unchanged (R6); flextable, a new Suggests, is already in
+# renv.lock. The manifest spells the Linux arch arm64, where our platform is linux-aarch64
+# (installer/platforms.py maps it). Select assets by manifest.json fields
 # (kind/platform/arch/r_minor), never by file name. manifest.json (schema_version 1) is
 # not in SHA256SUMS, so pin its hash here.
-manifest_sha256 = "26450bb0f177c47ce7c58571fc2df3aaae15a1d2854515baf300d1a8dfdc2e0a"
-sha256sums_sha256 = "0c475579ac3b2b3a9cc77722b01735d6ede6bcb3ff80c4ca0e5c702a8a65e044"
-source_commit = "aacae2a7dd562d40382c6debf6b9693c10b01cf6"
+manifest_sha256 = "2342ab85d6b4d55ada8bee5aa2519f868bd24b41fd3b9ce185d7172466769744"
+sha256sums_sha256 = "ab3ebf46b9f0cc9d5bc987a5bde4ca6ccdc96072e1e0a4dc8f11f48017fe3a36"
+source_commit = "9f7cd63af2a1ed0202a8a2ff473fb6df4a3abb41"
 r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.opnca-r.assets]
-"manifest.json" = "26450bb0f177c47ce7c58571fc2df3aaae15a1d2854515baf300d1a8dfdc2e0a"
-"opnca_0.3.2_R4.6_macos-arm64.tgz" = "6271a3d458be727155832b7dd84f9b23b0a42501c34f305b673f4c21a01c36fb"
-"opnca_0.3.2_R4.6_macos-x86_64.tgz" = "992268d4c49a30720e48e0a51ac22f55e4aeab0a602bf7a98be0d8b6b4341ff2"
-"opnca_0.3.2_R4.6_windows-x86_64.zip" = "836cb377caa938973c95b88161090ae12f2e0f7f68b166bb377936e285266c99"
-"opnca_0.3.2-vendored.tar.gz" = "7d64a37bf577a68d25dba9d1ade69206c0d03e2d15a6b7a7541dbe06a5403a0f"  # offline source fallback
+"manifest.json" = "2342ab85d6b4d55ada8bee5aa2519f868bd24b41fd3b9ce185d7172466769744"
+"opnca_0.3.3_R4.6_linux-x86_64.tar.gz" = "958d38d8418d1bd263083d4e0ac2a3b823d84dc59083b289132f99d3a377cfe6"
+"opnca_0.3.3_R4.6_linux-arm64.tar.gz" = "a7f9044b4f76a292c46d2584b126fed72b5b78cd91067a7eeabb250d2a460b9b"
+"opnca_0.3.3_R4.6_macos-arm64.tgz" = "5e99b9de6d316f38bb679992b6d23db0dcc39d28760e25cd46136802313a224b"
+"opnca_0.3.3_R4.6_macos-x86_64.tgz" = "292a1b2ab08d00ec0ae8c86d9d9c8baf8ca0d7d6ec602ef8035ebd33fccb3970"
+"opnca_0.3.3_R4.6_windows-x86_64.zip" = "d85e8d576fd692d428d90fbddc53d5128530c853e1a5d0566db9385527e5ae63"
+"opnca_0.3.3-vendored.tar.gz" = "e918cf8a6de80a63ef795250abf061fac75b5b440a2e816b9bcfab0d4da848cb"  # offline source fallback
 
 [packages.deckifyr]
 license = "GPL-3.0-or-later"
@@ -266,7 +272,7 @@ commit = "a353093d82b6e46cf91a374f4e1b96450d08c780"
 "SHA256SUMS" = "2121877aba60c17866cb7ae0ad3b0b3edca4a0e8a8dd67ae504c54bd59b7d7cf"
 
 # --- Repair path only (ADR 0004) ---------------------------------------------------------
-# Never installed on a normal install. Only to build opnca_0.3.2-vendored.tar.gz when a
+# Never installed on a normal install. Only to build opnca_0.3.3-vendored.tar.gz when a
 # binary can't be used (e.g. macOS below the binary's minimum). macOS also needs the
 # Command Line Tools for this path (#7).
 

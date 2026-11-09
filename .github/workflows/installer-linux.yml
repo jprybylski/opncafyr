@@ -3,17 +3,16 @@ name: Installer (Linux)
 # The native Linux install (#65), end to end, as an unprivileged user in a minimal Ubuntu 24.04
 # container with no network, no compiler, no make and no sudo: the offline bundle built twice
 # and compared, a computer with a library missing refused by name, install, a second run (no-op),
-# repair, a native launch reached through its forward (foreign Host, Origin and a missing
-# session secret refused), a tampered asset and a missing asset refused with the old install
+# repair, the Gate 2 flow on the install (two real opnca-r runs, replay, publish, DOCX report,
+# PPTX deck: scripts/offline/flow_check.py), a native launch reached through its forward
+# (foreign Host, Origin and a missing session secret refused), a tampered asset and a missing asset refused with the old install
 # still running, an update killed part-way and then completed, uninstall leaving a workspace.
 # Every installer command runs under strace and scripts/offline/check_trace.py fails on any
 # connection attempt that leaves the machine. scripts/installer_ci/linux.sh has the legs.
 #
 # x86_64 and aarch64 each run natively (public repositories get hosted arm64 runners).
 #
-# Until opnca-r publishes a Linux binary (opnca-r#61, [platforms].pending in runtime/pins.toml)
-# the bundles are built and installed with --allow-pending, which leaves opnca-r out: the
-# calculation, replay and run-based publishing legs wait for it. The job needs no private token.
+# opnca-r is private: the job needs OPNCA_R_RELEASE_TOKEN to download its Linux binary (0.3.3).
 on:
   workflow_dispatch:
   pull_request:
@@ -26,6 +25,7 @@ on:
       - "scripts/make_installer.py"
       - "scripts/installer_ci/linux*.sh"
       - "scripts/offline/check_trace.py"
+      - "scripts/offline/flow_check.py"
       - "scripts/offline/allowed_attempts.toml"
       - ".github/workflows/installer-linux.yml"
   push:
@@ -59,7 +59,10 @@ jobs:
           uv run python scripts/make_installer.py --out dist
           uv run python scripts/make_installer.py --out dist-newer --version "$(cat VERSION).post1"
       - name: Native install legs (unprivileged, no network)
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
         run: |
+          test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
           bash scripts/installer_ci/linux.sh "${{ matrix.arch }}" "dist/opncafyr-installer-$(cat VERSION)" \
             installer-linux-ci "dist-newer/opncafyr-installer-$(cat VERSION).post1"
       - uses: actions/upload-artifact@v4

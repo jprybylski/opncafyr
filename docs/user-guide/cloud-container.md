@@ -2,7 +2,7 @@
 
 > **Research use only.** This workspace has not been validated for clinical or regulatory decisions.
 
-If your study data lives on a cloud computer (a Linux virtual machine) where you can run Docker or Podman, you can run opncafyr there in a container instead of installing it on your own computer. (If you cannot run Docker or Podman there, a native install on Ubuntu 24.04 is planned: see [Installing and updating](install.md).) The app, R, opnca-r and the other tools run on the cloud computer next to your data. Your own computer only shows the pages in its web browser.
+If your study data lives on a cloud computer (a Linux virtual machine) where you can run Docker or Podman, you can run opncafyr there in a container instead of installing it on your own computer. (If you cannot run Docker or Podman there, you can install natively on Ubuntu 24.04: see [Installing and updating](install.md).) The app, R, opnca-r and the other tools run on the cloud computer next to your data. Your own computer only shows the pages in its web browser.
 
 Use the normal installer ([Installing and updating](install.md)) on a Windows or Mac desktop. Use container mode when:
 
