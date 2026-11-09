@@ -53,7 +53,11 @@ def sha256(path: Path) -> str:
 def bootstrap_tsv(pins: dict) -> str:
     rows = []
     for platform in pins["platforms"]["supported"]:
-        entry = pins["python"]["assets"][platform]
+        # Linux's Python is pinned once, under [ci.<platform>] (#65).
+        entry = (
+            pins["python"]["assets"].get(platform)
+            or (pins["ci"][platform]["python"]["assets"][platform])
+        )
         url = entry["url"]
         name = url.rsplit("/", 1)[1].replace("%2B", "+")
         rows.append("\t".join([platform, name, entry["sha256"], url]))

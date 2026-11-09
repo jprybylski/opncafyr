@@ -9,6 +9,12 @@ exactly the locked version, downloads it and records its URL and SHA-256. The re
 what the installer and the offline bundle builder fetch: binaries only, never a build
 from source on a user's machine.
 
+Linux (#65): P3M serves a Linux binary at the *source* URL under ``__linux__/noble/`` when
+the request carries R's own User-Agent, and the source tarball otherwise. So each Linux
+entry is pinned by URL, SHA-256 and the User-Agent that selects the binary (``[user_agents]``
+in the output); the script fails when a download is not a binary built for the platform
+(its ``Built:`` field names the architecture).
+
 Packages from the cellar (opnca, quartifyr, reportifyr, pyro, gitneighbr) are pinned in
 runtime/pins.toml instead.
 
@@ -44,8 +50,19 @@ PLATFORMS = {
     "macos-arm64": ("bin/macosx/sonoma-arm64/contrib/{minor}", ".tgz"),
     "macos-x86_64": ("bin/macosx/big-sur-x86_64/contrib/{minor}", ".tgz"),
     "windows-x86_64": ("bin/windows/contrib/{minor}", ".zip"),
+    "linux-x86_64": ("__linux__/noble/{date}/src/contrib", ".tar.gz"),
+    "linux-aarch64": ("__linux__/noble/{date}/src/contrib", ".tar.gz"),
     "source": ("src/contrib", ".tar.gz"),
 }
+
+# What R sends as its User-Agent on Ubuntu; P3M answers with a binary for it (#65). The
+# R version only needs to be one P3M builds for (4.6.x).
+LINUX_USER_AGENTS = {
+    "linux-x86_64": "R (4.6.2 x86_64-pc-linux-gnu x86_64 linux-gnu)",
+    "linux-aarch64": "R (4.6.2 aarch64-unknown-linux-gnu aarch64 linux-gnu)",
+}
+# The architecture a Linux binary's DESCRIPTION ``Built:`` field must name.
+LINUX_BUILT = {"linux-x86_64": "x86_64-pc-linux-gnu", "linux-aarch64": "aarch64-unknown-linux-gnu"}
 
 USER_AGENT = "opncafyr-pin/1"
 
@@ -63,10 +80,10 @@ ALLOWED_LINKS = (
 )
 
 
-def _get(url: str) -> bytes:
+def _get(url: str, user_agent: str = USER_AGENT) -> bytes:
     for attempt in range(4):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})  # noqa: S310
+            req = urllib.request.Request(url, headers={"User-Agent": user_agent})  # noqa: S310
             with urllib.request.urlopen(req, timeout=120) as resp:  # noqa: S310
                 return resp.read()
         except OSError:
@@ -117,6 +134,30 @@ def foreign_links(data: bytes) -> list[str]:
     return bad
 
 
+def linux_problem(platform: str, data: bytes) -> str | None:
+    """Why a download is not a Linux binary built for ``platform`` (None if it is)."""
+    try:
+        with tarfile.open(fileobj=io.BytesIO(data)) as tar:
+            member = next(
+                m
+                for m in tar.getmembers()
+                if m.name.count("/") == 1 and m.name.endswith("/DESCRIPTION")
+            )
+            text = (tar.extractfile(member) or io.BytesIO()).read().decode("utf-8", "replace")
+    except (tarfile.TarError, StopIteration):
+        return "not a package tarball"
+    built = next((line for line in text.splitlines() if line.startswith("Built:")), "")
+    if not built:
+        return "has no Built: field, so it is the source package, not a binary"
+    # "Built: R 4.6.0; <platform>; <date>; unix". A package without compiled code is built
+    # for no platform (the field is empty); compiled code must name this architecture.
+    fields = [part.strip() for part in built.removeprefix("Built:").split(";")]
+    target = fields[1] if len(fields) > 1 else ""
+    if target and LINUX_BUILT[platform] != target:
+        return f"was built for another platform ({built})"
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--lock", type=Path, default=ROOT / "runtime/r/renv.lock")
@@ -128,6 +169,7 @@ def main() -> int:
     lock = json.loads(args.lock.read_text("utf-8"))
     minor = ".".join(lock["R"]["Version"].split(".")[:2])
     repo = next(r["URL"] for r in lock["R"]["Repositories"] if r["Name"] == "P3M")
+    root_url, _, date = repo.rpartition("/")
     wanted = {
         name: entry["Version"]
         for name, entry in lock["Packages"].items()
@@ -145,7 +187,10 @@ def main() -> int:
 
     for platform, (path, ext) in PLATFORMS.items():
         for name, version in sorted(wanted.items()):
-            base = f"{repo}/{path.format(minor=minor)}"
+            if platform.startswith("linux"):
+                base = f"{root_url}/{path.format(minor=minor, date=date)}"
+            else:
+                base = f"{repo}/{path.format(minor=minor)}"
             if name in CRAN_MACOS and platform in CRAN_MACOS_PATHS:
                 base = CRAN_MACOS_PATHS[platform].format(minor=minor)
             have = index(base).get(name)
@@ -163,12 +208,14 @@ def main() -> int:
         if cached and cached.is_file():
             data = cached.read_bytes()
         else:
-            data = _get(url)
+            data = _get(url, LINUX_USER_AGENTS.get(platform, USER_AGENT))
             if cached:
                 cached.parent.mkdir(parents=True, exist_ok=True)
                 cached.write_bytes(data)
         if platform.startswith("macos"):
             problems.extend(f"{platform}: {name}: {bad}" for bad in foreign_links(data))
+        if platform.startswith("linux") and (why := linux_problem(platform, data)):
+            problems.append(f"{platform}: {name}: {why}")
         return name, platform, url, hashlib.sha256(data).hexdigest()
 
     results: dict[str, dict[str, tuple[str, str]]] = {}
@@ -187,6 +234,10 @@ def main() -> int:
         f'repository = "{repo}"',
         f'r_minor = "{minor}"',
         "",
+        "# The User-Agent that makes P3M answer a linux-* URL with a binary (#65).",
+        "[user_agents]",
+        *(f'{p} = "{ua}"' for p, ua in LINUX_USER_AGENTS.items()),
+        "",
     ]
     for name in sorted(results):
         for platform in PLATFORMS:
@@ -197,7 +248,7 @@ def main() -> int:
                 f'url = "{url}"',
                 f'sha256 = "{sha}"',
             ]
-            if not url.startswith(repo):
+            if not url.startswith((repo, f"{root_url}/__linux__/")):
                 lines.append('origin = "cran"')
             lines.append("")
     args.out.write_text("\n".join(lines), "utf-8")

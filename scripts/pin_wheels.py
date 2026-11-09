@@ -34,7 +34,7 @@ from packaging.markers import Marker
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "runtime" / "python" / "wheels.toml"
-PLATFORMS = ("windows-x86_64", "macos-arm64", "macos-x86_64")
+PLATFORMS = ("windows-x86_64", "macos-arm64", "macos-x86_64", "linux-x86_64", "linux-aarch64")
 ENVS = {
     "launcher": (ROOT, ["--no-dev"]),
     "tools": (ROOT / "runtime" / "python" / "tools", []),
@@ -42,20 +42,33 @@ ENVS = {
 PY = (3, 13)
 PY_FULL = "3.13.18"
 MACOS_MIN = 15  # pins [platforms].macos_min: wheels built for a newer macOS won't load
+GLIBC_MAX = (2, 39)  # pins [platforms].linux_glibc_min (#65): a wheel needing newer won't load
+# Old manylinux names stand for a glibc version (PEP 600).
+MANYLINUX_LEGACY = {"manylinux1": (2, 5), "manylinux2010": (2, 12), "manylinux2014": (2, 17)}
 PLATFORM_TAG = {
     "windows-x86_64": re.compile(r"^win_amd64$"),
     "macos-arm64": re.compile(r"^macosx_(\d+)_(\d+)_(arm64|universal2)$"),
     "macos-x86_64": re.compile(r"^macosx_(\d+)_(\d+)_(x86_64|universal2|intel)$"),
+    "linux-x86_64": re.compile(r"^(manylinux(?:1|2010|2014|_(\d+)_(\d+)))_x86_64$"),
+    "linux-aarch64": re.compile(r"^(manylinux(?:2014|_(\d+)_(\d+)))_aarch64$"),
 }
 MARKER_ENV = {
     "windows-x86_64": {"sys_platform": "win32", "platform_machine": "AMD64", "os_name": "nt"},
     "macos-arm64": {"sys_platform": "darwin", "platform_machine": "arm64", "os_name": "posix"},
     "macos-x86_64": {"sys_platform": "darwin", "platform_machine": "x86_64", "os_name": "posix"},
+    "linux-x86_64": {"sys_platform": "linux", "platform_machine": "x86_64", "os_name": "posix"},
+    "linux-aarch64": {"sys_platform": "linux", "platform_machine": "aarch64", "os_name": "posix"},
 }
-PLATFORM_SYSTEM = {"windows-x86_64": "Windows", "macos-arm64": "Darwin", "macos-x86_64": "Darwin"}
+PLATFORM_SYSTEM = {
+    "windows-x86_64": "Windows",
+    "macos-arm64": "Darwin",
+    "macos-x86_64": "Darwin",
+    "linux-x86_64": "Linux",
+    "linux-aarch64": "Linux",
+}
 
 
-def wheel_score(filename: str, platform: str) -> int | None:
+def wheel_score(filename: str, platform: str) -> float | None:
     """How well a wheel fits CPython 3.13 on ``platform`` (higher is better), or None."""
     parts = filename[:-4].split("-")
     py_tags, abi_tags, plat_tags = parts[-3].split("."), parts[-2].split("."), parts[-1]
@@ -73,7 +86,14 @@ def wheel_score(filename: str, platform: str) -> int | None:
         if tag == "any":
             return score
         m = PLATFORM_TAG[platform].match(tag)
-        if m and (platform.startswith("windows") or int(m.group(1)) <= MACOS_MIN):
+        if not m:
+            continue
+        if platform.startswith("linux"):
+            glibc = (int(m.group(2)), int(m.group(3))) if m.group(2) else None
+            glibc = glibc or MANYLINUX_LEGACY[m.group(1)]
+            if glibc <= GLIBC_MAX:
+                return score + 10 + glibc[1] / 100  # the newest glibc the target has
+        elif platform.startswith("windows") or int(m.group(1)) <= MACOS_MIN:
             return score + 10
     return None
 

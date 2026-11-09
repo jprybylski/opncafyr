@@ -350,12 +350,19 @@ def test_bootstrap_tsv_matches_the_pins():
     rows = [r.split("\t") for r in _make_installer().bootstrap_tsv(pins).splitlines()]
     assert {r[0] for r in rows} == set(pins["platforms"]["supported"])
     for platform, name, sha, url in rows:
-        asset = pins["python"]["assets"][platform]
+        asset = (
+            pins["python"]["assets"].get(platform)
+            or pins["ci"][platform]["python"]["assets"][platform]
+        )
         assert (sha, url) == (asset["sha256"], asset["url"])
         assert name == url.rsplit("/", 1)[1].replace("%2B", "+")
     assert all(
         r[1]
-        == next(a.file for a in Pins.load(ROOT / "runtime").assets(r[0]) if a.component == "python")
+        == next(
+            a.file
+            for a in Pins.load(ROOT / "runtime").assets(r[0], allow_pending=True)
+            if a.component == "python"
+        )
         for r in rows
     )
 

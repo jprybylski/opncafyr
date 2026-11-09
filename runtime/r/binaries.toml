@@ -5,6 +5,11 @@ schema_version = 1
 repository = "https://packagemanager.posit.co/cran/2026-11-06"
 r_minor = "4.6"
 
+# The User-Agent that makes P3M answer a linux-* URL with a binary (#65).
+[user_agents]
+linux-x86_64 = "R (4.6.2 x86_64-pc-linux-gnu x86_64 linux-gnu)"
+linux-aarch64 = "R (4.6.2 aarch64-unknown-linux-gnu aarch64 linux-gnu)"
+
 [packages."AsioHeaders".macos-arm64]
 version = "1.30.2-1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/macosx/sonoma-arm64/contrib/4.6/AsioHeaders_1.30.2-1.tgz"
@@ -19,6 +24,16 @@ sha256 = "e0a4c1b439079d11cc729a6d27a60aab36d81a35153bb3a6a5cde5a519f1f095"
 version = "1.30.2-1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/AsioHeaders_1.30.2-1.zip"
 sha256 = "e91381023505fb6d097c3c4ae30def9ddbfc65f7cad53f92a1a52505978b053e"
+
+[packages."AsioHeaders".linux-x86_64]
+version = "1.30.2-1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/AsioHeaders_1.30.2-1.tar.gz"
+sha256 = "d3ae39434add22cf4ba1135cf6c82c597691ce3b78ea9609063d4dfa0b73b97c"
+
+[packages."AsioHeaders".linux-aarch64]
+version = "1.30.2-1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/AsioHeaders_1.30.2-1.tar.gz"
+sha256 = "67da295ed318c045614c5e24519defc2a0c032db69fe86422babdd68d2f90ad2"
 
 [packages."AsioHeaders".source]
 version = "1.30.2-1"
@@ -40,6 +55,16 @@ version = "2.6.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/R6_2.6.1.zip"
 sha256 = "e16a8c018a680ac12ca516c1e0085cfbb2db5cd5e1f65c14884a8a6a47fad538"
 
+[packages."R6".linux-x86_64]
+version = "2.6.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/R6_2.6.1.tar.gz"
+sha256 = "c9f414aee8f5a82daaee177e45736b217ac9b0e09c13b6b5f835ce9a0828294a"
+
+[packages."R6".linux-aarch64]
+version = "2.6.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/R6_2.6.1.tar.gz"
+sha256 = "fe29d3d2810bf2bee3c770bdb31668e15880cf748b829d154de357bea00b8d34"
+
 [packages."R6".source]
 version = "2.6.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/R6_2.6.1.tar.gz"
@@ -59,6 +84,16 @@ sha256 = "465bb432039a567391b855ee9a0fc7bdff41663682653fc4b037acbf1ff6d398"
 version = "1.1-3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/RColorBrewer_1.1-3.zip"
 sha256 = "2d3acbd1aae131662793de199ca5d60441b27ce5ac7b681a1f436f890cf28ed0"
+
+[packages."RColorBrewer".linux-x86_64]
+version = "1.1-3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/RColorBrewer_1.1-3.tar.gz"
+sha256 = "a78f95eb8deb9faee088cb7a6bbd89441ee8078ccfe3368897f2febe610f09ba"
+
+[packages."RColorBrewer".linux-aarch64]
+version = "1.1-3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/RColorBrewer_1.1-3.tar.gz"
+sha256 = "59864254b29d623a0b226d0ec36060191c1a18f92cc3b95f32a4ef9002d0521b"
 
 [packages."RColorBrewer".source]
 version = "1.1-3"
@@ -80,6 +115,16 @@ version = "1.1.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/Rcpp_1.1.2.zip"
 sha256 = "28eef138e6417b2fd92c9bebb81f5e77c758812cf68b7ec84125b1327c71b461"
 
+[packages."Rcpp".linux-x86_64]
+version = "1.1.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/Rcpp_1.1.2.tar.gz"
+sha256 = "e133ac43d289d73bc07223de64bc175fcb94e9438c3dcfb82b863e90b5ff9181"
+
+[packages."Rcpp".linux-aarch64]
+version = "1.1.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/Rcpp_1.1.2.tar.gz"
+sha256 = "6459815cc6f6cfede1a3ddbfe0ef5a1cab493d032e631da0c9fe1120a47824bc"
+
 [packages."Rcpp".source]
 version = "1.1.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/Rcpp_1.1.2.tar.gz"
@@ -99,6 +144,16 @@ sha256 = "3a325cdef0aa6f6bba0cdf77fe4078d5a9db2b8412a050b1fe190059c275e73b"
 version = "0.2.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/S7_0.2.2.zip"
 sha256 = "291d5cfae038dc87b5ec84ef10a9222b8789b21f6f6bffba30b4c9839141d520"
+
+[packages."S7".linux-x86_64]
+version = "0.2.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/S7_0.2.2.tar.gz"
+sha256 = "05a5ad2d20795fda56e318bff9c38365410df3c6088393b59473044579caf400"
+
+[packages."S7".linux-aarch64]
+version = "0.2.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/S7_0.2.2.tar.gz"
+sha256 = "d01c5c69b6ae386eb01f0e34e0e2b393660c4e1287bcba81d51d57e50b88dbe2"
 
 [packages."S7".source]
 version = "0.2.2"
@@ -120,6 +175,16 @@ version = "1.2.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/askpass_1.2.1.zip"
 sha256 = "b4b053f423e1bc0b888a412e1094f8176b01721ebe210367c16dccec860c574b"
 
+[packages."askpass".linux-x86_64]
+version = "1.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/askpass_1.2.1.tar.gz"
+sha256 = "8d1d8ef9fb96f556dcd8dc93bef4c790823fe615da5121c29a991f92a2bdf51a"
+
+[packages."askpass".linux-aarch64]
+version = "1.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/askpass_1.2.1.tar.gz"
+sha256 = "f37bea4606151b59c5c5b6b6f0b97584659ff75c094dad5a8688251675acf63b"
+
 [packages."askpass".source]
 version = "1.2.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/askpass_1.2.1.tar.gz"
@@ -139,6 +204,16 @@ sha256 = "0e60e50b54e83f97bed92e5f0ce31a74ec389cb34547e9ab88b4c738c9d698e8"
 version = "0.2.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/assertthat_0.2.1.zip"
 sha256 = "70e0cc821139bb105c96fd186c7223357abc1af78bb802b26aa46da713f63b0e"
+
+[packages."assertthat".linux-x86_64]
+version = "0.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/assertthat_0.2.1.tar.gz"
+sha256 = "cb5fdde93794dcca8b240c372c2cc6e11cdf77e9408ff5035bb0945f6d9125af"
+
+[packages."assertthat".linux-aarch64]
+version = "0.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/assertthat_0.2.1.tar.gz"
+sha256 = "05062ca9f1daf3c4edc3d891bde43f081f34d7b77b8e4aa1ca4d70183aaa442f"
 
 [packages."assertthat".source]
 version = "0.2.1"
@@ -160,6 +235,16 @@ version = "0.1-6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/base64enc_0.1-6.zip"
 sha256 = "1854713612eb16c9550b4481e731c0e51b5bed82419874553915b577b7071d15"
 
+[packages."base64enc".linux-x86_64]
+version = "0.1-6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/base64enc_0.1-6.tar.gz"
+sha256 = "dfaba5ebacc8b4608c71c825f9bd15a15a19a5a00f213532ebcdff024ad6ab5b"
+
+[packages."base64enc".linux-aarch64]
+version = "0.1-6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/base64enc_0.1-6.tar.gz"
+sha256 = "e30e01bd1c99704021e843a8c291c8e999affef1297b14738db7ab614adab2f2"
+
 [packages."base64enc".source]
 version = "0.1-6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/base64enc_0.1-6.tar.gz"
@@ -179,6 +264,16 @@ sha256 = "ec570c082ccfa0c6564edee060d04183b3bc1c7f2345655f02745fd90ef2b0b0"
 version = "4.6.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/bit_4.6.0.zip"
 sha256 = "41acc4eeff046997aebe9dc2e902db40d8f59a768182d597e7c8c4b761d70032"
+
+[packages."bit".linux-x86_64]
+version = "4.6.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/bit_4.6.0.tar.gz"
+sha256 = "855efdf43e792afad04553c1509ac9d0b114c5b7ff04998d90f64c8efb80634e"
+
+[packages."bit".linux-aarch64]
+version = "4.6.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/bit_4.6.0.tar.gz"
+sha256 = "b5ede53e3f4cef0b061224be0d3a3889d1aa762f2e9c571a3dccb945fd3595b0"
 
 [packages."bit".source]
 version = "4.6.0"
@@ -200,6 +295,16 @@ version = "4.8.6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/bit64_4.8.6.zip"
 sha256 = "ce7ae17810fae0dd8c00f164ada0bcd62d6d5f4178523faf430f70abf3825c94"
 
+[packages."bit64".linux-x86_64]
+version = "4.8.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/bit64_4.8.6.tar.gz"
+sha256 = "4bf05740a2301820831dce559bdc31220abde973c11eb9af14de3277ed739900"
+
+[packages."bit64".linux-aarch64]
+version = "4.8.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/bit64_4.8.6.tar.gz"
+sha256 = "fab1289f83f93057bd1eced1eda1368844cda444fdc1fd9443c661d3889e1e84"
+
 [packages."bit64".source]
 version = "4.8.6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/bit64_4.8.6.tar.gz"
@@ -219,6 +324,16 @@ sha256 = "f1de45cd456799097378f2b69b19793d057d2305bd7bb38b9943dd8aaf323238"
 version = "1.0-10"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/brew_1.0-10.zip"
 sha256 = "129a233c74c061c4f074d8ed8bec77d363c8aa4e3baf32086103dc7d7ddce9db"
+
+[packages."brew".linux-x86_64]
+version = "1.0-10"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/brew_1.0-10.tar.gz"
+sha256 = "15d069cd9e59c61703bbf1c7d9f2c550485d055ed13f5e843ee32fc6673c22ea"
+
+[packages."brew".linux-aarch64]
+version = "1.0-10"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/brew_1.0-10.tar.gz"
+sha256 = "c9d3bf8f5c078caa4f72a0fd382ea59f7b9dd84ca68c87d2ab249c59f390217a"
 
 [packages."brew".source]
 version = "1.0-10"
@@ -240,6 +355,16 @@ version = "1.1.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/brio_1.1.5.zip"
 sha256 = "050affd40f85527cf5ca47378c7deac0ac54d5c6b8c9af486a34ba974f2f42fc"
 
+[packages."brio".linux-x86_64]
+version = "1.1.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/brio_1.1.5.tar.gz"
+sha256 = "d56d255777ccf957d9604dbc8e509e700165074373ca895d98fc20507fd37a90"
+
+[packages."brio".linux-aarch64]
+version = "1.1.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/brio_1.1.5.tar.gz"
+sha256 = "6e089c2645f16e675fcec8393525a26d4ba36b80f3bcc53a0ba3a0c6a4c452a7"
+
 [packages."brio".source]
 version = "1.1.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/brio_1.1.5.tar.gz"
@@ -259,6 +384,16 @@ sha256 = "e70f6e9ae9dd37111803c90f0351d31a3ffb66c38346ee9bf28d9f037653e013"
 version = "1.4.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/brotli_1.4.0.zip"
 sha256 = "b81d27d3a5b1703bb12a3fc373b385b1fe0628260220f9482b95063b551c2caf"
+
+[packages."brotli".linux-x86_64]
+version = "1.4.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/brotli_1.4.0.tar.gz"
+sha256 = "729b8dd009df01a18fbaace0bbd4b5cc6057c5c28c686bc89374b2de309215b5"
+
+[packages."brotli".linux-aarch64]
+version = "1.4.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/brotli_1.4.0.tar.gz"
+sha256 = "053cce69ed8ea04370a4d5d3a67f01bb8b7a58b519d4c52de7d96072b3ae874f"
 
 [packages."brotli".source]
 version = "1.4.0"
@@ -280,6 +415,16 @@ version = "0.12.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/bslib_0.12.0.zip"
 sha256 = "7b32cc2d323be6289700fc8faf32d8a9c80dfddceb20d31563f7c30ba2ee0e33"
 
+[packages."bslib".linux-x86_64]
+version = "0.12.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/bslib_0.12.0.tar.gz"
+sha256 = "219acba4ceace376ac350b12e55b3fb562f7f224b6bd4f4a08836547a76f0de9"
+
+[packages."bslib".linux-aarch64]
+version = "0.12.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/bslib_0.12.0.tar.gz"
+sha256 = "08fae5fd03636fe806e6f4235808cbcc27ec56c8c2672fdd6b8074833379415d"
+
 [packages."bslib".source]
 version = "0.12.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/bslib_0.12.0.tar.gz"
@@ -299,6 +444,16 @@ sha256 = "3c3b7994b0c86148e6869e5f84f78ba17c134f6bed187c2065e2088c5f9972fb"
 version = "1.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/cachem_1.1.0.zip"
 sha256 = "6a4bcfdc7f48b758ce1602b9ddd9c6cf74e2e896e1d209ce96d4e91995ccbe86"
+
+[packages."cachem".linux-x86_64]
+version = "1.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/cachem_1.1.0.tar.gz"
+sha256 = "7904fb5c11a4929ce8c08da8fe8b5ec53ced18cbaf52e60fb13762805848d32d"
+
+[packages."cachem".linux-aarch64]
+version = "1.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/cachem_1.1.0.tar.gz"
+sha256 = "dcc2389098c26a1530853c4c3e1066e5310972e6a60a41eff1a202c31bb2ca13"
 
 [packages."cachem".source]
 version = "1.1.0"
@@ -320,6 +475,16 @@ version = "3.8.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/callr_3.8.0.zip"
 sha256 = "e80f726ffd07dbb519255f21e356f7708603798aa37bf30a18425d082c416034"
 
+[packages."callr".linux-x86_64]
+version = "3.8.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/callr_3.8.0.tar.gz"
+sha256 = "f363477ee449d926dda0ff7c3d0375c79a1f96115564f24e38d361903fb37e51"
+
+[packages."callr".linux-aarch64]
+version = "3.8.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/callr_3.8.0.tar.gz"
+sha256 = "4731656a3941e0f364d54c80c90579c2684cd496fc11b94eb15355b74da65098"
+
 [packages."callr".source]
 version = "3.8.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/callr_3.8.0.tar.gz"
@@ -339,6 +504,16 @@ sha256 = "7cc3ac4aa1a6edd2131a125c943e8958a4b598716e191ae2ea210f656da462b2"
 version = "3.6.6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/cli_3.6.6.zip"
 sha256 = "6d5e4c84f4aab8ecac4adec37f61188d2d2b50eb293edfed2d50d8d2f775aa18"
+
+[packages."cli".linux-x86_64]
+version = "3.6.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/cli_3.6.6.tar.gz"
+sha256 = "3fdd95c50f57ad48dca3890c9591c4035c622fc046e5d2f6001e1c45d0e91245"
+
+[packages."cli".linux-aarch64]
+version = "3.6.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/cli_3.6.6.tar.gz"
+sha256 = "f05c7a56ac105d758cf3806a275a06a7826a4328d596d34175aa84571aeb5378"
 
 [packages."cli".source]
 version = "3.6.6"
@@ -360,6 +535,16 @@ version = "0.8.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/clipr_0.8.1.zip"
 sha256 = "f977d0796ae4a4538daa9a7e7e534fffafa11995d38a50217f1a4aaac07f2df9"
 
+[packages."clipr".linux-x86_64]
+version = "0.8.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/clipr_0.8.1.tar.gz"
+sha256 = "24206d14a2ede6db5f308e1231fa599d3b8707d2f03ef955791fa4ee030f1fba"
+
+[packages."clipr".linux-aarch64]
+version = "0.8.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/clipr_0.8.1.tar.gz"
+sha256 = "86b89d1ee1a87ac0b844ba141fb3f1cd18a254a07925ecacb205258936466b4c"
+
 [packages."clipr".source]
 version = "0.8.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/clipr_0.8.1.tar.gz"
@@ -379,6 +564,16 @@ sha256 = "933900f6243184dc54e3540c96b28e81294e7c0648bd2603d8d9844a6696ec8f"
 version = "2.0.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/commonmark_2.0.0.zip"
 sha256 = "8bf236ff6fbbb923c4d86ef053a354359a28975d90949efffd074811302a81e6"
+
+[packages."commonmark".linux-x86_64]
+version = "2.0.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/commonmark_2.0.0.tar.gz"
+sha256 = "eb7c6fa457337197d4873b2a46dd65f3ccdf604d30685087d488b9302f0d5ab7"
+
+[packages."commonmark".linux-aarch64]
+version = "2.0.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/commonmark_2.0.0.tar.gz"
+sha256 = "2d629a700784cb835d568f69de6e3ee12c8a1e076b09fe02a5a48b4c2cd5f170"
 
 [packages."commonmark".source]
 version = "2.0.0"
@@ -400,6 +595,16 @@ version = "0.5.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/cpp11_0.5.5.zip"
 sha256 = "65cf57ba74dd2a93b7a24d6e42d1277cee12479b0fa2169197e123dd31aa0459"
 
+[packages."cpp11".linux-x86_64]
+version = "0.5.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/cpp11_0.5.5.tar.gz"
+sha256 = "1513e1ba8308324f2319d8dae051fb8f1b4be4d76af8711f924091afdf320f8d"
+
+[packages."cpp11".linux-aarch64]
+version = "0.5.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/cpp11_0.5.5.tar.gz"
+sha256 = "8b2de0e61443ac87cb8ec2bf3eee1c315ed48415a97f35f6fb88ce54f1970c8d"
+
 [packages."cpp11".source]
 version = "0.5.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/cpp11_0.5.5.tar.gz"
@@ -419,6 +624,16 @@ sha256 = "0f789f1ac3833ed0a9ac4fe2d7d4b6a8c1e3215946e527cd3c8d05ae1b54edfe"
 version = "1.5.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/crayon_1.5.3.zip"
 sha256 = "fe6a43ab50f5bf27dd72ee6581d916d214d1ff3d5268966d347a1bcafd9e2651"
+
+[packages."crayon".linux-x86_64]
+version = "1.5.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/crayon_1.5.3.tar.gz"
+sha256 = "9d1abf91a4133659eab39c6b228cd0462363e002d1f5a613b49dbfabfea2bd90"
+
+[packages."crayon".linux-aarch64]
+version = "1.5.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/crayon_1.5.3.tar.gz"
+sha256 = "ee21d2f084c662fbeb4255e19761739978dbe88c42ee1edd27c07e1b41132124"
 
 [packages."crayon".source]
 version = "1.5.3"
@@ -440,6 +655,16 @@ version = "2.0.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/credentials_2.0.3.zip"
 sha256 = "a7e098caebb5e526252124ead9dffec54bba990107117cc5a4ca5be518b233da"
 
+[packages."credentials".linux-x86_64]
+version = "2.0.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/credentials_2.0.3.tar.gz"
+sha256 = "fc86c82378ddecfd9e9fd4f2d7c24c23a8ab2b91c32a1a02309dea0550c4c44b"
+
+[packages."credentials".linux-aarch64]
+version = "2.0.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/credentials_2.0.3.tar.gz"
+sha256 = "44563bceb3d6cb4e1897d25b07991b2788e141c6b1473b3ed7004f4803aaf3f1"
+
 [packages."credentials".source]
 version = "2.0.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/credentials_2.0.3.tar.gz"
@@ -459,6 +684,16 @@ sha256 = "f64dcd36717bef3eb85b93af7551f0e1517d8bc3f06e0b11f9e00b338566a8fb"
 version = "8.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/curl_8.1.0.zip"
 sha256 = "4fe3e307622eb6081bf0cd89455f4ac3d55e0cb2600456c9613350a79459e5f0"
+
+[packages."curl".linux-x86_64]
+version = "8.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/curl_8.1.0.tar.gz"
+sha256 = "f83200b4269dd905fe62760122ca79afb31b8179d02551e3acd7ddee5d2cae0d"
+
+[packages."curl".linux-aarch64]
+version = "8.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/curl_8.1.0.tar.gz"
+sha256 = "2339b93d245bbc02cd8d13d16e448faef0913d39ad3afc5935c31759b21a1595"
 
 [packages."curl".source]
 version = "8.1.0"
@@ -480,6 +715,16 @@ version = "1.18.6.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/data.table_1.18.6.1.zip"
 sha256 = "65435c6adae23542657d9c65e268e56320411f2bb679d4d5cdf91c299639accd"
 
+[packages."data.table".linux-x86_64]
+version = "1.18.6.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/data.table_1.18.6.1.tar.gz"
+sha256 = "b39f87db6773f2f2285dad76a24e6220ab70dca25a66a265493b5a2493c1a90b"
+
+[packages."data.table".linux-aarch64]
+version = "1.18.6.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/data.table_1.18.6.1.tar.gz"
+sha256 = "dc09d7cb65d550cab08bd1ecd1f464a0b81bb1e403116ce455867c452d476d62"
+
 [packages."data.table".source]
 version = "1.18.6.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/data.table_1.18.6.1.tar.gz"
@@ -499,6 +744,16 @@ sha256 = "64a7ce04e2efb2854007e4586992483572d1b4197bd1d3f7860041c929998e28"
 version = "1.4.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/desc_1.4.3.zip"
 sha256 = "44c0495b7d7facd6bfe1e7ce232f55b1c400ba8e0db35c50f9a4b7cbeb2b44c0"
+
+[packages."desc".linux-x86_64]
+version = "1.4.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/desc_1.4.3.tar.gz"
+sha256 = "5f1e21b13fe77958a1723b543066fe9150b48999a3d089063946244f6a95cfb7"
+
+[packages."desc".linux-aarch64]
+version = "1.4.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/desc_1.4.3.tar.gz"
+sha256 = "eb6fe547cfa7f5c6c94be7fc2bdcbcff091de1e065b2c38d3ab03a154cdddc0d"
 
 [packages."desc".source]
 version = "1.4.3"
@@ -520,6 +775,16 @@ version = "0.6.39"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/digest_0.6.39.zip"
 sha256 = "b6cb91c374a7865a952aafe287007b5e69663013bc3475b3eceacf899fe67b00"
 
+[packages."digest".linux-x86_64]
+version = "0.6.39"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/digest_0.6.39.tar.gz"
+sha256 = "4bbbef4ae1c7ab83bcb8a2f571610787ff9396d60b7e336abb0ee2cbe433bff6"
+
+[packages."digest".linux-aarch64]
+version = "0.6.39"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/digest_0.6.39.tar.gz"
+sha256 = "a5952ac042d2f6ce413f166271ad062740fbed3b4acc59052dbd1b2174e98f45"
+
 [packages."digest".source]
 version = "0.6.39"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/digest_0.6.39.tar.gz"
@@ -539,6 +804,16 @@ sha256 = "96d683859041ebe3bdf8f12b6a765185fd3a6be26635858c1b6f3eeef01a93af"
 version = "1.2.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/dplyr_1.2.1.zip"
 sha256 = "082f726dcfc102d9217e01b2326e04bd5f9c74e7fe91612122a6fb4f731ca9bf"
+
+[packages."dplyr".linux-x86_64]
+version = "1.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/dplyr_1.2.1.tar.gz"
+sha256 = "743ca1f29bb7a9b9b9aebcab3bc4f3da7ddc5c2506c0908093aa94147691a6c0"
+
+[packages."dplyr".linux-aarch64]
+version = "1.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/dplyr_1.2.1.tar.gz"
+sha256 = "70594408bdb0d0b9caeaf22eff74bc3b73d87305a1f74129c74934ae42b5fe0e"
 
 [packages."dplyr".source]
 version = "1.2.1"
@@ -560,6 +835,16 @@ version = "1.0.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/evaluate_1.0.5.zip"
 sha256 = "22fab1e91ee9b787af37a446c8d9185aacfc8a2dcff9f2ff4fd753194ece1551"
 
+[packages."evaluate".linux-x86_64]
+version = "1.0.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/evaluate_1.0.5.tar.gz"
+sha256 = "ba41d8496d9881ea1ee713ea9f802c9a41c627444c076c6130e0a4c83057cdce"
+
+[packages."evaluate".linux-aarch64]
+version = "1.0.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/evaluate_1.0.5.tar.gz"
+sha256 = "198c3bfe7b3b80eabd2dab259c2963ce0ad0c2c531136a64a7f7b682338d974e"
+
 [packages."evaluate".source]
 version = "1.0.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/evaluate_1.0.5.tar.gz"
@@ -579,6 +864,16 @@ sha256 = "4d029024672dd222e965b64d30cb7620088c0efc2533d03821ff0bc219f8fc6d"
 version = "2.1.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/farver_2.1.2.zip"
 sha256 = "71e93a7155fdad5be7039797620c66b9de1d9b2ef1f701393a557546664babe8"
+
+[packages."farver".linux-x86_64]
+version = "2.1.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/farver_2.1.2.tar.gz"
+sha256 = "56b3ab67f1ab4ccbcdda43818792841f21ef0e762b8a9753f48bec4ce9e52ea9"
+
+[packages."farver".linux-aarch64]
+version = "2.1.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/farver_2.1.2.tar.gz"
+sha256 = "f8c044c59e43b850e2041cd88edac7d6c2f188118b6d590bdaf2be3d7cf08843"
 
 [packages."farver".source]
 version = "2.1.2"
@@ -600,6 +895,16 @@ version = "1.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/fastmap_1.2.0.zip"
 sha256 = "b1bfcd3d3475124f52a1a1afad3727c04585673b8edba5fc38c4fc42b73fdd72"
 
+[packages."fastmap".linux-x86_64]
+version = "1.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fastmap_1.2.0.tar.gz"
+sha256 = "4f8a614ccc7e2ffcc72b2397a462afbf75a9de00c9afd7842ad7288b4bc20ff8"
+
+[packages."fastmap".linux-aarch64]
+version = "1.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fastmap_1.2.0.tar.gz"
+sha256 = "e6d2f6b1d7ffca52b74e25c3f97e4e100248e6d96a6882e447e3f2d5521a3095"
+
 [packages."fastmap".source]
 version = "1.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/fastmap_1.2.0.tar.gz"
@@ -619,6 +924,16 @@ sha256 = "0503233a9276ceead39e4da29eeafba1e9c6da5c74dea301ae48b67a49729f64"
 version = "1.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/fiery_1.5.0.zip"
 sha256 = "9778618056734ba113d072a318b378f967e6328e0072de522adff5828378ec48"
+
+[packages."fiery".linux-x86_64]
+version = "1.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fiery_1.5.0.tar.gz"
+sha256 = "e89814dbde1654c3931f1c2ef1171da5cbb3a47e8f72e90616ba1ce98677cf49"
+
+[packages."fiery".linux-aarch64]
+version = "1.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fiery_1.5.0.tar.gz"
+sha256 = "d539d8ee727a27678a5dedb6d1d6cdf24537eed3d82b5abda91f5e3571dc4147"
 
 [packages."fiery".source]
 version = "1.5.0"
@@ -640,6 +955,16 @@ version = "0.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/fireproof_0.1.0.zip"
 sha256 = "655399b6a6a3224540bd040bd6eab6b464a7f00f0af2dc10fcef08dcba16eda1"
 
+[packages."fireproof".linux-x86_64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fireproof_0.1.0.tar.gz"
+sha256 = "1bc5126386105c0e0d39cf1f7151049c58272c45d6fe4af042b562610c2286c4"
+
+[packages."fireproof".linux-aarch64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fireproof_0.1.0.tar.gz"
+sha256 = "142c48ca741fe27fe17a7dc7ab187a150ba58688e8efa25723e9a71ce5664648"
+
 [packages."fireproof".source]
 version = "0.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/fireproof_0.1.0.tar.gz"
@@ -659,6 +984,16 @@ sha256 = "a14425ca7b0c55f7f39ee517a42615d4ecd48bbef0bfbad77c95b9da3849871b"
 version = "0.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/firesafety_0.1.0.zip"
 sha256 = "f5979627501604e9da1681a0ab38f31e37955d080b3716c5144cbe92d99b780c"
+
+[packages."firesafety".linux-x86_64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/firesafety_0.1.0.tar.gz"
+sha256 = "eecc14d5094f3bbf519fc44f189e4439fc6958d91c2a6530b5b0bec0e1c16690"
+
+[packages."firesafety".linux-aarch64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/firesafety_0.1.0.tar.gz"
+sha256 = "e86e6bc4b046e7207b63cd43fd4a550a9e2608b421e3966d1037f343b5f944a1"
 
 [packages."firesafety".source]
 version = "0.1.0"
@@ -680,6 +1015,16 @@ version = "0.1.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/firesale_0.1.1.zip"
 sha256 = "8fb84b058cc39e5515ebf61497e2833ce586d1daecf90d748c70a00a1c07be63"
 
+[packages."firesale".linux-x86_64]
+version = "0.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/firesale_0.1.1.tar.gz"
+sha256 = "6f7d02e6a75aff6905927458bb3b3c952383ad2c4e3719177b4b5f7e79920f03"
+
+[packages."firesale".linux-aarch64]
+version = "0.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/firesale_0.1.1.tar.gz"
+sha256 = "c4ec5a546fea141757a626e04555288097bfe6f85b914868cacdca2109132232"
+
 [packages."firesale".source]
 version = "0.1.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/firesale_0.1.1.tar.gz"
@@ -699,6 +1044,16 @@ sha256 = "362e34105c017b12a9819933f76ecca5f87b2799b5af780e797687039d29bfc8"
 version = "0.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/firestorm_0.1.0.zip"
 sha256 = "435e579d97a30475819e90136c0887795e2f9442104457786f7730b41fe700d5"
+
+[packages."firestorm".linux-x86_64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/firestorm_0.1.0.tar.gz"
+sha256 = "a111126fe15e7735bb32d8ed3dd60124825c7055a523f767c47fcdbe2a176ed8"
+
+[packages."firestorm".linux-aarch64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/firestorm_0.1.0.tar.gz"
+sha256 = "893a15e9b6ab12df1b4a0010e979710109387014945d40dcb04b4a2f59ebc8b2"
 
 [packages."firestorm".source]
 version = "0.1.0"
@@ -720,6 +1075,16 @@ version = "0.10.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/flextable_0.10.3.zip"
 sha256 = "372d2221d9104740c962590ba52d019cebbba99cfb8da5bef0d170eedf007834"
 
+[packages."flextable".linux-x86_64]
+version = "0.10.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/flextable_0.10.3.tar.gz"
+sha256 = "b035b379fd3f78473144cc6501a440ca8ed7b2c6cf5ba7be71e03c697fd721ae"
+
+[packages."flextable".linux-aarch64]
+version = "0.10.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/flextable_0.10.3.tar.gz"
+sha256 = "a5c90ae4f45e365cca530147100aa64ac1ce65f4be37189a037a5bbc21c24b4e"
+
 [packages."flextable".source]
 version = "0.10.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/flextable_0.10.3.tar.gz"
@@ -739,6 +1104,16 @@ sha256 = "2efa144762e84b5076b6b642148b10b712a9fa3964ce554f421bade7a5842bf5"
 version = "0.1.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/fontBitstreamVera_0.1.1.zip"
 sha256 = "42848028996c00c68b851e03ab1717cf5594c9ddafb38152ad0e77815c3a2226"
+
+[packages."fontBitstreamVera".linux-x86_64]
+version = "0.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fontBitstreamVera_0.1.1.tar.gz"
+sha256 = "584e99c7ca21c22f0fd43103d428d06d02028437b3e02c72cc89607a94ff33c7"
+
+[packages."fontBitstreamVera".linux-aarch64]
+version = "0.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fontBitstreamVera_0.1.1.tar.gz"
+sha256 = "9886a76ebd6a892dd55a978fa909ff861c0a4490dc59ee5ed51c1417236b42e9"
 
 [packages."fontBitstreamVera".source]
 version = "0.1.1"
@@ -760,6 +1135,16 @@ version = "0.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/fontLiberation_0.1.0.zip"
 sha256 = "e3e2253defc351dcb2e3d04ffde87cb8963cc82f6491888fc05c82e4714d89c7"
 
+[packages."fontLiberation".linux-x86_64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fontLiberation_0.1.0.tar.gz"
+sha256 = "36e06e07f2587c4c75795052c9671c596877cd43ac7f95a0b68be833e9c3a1eb"
+
+[packages."fontLiberation".linux-aarch64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fontLiberation_0.1.0.tar.gz"
+sha256 = "751e9fed4ee53206aa80e10933b70e40841bb81367c264431f793c9b203a0072"
+
 [packages."fontLiberation".source]
 version = "0.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/fontLiberation_0.1.0.tar.gz"
@@ -779,6 +1164,16 @@ sha256 = "4845b3d4611bcd83eb1c317a743c85bb7944047490edf08b972ca5e6a51b156b"
 version = "0.5.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/fontawesome_0.5.3.zip"
 sha256 = "3eb6a56b134c9d28a72cc6b45a9ef40c92c3c87bbc3653237286e822fe8e8443"
+
+[packages."fontawesome".linux-x86_64]
+version = "0.5.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fontawesome_0.5.3.tar.gz"
+sha256 = "7acbbb02fef0f48619133a88da3fe9c61298ff7c08ac8c4f1a83e21e862a85ab"
+
+[packages."fontawesome".linux-aarch64]
+version = "0.5.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fontawesome_0.5.3.tar.gz"
+sha256 = "2c6e7f1e5aa5916ef4fa27cee4607d9f37c33466c73139856a53e292052c6b48"
 
 [packages."fontawesome".source]
 version = "0.5.3"
@@ -800,6 +1195,16 @@ version = "0.2.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/fontquiver_0.2.1.zip"
 sha256 = "01487df748b10afb3913faf92eab5122076fe44d07ce22c9d8c1d19f3a368d58"
 
+[packages."fontquiver".linux-x86_64]
+version = "0.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fontquiver_0.2.1.tar.gz"
+sha256 = "c43e02c3e59e9359d577aa185c3df3ace74f5904101a5de5df585a47642f8e3f"
+
+[packages."fontquiver".linux-aarch64]
+version = "0.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fontquiver_0.2.1.tar.gz"
+sha256 = "a5e49b554596a01c1fd436bd8f15370e329865c20efa7732082721fd49b04b2a"
+
 [packages."fontquiver".source]
 version = "0.2.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/fontquiver_0.2.1.tar.gz"
@@ -819,6 +1224,16 @@ sha256 = "223479475813ee5382e2c0746716908dd6e3747da1d7c6f7b5c35c27286f1b8a"
 version = "2.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/fs_2.1.0.zip"
 sha256 = "0c682f87c056239d24bc0ee278b2a367e22e22f4db5555fcd6f2be6db08faa63"
+
+[packages."fs".linux-x86_64]
+version = "2.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fs_2.1.0.tar.gz"
+sha256 = "428257debbc54eec99100b945c6b3766b151b10474b54b4f8215310def899882"
+
+[packages."fs".linux-aarch64]
+version = "2.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/fs_2.1.0.tar.gz"
+sha256 = "65338f8b27948d481899ad87b05f02f68fb5d6d537674bb76f9a85c2c1690bd0"
 
 [packages."fs".source]
 version = "2.1.0"
@@ -842,6 +1257,16 @@ version = "0.5.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/gdtools_0.5.3.zip"
 sha256 = "4de3918ad7214d7e32b795c4979e3bca0ad3d7c01cd41d1e69570b4270438468"
 
+[packages."gdtools".linux-x86_64]
+version = "0.5.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/gdtools_0.5.3.tar.gz"
+sha256 = "f4ce9633b96740ce675e20dc8decfc5a086bae9fef7dfffbb47e0f192139c6f5"
+
+[packages."gdtools".linux-aarch64]
+version = "0.5.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/gdtools_0.5.3.tar.gz"
+sha256 = "016cbdaba619b416c160ef8f5a9a4a937be21aff81abd984c52856df78423406"
+
 [packages."gdtools".source]
 version = "0.5.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/gdtools_0.5.3.tar.gz"
@@ -861,6 +1286,16 @@ sha256 = "18ff94fb68d34a475f0b2657648f3c4b6299a996c8d247987e5392bd6866c5c7"
 version = "0.1.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/generics_0.1.4.zip"
 sha256 = "080ad8d9f3e056b26ddd0883f9e72cea0eeddece96beae80b50fc7a07bd03752"
+
+[packages."generics".linux-x86_64]
+version = "0.1.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/generics_0.1.4.tar.gz"
+sha256 = "b83d0691459b2ca06af42db035d584ee5b8aea467061cece21cf61f811c4696e"
+
+[packages."generics".linux-aarch64]
+version = "0.1.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/generics_0.1.4.tar.gz"
+sha256 = "fc8e6f72c23414d9b33c27127792b01b497ffdcc63751a57e1f21290b516bd8c"
 
 [packages."generics".source]
 version = "0.1.4"
@@ -882,6 +1317,16 @@ version = "2.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/gert_2.5.0.zip"
 sha256 = "fe381f597c047a5847cc1bc5895663bf7d768e91cd37681585885eb7cc7c6964"
 
+[packages."gert".linux-x86_64]
+version = "2.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/gert_2.5.0.tar.gz"
+sha256 = "ab2303a04bc4ee1c81c9e8f207ce580819165dd96f1260d31e11d34a8748b3ac"
+
+[packages."gert".linux-aarch64]
+version = "2.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/gert_2.5.0.tar.gz"
+sha256 = "cf584d99aa7cb9066be17fb3f260b5104cfd0853c9c76dfc40ea448d6b3f2621"
+
 [packages."gert".source]
 version = "2.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/gert_2.5.0.tar.gz"
@@ -901,6 +1346,16 @@ sha256 = "91213ec78827fd4d1e001a2022a4c4acf800e4ee16388f6cadbe276312d72d6e"
 version = "4.0.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/ggplot2_4.0.3.zip"
 sha256 = "83266ec1f1155cd67ad5a46f3e3c76d4c9374e869f91ba08cadef17c32d78e08"
+
+[packages."ggplot2".linux-x86_64]
+version = "4.0.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/ggplot2_4.0.3.tar.gz"
+sha256 = "3ed9044e4b1bafe56573a918e7da2c0f3dab9dd4e0b45e5d27ec960dc6a2e535"
+
+[packages."ggplot2".linux-aarch64]
+version = "4.0.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/ggplot2_4.0.3.tar.gz"
+sha256 = "6790f4388676806b737194489231b31cd47a965aba5d97b3e0804f0f3cb7a657"
 
 [packages."ggplot2".source]
 version = "4.0.3"
@@ -922,6 +1377,16 @@ version = "1.8.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/glue_1.8.1.zip"
 sha256 = "74a0de06a0bf6417094efe774b819ca9508876d4b51914ad620e3af66f7344eb"
 
+[packages."glue".linux-x86_64]
+version = "1.8.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/glue_1.8.1.tar.gz"
+sha256 = "4174f8740b68347d747f777b37e3206256557227048c7f9e3bb6ae66558a3605"
+
+[packages."glue".linux-aarch64]
+version = "1.8.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/glue_1.8.1.tar.gz"
+sha256 = "ed3bb115c7f652d69c04daa5ff6c342634c574289d6bcaeaf54beb5cb1964d86"
+
 [packages."glue".source]
 version = "1.8.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/glue_1.8.1.tar.gz"
@@ -941,6 +1406,16 @@ sha256 = "07c1bfc727f708600db092ec143a785215283c419fef4638394c4847f6986036"
 version = "0.3.6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/gtable_0.3.6.zip"
 sha256 = "1e5ee8ef70e3a27b4025101dfec1b6138cd2833c15a8f9935b3e51c177268c62"
+
+[packages."gtable".linux-x86_64]
+version = "0.3.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/gtable_0.3.6.tar.gz"
+sha256 = "37d3253d0c87e2622e5bff3d86667d057770bfb783b6700b09d91cc5525ea6e7"
+
+[packages."gtable".linux-aarch64]
+version = "0.3.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/gtable_0.3.6.tar.gz"
+sha256 = "2464f095920410ecd7fdc4e908295801e03901e4a2803d85a5755784ab38a79e"
 
 [packages."gtable".source]
 version = "0.3.6"
@@ -962,6 +1437,16 @@ version = "1.0.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/here_1.0.2.zip"
 sha256 = "c32c807fd0766f0fb2ff1641f30704730f02827297d8cc7041f4b7646fadb2f3"
 
+[packages."here".linux-x86_64]
+version = "1.0.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/here_1.0.2.tar.gz"
+sha256 = "d9ba4fba43f6d5e99a30b678f9327a5fff9d0fa5908c971e451dfa2a3ae0ff33"
+
+[packages."here".linux-aarch64]
+version = "1.0.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/here_1.0.2.tar.gz"
+sha256 = "b5a12cb9d1926e8820c68bc4b6f9c6049443530975eb8b672e7d7d62ef68eb4a"
+
 [packages."here".source]
 version = "1.0.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/here_1.0.2.tar.gz"
@@ -981,6 +1466,16 @@ sha256 = "f5394a5b89764a6ced1806627011d48e539a3a1570c3880423abaa103841dcc0"
 version = "0.12"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/highr_0.12.zip"
 sha256 = "675082bb6ea3aceadc939a1e18b24ffa7d5c729646b9939db4163f5b0b53ffd1"
+
+[packages."highr".linux-x86_64]
+version = "0.12"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/highr_0.12.tar.gz"
+sha256 = "a47779920b6be94aba8414622615e50ad26b12bdff48339723e53e493522ec5b"
+
+[packages."highr".linux-aarch64]
+version = "0.12"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/highr_0.12.tar.gz"
+sha256 = "caa9b893dfcefe7e34e655ef604a2ca753fdb097bedd7ff626636d0f1de5526a"
 
 [packages."highr".source]
 version = "0.12"
@@ -1002,6 +1497,16 @@ version = "1.1.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/hms_1.1.4.zip"
 sha256 = "0720ba1bedec7cba064abd81ff5e9943e4ec47d541e12cb455117b1b3a178525"
 
+[packages."hms".linux-x86_64]
+version = "1.1.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/hms_1.1.4.tar.gz"
+sha256 = "d68af968c03aea8b79fe4d8acc3f4d9f5953fea11cfb4eff683e14ed00984695"
+
+[packages."hms".linux-aarch64]
+version = "1.1.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/hms_1.1.4.tar.gz"
+sha256 = "15e03a837d8d9dcbc121423a069261e5b003ada400ec3ae85acb105b20e4b112"
+
 [packages."hms".source]
 version = "1.1.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/hms_1.1.4.tar.gz"
@@ -1021,6 +1526,16 @@ sha256 = "0e7edf8f3b4dc369831b11ad647f4e24e547bce1c5b38bebe8620f445e91d8d4"
 version = "0.5.9"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/htmltools_0.5.9.zip"
 sha256 = "7849f8763bc61d7e2cb20f46f29d5d5b8e0cfe9e42993d2e9984a685b5e8dbaa"
+
+[packages."htmltools".linux-x86_64]
+version = "0.5.9"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/htmltools_0.5.9.tar.gz"
+sha256 = "841d0641299de9cca037a0b621af1696b4a8416b9bd5c697879772cc2f65c430"
+
+[packages."htmltools".linux-aarch64]
+version = "0.5.9"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/htmltools_0.5.9.tar.gz"
+sha256 = "fa7507f8372a1f241e62e9e08d18f5c185e49fc17066253ae992df4759fb1c37"
 
 [packages."htmltools".source]
 version = "0.5.9"
@@ -1042,6 +1557,16 @@ version = "1.6.17"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/httpuv_1.6.17.zip"
 sha256 = "2bf1425dfdfc06e379646d487de8fefc35ba68bd6f604ee86c899d0cba9e5eaf"
 
+[packages."httpuv".linux-x86_64]
+version = "1.6.17"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/httpuv_1.6.17.tar.gz"
+sha256 = "00bf0653f7ac39b4a9e2770842eff64ae7a5e4ced8ca74039d86ed898afb7c0d"
+
+[packages."httpuv".linux-aarch64]
+version = "1.6.17"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/httpuv_1.6.17.tar.gz"
+sha256 = "fbf5041ec36b3d2c5a37287b6558fcc39f163c843c54d53bf238510f9bc5b8ed"
+
 [packages."httpuv".source]
 version = "1.6.17"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/httpuv_1.6.17.tar.gz"
@@ -1061,6 +1586,16 @@ sha256 = "2fb96fe21702749f2e1c898882bcd42d30b76d1b138cccbd615c67d5568e5f9c"
 version = "0.3.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/isoband_0.3.0.zip"
 sha256 = "d147f430694a7f3db55f1d9827b68db2f007504c2eb56f183104930715a9e02c"
+
+[packages."isoband".linux-x86_64]
+version = "0.3.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/isoband_0.3.0.tar.gz"
+sha256 = "864b2cf55ead25fcc7f733b31669d52ddc0985692b011884fec494c3614d685d"
+
+[packages."isoband".linux-aarch64]
+version = "0.3.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/isoband_0.3.0.tar.gz"
+sha256 = "c2e7c8a3e738459fd8905c3809791bfff2f6ea4f0eaf39e0b9ff30ae990df8df"
 
 [packages."isoband".source]
 version = "0.3.0"
@@ -1082,6 +1617,16 @@ version = "2.0.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/jose_2.0.0.zip"
 sha256 = "d1bc3c38e57cb52e75f7928d354e9bdf106d5bf0b8b4babcab2a61e65233e0b9"
 
+[packages."jose".linux-x86_64]
+version = "2.0.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/jose_2.0.0.tar.gz"
+sha256 = "98ababda399b3738f7d2c69cf7574145c0f391098c2f1e6303d377a1093f2177"
+
+[packages."jose".linux-aarch64]
+version = "2.0.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/jose_2.0.0.tar.gz"
+sha256 = "ea5fa7e118f373fd2705b2174f541341633b34739a7546c1c89e37b9e4074109"
+
 [packages."jose".source]
 version = "2.0.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/jose_2.0.0.tar.gz"
@@ -1101,6 +1646,16 @@ sha256 = "c0ff01ac4364591651474e3e7f95043ec9938d100c8b54fecc0a27c03d9ff498"
 version = "0.1.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/jquerylib_0.1.4.zip"
 sha256 = "aa8ce3352f05f2c300094d0d51e591f9c81ea10915b1371b1c26a45d5537aa8c"
+
+[packages."jquerylib".linux-x86_64]
+version = "0.1.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/jquerylib_0.1.4.tar.gz"
+sha256 = "e3e32079505e66a7daffc7be644e4f764e2bdc53d8db33868e103567d9e46c7f"
+
+[packages."jquerylib".linux-aarch64]
+version = "0.1.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/jquerylib_0.1.4.tar.gz"
+sha256 = "2291b70bd2297c703de3360f64efb06dd99710299d057cc8392f624cf2c13a2d"
 
 [packages."jquerylib".source]
 version = "0.1.4"
@@ -1122,6 +1677,16 @@ version = "2.0.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/jsonlite_2.0.0.zip"
 sha256 = "f951bdef28176d3b8602c60533e4dcf837dc7498d9ca327108c29dca361e539d"
 
+[packages."jsonlite".linux-x86_64]
+version = "2.0.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/jsonlite_2.0.0.tar.gz"
+sha256 = "4424eef5705260afc8b334b073f50d7390d3f3d273a0c8f2ba7a8b3290d62fcf"
+
+[packages."jsonlite".linux-aarch64]
+version = "2.0.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/jsonlite_2.0.0.tar.gz"
+sha256 = "82d0fa962a0c78113160925563b5c8fb716a3f2a2718649a7b742908366d541d"
+
 [packages."jsonlite".source]
 version = "2.0.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/jsonlite_2.0.0.tar.gz"
@@ -1141,6 +1706,16 @@ sha256 = "6daa744e847d2cae450b4ae7fd8528946d2d528d1d7fce21def62b3b3184d4b0"
 version = "1.52"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/knitr_1.52.zip"
 sha256 = "61d69992bf82b040b81ecb3c2e1b3faa49691280a24061b29f396709a0d689d9"
+
+[packages."knitr".linux-x86_64]
+version = "1.52"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/knitr_1.52.tar.gz"
+sha256 = "e0637a10b88dbb39eb7d625455e05b7eead67dc5c55ecbffa015b2f130b8f1cb"
+
+[packages."knitr".linux-aarch64]
+version = "1.52"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/knitr_1.52.tar.gz"
+sha256 = "d35e7fe00bcb5055357eaaa91bb946df9a63ea7298cd7bd0b53a3f640cbf7b86"
 
 [packages."knitr".source]
 version = "1.52"
@@ -1162,6 +1737,16 @@ version = "0.4.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/labeling_0.4.3.zip"
 sha256 = "b2163eb204c7316e0eef8f3ee6b17ab29bbe5303ce08e1130e315c6cb4447cb8"
 
+[packages."labeling".linux-x86_64]
+version = "0.4.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/labeling_0.4.3.tar.gz"
+sha256 = "ec3a7300f7b2d4b2e0f4b4dd1b4e41948808debf61320c5fae2375df19b743cc"
+
+[packages."labeling".linux-aarch64]
+version = "0.4.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/labeling_0.4.3.tar.gz"
+sha256 = "e9624c18578dd414b678a729a9fe3c57707bdeab7be0bc9823764a5cd48a8107"
+
 [packages."labeling".source]
 version = "0.4.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/labeling_0.4.3.tar.gz"
@@ -1181,6 +1766,16 @@ sha256 = "23c5880f91f9de37992d8eed8e41e5e7463b0db958b5baf3c76491ae43ea5215"
 version = "1.4.8"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/later_1.4.8.zip"
 sha256 = "d3dae7d12e4734107a67f9bff1e62e224b6f5b5b6b102be3d30fa9e9937f8b8b"
+
+[packages."later".linux-x86_64]
+version = "1.4.8"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/later_1.4.8.tar.gz"
+sha256 = "16529bd56a2c90fb7611616eda28df4cf695e695040d51638c43b10d1acd99c2"
+
+[packages."later".linux-aarch64]
+version = "1.4.8"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/later_1.4.8.tar.gz"
+sha256 = "eeda51f103ebffe6fa7dbba4cdff0bbd3f0a4e7bf548ade976cea60e4be8f5d1"
 
 [packages."later".source]
 version = "1.4.8"
@@ -1202,6 +1797,16 @@ version = "1.0.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/lifecycle_1.0.5.zip"
 sha256 = "655116bf33a554a5272dfd21e95c2b3044fc3bf0ce530697bc0f5bd71ecc31e5"
 
+[packages."lifecycle".linux-x86_64]
+version = "1.0.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/lifecycle_1.0.5.tar.gz"
+sha256 = "66a70bd5f7cb622678af9268ca898faa9f489d226031d5d2d57938eeca15b224"
+
+[packages."lifecycle".linux-aarch64]
+version = "1.0.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/lifecycle_1.0.5.tar.gz"
+sha256 = "3a3a8076f755ff4859223c12b1cb209b22c8d314504aec7bff7b981e45fd0f7a"
+
 [packages."lifecycle".source]
 version = "1.0.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/lifecycle_1.0.5.tar.gz"
@@ -1221,6 +1826,16 @@ sha256 = "c1e5f980318cc6c6ef35c9c957c632378357b6f50ac2d2f5198f3abe486e3a3d"
 version = "0.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/log4r_0.5.0.zip"
 sha256 = "d5b452a6600eff2b607acc322569a52952f6685bb5b3525fe938fd56a16647ad"
+
+[packages."log4r".linux-x86_64]
+version = "0.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/log4r_0.5.0.tar.gz"
+sha256 = "0ea56b5cd414978946d51e646f5961901c27aa0d5d969c38fe87c04f1aeeb549"
+
+[packages."log4r".linux-aarch64]
+version = "0.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/log4r_0.5.0.tar.gz"
+sha256 = "ad1d9b76d72ba94810f737297373d90a60795ea3309694c021f0fd1de75f5c60"
 
 [packages."log4r".source]
 version = "0.5.0"
@@ -1242,6 +1857,16 @@ version = "2.0.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/magrittr_2.0.5.zip"
 sha256 = "f3acfae0a374c4f3a6ba3e1ffa7972a23db0e3b6fd31b749e504178e66eeceeb"
 
+[packages."magrittr".linux-x86_64]
+version = "2.0.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/magrittr_2.0.5.tar.gz"
+sha256 = "3b7f848009d6ed2d4719b43d1855f8dbbefa54d65a3bf1edb2e2dc1e618af84c"
+
+[packages."magrittr".linux-aarch64]
+version = "2.0.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/magrittr_2.0.5.tar.gz"
+sha256 = "304c5a27ebc198cbea496ce7d379e7ce03157e61eb2e03c695e480d079df6ba1"
+
 [packages."magrittr".source]
 version = "2.0.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/magrittr_2.0.5.tar.gz"
@@ -1261,6 +1886,16 @@ sha256 = "65160d53ac0f15f14add0acbfd45fb997a9ffc25e7ec6dc6c56b20b9db7c7810"
 version = "2.0.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/memoise_2.0.1.zip"
 sha256 = "b5366209f5ea0311fdbd298681506af3f0d0fbb5b09105fb1812eff59b225a0f"
+
+[packages."memoise".linux-x86_64]
+version = "2.0.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/memoise_2.0.1.tar.gz"
+sha256 = "678f409f3f73073c346d9b250c573ba73c14ae2250f64d3e6c9c1d645f7cc8cd"
+
+[packages."memoise".linux-aarch64]
+version = "2.0.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/memoise_2.0.1.tar.gz"
+sha256 = "68a5e288e67b46b91e2f4c3206311086625c48ba785f12cdf8e48ed20b85b0db"
 
 [packages."memoise".source]
 version = "2.0.1"
@@ -1282,6 +1917,16 @@ version = "0.13"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/mime_0.13.zip"
 sha256 = "539dba68e847edfac8bc7a818f794073cccab7535ee19e4741056c0d26342c01"
 
+[packages."mime".linux-x86_64]
+version = "0.13"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/mime_0.13.tar.gz"
+sha256 = "e9c8f78546d100a5a078de441fc94d402bd488671bfb46d400f111d6f40c6c97"
+
+[packages."mime".linux-aarch64]
+version = "0.13"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/mime_0.13.tar.gz"
+sha256 = "ca8d3852cdda31fb22fb1b2e4409d5459b8ba65a08a70b36bc46a3f7dfef1274"
+
 [packages."mime".source]
 version = "0.13"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/mime_0.13.tar.gz"
@@ -1301,6 +1946,16 @@ sha256 = "4a539eb41f20b580d6d108d2ce35f36eb18f357ce6c4476de63ba1eab0b6925f"
 version = "2.7.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/mirai_2.7.4.zip"
 sha256 = "a678af754c71d82f3df803da3d1244e175931948affaaaebf81edb802831cfd6"
+
+[packages."mirai".linux-x86_64]
+version = "2.7.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/mirai_2.7.4.tar.gz"
+sha256 = "52604516e54b9552b1d4b8a5dedf125096267471f55e3ded16ece9b6d4f05bd3"
+
+[packages."mirai".linux-aarch64]
+version = "2.7.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/mirai_2.7.4.tar.gz"
+sha256 = "c0161ca43e2a259acff0cf4c0b044b47169e15e1261ef952241e69f0eb59ba7f"
 
 [packages."mirai".source]
 version = "2.7.4"
@@ -1322,6 +1977,16 @@ version = "1.10.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/nanonext_1.10.4.zip"
 sha256 = "a1cb308260aa16233dfd4eca02d678705f168739944882908cf4b6e65135ae5b"
 
+[packages."nanonext".linux-x86_64]
+version = "1.10.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/nanonext_1.10.4.tar.gz"
+sha256 = "07df05b9ff9f0c74dd31597c92659f85f26891d6a1770f83390e0f67a60a628d"
+
+[packages."nanonext".linux-aarch64]
+version = "1.10.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/nanonext_1.10.4.tar.gz"
+sha256 = "7842d7aaf3a6f6e1b9373587c309b01c09f07154a1332078a12e2a0436339d1d"
+
 [packages."nanonext".source]
 version = "1.10.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/nanonext_1.10.4.tar.gz"
@@ -1341,6 +2006,16 @@ sha256 = "f158e296a32c7cf278238f96128fae6c77dbc9c8528f3d5ac7a679703d205e10"
 version = "0.7.7"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/officer_0.7.7.zip"
 sha256 = "3f2a0ecfb324c15aeeb97141a4adebeccc156650bf0df1b64895bddace0ff4b4"
+
+[packages."officer".linux-x86_64]
+version = "0.7.7"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/officer_0.7.7.tar.gz"
+sha256 = "e84f7f40296b6569acfc2cd0866cca2bcf6e05ae2090f3715cc0b2da52761958"
+
+[packages."officer".linux-aarch64]
+version = "0.7.7"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/officer_0.7.7.tar.gz"
+sha256 = "50887a7348b8d368b2ffe5dffa91f6be12c20c7c744a7255ea0db9256fe595bd"
 
 [packages."officer".source]
 version = "0.7.7"
@@ -1362,6 +2037,16 @@ version = "2.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/openssl_2.5.0.zip"
 sha256 = "3d03dd54a8a2c352ada1ee393814573a0a3efe06cb5b9d7671a4e0f47bae2e14"
 
+[packages."openssl".linux-x86_64]
+version = "2.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/openssl_2.5.0.tar.gz"
+sha256 = "aaadb8944015fa2a2189be38dd2b1d2bbd561d4df9fddae2d00245043ac1723d"
+
+[packages."openssl".linux-aarch64]
+version = "2.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/openssl_2.5.0.tar.gz"
+sha256 = "22fd9dcf93ebaff7b5311598620181f043337c8143d42991dfff3f72ec5a6d24"
+
 [packages."openssl".source]
 version = "2.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/openssl_2.5.0.tar.gz"
@@ -1381,6 +2066,16 @@ sha256 = "698c25211210129d84b65cc4d23942a9486abffe24f8ec2286809f5484694ba4"
 version = "0.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/otel_0.2.0.zip"
 sha256 = "7a5b95d379a3add02f44766abb4211c532b187bb3379169fc789b76bbdacd98a"
+
+[packages."otel".linux-x86_64]
+version = "0.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/otel_0.2.0.tar.gz"
+sha256 = "da3d2f06acc6910c48d2ba2820e0a4d5462d93552e55ca75ea0785c909b6eafe"
+
+[packages."otel".linux-aarch64]
+version = "0.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/otel_0.2.0.tar.gz"
+sha256 = "30277f991c68812b8fd202560977dad669c9ed22534582b9c4c233e23ad12249"
 
 [packages."otel".source]
 version = "0.2.0"
@@ -1402,6 +2097,16 @@ version = "1.11.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/pillar_1.11.1.zip"
 sha256 = "f498fec06bc591beba4ba774cbffd135c431eb8c54b9643013ebb062d0f81c35"
 
+[packages."pillar".linux-x86_64]
+version = "1.11.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/pillar_1.11.1.tar.gz"
+sha256 = "8e28d40f7c575a3416ff5774392b110efb67e228bed83956d7c9d29c15d418a5"
+
+[packages."pillar".linux-aarch64]
+version = "1.11.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/pillar_1.11.1.tar.gz"
+sha256 = "44bc97ac1df23c9d37eebc8ab2c37902c84b82dd96fa3fe8e8d583fc9cc329ba"
+
 [packages."pillar".source]
 version = "1.11.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/pillar_1.11.1.tar.gz"
@@ -1421,6 +2126,16 @@ sha256 = "d10dc42253b08ebf4f52648d228c9b38b9022cd45e2bb0545aecf97b43d313ab"
 version = "1.4.8"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/pkgbuild_1.4.8.zip"
 sha256 = "e48fe2ac1193cda4d2ee4072db5be4f38fc369877ebbbcd0e3c4def0fefcaedb"
+
+[packages."pkgbuild".linux-x86_64]
+version = "1.4.8"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/pkgbuild_1.4.8.tar.gz"
+sha256 = "4171c37b022b678230ddbac8d176a1fb561a297ad4d9fba3b3d8140d3071bb15"
+
+[packages."pkgbuild".linux-aarch64]
+version = "1.4.8"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/pkgbuild_1.4.8.tar.gz"
+sha256 = "7692ba305a8dbd890ae3c4ab282092a8fc257bb374413f4804328736b09df865"
 
 [packages."pkgbuild".source]
 version = "1.4.8"
@@ -1442,6 +2157,16 @@ version = "2.0.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/pkgconfig_2.0.3.zip"
 sha256 = "caa7d46b83e6638ac274f8d4dac33240082275323789693da21e14860e128553"
 
+[packages."pkgconfig".linux-x86_64]
+version = "2.0.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/pkgconfig_2.0.3.tar.gz"
+sha256 = "1aee70b1009b44c6b5eb3eadc5e12f33feb9a76273860cb6b2027ea966ac0e11"
+
+[packages."pkgconfig".linux-aarch64]
+version = "2.0.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/pkgconfig_2.0.3.tar.gz"
+sha256 = "2b10fed9d8b92cf40dca4a3971c92ca62e3719401ba06ad4bfb3ad32c8b08eae"
+
 [packages."pkgconfig".source]
 version = "2.0.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/pkgconfig_2.0.3.tar.gz"
@@ -1461,6 +2186,16 @@ sha256 = "5162dcd80d5e337ce6868504bfd374cf1d3cc162a798a129652cb7cd5c96ac79"
 version = "1.5.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/pkgload_1.5.3.zip"
 sha256 = "b78f436f58af1607857b7bc2ccad160f3993ec6b5a20c1553b3b95072e228ebd"
+
+[packages."pkgload".linux-x86_64]
+version = "1.5.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/pkgload_1.5.3.tar.gz"
+sha256 = "2856d74ace1c69440c36f1cc7e7954b53ac3ac82a118ad07de21f21bbf6aead4"
+
+[packages."pkgload".linux-aarch64]
+version = "1.5.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/pkgload_1.5.3.tar.gz"
+sha256 = "308797af4448f03073fc6fd441ef62d0ea6a3c2a709d2b29823cb7c10fa62b10"
 
 [packages."pkgload".source]
 version = "1.5.3"
@@ -1482,6 +2217,16 @@ version = "0.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/plumber2_0.2.0.zip"
 sha256 = "97c152f9b87aad0ac2ebe723a64925d74a03e74062ea03ca59b9e80af88ccb47"
 
+[packages."plumber2".linux-x86_64]
+version = "0.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/plumber2_0.2.0.tar.gz"
+sha256 = "083d3c66739c8c659a82edffaf2c0394dc7cf50f082c6e4de76f68be56eba346"
+
+[packages."plumber2".linux-aarch64]
+version = "0.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/plumber2_0.2.0.tar.gz"
+sha256 = "f6c22cc82cd6ac46e07207854ccbc27316f7015856653e9ab468e7cbe44fc1f5"
+
 [packages."plumber2".source]
 version = "0.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/plumber2_0.2.0.tar.gz"
@@ -1501,6 +2246,16 @@ sha256 = "60aebf6bc742aa7d9b08a59f0c997303df67196892f7050b9331aab329866f87"
 version = "1.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/prettyunits_1.2.0.zip"
 sha256 = "d83af7231606c876255bca764228a58659aa5ecd6e9968304179c44c61b701de"
+
+[packages."prettyunits".linux-x86_64]
+version = "1.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/prettyunits_1.2.0.tar.gz"
+sha256 = "b18a8db210ba38531452aafd530108e5d7e68b07ad755546fa79f50a62b17db0"
+
+[packages."prettyunits".linux-aarch64]
+version = "1.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/prettyunits_1.2.0.tar.gz"
+sha256 = "df93511fdb168682f679f002ffbfb6805cd830783a8afd14e25f3896798c31cc"
 
 [packages."prettyunits".source]
 version = "1.2.0"
@@ -1522,6 +2277,16 @@ version = "3.9.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/processx_3.9.0.zip"
 sha256 = "54af4b2371ee6cb1cb0b8df5f686a70fcf03c55a0e3b5b87a8ec0a3806f22fe8"
 
+[packages."processx".linux-x86_64]
+version = "3.9.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/processx_3.9.0.tar.gz"
+sha256 = "db4356316bdafd8d05978031f2eb7102346d74e6b9e144a6ba718bb2658585af"
+
+[packages."processx".linux-aarch64]
+version = "3.9.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/processx_3.9.0.tar.gz"
+sha256 = "df72a2aacefe0b052da267a8f001edad24567e78762bf4498e57969ed46b365a"
+
 [packages."processx".source]
 version = "3.9.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/processx_3.9.0.tar.gz"
@@ -1541,6 +2306,16 @@ sha256 = "9d64f9341e6061345d3cf0c167ac51832d15a8e2ccf6e54504fa008dd7f5f5a6"
 version = "1.2.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/progress_1.2.3.zip"
 sha256 = "74a90652de82d5ce1ecde0aa76bde8fd22341c3adb1e916c1235e49e7a67cb01"
+
+[packages."progress".linux-x86_64]
+version = "1.2.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/progress_1.2.3.tar.gz"
+sha256 = "fdd8fa67958af447276c03101d96707e194f46a98fdf73378aebe4667ba5f7c4"
+
+[packages."progress".linux-aarch64]
+version = "1.2.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/progress_1.2.3.tar.gz"
+sha256 = "f54b086822253eff81e82694264b48b7638082f7d5b6ab49607ce7a77e9329c7"
 
 [packages."progress".source]
 version = "1.2.3"
@@ -1562,6 +2337,16 @@ version = "1.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/promises_1.5.0.zip"
 sha256 = "a7f6f83f4f0cc91f477d73b231954bd60c325954ddca9b85ad7f2741e244e5cc"
 
+[packages."promises".linux-x86_64]
+version = "1.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/promises_1.5.0.tar.gz"
+sha256 = "d42f67e4f8867eb96f141677cb5d20345b968bdfada9ef0941a48ac66518f0c3"
+
+[packages."promises".linux-aarch64]
+version = "1.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/promises_1.5.0.tar.gz"
+sha256 = "987d119bf5cee6083f5f9963bc53194f9630727b86a36d5daa5d7d0f1300a0a5"
+
 [packages."promises".source]
 version = "1.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/promises_1.5.0.tar.gz"
@@ -1581,6 +2366,16 @@ sha256 = "d172fecff008b6a0a24b36f5e491505460db905ac9d7a6f9f20855cf7bd2a9a6"
 version = "1.9.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/ps_1.9.3.zip"
 sha256 = "f386eff29201bd317fc89b889e1e865ed1a039f30a44c7c1d84dee53796345d6"
+
+[packages."ps".linux-x86_64]
+version = "1.9.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/ps_1.9.3.tar.gz"
+sha256 = "787bb6badcd975f6f8464b5e87beea127e55bf5c7d91e4c9c617c08cee2333f2"
+
+[packages."ps".linux-aarch64]
+version = "1.9.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/ps_1.9.3.tar.gz"
+sha256 = "1b10a2d543745b7fff1c2a23e3be3a112728c4b7871bbe6075498bc67f21163d"
 
 [packages."ps".source]
 version = "1.9.3"
@@ -1602,6 +2397,16 @@ version = "1.2.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/purrr_1.2.2.zip"
 sha256 = "1a9d6b9875e1cd76fdc97e0ce9bea0a424089727074fe51317d94f594938f2a5"
 
+[packages."purrr".linux-x86_64]
+version = "1.2.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/purrr_1.2.2.tar.gz"
+sha256 = "d185c86a88014585cf5d9ce4428a67be5a1bc9c64338915e2149d91d49586384"
+
+[packages."purrr".linux-aarch64]
+version = "1.2.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/purrr_1.2.2.tar.gz"
+sha256 = "4310e97ceb6082afd7f4d86d0b58d96a513346ce4d7e361f77663be58d592257"
+
 [packages."purrr".source]
 version = "1.2.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/purrr_1.2.2.tar.gz"
@@ -1621,6 +2426,16 @@ sha256 = "5b80c7ca7af83ba654b735c3865fe257f3243af11e00895dfaedcdd75ceb5ba8"
 version = "1.5.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/quarto_1.5.1.zip"
 sha256 = "93ef1830cf2ec7d641f77375749d1d6b063ba76ea9c69f038fdcc2880d7fa166"
+
+[packages."quarto".linux-x86_64]
+version = "1.5.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/quarto_1.5.1.tar.gz"
+sha256 = "2f8555bd54480bc37521cc23a83260e3b76989d04ebaf25f08aa31838a098625"
+
+[packages."quarto".linux-aarch64]
+version = "1.5.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/quarto_1.5.1.tar.gz"
+sha256 = "b244d19a0639ee3ebb344546c40e189f710a923b3fe02a107687fc8c25ab606e"
 
 [packages."quarto".source]
 version = "1.5.1"
@@ -1642,6 +2457,16 @@ version = "1.5.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/ragg_1.5.2.zip"
 sha256 = "13003e2a5618e9cac3115c25871d7105b844c5d2271b18589125df4dce3f9012"
 
+[packages."ragg".linux-x86_64]
+version = "1.5.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/ragg_1.5.2.tar.gz"
+sha256 = "8fb7ad78d927c31dd3db306c70df2fe074ef3270d58d1c033f22c8a79aaf8497"
+
+[packages."ragg".linux-aarch64]
+version = "1.5.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/ragg_1.5.2.tar.gz"
+sha256 = "47dee4b2662206f15f991600598ceeb1352494dfa7181d45482680bf2bbe3052"
+
 [packages."ragg".source]
 version = "1.5.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/ragg_1.5.2.tar.gz"
@@ -1661,6 +2486,16 @@ sha256 = "4a958a8f39af3b7af304c413a1b2484855c16f056ced729206cc339824b80d97"
 version = "9.3.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/rapidoc_9.3.4.zip"
 sha256 = "2b74c427c7a9833dd542ce1bc54098da52efae3fa7c47dc2d7ac91567c01546e"
+
+[packages."rapidoc".linux-x86_64]
+version = "9.3.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rapidoc_9.3.4.tar.gz"
+sha256 = "d7e7fa7da6230389a857e43590c5a890e560445eb871fff275f6bdee8347d5bc"
+
+[packages."rapidoc".linux-aarch64]
+version = "9.3.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rapidoc_9.3.4.tar.gz"
+sha256 = "05ed9723c1231f8741ad51148627e201ef451558e094c39f9c1eca2498fd6d63"
 
 [packages."rapidoc".source]
 version = "9.3.4"
@@ -1682,6 +2517,16 @@ version = "0.3.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/rappdirs_0.3.4.zip"
 sha256 = "bdc3ac24090b47f49c4c4cd6391c41b8f413459295769bafc39f00d8c466d410"
 
+[packages."rappdirs".linux-x86_64]
+version = "0.3.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rappdirs_0.3.4.tar.gz"
+sha256 = "17bfb9a88ba3f56dcbdab438063f4f83e2a72f1a8a5394b867040ff36c123dc0"
+
+[packages."rappdirs".linux-aarch64]
+version = "0.3.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rappdirs_0.3.4.tar.gz"
+sha256 = "9d26ca3137b8d518573607fb5309a8b8d3eb0ddf14b3ea76b9da7c4284aefef2"
+
 [packages."rappdirs".source]
 version = "0.3.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/rappdirs_0.3.4.tar.gz"
@@ -1701,6 +2546,16 @@ sha256 = "ecb8d0b2dc34634b843e83b50f955f4b526ce100cfd85018f4f6d5a6dee78975"
 version = "0.1.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/rdtools_0.1.0.zip"
 sha256 = "9589f5168fd0d89686f20f0e5477f8ed0e2bb4d1cc34139aa2d3471785506eb3"
+
+[packages."rdtools".linux-x86_64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rdtools_0.1.0.tar.gz"
+sha256 = "6f573176969003184b10b161981c760317ec4b6d71626bdca7cf5c0cf2b9ce5f"
+
+[packages."rdtools".linux-aarch64]
+version = "0.1.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rdtools_0.1.0.tar.gz"
+sha256 = "041882a5b83e2823650f941a2c70d151fb0bddde13ab9eb35c35930e71ffe55f"
 
 [packages."rdtools".source]
 version = "0.1.0"
@@ -1722,6 +2577,16 @@ version = "2.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/readr_2.2.0.zip"
 sha256 = "e4fe84f306db09896f1b7d610e941fc210e5bf2e6ec085b00af54fa23ae8e3cf"
 
+[packages."readr".linux-x86_64]
+version = "2.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/readr_2.2.0.tar.gz"
+sha256 = "ed8fb2d34b6b2ee195adcf237520875045b07bdc5e92b5d1d39fcc378a608716"
+
+[packages."readr".linux-aarch64]
+version = "2.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/readr_2.2.0.tar.gz"
+sha256 = "aa981c5410bc716b7c6b89c528aad57eec2e1d2c70afee64bb657523fcbafe00"
+
 [packages."readr".source]
 version = "2.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/readr_2.2.0.tar.gz"
@@ -1741,6 +2606,16 @@ sha256 = "37069ffee71227c54ece39d9a23390028a66d74339097ac463bcab684829109a"
 version = "1.3.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/renv_1.3.1.zip"
 sha256 = "19bbadfcd332093d4ac7b2b5d44d616da005b1cb271d86c884eb425d556b2d44"
+
+[packages."renv".linux-x86_64]
+version = "1.3.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/renv_1.3.1.tar.gz"
+sha256 = "293758e9375cc4d009cc11631e2c29694189250fc98f39842d4b4f591b5acc9e"
+
+[packages."renv".linux-aarch64]
+version = "1.3.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/renv_1.3.1.tar.gz"
+sha256 = "11109fd3e8471df63880d31f128274514e7d3d6224323ab16c5075db072c6dfe"
 
 [packages."renv".source]
 version = "1.3.1"
@@ -1762,6 +2637,16 @@ version = "1.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/reqres_1.2.0.zip"
 sha256 = "66ad9dcf64e1530891b1fdf16c2323bdb98d877745f3369745e4a5e41a383acd"
 
+[packages."reqres".linux-x86_64]
+version = "1.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/reqres_1.2.0.tar.gz"
+sha256 = "98a11625db67ced09c16bb6bd9914ebb18c7c7d6b7b4d59a6231a3c1ef7ef8c8"
+
+[packages."reqres".linux-aarch64]
+version = "1.2.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/reqres_1.2.0.tar.gz"
+sha256 = "eb9b10ec85d0b84515b1b90d5533f98ee7a48e9c119a4a3b1893f53deb5c6f2a"
+
 [packages."reqres".source]
 version = "1.2.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/reqres_1.2.0.tar.gz"
@@ -1781,6 +2666,16 @@ sha256 = "b9a2441173d00643080caf5f01fa7b0f34d79a1d56010df963da3da325f5c8c2"
 version = "1.3.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/rlang_1.3.0.zip"
 sha256 = "3984228e435466149ee50c27ba77dc21bb0373710f20773dda0861a7ce1c3f9c"
+
+[packages."rlang".linux-x86_64]
+version = "1.3.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rlang_1.3.0.tar.gz"
+sha256 = "88c65668f0f511cbccf47577d030e00c83a626539b3eaa1bc5c189ad139bb616"
+
+[packages."rlang".linux-aarch64]
+version = "1.3.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rlang_1.3.0.tar.gz"
+sha256 = "64cb69756eb4f2c36fee185d2c00b7611859ceb9abf234ad47037bdd745973c4"
 
 [packages."rlang".source]
 version = "1.3.0"
@@ -1802,6 +2697,16 @@ version = "2.32"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/rmarkdown_2.32.zip"
 sha256 = "e116e439ca8c9e02d00ca57fa81a110a1cfaafb061eb22a6cf89661346b56cc8"
 
+[packages."rmarkdown".linux-x86_64]
+version = "2.32"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rmarkdown_2.32.tar.gz"
+sha256 = "fc1b0cf84277530b31f99701fbc920369c8dea210f5b9b2ffdc289caf5badf50"
+
+[packages."rmarkdown".linux-aarch64]
+version = "2.32"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rmarkdown_2.32.tar.gz"
+sha256 = "bcb760cfa209659a1ce78f43f3c4c9df66b7b6df81042e4a5cf15eca0b8342c1"
+
 [packages."rmarkdown".source]
 version = "2.32"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/rmarkdown_2.32.tar.gz"
@@ -1821,6 +2726,16 @@ sha256 = "062e65807934bac45d1a126c13e1878c2a55bbcdc14ae91c9fb613b001382df2"
 version = "2.0.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/routr_2.0.0.zip"
 sha256 = "24cd3e2d8cb3218fb7d1b5a450fbf1b04c17198319deebcc00c4e389b28f471a"
+
+[packages."routr".linux-x86_64]
+version = "2.0.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/routr_2.0.0.tar.gz"
+sha256 = "12b8ee4ad65c69bf8f92ec96223ff0d3382e94261ac4fee8cd223f2e55f26fc3"
+
+[packages."routr".linux-aarch64]
+version = "2.0.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/routr_2.0.0.tar.gz"
+sha256 = "0a0cce2316174958c705dafbaea0858132fdb93917954490d230efca09f4af55"
 
 [packages."routr".source]
 version = "2.0.0"
@@ -1842,6 +2757,16 @@ version = "8.1.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/roxygen2_8.1.1.zip"
 sha256 = "8cda5e740932550dea051d6a7b623a9783c8afca2b06183a5137329f65f61eaf"
 
+[packages."roxygen2".linux-x86_64]
+version = "8.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/roxygen2_8.1.1.tar.gz"
+sha256 = "ec21d8e6b1721da1107243f1a66e836bfca634c10cee1b096c3e80b6a4db6aac"
+
+[packages."roxygen2".linux-aarch64]
+version = "8.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/roxygen2_8.1.1.tar.gz"
+sha256 = "a9ced250c0ee2c415bd5c7a08f211f0590bd2f5fb31a08a4f07f8d85619abcd2"
+
 [packages."roxygen2".source]
 version = "8.1.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/roxygen2_8.1.1.tar.gz"
@@ -1861,6 +2786,16 @@ sha256 = "465daaafd12d9841f1703ab5ee8c0bbb400f528f9f3825ac76d58e6938a3d765"
 version = "2.1.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/rprojroot_2.1.1.zip"
 sha256 = "a82605d215fdee74e7489253163a16f2046de7b294a33cc48af49cd4b89a23e2"
+
+[packages."rprojroot".linux-x86_64]
+version = "2.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rprojroot_2.1.1.tar.gz"
+sha256 = "7803d77ca41471e56b9c729ffca1b8b927377b4aaf5462773d30a8e0a0bc50e9"
+
+[packages."rprojroot".linux-aarch64]
+version = "2.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rprojroot_2.1.1.tar.gz"
+sha256 = "8098511486971b34f7157b352908198e46114d6120f5ecb533ac6f5601ced5c5"
 
 [packages."rprojroot".source]
 version = "2.1.1"
@@ -1882,6 +2817,16 @@ version = "0.19.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/rstudioapi_0.19.0.zip"
 sha256 = "b0b004f827e74f6d9dd59cef74e328f4429335539ff56e88bd26880c00cd1841"
 
+[packages."rstudioapi".linux-x86_64]
+version = "0.19.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rstudioapi_0.19.0.tar.gz"
+sha256 = "0dad9bee7099c8287488d4474e49f213722fe12138464d9750e340fdb0e65337"
+
+[packages."rstudioapi".linux-aarch64]
+version = "0.19.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/rstudioapi_0.19.0.tar.gz"
+sha256 = "b502b44ae3f0f09115bc8df249d6f5d3c743033110ec99cb872a8835c4e26d05"
+
 [packages."rstudioapi".source]
 version = "0.19.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/rstudioapi_0.19.0.tar.gz"
@@ -1901,6 +2846,16 @@ sha256 = "aa26bad2d9a518fa60b665f5efb4993e74fb55a145f72ff8c89e46688e771ac5"
 version = "0.4.10"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/sass_0.4.10.zip"
 sha256 = "331aa8e6994200a2c78aa1ac8c559395e8be44531e3a4ce8910d823dc3b57493"
+
+[packages."sass".linux-x86_64]
+version = "0.4.10"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/sass_0.4.10.tar.gz"
+sha256 = "40acb53ea97eff2f7cd0550b22c7f89657cf54d22c3ab608776ff7dc61aeb4b9"
+
+[packages."sass".linux-aarch64]
+version = "0.4.10"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/sass_0.4.10.tar.gz"
+sha256 = "86464df0ec53989b3573d3a5122f00f58aa85f43e09be09b6c06532515853ec6"
 
 [packages."sass".source]
 version = "0.4.10"
@@ -1922,6 +2877,16 @@ version = "1.4.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/scales_1.4.0.zip"
 sha256 = "a595810bcffce2d40d831d2696ddc6bacdd1afaaeb30ea3f594b506c29e491a8"
 
+[packages."scales".linux-x86_64]
+version = "1.4.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/scales_1.4.0.tar.gz"
+sha256 = "cf8a0a2fbdd9af5217b1df86c8c53270b4813e426e08c1f665d63df09518f8d0"
+
+[packages."scales".linux-aarch64]
+version = "1.4.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/scales_1.4.0.tar.gz"
+sha256 = "8165c5ddd19ee1cc0674d7d94f6a493bbb297b3bff85caf606c0b994a75d50e4"
+
 [packages."scales".source]
 version = "1.4.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/scales_1.4.0.tar.gz"
@@ -1941,6 +2906,16 @@ sha256 = "76a56f0fc143e5f47b2bae031c4d9230f5f0336c98dea1c1ebd906c7b6b14e54"
 version = "1.4.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/sodium_1.4.0.zip"
 sha256 = "b3243bc15adfbc725cf0a3c376f1ebbb6bbd8b3aee02b26ef448d75e6f1141b4"
+
+[packages."sodium".linux-x86_64]
+version = "1.4.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/sodium_1.4.0.tar.gz"
+sha256 = "8f7ca7aa3598d42c7509f13384eb5ccc15bd6eaa29cbac4cdefde98fc4cac8d2"
+
+[packages."sodium".linux-aarch64]
+version = "1.4.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/sodium_1.4.0.tar.gz"
+sha256 = "41e46f34b3de96dfa415cdfb2997c07488f7d99808d8ddab67356d8d3166cce0"
 
 [packages."sodium".source]
 version = "1.4.0"
@@ -1962,6 +2937,16 @@ version = "1.2.6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/storr_1.2.6.zip"
 sha256 = "dca65b62f14d8e39d1b415f68d03dcb64e6628df2a822e6064492a04b1de1a4d"
 
+[packages."storr".linux-x86_64]
+version = "1.2.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/storr_1.2.6.tar.gz"
+sha256 = "d7854e93cf050b062d8d6e242f2b7c350f84b92794abd22cfc60eea909e3a10d"
+
+[packages."storr".linux-aarch64]
+version = "1.2.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/storr_1.2.6.tar.gz"
+sha256 = "98a9736a630f70e7103772928e6d5dd426e62391242e41f9d31013b986bf185d"
+
 [packages."storr".source]
 version = "1.2.6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/storr_1.2.6.tar.gz"
@@ -1981,6 +2966,16 @@ sha256 = "c86ae2492715e2526dfd5fc8aad2a8bb9aed8094be928f7cb1c06340e1f96c06"
 version = "1.8.9"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/stringi_1.8.9.zip"
 sha256 = "b63d0230e82756800de67e9371356435cd93710f467376954237b95a1201ea97"
+
+[packages."stringi".linux-x86_64]
+version = "1.8.9"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/stringi_1.8.9.tar.gz"
+sha256 = "67362d5633d8f10f2ce77d1205c4d9fb2ee1d2d446825eab7681b0de446d787d"
+
+[packages."stringi".linux-aarch64]
+version = "1.8.9"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/stringi_1.8.9.tar.gz"
+sha256 = "4642c678dba2e1a4d406a11ac8eca048711f751a0aaf49106ac1d41c13984eed"
 
 [packages."stringi".source]
 version = "1.8.9"
@@ -2002,6 +2997,16 @@ version = "1.6.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/stringr_1.6.0.zip"
 sha256 = "b2faba04d97702a60f67f46fb1b8c43398a7ac9b3e7626b43c362bca22b0191e"
 
+[packages."stringr".linux-x86_64]
+version = "1.6.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/stringr_1.6.0.tar.gz"
+sha256 = "9b0c121a59961d20f36951204880b0c3522b2c136098a0fca7474b4803ec2804"
+
+[packages."stringr".linux-aarch64]
+version = "1.6.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/stringr_1.6.0.tar.gz"
+sha256 = "ee4a99ad97b5525c38f829183bfa02112da84f28720c83b46efccf9ce17cd627"
+
 [packages."stringr".source]
 version = "1.6.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/stringr_1.6.0.tar.gz"
@@ -2021,6 +3026,16 @@ sha256 = "43bf7cbb3b1f785badc3ace06c69c7d9686bd9ddff8780f8864705c13c0e977f"
 version = "2.2.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/svglite_2.2.2.zip"
 sha256 = "977164a5b1cd4b3c8d19bf5683a817e71d3d7dd68d5c4bd78fbe453dba0d1111"
+
+[packages."svglite".linux-x86_64]
+version = "2.2.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/svglite_2.2.2.tar.gz"
+sha256 = "e196e7067b62760ade1d06145aa3e452c9d1cdcc4f4bb33e647195877acf8589"
+
+[packages."svglite".linux-aarch64]
+version = "2.2.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/svglite_2.2.2.tar.gz"
+sha256 = "34f7f2aba5e4642a3322f870943668e4794ce56b319522736f54547fdeb50b62"
 
 [packages."svglite".source]
 version = "2.2.2"
@@ -2042,6 +3057,16 @@ version = "3.4.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/sys_3.4.3.zip"
 sha256 = "6bbabf1f770564ebf0ae200ec1ceb823a5cb3b73fad09f8c7f5397145ed3a2b7"
 
+[packages."sys".linux-x86_64]
+version = "3.4.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/sys_3.4.3.tar.gz"
+sha256 = "37a6bdcdf70741c00025ce2a143e7f4a1c179a7f9e285bcee468678d031478a2"
+
+[packages."sys".linux-aarch64]
+version = "3.4.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/sys_3.4.3.tar.gz"
+sha256 = "889b19f47f56453e8eaaaac54acf12936104f1fa1c2147f9a2eb1f34d18771ee"
+
 [packages."sys".source]
 version = "3.4.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/sys_3.4.3.tar.gz"
@@ -2061,6 +3086,16 @@ sha256 = "cb1ee1fe327902e0379054c306555545bea5abb52fca76ff7bb6e2268d9296fe"
 version = "1.3.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/systemfonts_1.3.2.zip"
 sha256 = "bd6127c1862571be806cf14729da4588addc22199bd8084ff4c8f170a04ad5d0"
+
+[packages."systemfonts".linux-x86_64]
+version = "1.3.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/systemfonts_1.3.2.tar.gz"
+sha256 = "0845bcb2c1d19a70363b81a8212019f9fc045db354fd6c1a84187935b2abeb52"
+
+[packages."systemfonts".linux-aarch64]
+version = "1.3.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/systemfonts_1.3.2.tar.gz"
+sha256 = "1ffe183628b44f2f76513fcda70cb48646a49587d0f8544c0087764e332d0271"
 
 [packages."systemfonts".source]
 version = "1.3.2"
@@ -2082,6 +3117,16 @@ version = "1.0.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/textshaping_1.0.5.zip"
 sha256 = "e58e1541fd21c131daaee417eaab71b7bf1feb5b6354fc6d75a239c48181b5d1"
 
+[packages."textshaping".linux-x86_64]
+version = "1.0.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/textshaping_1.0.5.tar.gz"
+sha256 = "5a3cf92034ece502b037c6d726690bff54e137352cdb88eb0ed93a7518f76f80"
+
+[packages."textshaping".linux-aarch64]
+version = "1.0.5"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/textshaping_1.0.5.tar.gz"
+sha256 = "43726c5cf14bee99c49b07f55b1c49c35d9c54b76c8484d92e5593f57ce21a75"
+
 [packages."textshaping".source]
 version = "1.0.5"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/textshaping_1.0.5.tar.gz"
@@ -2101,6 +3146,16 @@ sha256 = "6469b2adc334aac3dbd1985f65053f1d52b1f5613f483c051dff106ff4498a6d"
 version = "2.8.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/this.path_2.8.0.zip"
 sha256 = "ad1d1cb7e1e59a178c8a62fb64f66325d949cb1f2537ceb8679199739801e97c"
+
+[packages."this.path".linux-x86_64]
+version = "2.8.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/this.path_2.8.0.tar.gz"
+sha256 = "c1bbbc2686e803833d9d54d3bf6b20e59d6e73208e0ed03f534c2dda0c2a48a2"
+
+[packages."this.path".linux-aarch64]
+version = "2.8.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/this.path_2.8.0.tar.gz"
+sha256 = "bf529e382486182b14b00bbee0c6e3172609e0d85e08c5e74e4a5eabcfe68bbf"
 
 [packages."this.path".source]
 version = "2.8.0"
@@ -2122,6 +3177,16 @@ version = "3.3.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/tibble_3.3.1.zip"
 sha256 = "424ac6b624e705592a4959c06395ddd56a5bca6ddfaf5d1fccc50a9d27d8cc3f"
 
+[packages."tibble".linux-x86_64]
+version = "3.3.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tibble_3.3.1.tar.gz"
+sha256 = "6ae63c84f87ff2674b23b848f7bd44fdb8ca1c0f5caa3805d5b946c79c6baa62"
+
+[packages."tibble".linux-aarch64]
+version = "3.3.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tibble_3.3.1.tar.gz"
+sha256 = "9033e284f24c012b45e82b611d510be55702fc65583f4743ffc40e16f6600ae0"
+
 [packages."tibble".source]
 version = "3.3.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/tibble_3.3.1.tar.gz"
@@ -2141,6 +3206,16 @@ sha256 = "23fca2a383a6e20ab68ff568f23aa5a055f1abd78d7a43cc456004ea03a87213"
 version = "1.2.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/tictoc_1.2.1.zip"
 sha256 = "0ed64744e5f02cd3cc6cfb17987e274713212de18a4d339b2d4dd3c9928e4587"
+
+[packages."tictoc".linux-x86_64]
+version = "1.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tictoc_1.2.1.tar.gz"
+sha256 = "52f2c250d5422c06b942400ee14959832cf0e569def5e08dc1e9770153ee23c5"
+
+[packages."tictoc".linux-aarch64]
+version = "1.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tictoc_1.2.1.tar.gz"
+sha256 = "19174c9b900defd08ad45dabee401acf8961eeb77dafcbb90a58baeb3a480193"
 
 [packages."tictoc".source]
 version = "1.2.1"
@@ -2162,6 +3237,16 @@ version = "1.3.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/tidyr_1.3.2.zip"
 sha256 = "fc33287befec2c8fcb60c16c9709d8a4536f3e9d78e784cd50598bd957c0f967"
 
+[packages."tidyr".linux-x86_64]
+version = "1.3.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tidyr_1.3.2.tar.gz"
+sha256 = "6da2213ecc79646db7a0f76fdf6eb13e39a93cc3e4c710a75e7a74f574595ec3"
+
+[packages."tidyr".linux-aarch64]
+version = "1.3.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tidyr_1.3.2.tar.gz"
+sha256 = "bfcd9f52e9ce101a6b33b6b3cd6c02901e4eb8fdb79188d103a655ca07f0dc66"
+
 [packages."tidyr".source]
 version = "1.3.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/tidyr_1.3.2.tar.gz"
@@ -2181,6 +3266,16 @@ sha256 = "a4a6ddd23d0d8735dc152bec08526f7640d2f09558b4f6e7eb19d81f7fef303f"
 version = "1.2.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/tidyselect_1.2.1.zip"
 sha256 = "3ab5c3155e2eaee04d7066eec92203ee13479735d4f3c302fcd51758bf569d99"
+
+[packages."tidyselect".linux-x86_64]
+version = "1.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tidyselect_1.2.1.tar.gz"
+sha256 = "d9dfdc083c9bb64317574522172cf4d07b1f70ceea6961cbe9f996804c045242"
+
+[packages."tidyselect".linux-aarch64]
+version = "1.2.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tidyselect_1.2.1.tar.gz"
+sha256 = "d34935f5d23bcc64a2d0d3525d45e3a2587e45fc58327aadb474515b2323c466"
 
 [packages."tidyselect".source]
 version = "1.2.1"
@@ -2202,6 +3297,16 @@ version = "0.61"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/tinytex_0.61.zip"
 sha256 = "0fe83b4ac4f69e0e3a8a5821ac77396b4fbc71ffb6e2b17468ce8366b8671c74"
 
+[packages."tinytex".linux-x86_64]
+version = "0.61"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tinytex_0.61.tar.gz"
+sha256 = "6f548a0763338fad19e7fca3c12efa8b440547470e382441c60a0009cc0b8fae"
+
+[packages."tinytex".linux-aarch64]
+version = "0.61"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tinytex_0.61.tar.gz"
+sha256 = "ea8d997842d5fa298850a6c511041b07f963323d437019a3ef1c1d355ae44e57"
+
 [packages."tinytex".source]
 version = "0.61"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/tinytex_0.61.tar.gz"
@@ -2221,6 +3326,16 @@ sha256 = "901b0615931e19b4bc7851045af9736e82f4c58a77206377aa6edf8d827d6e3c"
 version = "0.4.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/triebeard_0.4.1.zip"
 sha256 = "004199673a18bab42bbe58a02d2e8c2dbdc18bb6a1ca14f1f4c48c5a0a40fc59"
+
+[packages."triebeard".linux-x86_64]
+version = "0.4.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/triebeard_0.4.1.tar.gz"
+sha256 = "08cdc3fc3d13d2b34068c1b73d5b6236dbc8edf124ef23f97fb558d21a4b4808"
+
+[packages."triebeard".linux-aarch64]
+version = "0.4.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/triebeard_0.4.1.tar.gz"
+sha256 = "b7bdc117a3e562b72fbce52e5b712296f268458164a7afaefb0cd434edc8c812"
 
 [packages."triebeard".source]
 version = "0.4.1"
@@ -2242,6 +3357,16 @@ version = "0.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/tzdb_0.5.0.zip"
 sha256 = "5891354cafa1258a3c9fd9e8ae4cd774c2357d20352a2229d41030a95ac33c01"
 
+[packages."tzdb".linux-x86_64]
+version = "0.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tzdb_0.5.0.tar.gz"
+sha256 = "9563957ca6333054792347a185cbe42170a27618bbd87ffc8ebe848e9062a06b"
+
+[packages."tzdb".linux-aarch64]
+version = "0.5.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/tzdb_0.5.0.tar.gz"
+sha256 = "365a945675405635f8465b103297d6a545ef7e0cb6f7dd40258747a8cbd0423e"
+
 [packages."tzdb".source]
 version = "0.5.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/tzdb_0.5.0.tar.gz"
@@ -2261,6 +3386,16 @@ sha256 = "87537038d46f2a0fc38e6cf5cc9ee0d8314869d8189adc84266c455870361286"
 version = "1.7.3.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/urltools_1.7.3.1.zip"
 sha256 = "77cb4278a046337add560e36c8c1a73e43a222bc6498cdb5babd10ee0490db2c"
+
+[packages."urltools".linux-x86_64]
+version = "1.7.3.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/urltools_1.7.3.1.tar.gz"
+sha256 = "69b0728d9e6d76712e1b1293fd4f434050351d1b6094dca88c26e76e3f99e067"
+
+[packages."urltools".linux-aarch64]
+version = "1.7.3.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/urltools_1.7.3.1.tar.gz"
+sha256 = "5092642e9cfba0ddc9ec4e630ac4cf73e833efc116e273877528728ae4a2d95a"
 
 [packages."urltools".source]
 version = "1.7.3.1"
@@ -2282,6 +3417,16 @@ version = "1.2.6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/utf8_1.2.6.zip"
 sha256 = "bb8e797f679161b2dcce0fac934330ec9cf48332fb598838c3b4b39df18c326d"
 
+[packages."utf8".linux-x86_64]
+version = "1.2.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/utf8_1.2.6.tar.gz"
+sha256 = "f5cd2b85efa94ad9b9b943c6164c2eb65c095d6ea3fb2c4ffb7da0095a6144c0"
+
+[packages."utf8".linux-aarch64]
+version = "1.2.6"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/utf8_1.2.6.tar.gz"
+sha256 = "a4eebe35059701d3de790895872de8da36174d716d5bef4dfb1e935a8503664e"
+
 [packages."utf8".source]
 version = "1.2.6"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/utf8_1.2.6.tar.gz"
@@ -2301,6 +3446,16 @@ sha256 = "f181d273eaeb7e8d8b830b387f4ea5ca6ac7ebab81bb98d49fdb362c8565d486"
 version = "1.2-2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/uuid_1.2-2.zip"
 sha256 = "e2edbfb5df463dac9d49b3264c8e24311b1908143ebd8883bcb1e0a9d3040eaf"
+
+[packages."uuid".linux-x86_64]
+version = "1.2-2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/uuid_1.2-2.tar.gz"
+sha256 = "cd2ce9b1b76a3a42396a1460a0ea1088bbc7678a96d1be88e6882629d480702d"
+
+[packages."uuid".linux-aarch64]
+version = "1.2-2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/uuid_1.2-2.tar.gz"
+sha256 = "1ed3c3db749d5054f40eaa0ddbc5dc8dfa14c440c1aac8e9c00335c23fe0b2f1"
 
 [packages."uuid".source]
 version = "1.2-2"
@@ -2322,6 +3477,16 @@ version = "0.7.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/vctrs_0.7.3.zip"
 sha256 = "1b6fb5b85610f9393b2761c1bfdc4af969ac74d567507d197527ab9f7a9d010d"
 
+[packages."vctrs".linux-x86_64]
+version = "0.7.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/vctrs_0.7.3.tar.gz"
+sha256 = "c6ca18d2d7b3008905dc6c68c6d8ef75eef12e731cb66e3ecb1881a786c306a5"
+
+[packages."vctrs".linux-aarch64]
+version = "0.7.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/vctrs_0.7.3.tar.gz"
+sha256 = "78191a3da8510971a42272fb74e40f59247014bff50abdd42739ae99f7241fc5"
+
 [packages."vctrs".source]
 version = "0.7.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/vctrs_0.7.3.tar.gz"
@@ -2341,6 +3506,16 @@ sha256 = "a9e3ee25cb3da4becfe3bb596932263315c3aa8873d704253f6c59bf09e1a636"
 version = "0.4.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/viridisLite_0.4.3.zip"
 sha256 = "46c79a0ae748a55549b7503394e373ecbf6ef6733261000cbe30c415b0d1e695"
+
+[packages."viridisLite".linux-x86_64]
+version = "0.4.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/viridisLite_0.4.3.tar.gz"
+sha256 = "c6c2736b692a8958c49b19e299642b8681ca79f73625b39f4938e843ff1a4345"
+
+[packages."viridisLite".linux-aarch64]
+version = "0.4.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/viridisLite_0.4.3.tar.gz"
+sha256 = "81520722a84c212a81594ef278dd5058c09efc7798ff994fe0bf77625c0ed38e"
 
 [packages."viridisLite".source]
 version = "0.4.3"
@@ -2362,6 +3537,16 @@ version = "1.7.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/vroom_1.7.1.zip"
 sha256 = "f814caa4be24a55223e90a9229d623c17cce08aabea467c67911a96d9cf65721"
 
+[packages."vroom".linux-x86_64]
+version = "1.7.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/vroom_1.7.1.tar.gz"
+sha256 = "ac1b0a4989d0f8dac1b61d92112c5b9660ee96356f3314d68edc0770c0c0c619"
+
+[packages."vroom".linux-aarch64]
+version = "1.7.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/vroom_1.7.1.tar.gz"
+sha256 = "5ccdf60a0e4b310ab9b21b8e5df08d1b0438b99591944b79db28ff53d69fc471"
+
 [packages."vroom".source]
 version = "1.7.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/vroom_1.7.1.tar.gz"
@@ -2381,6 +3566,16 @@ sha256 = "8df293164397ff3966c1aa360a0cd1319ca2a33d1d2520389f0b401ad0c75f7f"
 version = "0.1.1"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/waysign_0.1.1.zip"
 sha256 = "9a64092348e933f1143747670e3f3f520e3c66b25ac871a168d86b842ee4c5f6"
+
+[packages."waysign".linux-x86_64]
+version = "0.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/waysign_0.1.1.tar.gz"
+sha256 = "b98055809b8f1e7a33b8627f826bc0680c9c7030d41a07702c6b6ff117b8b2dd"
+
+[packages."waysign".linux-aarch64]
+version = "0.1.1"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/waysign_0.1.1.tar.gz"
+sha256 = "382c04dd4efd763d65b9883c93ad737674388426dd34afaa067e50a78dbc3a5e"
 
 [packages."waysign".source]
 version = "0.1.1"
@@ -2402,6 +3597,16 @@ version = "1.4.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/websocket_1.4.4.zip"
 sha256 = "f8982545d0c0dcfb60e392226f8fb0646ba6b9203921ba31e75dea4aa2eebdbd"
 
+[packages."websocket".linux-x86_64]
+version = "1.4.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/websocket_1.4.4.tar.gz"
+sha256 = "a91424b3447702acc613907e24356e8b695c51b27fa77fc82241b0429e4a8699"
+
+[packages."websocket".linux-aarch64]
+version = "1.4.4"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/websocket_1.4.4.tar.gz"
+sha256 = "8508132aa63ae4d5126c61b92b36ac99a00f25e9f92c035264a5e05c25fb710b"
+
 [packages."websocket".source]
 version = "1.4.4"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/websocket_1.4.4.tar.gz"
@@ -2421,6 +3626,16 @@ sha256 = "d50e4713ba1513294d5c785d76e66a163f7d643ded4e79283bb0a1f785b04d40"
 version = "1.2.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/webutils_1.2.3.zip"
 sha256 = "5ef2b9a4b2bd7d0abda51095f0c75d6944b32efe72cebd85bf1c7daf6dc00fd7"
+
+[packages."webutils".linux-x86_64]
+version = "1.2.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/webutils_1.2.3.tar.gz"
+sha256 = "f91f48aff8945f02838c72dbd0ad9f07f92c4f96c384142db818e778deab74ee"
+
+[packages."webutils".linux-aarch64]
+version = "1.2.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/webutils_1.2.3.tar.gz"
+sha256 = "d2d7b945255931db29a055b8cce4ed316231e6a6ee5261d942a249ec8b4b84e1"
 
 [packages."webutils".source]
 version = "1.2.3"
@@ -2442,6 +3657,16 @@ version = "3.0.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/withr_3.0.3.zip"
 sha256 = "85e7a7fd4dd9c630000a0d6a803634e7a8d9bc59398f5ee3edcf46dfea5483a0"
 
+[packages."withr".linux-x86_64]
+version = "3.0.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/withr_3.0.3.tar.gz"
+sha256 = "e7f8ae4ec98d75ff14fe98e5e39ab487d8957fca9e7d43621ab21abe7635d812"
+
+[packages."withr".linux-aarch64]
+version = "3.0.3"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/withr_3.0.3.tar.gz"
+sha256 = "5b931cfcac52029eb4555505e376ec7ff231f7fd9c69802479431a5645f150dc"
+
 [packages."withr".source]
 version = "3.0.3"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/withr_3.0.3.tar.gz"
@@ -2461,6 +3686,16 @@ sha256 = "d6fe664849707c558bad86e0ba5af1ea9ff5b265cb31660747136e6aecc3d926"
 version = "0.62"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/xfun_0.62.zip"
 sha256 = "8f9b86042e2eb894667b10175ae6ec4ff870b23b0f3845c78df8c51226b2b07b"
+
+[packages."xfun".linux-x86_64]
+version = "0.62"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/xfun_0.62.tar.gz"
+sha256 = "ba0dd6a660cccbf8effaa2fe5b989cdbee3b668e5a0c222a4a390b99bff78b2b"
+
+[packages."xfun".linux-aarch64]
+version = "0.62"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/xfun_0.62.tar.gz"
+sha256 = "a204f082a247bf88ad30f4a10621187a97dc1843ee67558d715b2ee15042fb90"
 
 [packages."xfun".source]
 version = "0.62"
@@ -2482,6 +3717,16 @@ version = "1.6.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/xml2_1.6.0.zip"
 sha256 = "8ad9c8d9ecc6ed521a573275513344224a7a873c611e110837020068b2579d87"
 
+[packages."xml2".linux-x86_64]
+version = "1.6.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/xml2_1.6.0.tar.gz"
+sha256 = "6c49cdd1636bb7cb75e99a5432a74f059ea78e9855b01f8511b91c9bd184c3f5"
+
+[packages."xml2".linux-aarch64]
+version = "1.6.0"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/xml2_1.6.0.tar.gz"
+sha256 = "531b07694a1730679fc8cbdad787a3075b1264c2c90279bf6d51e03daa010527"
+
 [packages."xml2".source]
 version = "1.6.0"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/xml2_1.6.0.tar.gz"
@@ -2502,6 +3747,16 @@ version = "2.3.12"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/yaml_2.3.12.zip"
 sha256 = "da198a231abc3da29774317362843b44dd3fd467f2c57f1da850554b0db0ec74"
 
+[packages."yaml".linux-x86_64]
+version = "2.3.12"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/yaml_2.3.12.tar.gz"
+sha256 = "63481b0b937d1b77dbadef0ee6680581417dedddec7d25d3155a2831e5ccd42c"
+
+[packages."yaml".linux-aarch64]
+version = "2.3.12"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/yaml_2.3.12.tar.gz"
+sha256 = "b1a16d7a1f8b88ff65158cb853804989c6fb63e33949f0be626d68e8db77f0d3"
+
 [packages."yaml".source]
 version = "2.3.12"
 url = "https://packagemanager.posit.co/cran/2026-11-06/src/contrib/yaml_2.3.12.tar.gz"
@@ -2521,6 +3776,16 @@ sha256 = "81bff82f38e91dfd2e38e071c0d1fe54da08d8cf5a1cdb314cab4df6c05bbfe3"
 version = "3.0.2"
 url = "https://packagemanager.posit.co/cran/2026-11-06/bin/windows/contrib/4.6/zip_3.0.2.zip"
 sha256 = "31928b214468ce8572fd2ae2f86d7373337d013966bff0d1e0d7edcef24ee547"
+
+[packages."zip".linux-x86_64]
+version = "3.0.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/zip_3.0.2.tar.gz"
+sha256 = "412521aaac26f456ab314208c85023553694ff6e3fdfaafefd275a9cae971291"
+
+[packages."zip".linux-aarch64]
+version = "3.0.2"
+url = "https://packagemanager.posit.co/cran/__linux__/noble/2026-11-06/src/contrib/zip_3.0.2.tar.gz"
+sha256 = "69d88687867a078587bb2b47c5bfa8934d30f11f19e953bde062b48019209dab"
 
 [packages."zip".source]
 version = "3.0.2"

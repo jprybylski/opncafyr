@@ -53,8 +53,33 @@ def test_committed_pins_pass():
 
 def test_every_supported_platform_has_runtimes():
     pins = tomllib.loads((ROOT / "runtime/pins.toml").read_text("utf-8"))
+    supported = set(pins["platforms"]["supported"])
+    linux = {p for p in supported if p.startswith("linux")}
     for name in ("uv", "python", "r", "quarto"):
-        assert set(pins[name]["assets"]) == set(pins["platforms"]["supported"])
+        # Linux runtimes are pinned once, under [ci.<platform>], and read from there (#65).
+        assert set(pins[name]["assets"]) == supported - linux
+        for platform in linux:
+            assert set(pins["ci"][platform][name]["assets"]) == {platform}
+
+
+def test_a_pending_platform_needs_no_opnca_binary_but_a_supported_one_does(tree):
+    pins = tomllib.loads((tree / "runtime/pins.toml").read_text("utf-8"))
+    assert set(pins["platforms"]["pending"]) <= set(pins["platforms"]["supported"])
+    _edit(tree, "runtime/pins.toml", 'pending = ["linux-x86_64", "linux-aarch64"]', "pending = []")
+    errors, _ = _check(tree)
+    assert "[packages.opnca-r] has no binary for linux-x86_64" in errors
+    assert "[packages.opnca-r] has no binary for linux-aarch64" in errors
+
+
+def test_linux_r_binaries_need_their_user_agent(tree):
+    _edit(
+        tree,
+        "runtime/r/binaries.toml",
+        '[user_agents]\nlinux-x86_64 = "R (',
+        '[user_agents]\nlinux-x86_64 = "(',
+    )
+    errors, _ = _check(tree)
+    assert any("no R user agent for linux-x86_64" in e for e in errors)
 
 
 def test_tbd_is_rejected(tree):
