@@ -535,6 +535,15 @@ class Installer:
             icons.create(self.layout, install_id, self.payload.version, log)
         except (proc.ProcError, OSError) as exc:
             self.say(f"warning: could not create the icon (run `repair` later): {exc}")
+        if sys.platform.startswith("linux"):
+            launcher = icons.linux_launcher(self.layout)
+            self.say(
+                f"start it with: {launcher} launch --remote --port 8765 --workspace <study folder>"
+            )
+            self.say(
+                "  (no desktop here: reach it through an SSH forward or your IDE's proxy; "
+                "see the guide)"
+            )
         self._refresh_installer_copy(install_id)
         self.collect_garbage(keep={install_id, *([previous] if previous else [])})
 

@@ -1,4 +1,4 @@
-"""Remote access for cloud container mode (#42, ADR 0009).
+"""Remote access for cloud container mode (#42, ADR 0009) and a native Linux VM (#65).
 
 On a desktop the launcher listens on 127.0.0.1 and the browser is on the same machine.
 In cloud container mode the launcher runs in a container on a VM, and the browser reaches
@@ -15,6 +15,11 @@ environment variables or anything else sniffed at run time. A preset only fills 
 allow-lists and the prefix from a URL the user gives; it never turns a check off. The
 session cookie, the one-time ``/open`` token, the session header and every Host, Origin
 and ``Sec-Fetch-Site`` check stay exactly as on a desktop (``core.security``).
+
+A **native** Linux VM (``launch --remote``, no container) differs in one thing only: nothing
+publishes a port, so the listener stays on the VM's own loopback (``LOOPBACK``) and the SSH
+forward or the IDE proxy running on the VM reaches it there. ``native_access`` is
+``container_access`` with that bind.
 """
 
 from __future__ import annotations
@@ -62,6 +67,11 @@ class RemoteAccess:
     origins: frozenset[str] = field(default_factory=frozenset)
 
     @property
+    def native(self) -> bool:
+        """A launcher on the VM itself (no container): it listens on the loopback."""
+        return self.bind == LOOPBACK
+
+    @property
     def secure_cookie(self) -> bool:
         return self.public_url.startswith("https://")
 
@@ -103,8 +113,9 @@ def container_access(
     local_port: int | None = None,
     allowed_hosts: tuple[str, ...] = (),
     allowed_origins: tuple[str, ...] = (),
+    bind: str = CONTAINER_BIND,
 ) -> RemoteAccess:
-    """Settings for ``opncafyr launch --container``, from its options only.
+    """Settings for ``opncafyr launch --container`` (or ``--remote``), from its options only.
 
     ``port`` is the launcher's port inside the container. For ``ssh``, ``local_port`` is
     the port on the user's own machine (``ssh -L <local_port>:127.0.0.1:<VM port>``); it
@@ -124,7 +135,7 @@ def container_access(
             origins.add(_origin("http", f"{name}:{lp}"))
         return RemoteAccess(
             access=access,
-            bind=CONTAINER_BIND,
+            bind=bind,
             public_url=f"http://{LOOPBACK}:{lp}/",
             hosts=frozenset(hosts),
             origins=frozenset(origins),
@@ -155,9 +166,18 @@ def container_access(
     # loopback authority, which core.security always allows.
     return RemoteAccess(
         access=access,
-        bind=CONTAINER_BIND,
+        bind=bind,
         public_url=f"{parts.scheme}://{authority}{path}",
         base_path=path,
         hosts=frozenset(hosts),
         origins=frozenset(origins),
     )
+
+
+def native_access(**options) -> RemoteAccess:
+    """Settings for ``opncafyr launch --remote`` on a native Linux VM (#65).
+
+    The same options and checks as ``container_access``, but the listener is the VM's
+    loopback: an SSH forward or an IDE proxy on the VM reaches it there, and nothing else can.
+    """
+    return container_access(bind=LOOPBACK, **options)

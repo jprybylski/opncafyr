@@ -351,3 +351,25 @@ def test_the_download_sends_the_pinned_user_agent(pins, tmp_path):
     assert argv[argv.index("--user-agent") + 1] == "R (4.6.2 x86_64-pc-linux-gnu)"
     default = source._argv("https://example.org/x", tmp_path / "x")
     assert default[default.index("--user-agent") + 1] == "opncafyr-installer"
+
+
+# --- the launcher script ---------------------------------------------------------------
+
+
+def test_linux_gets_a_launcher_script_not_an_icon(tmp_path, monkeypatch):
+    from opncafyr.installer import icons
+    from opncafyr.installer.layout import Layout
+
+    monkeypatch.setattr(icons.sys, "platform", "linux")
+    layout = Layout(tmp_path / "root")
+    assert not icons.present(layout)
+    made = icons.create(layout, "id-1", "0.0.1", tmp_path / "icons.log")
+    script = layout.root / "bin" / "opncafyr"
+    assert made == [script] and os.access(script, os.X_OK) and icons.present(layout)
+    text = script.read_text("utf-8")
+    assert text.startswith("#!/bin/sh\n") and text.endswith(' -m opncafyr "$@"\n')
+    # It goes through the current link, so an update needs no new script.
+    assert str(layout.root / "current" / "launcher" / "bin" / "python") in text
+    assert icons.existing() == []  # inside the app root: uninstall removes the root itself
+    icons.remove(layout, tmp_path / "icons.log")
+    assert not script.exists()

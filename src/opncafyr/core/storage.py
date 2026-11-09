@@ -146,7 +146,7 @@ def check_storage(folder: Path, mountinfo: str | None = None) -> StorageCheck:
     return StorageCheck(LOCAL, fstype)
 
 
-def owner_mismatch(folder: Path) -> str | None:
+def owner_mismatch(folder: Path, container: bool = True) -> str | None:
     """A sentence if another user owns ``folder`` than the one running this process (#62).
 
     Git refuses such a folder ("dubious ownership"), and files this process writes there
@@ -164,9 +164,16 @@ def owner_mismatch(folder: Path) -> str | None:
     me = geteuid()
     if owner == me:
         return None
-    return (
+    first = (
         f"The study folder belongs to user {owner}, but opncafyr is running as user {me}. "
-        "Git version history and file access may fail. Start the container with "
+        "Git version history and file access may fail. "
+    )
+    if not container:
+        return (
+            first + "Run opncafyr as the user who owns the folder, or ask for the owner to match."
+        )
+    return first + (
+        "Start the container with "
         '`opncafyr-container`, or pass `--user "$(id -u):$(id -g)"` (rootless Podman: '
         "`--userns=keep-id`), so the two match."
     )
