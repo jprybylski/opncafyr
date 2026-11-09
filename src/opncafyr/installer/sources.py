@@ -77,7 +77,9 @@ class LocalSource:
     """A bundle (folder or zip) or a folder of pinned files. Never touches the network."""
 
     def __init__(self, location: Path, cache: Cache) -> None:
-        self.location = Path(location)
+        # A bundle may be passed as ".". Its files can become process executables
+        # (the Windows R installer), which must have absolute paths.
+        self.location = Path(location).resolve()
         self.cache = cache
         self._names: dict[str, list[Path]] | None = None
         self._zip: zipfile.ZipFile | None = None

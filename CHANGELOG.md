@@ -871,6 +871,8 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- Clarified how to build the installer payload from a source checkout before testing
+  offline bundle creation, and distinguished the installer zip from a platform bundle.
 - opnca-r is pinned at 0.3.1, which releases opnca-r#32, #53 and #54 (0.3.0) and #56–#58
   (0.3.1). Imports are unchanged. flextable, a new suggested package, is already in
   `renv.lock`.
@@ -969,6 +971,9 @@ All notable changes to this project are documented here. The format follows
   `upstream-blocked` removed from #27.
 
 ### Fixed
+- Resolve local bundle and asset folders to absolute paths before staging, so a
+  Windows offline install can launch the pinned R installer when given `--from-bundle .`.
+  The offline guide also uses an absolute Windows bundle path for older installers.
 - **Cloud `-full` walkthrough failures** (#62).
   - The Publications list and the file picker on the Publish page no longer keep an
     error after a later request succeeds. The first request can run before a study folder

@@ -49,10 +49,10 @@ You don't need a separate opnca-r download: the bundle already holds it.
 
 1. In File Explorer, right-click the bundle zip, choose **Extract All…**, then **Extract**. You get a folder, `opncafyr-bundle-<version>-windows-x86_64`.
 2. Open that folder. Click the address bar, type `cmd` and press Enter. A Command Prompt window opens in the bundle folder.
-3. Type the command below and press Enter. The `.` at the end means "this folder", the bundle.
+3. Type the command below and press Enter. `%CD%` supplies the full path of this bundle folder.
 
    ```bat
-   installer\install.bat install --from-bundle .
+   installer\install.bat install --from-bundle "%CD%"
    ```
 
 4. Wait until the installer finishes. Then start opncafyr from the **opncafyr** shortcut on your Desktop or in the Start Menu.
@@ -104,7 +104,7 @@ A repair checks the install and, if something is damaged, installs it again. Off
    On Windows:
 
    ```bat
-   installer\install.bat repair --from-bundle .
+   installer\install.bat repair --from-bundle "%CD%"
    ```
 
 {: .expect }

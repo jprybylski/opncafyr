@@ -18,6 +18,8 @@ from opncafyr.installer import install as install_mod
 from opncafyr.installer import payload as payload_mod
 from opncafyr.installer import proc
 from opncafyr.installer.mirror import Mirror, MirrorError
+from opncafyr.installer.pins import Pins
+from opncafyr.installer.sources import Cache, LocalSource
 from opncafyr.installer.verify import MissingAssets
 
 
@@ -54,6 +56,18 @@ def test_bundle_holds_every_pinned_file_and_its_records(world, tmp_path):
     assert spdx["spdxVersion"] == "SPDX-2.3" and len(spdx["packages"]) == len(paths)
     inventory = json.loads((dest / "licenses.json").read_text("utf-8"))
     assert sum(inventory["summary"].values()) == len(paths)
+
+
+def test_relative_bundle_folder_yields_absolute_r_installer(world, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    asset = next(
+        a for a in Pins.load(world.payload / "runtime").assets(PLATFORM) if a.component == "r"
+    )
+    source = LocalSource(Path("bundle"), Cache(tmp_path / "cache"))
+    path, problem = source.find(asset)
+    assert problem is None
+    assert path == world.bundle / asset.path
+    assert path.is_absolute()
 
 
 def test_two_builds_from_the_same_pins_list_the_same_hashes(world, tmp_path):

@@ -190,6 +190,21 @@ inside the installer before anything is installed.
 
 ### 1. Build a bundle on a connected machine
 
+The commands below run from a generated installer payload, not the source tree's
+`installer/` directory. There is no public installer zip download yet. From a source
+checkout, create the complete installer folder and zip first:
+
+```sh
+uv run python scripts/make_installer.py --out dist --zip
+```
+
+Then run `install.sh` or `install.bat` from `dist/opncafyr-installer-<version>/`.
+That folder includes the generated `bootstrap.tsv`, `payload.json`, wheel and pins;
+`installer/install.sh` in the checkout does not. The installer zip contains the
+installer, while `bundle --archive` produces a separate, platform-specific zip with
+all pinned assets. The full build requires access to the private opnca-r release
+(`--assets` or `GH_TOKEN`/`GITHUB_TOKEN`) and the public pinned downloads.
+
 Any connected Mac or Windows PC can build a bundle for any supported platform:
 
 ```sh
