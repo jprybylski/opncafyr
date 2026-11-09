@@ -203,3 +203,10 @@ jobs:
         run: |
           uv run python scripts/container/mode_check.py \
             --image "$IMAGE:sha-${GITHUB_SHA::12}" --engine ${{ matrix.engine }}
+      - name: Diagnostics
+        if: failure()
+        run: |
+          ss -ltnp || true
+          ${{ matrix.engine }} ps -a || true
+          ${{ matrix.engine }} network ls || true
+          ${{ matrix.engine }} version --format '{{.Client.Version}}' || true

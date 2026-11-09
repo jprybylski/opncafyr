@@ -184,7 +184,15 @@ for _ in $(seq 1 40); do port_busy || break; sleep 0.5; done
 port_busy && die "port $port on 127.0.0.1 is in use; stop what uses it or pick another --port"
 
 # Its own network, so other containers on the default bridge can't reach the listener.
-"$engine" network inspect "$name" > /dev/null 2>&1 || "$engine" network create "$name" > /dev/null
+# Rootless Podman already gives each container a private network namespace that no other
+# container can reach; a custom network there would add a shared rootless namespace whose
+# teardown has left the port forwarder holding the port.
+network=(--network "$name")
+if [[ "$engine" == podman && "$(id -u)" -ne 0 ]]; then
+  network=()
+else
+  "$engine" network inspect "$name" > /dev/null 2>&1 || "$engine" network create "$name" > /dev/null
+fi
 
 user=(--user "$(id -u):$(id -g)")
 if [[ "$engine" == podman ]]; then
@@ -194,7 +202,7 @@ if [[ "$engine" == podman ]]; then
   user+=(--security-opt label=disable)
 fi
 
-"$engine" run --detach --rm --name "$name" --network "$name" \
+"$engine" run --detach --rm --name "$name" "${network[@]}" \
   --publish "127.0.0.1:$port:$port" \
   --volume "$study:/workspace" --volume "$name-state:/state" \
   --cap-drop ALL --security-opt no-new-privileges \
