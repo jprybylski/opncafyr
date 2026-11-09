@@ -54,6 +54,7 @@ from opncafyr.core.lifecycle import (
 from opncafyr.core.picker import pick_folder
 from opncafyr.core.projectfiles import ProjectFiles
 from opncafyr.core.projectfiles_api import mount_project_files_api
+from opncafyr.core.provenance import set_container_image
 from opncafyr.core.proxy import mount_proxy
 from opncafyr.core.registry import (
     ToolDescriptor,
@@ -68,6 +69,7 @@ from opncafyr.core.runs_api import mount_runs_api
 from opncafyr.core.runtime import Runtime, load_runtime
 from opncafyr.core.security import (
     REOPEN_PAGE,
+    BasePathMiddleware,
     LoopbackGuardMiddleware,
     SecurityConfig,
     reopen_page_headers,
@@ -145,7 +147,9 @@ async def _monitor(lifecycle: Lifecycle, tick_s: float) -> None:
             log.exception("Lifecycle check failed")
 
 
-def build_supervisor(tools: dict[str, ToolDescriptor], runtime: Runtime) -> Supervisor:
+def build_supervisor(
+    tools: dict[str, ToolDescriptor], runtime: Runtime, url_prefix: str = "/"
+) -> Supervisor:
     adapters = load_web_adapters(tools)
     apps = {
         tool_id: WebAppConfig(
@@ -157,7 +161,11 @@ def build_supervisor(tools: dict[str, ToolDescriptor], runtime: Runtime) -> Supe
         for tool_id, adapter in adapters.items()
     }
     return Supervisor(
-        apps, runtime=runtime, state_root=state_dir(), log_root=logs_dir() / "children"
+        apps,
+        runtime=runtime,
+        state_root=state_dir(),
+        log_root=logs_dir() / "children",
+        url_prefix=url_prefix,
     )
 
 
@@ -176,8 +184,14 @@ def create_app(
     open_tokens: Path | None = None,
     workflows: list[WorkflowPack] | None = None,
     editors: dict[str, Any] | None = None,
+    workspace: Path | None = None,
+    container_image: str | None = None,
 ) -> FastAPI:
     """Build the controller app.
+
+    ``workspace`` fixes the one study folder this launcher serves (cloud container mode,
+    #42); ``container_image`` is the image ID it runs in, recorded in run, publication and
+    build manifests (``core.provenance``).
 
     Descriptors are loaded here, before anything listens, so an invalid one stops the
     launch with a ``DescriptorError`` naming the file and field.
@@ -206,7 +220,11 @@ def create_app(
         health = ToolHealth(installed, rt)
         app.state.health = health
         health.start()
-        sup = supervisor if supervisor is not None else build_supervisor(installed, rt)
+        sup = (
+            supervisor
+            if supervisor is not None
+            else build_supervisor(installed, rt, security.base_path)
+        )
         app.state.supervisor = sup
         # Opening a workspace (/api/workspace/open) runs the job sweep.
         manager = jobs if jobs is not None else JobManager(runtime=rt)
@@ -260,7 +278,12 @@ def create_app(
     )
     # Set before the workflow packs mount, so they can take a project's lock (#52).
     app.state.project_files = project_files
+    app.state.container_image = container_image
+    set_container_image(container_image)
     app.add_middleware(LoopbackGuardMiddleware, config=security)
+    if security.base_path != "/":
+        # Added last, so it runs first: the guard and the routes see unprefixed paths.
+        app.add_middleware(BasePathMiddleware, base_path=security.base_path)
 
     started = time.monotonic()
 
@@ -399,16 +422,17 @@ def create_app(
             headers = {k.decode(): v.decode() for k, v in reopen_page_headers()}
             return HTMLResponse(REOPEN_PAGE, status_code=403, headers=headers)
         response = RedirectResponse(
-            "/",
+            security.base_path,
             status_code=303,
             headers={"cache-control": "no-store", "referrer-policy": "no-referrer"},
         )
         response.set_cookie(
             security.cookie_name,
             security.secret,
-            path="/",
+            path=security.base_path,
             httponly=True,
             samesite="strict",
+            secure=security.secure_cookie,
         )
         return response
 
@@ -435,6 +459,7 @@ def create_app(
         app,
         picker=picker if picker is not None else pick_folder,
         recent=recent if recent is not None else RecentWorkspaces(state_dir() / RECENT_FILE),
+        fixed=workspace,
     )
     mount_datasets_api(app, datasets)
     mount_runs_api(app)

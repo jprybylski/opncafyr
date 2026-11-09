@@ -40,6 +40,7 @@ from opncafyr.core import runs as runs_core
 from opncafyr.core.artifacts import PUBLICATIONS_DIR, list_runs
 from opncafyr.core.jobs import JobState
 from opncafyr.core.manifest import atomic_write_json, validate
+from opncafyr.core.provenance import base_tools
 from opncafyr.core.workspace import resolve_in_root
 from opncafyr.workflows.nca.publish import sidecars
 from opncafyr.workflows.nca.publish.catalog import FORMATTED, Entry, catalog, missing
@@ -432,7 +433,7 @@ def _manifest(root: Path, planned: Plan, label: str | None) -> dict[str, Any]:
         "schema_version": "1.0",
         "publication_id": new_publication_id(root),
         "created_at": runs_core.now(),
-        "tools": {"opncafyr": __version__, "sidecar_format": SIDECAR_FORMAT},
+        "tools": {**base_tools(), "sidecar_format": SIDECAR_FORMAT},
         "runs": runs,
         "items": [
             {

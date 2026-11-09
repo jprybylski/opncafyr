@@ -40,7 +40,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from opncafyr import __version__
 from opncafyr.adapters import quartifyr as Q
 from opncafyr.adapters.quartifyr import editor as QE
 from opncafyr.core import runs as runs_core
@@ -55,6 +54,7 @@ from opncafyr.core.jobmanager import (
     ReviewResult,
 )
 from opncafyr.core.manifest import atomic_write_json, atomic_write_text
+from opncafyr.core.provenance import base_tools
 from opncafyr.core.runtime import RuntimeUnavailable
 from opncafyr.paths import WORKSPACE_META_DIR, app_root
 from opncafyr.workflows.nca.publish import projects, sidecars
@@ -456,7 +456,7 @@ class ReportService(projects.ProjectJobs):
             text = _relative(json.dumps(result.document, indent=2, sort_keys=True), ctx.cwd)
             (staging / "render-result.json").write_text(text + "\n", "utf-8")
             versions = result.document.get("versions") or {}
-            tools = {"opncafyr": __version__}
+            tools = base_tools()
             tools.update(
                 {k: str(v) for k, v in versions.items() if isinstance(v, str | int | float)}
             )

@@ -39,7 +39,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from opncafyr import __version__
 from opncafyr.adapters import deckifyr as D
 from opncafyr.adapters import quartifyr as Q
 from opncafyr.core import runs as runs_core
@@ -53,6 +52,7 @@ from opncafyr.core.jobmanager import (
     ReviewResult,
 )
 from opncafyr.core.manifest import atomic_write_json, atomic_write_text
+from opncafyr.core.provenance import base_tools
 from opncafyr.core.runtime import Runtime, RuntimeUnavailable
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
 from opncafyr.workflows.nca.publish import projects, sidecars
@@ -465,7 +465,7 @@ class DeckService(projects.ProjectJobs):
                 publication=publication,
                 publication_sha=sha,
                 inputs=json.loads((ctx.tmpdir / "inputs.json").read_text("utf-8")),
-                tools={"opncafyr": __version__, "deckifyr": made["deckifyr_version"]},
+                tools={**base_tools(), "deckifyr": made["deckifyr_version"]},
                 settings={"previews": previews},
                 outputs=made["outputs"],
                 warnings=[

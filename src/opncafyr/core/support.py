@@ -48,6 +48,7 @@ from typing import Any
 
 from opncafyr import __version__
 from opncafyr.core.manifest import atomic_write_bytes, validate
+from opncafyr.core.provenance import container_image
 from opncafyr.core.redaction import REDACTOR, Redactor
 from opncafyr.installer import payload as payload_mod
 from opncafyr.installer.layout import INSTALL_RECORD, Layout
@@ -210,6 +211,7 @@ def _system(root: Path, install_id: str | None, now: float) -> dict[str, Any]:
         "machine": platform.machine(),
         "free_disk_mb": free_mb,
         "install_id": install_id,
+        "container_image": container_image(),
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(now)),
     }
 

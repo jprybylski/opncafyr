@@ -16,6 +16,10 @@ the user visits can reach 127.0.0.1. This module enforces:
   header (the home page reads it from a meta tag). Proxied child apps under ``/apps/``
   can't send a custom header, so there they need our own ``Origin`` instead.
 - No CORS headers are ever added, so other origins cannot read responses.
+
+Cloud container mode (#42, ``core.remote``) only *adds* the forward's or IDE proxy's own
+Host and Origin to the allow-lists, scopes the cookie to the URL prefix, and makes it
+``Secure`` behind https. Every check above still applies.
 """
 
 from __future__ import annotations
@@ -45,19 +49,31 @@ def new_session_secret() -> str:
 class SecurityConfig:
     port: int
     secret: str = field(default_factory=new_session_secret, repr=False)
+    # Cloud container mode only (core.remote): the browser-side Host and Origin values of
+    # an SSH forward or IDE proxy, the URL prefix, and the cookie's name and Secure flag.
+    extra_hosts: frozenset[str] = frozenset()
+    extra_origins: frozenset[str] = frozenset()
+    base_path: str = "/"
+    cookie_id: str | None = None
+    secure_cookie: bool = False
+
+    def __post_init__(self) -> None:
+        if not (self.base_path.startswith("/") and self.base_path.endswith("/")):
+            raise ValueError("base_path must start and end with '/'")
 
     @property
     def allowed_hosts(self) -> frozenset[str]:
-        return frozenset(f"{h}:{self.port}" for h in LOOPBACK_HOSTS)
+        return frozenset(f"{h}:{self.port}" for h in LOOPBACK_HOSTS) | self.extra_hosts
 
     @property
     def allowed_origins(self) -> frozenset[str]:
-        return frozenset(f"http://{h}" for h in self.allowed_hosts)
+        loopback = frozenset(f"http://{h}:{self.port}" for h in LOOPBACK_HOSTS)
+        return loopback | self.extra_origins
 
     @property
     def cookie_name(self) -> str:
         # Cookies ignore ports, so the port keeps two launchers from sharing one cookie.
-        return f"{SESSION_COOKIE_PREFIX}{self.port}"
+        return f"{SESSION_COOKIE_PREFIX}{self.cookie_id or self.port}"
 
     def secret_matches(self, candidate: str | None) -> bool:
         if not candidate:
@@ -116,6 +132,30 @@ class LoopbackGuardMiddleware:
             await _reject(scope, receive, send, 403, "Missing or invalid session token.")
             return
 
+        await self.app(scope, receive, send)
+
+
+class BasePathMiddleware:
+    """Serve the app under ``base_path`` (an IDE proxy's ``/proxy/<port>/``, #42).
+
+    Some proxies strip the prefix before forwarding and some don't; a path under the
+    prefix loses it here, and any other path is served as it is. Runs outside
+    ``LoopbackGuardMiddleware``, so every check sees the app's own paths.
+    """
+
+    def __init__(self, app: ASGIApp, base_path: str) -> None:
+        self.app = app
+        self.prefix = base_path.rstrip("/")
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if self.prefix and scope["type"] in ("http", "websocket"):
+            path: str = scope.get("path", "")
+            if path == self.prefix or path.startswith(self.prefix + "/"):
+                scope = dict(scope)
+                scope["path"] = path[len(self.prefix) :] or "/"
+                raw = scope.get("raw_path")
+                if isinstance(raw, bytes):
+                    scope["raw_path"] = raw[len(self.prefix.encode()) :] or b"/"
         await self.app(scope, receive, send)
 
 

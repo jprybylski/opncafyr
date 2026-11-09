@@ -37,9 +37,9 @@ import stat
 from pathlib import Path
 from typing import Any
 
-from opncafyr import __version__
 from opncafyr.core.datasets import fingerprint
 from opncafyr.core.manifest import atomic_write_json, atomic_write_text
+from opncafyr.core.provenance import base_tools
 from opncafyr.core.runs import RUN_ID_RE, RUNS_DIR, now, publish_run, stage_run
 from opncafyr.core.workspace import resolve_in_root
 from opncafyr.workflows.nca import mapping as M
@@ -390,7 +390,7 @@ def create_run(
         "row_accounting": accounting,
         "settings": {"path": SETTINGS, "sha256": settings_sha},
         "nca_settings": {"blq": blq_choice},
-        "tools": {"opncafyr": __version__},
+        "tools": base_tools(),
     }
     atomic_write_json(staging / MANIFEST, manifest, "run-manifest-v1")
     for name in (INPUT, FINGERPRINT, PRESET, SETTINGS):

@@ -33,6 +33,7 @@ from opncafyr.core.jobmanager import (
     ReviewResult,
 )
 from opncafyr.core.manifest import atomic_write_json
+from opncafyr.core.provenance import container_image
 from opncafyr.core.rscript import rscript_command
 from opncafyr.core.runtime import RuntimeUnavailable
 from opncafyr.workflows.nca.replay_compare import (
@@ -45,6 +46,15 @@ from opncafyr.workflows.nca.replay_compare import (
 DEFAULT_TIMEOUT_S = 1800.0
 REPORT = "replay.json"
 _FOLDER = re.compile(r"^replay-(\d+)$")
+
+
+def replay_tools(run_tools: dict[str, str]) -> dict[str, str]:
+    """The run's own tool versions, plus the image this replay ran in, if any (#42)."""
+    tools = {k: v for k, v in run_tools.items() if k in ("opnca-r", "R", "container_image")}
+    image = container_image()
+    if image is not None:
+        tools["replay_container_image"] = image
+    return tools
 
 
 def replay_folders(run: Path) -> list[tuple[int, Path]]:
@@ -123,7 +133,7 @@ def _request(
             "differences": describe(result),
             "script_sha256": manifest["script"]["sha256"],
             "input_sha256": manifest["analysis_input"]["sha256"],
-            "tools": {k: v for k, v in manifest["tools"].items() if k in ("opnca-r", "R")},
+            "tools": replay_tools(manifest["tools"]),
         }
         atomic_write_json(ctx.staging / REPORT, report, "replay-v1")
         return ReviewResult(True)

@@ -121,7 +121,7 @@ def filter_response_headers(headers: httpx.Headers, child: Child) -> list[tuple[
     return out
 
 
-def _page(status: int, title: str, body: str) -> HTMLResponse:
+def _page(status: int, title: str, body: str, home: str = "/") -> HTMLResponse:
     html = (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
         f"<title>{escape(title)}</title><style>"
@@ -130,7 +130,7 @@ def _page(status: int, title: str, body: str) -> HTMLResponse:
         "</style></head><body>"
         f"<h1>{escape(title)}</h1>{body}"
         # _top: inside the launcher's tool view, go back to the launcher, not into a frame.
-        "<p><a href='/' target='_top'>Back to the workspace home</a></p>"
+        f"<p><a href='{escape(home)}' target='_top'>Back to the workspace home</a></p>"
         "</body></html>"
     )
     headers = {"cache-control": "no-store", FRAME_POLICY[0]: FRAME_POLICY[1]}
@@ -139,17 +139,18 @@ def _page(status: int, title: str, body: str) -> HTMLResponse:
 
 def unavailable_page(sup: Supervisor, tool: str, detail: str | None = None) -> HTMLResponse:
     state = sup.state(tool)
+    home = sup.url_prefix
     if state is ChildState.STARTING:
-        return _page(503, f"{tool} is starting", "<p>Reload this page in a moment.</p>")
+        return _page(503, f"{tool} is starting", "<p>Reload this page in a moment.</p>", home)
     if not sup.can_restart(tool):
-        return _page(503, f"{tool} is not running", "<p>Open it from the workspace home.</p>")
+        return _page(503, f"{tool} is not running", "<p>Open it from the workspace home.</p>", home)
     reason = escape(detail) if detail else "It stopped unexpectedly."
     form = (
         f"<p>{reason}</p>"
-        f"<form method='post' action='/apps/{CONTROL_SEGMENT}/{escape(tool)}/restart'>"
+        f"<form method='post' action='{escape(home)}apps/{CONTROL_SEGMENT}/{escape(tool)}/restart'>"
         "<button type='submit'>Restart</button></form>"
     )
-    return _page(502, f"{tool} is not responding", form)
+    return _page(502, f"{tool} is not responding", form, home)
 
 
 def busy_reply(code: str, message: str) -> JSONResponse:
@@ -210,12 +211,13 @@ def mount_proxy(app: FastAPI) -> None:
             await anyio.to_thread.run_sync(sup.restart, tool)
         except LaunchError as exc:
             return unavailable_page(sup, tool, str(exc))
-        return RedirectResponse(f"/apps/{tool}/", status_code=303)
+        return RedirectResponse(f"{sup.url_prefix}apps/{tool}/", status_code=303)
 
     @app.api_route("/apps/{tool}", methods=METHODS, include_in_schema=False)
     async def add_slash(request: Request, tool: str) -> Response:
         query = request.url.query
-        return RedirectResponse(f"/apps/{tool}/" + (f"?{query}" if query else ""), 308)
+        prefix = request.app.state.supervisor.url_prefix
+        return RedirectResponse(f"{prefix}apps/{tool}/" + (f"?{query}" if query else ""), 308)
 
     @app.api_route("/apps/{tool}/{path:path}", methods=METHODS, include_in_schema=False)
     async def proxy(request: Request, tool: str, path: str) -> Response:
@@ -256,7 +258,7 @@ def mount_proxy(app: FastAPI) -> None:
             if guarded and lease is not None:
                 lease.release(tool)
 
-        url = child.context.origin + request.url.path
+        url = child.context.origin + sup.child_path(request.url.path)
         if request.url.query:
             url += "?" + request.url.query
         client: httpx.AsyncClient = request.app.state.proxy_client

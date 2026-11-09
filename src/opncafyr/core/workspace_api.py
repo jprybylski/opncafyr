@@ -4,6 +4,11 @@ The folder comes from the native picker, which the controller runs (``core.picke
 browser never names an arbitrary folder: inspect, init and open accept only a folder
 picked in this session or one on the recently-used list. Every POST also needs the
 session secret (``core.security``). Paths travel in JSON bodies, never in URLs.
+
+In cloud container mode (#42) the study folder is the one mounted when the container
+started (``opncafyr launch --workspace``). There is no picker: "choosing" a folder returns
+that one, and no other folder is accepted. Every folder, in either mode, must be on a
+filesystem that replaces files atomically (``core.storage``).
 """
 
 from __future__ import annotations
@@ -21,6 +26,7 @@ from opncafyr import __version__
 from opncafyr.core.artifacts import list_publications, list_runs
 from opncafyr.core.jobmanager import JobManager, JobManagerError
 from opncafyr.core.picker import PickerError, PickerUnavailable
+from opncafyr.core.storage import check_storage
 from opncafyr.core.workspace import (
     MISSING,
     RecentWorkspaces,
@@ -55,18 +61,40 @@ def _canonical(path: str) -> str:
         raise _error(400, "invalid_path", "That path can't be used.") from None
 
 
-def mount_workspace_api(app: FastAPI, picker: Picker, recent: RecentWorkspaces) -> None:
+def mount_workspace_api(
+    app: FastAPI, picker: Picker, recent: RecentWorkspaces, fixed: Path | None = None
+) -> None:
     picker_lock = threading.Lock()
     open_lock = threading.Lock()
     picked: set[str] = set()
+    fixed_path = str(Path(fixed).resolve()) if fixed is not None else None
 
     def approved(path: str) -> str:
         canonical = _canonical(path)
+        if fixed_path is not None:
+            if canonical != fixed_path:
+                raise _error(
+                    403,
+                    "not_approved",
+                    "This opncafyr serves only the study folder it was started with.",
+                )
+            return canonical
         if canonical not in picked and canonical not in recent.paths():
             raise _error(403, "not_approved", "Choose this folder with the folder picker first.")
         return canonical
 
-    def activate(workspace: Workspace) -> dict[str, Any]:
+    def storage_ok(path: str) -> dict[str, Any] | None:
+        """Refuse a folder whose filesystem can't replace files atomically (#42)."""
+        if not Path(path).is_dir():
+            return None  # init/open report the missing folder themselves
+        result = check_storage(Path(path))
+        if not result.ok:
+            raise _error(400, "unsupported_filesystem", result.message or "Unsupported storage.")
+        if result.message:
+            return {"kind": result.kind, "fstype": result.fstype, "message": result.message}
+        return None
+
+    def activate(workspace: Workspace, storage: dict[str, Any] | None) -> dict[str, Any]:
         jobs: JobManager = app.state.jobs
         try:
             swept = jobs.open(workspace.root)
@@ -86,6 +114,7 @@ def mount_workspace_api(app: FastAPI, picker: Picker, recent: RecentWorkspaces) 
             "migrated_from": workspace.migrated_from,
             "backups": [p.relative_to(workspace.root).as_posix() for p in workspace.backups],
             "swept_jobs": swept,
+            "storage": storage,
         }
 
     def workspace_error(exc: WorkspaceError) -> HTTPException:
@@ -102,8 +131,15 @@ def mount_workspace_api(app: FastAPI, picker: Picker, recent: RecentWorkspaces) 
     @app.get("/api/workspace")
     def current() -> dict[str, Any]:
         ws: Workspace | None = app.state.workspace
+        if fixed_path is not None:
+            return {
+                "workspace": ws.summary() if ws else None,
+                "fixed": {"path": fixed_path, "name": Path(fixed_path).name},
+                "recent": [],
+            }
         return {
             "workspace": ws.summary() if ws else None,
+            "fixed": None,
             "recent": [
                 {
                     "path": entry["path"],
@@ -128,6 +164,8 @@ def mount_workspace_api(app: FastAPI, picker: Picker, recent: RecentWorkspaces) 
 
     @app.post("/api/workspace/pick")
     async def pick() -> dict[str, Any]:
+        if fixed_path is not None:
+            return {"cancelled": False, "folder": inspect_folder(Path(fixed_path)).to_dict()}
         if not picker_lock.acquire(blocking=False):
             raise _error(409, "picker_busy", "A folder picker is already open.")
         try:
@@ -154,21 +192,23 @@ def mount_workspace_api(app: FastAPI, picker: Picker, recent: RecentWorkspaces) 
     @app.post("/api/workspace/init")
     def init(body: PathBody) -> dict[str, Any]:
         path = approved(body.path)
+        storage = storage_ok(path)
         with open_lock:
             check_jobs_idle()
             try:
                 workspace = init_workspace(path, __version__)
             except WorkspaceError as exc:
                 raise workspace_error(exc) from None
-            return activate(workspace)
+            return activate(workspace, storage)
 
     @app.post("/api/workspace/open")
     def open_(body: OpenBody) -> dict[str, Any]:
         path = approved(body.path)
+        storage = storage_ok(path)
         with open_lock:
             check_jobs_idle()
             try:
                 workspace = open_workspace(path, allow_migrate=body.migrate)
             except WorkspaceError as exc:
                 raise workspace_error(exc) from None
-            return activate(workspace)
+            return activate(workspace, storage)

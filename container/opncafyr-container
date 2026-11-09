@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+# Run opncafyr in a container on a cloud VM (cloud container mode, #42, ADR 0009).
+#
+#   opncafyr-container start <study folder> [options]
+#   opncafyr-container url <study folder>      a fresh one-time link for the running one
+#   opncafyr-container status <study folder>
+#   opncafyr-container stop <study folder>
+#
+# Options for start:
+#   --access ssh|vscode|workbench|jupyter   how your browser reaches the VM (default ssh)
+#   --public-url URL     vscode/workbench/jupyter: the URL the IDE shows for --port
+#   --local-port N       ssh: the port on your own machine (default: --port)
+#   --port N             the port on the VM's 127.0.0.1 (default 8765)
+#   --image REF          the image (default ghcr.io/jprybylski/opncafyr:edge)
+#   --full               the -full image, with LibreOffice for slide previews
+#   --engine docker|podman  (default: docker if installed, else podman)
+#   --idle-timeout M|off minutes without a page or job before it stops (default 30)
+#
+# One container per study folder. Running start again for the same folder reattaches:
+# it prints a fresh link instead of starting another. The port is published to the VM's
+# 127.0.0.1 only; this script never opens a firewall, a security group or any public
+# interface. Reach it through `ssh -L` or your IDE's authenticated proxy only.
+#
+# Research use only.
+set -euo pipefail
+
+DEFAULT_IMAGE=ghcr.io/jprybylski/opncafyr:edge
+LABEL=io.opncafyr.workspace
+
+die() { echo "opncafyr-container: $*" >&2; exit 1; }
+usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+[[ $# -ge 1 ]] || usage 2
+cmd="$1"; shift
+case "$cmd" in -h | --help | help) usage 0 ;; start | url | status | stop) ;; *) usage 2 ;; esac
+[[ $# -ge 1 ]] || die "name the study folder"
+study_arg="$1"; shift
+
+access=ssh public_url="" local_port="" port=8765 image="" full=0 engine="" idle=""
+while (($#)); do
+  case "$1" in
+    --access) access="${2:?}"; shift ;;
+    --public-url) public_url="${2:?}"; shift ;;
+    --local-port) local_port="${2:?}"; shift ;;
+    --port) port="${2:?}"; shift ;;
+    --image) image="${2:?}"; shift ;;
+    --full) full=1 ;;
+    --engine) engine="${2:?}"; shift ;;
+    --idle-timeout) idle="${2:?}"; shift ;;
+    *) die "unknown option: $1" ;;
+  esac
+  shift
+done
+
+if [[ -z "$engine" ]]; then
+  if command -v docker > /dev/null; then engine=docker
+  elif command -v podman > /dev/null; then engine=podman
+  else die "neither docker nor podman is installed"; fi
+fi
+case "$engine" in docker | podman) ;; *) die "--engine must be docker or podman" ;; esac
+command -v "$engine" > /dev/null || die "$engine is not installed"
+[[ "$port" =~ ^[0-9]+$ ]] && ((port > 0 && port < 65536)) || die "--port must be a port number"
+
+[[ -d "$study_arg" ]] || die "$study_arg is not a folder"
+study="$(cd "$study_arg" && pwd -P)"
+hash="$(printf '%s' "$study" | sha256sum | cut -c1-12)"
+name="opncafyr-$hash"
+state="${XDG_STATE_HOME:-$HOME/.local/state}/opncafyr-container/$hash"
+
+running() { [[ "$("$engine" container inspect --format '{{.State.Running}}' "$name" 2> /dev/null)" == true ]]; }
+
+print_link() {
+  local args=()
+  while IFS= read -r line; do args+=("$line"); done < "$state/launch-args"
+  "$engine" exec "$name" opncafyr "${args[@]}" --print-url
+}
+
+how_to_reach() {
+  local p lp
+  p="$(cat "$state/port")"
+  lp="$(cat "$state/local-port" 2> /dev/null || true)"
+  case "$(cat "$state/access")" in
+    ssh)
+      echo "From your own computer, forward the port (keep that terminal open):"
+      echo "  ssh -L ${lp:-$p}:127.0.0.1:$p $(id -un)@$(hostname -f 2> /dev/null || hostname)"
+      ;;
+    *) echo "Open the link in the browser where your IDE runs (you are already signed in there)." ;;
+  esac
+  echo "Then open this link (it works once, within 2 minutes):"
+}
+
+case "$cmd" in
+  status)
+    if running; then
+      echo "running: $name"
+      "$engine" container inspect --format 'image: {{.Image}}' "$name"
+      echo "port: 127.0.0.1:$(cat "$state/port")"
+    else
+      echo "not running"
+    fi
+    exit 0
+    ;;
+  stop)
+    running || { echo "not running"; exit 0; }
+    "$engine" stop --time 30 "$name" > /dev/null
+    echo "stopped $name"
+    exit 0
+    ;;
+  url)
+    running || die "not running for $study; use start"
+    how_to_reach
+    print_link
+    exit 0
+    ;;
+esac
+
+# --- start --------------------------------------------------------------------------------
+if running; then
+  echo "Already running for $study; here is a fresh link."
+  how_to_reach
+  print_link
+  exit 0
+fi
+
+image="${image:-$DEFAULT_IMAGE}"
+if ((full)) && [[ "$image" != *-full ]]; then image="$image-full"; fi
+
+if ! "$engine" image inspect "$image" > /dev/null 2>&1; then
+  echo "Pulling $image ..."
+  "$engine" pull "$image" || die "could not pull $image. The image is private: sign in first
+  (echo \$TOKEN | $engine login ghcr.io -u <user> --password-stdin, with a token that can read packages),
+  or load it from an archive with '$engine load -i <file>'."
+fi
+image_id="$("$engine" image inspect --format '{{.Id}}' "$image")"
+[[ "$image_id" == sha256:* ]] || image_id="sha256:$image_id"   # podman prints no prefix
+
+launch=(launch --container --port "$port" --workspace /workspace --access "$access"
+  --container-image "$image_id")
+[[ -n "$public_url" ]] && launch+=(--public-url "$public_url")
+[[ -n "$local_port" ]] && launch+=(--local-port "$local_port")
+[[ -n "$idle" ]] && launch+=(--idle-timeout "$idle")
+
+mkdir -p "$state/app"
+chmod 700 "$state"
+printf '%s\n' "${launch[@]}" > "$state/launch-args"
+echo "$port" > "$state/port"
+echo "$access" > "$state/access"
+if [[ -n "$local_port" ]]; then echo "$local_port" > "$state/local-port"; else rm -f "$state/local-port"; fi
+
+# Its own network, so other containers on the default bridge can't reach the listener.
+"$engine" network inspect "$name" > /dev/null 2>&1 || "$engine" network create "$name" > /dev/null
+
+user=(--user "$(id -u):$(id -g)")
+if [[ "$engine" == podman ]]; then
+  # Rootless podman maps the invoking user only with keep-id. SELinux hosts (RHEL family)
+  # would block the bind mounts; disabling labelling avoids relabelling the study folder.
+  [[ "$(id -u)" -ne 0 ]] && user=(--userns=keep-id "${user[@]}")
+  user+=(--security-opt label=disable)
+fi
+
+"$engine" run --detach --rm --name "$name" --network "$name" \
+  --publish "127.0.0.1:$port:$port" \
+  --volume "$study:/workspace" --volume "$state/app:/state" \
+  --cap-drop ALL --security-opt no-new-privileges \
+  --label "$LABEL=$study" --stop-timeout 30 \
+  "${user[@]}" "$image" "${launch[@]}" > /dev/null
+
+for _ in $(seq 1 120); do
+  if curl -fsS --max-time 1 "http://127.0.0.1:$port/health" > /dev/null 2>&1; then
+    echo "opncafyr is running for $study ($name)."
+    how_to_reach
+    print_link
+    exit 0
+  fi
+  running || { "$engine" logs "$name" 2>&1 | tail -20 >&2 || true; die "the container stopped"; }
+  sleep 0.5
+done
+"$engine" logs "$name" 2>&1 | tail -20 >&2 || true
+die "opncafyr did not become healthy in 60 s"

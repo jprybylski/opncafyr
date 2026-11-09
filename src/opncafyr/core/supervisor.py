@@ -102,6 +102,10 @@ class Child:
 
 
 class Supervisor:
+    def child_path(self, path: str) -> str:
+        """``/apps/<tool>/...`` as the child serves it: under the URL prefix, if any."""
+        return self.url_prefix.rstrip("/") + path
+
     def __init__(
         self,
         apps: Mapping[str, WebAppConfig],
@@ -114,8 +118,13 @@ class Supervisor:
         port_attempts: int = 3,
         port_picker: Callable[[], int] = free_loopback_port,
         redactor: Redactor = REDACTOR,
+        url_prefix: str = "/",
     ) -> None:
         self.apps = dict(apps)
+        # Cloud container mode behind an IDE proxy (#42): the browser's URLs sit under
+        # this prefix. Children are told their full public path and the proxy forwards
+        # with the prefix put back, so a child sees exactly the URL the browser uses.
+        self.url_prefix = url_prefix
         self.redactor = redactor
         self.runtime = runtime
         self.state_root = Path(state_root)
@@ -268,7 +277,7 @@ class Supervisor:
         ctx = LaunchContext(
             tool=tool,
             port=self._port_picker(),
-            base_path=app.route,
+            base_path=self.child_path(app.route),
             workdir=workdir,
             tmpdir=tmpdir,
             runtime=self.runtime,

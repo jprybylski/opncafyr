@@ -26,6 +26,14 @@ from opncafyr.core.lifecycle import (
     Settings,
     minutes_to_seconds,
 )
+from opncafyr.core.provenance import IMAGE_ID_RE
+from opncafyr.core.remote import (
+    ACCESS_CHOICES,
+    ACCESS_SSH,
+    RemoteAccess,
+    RemoteAccessError,
+    container_access,
+)
 from opncafyr.paths import app_root, logs_dir, state_dir
 
 if TYPE_CHECKING:
@@ -46,11 +54,15 @@ def _loopback_host(value: str) -> str:
     return value
 
 
-def _bind_loopback(port: int) -> socket.socket:
-    """Bind the listener ourselves so the ephemeral port is known before the app is built."""
+def _bind_loopback(port: int, host: str = LOOPBACK) -> socket.socket:
+    """Bind the listener ourselves so the ephemeral port is known before the app is built.
+
+    ``host`` is the loopback address, except in cloud container mode (``core.remote``),
+    where the container interface is bound and Docker publishes it to the VM's loopback.
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind((LOOPBACK, port))
+    sock.bind((host, port))
     return sock
 
 
@@ -82,10 +94,17 @@ def run_controller(
     claim_wait: float = CLAIM_WAIT,
     lifecycle: LifecycleConfig | None = None,
     log_dir: Path | None = None,
+    remote: RemoteAccess | None = None,
+    workspace: Path | None = None,
+    container_image: str | None = None,
+    print_url: bool = False,
 ) -> int:
     """Start the controller, or reopen the one already running for this user.
 
     ``log_dir`` turns on the launcher log (``core.logs``); tests may leave it off.
+    ``remote`` is cloud container mode (#42): no browser is opened; the one-time link is
+    printed with the public URL instead. ``print_url`` only prints a fresh link for the
+    instance already running (used to reattach), and starts nothing.
     """
     import uvicorn
 
@@ -103,10 +122,20 @@ def run_controller(
     tokens = tokens_dir(state)
     claimed = claim(state, wait=claim_wait)
     if claimed.url is not None:
+        if remote is not None or print_url:
+            public = remote.public_url if remote is not None else claimed.url
+            print(open_url(public, mint_open_token(tokens)))
+            print(_link_note(), file=sys.stderr)
+            return 0
         print(f"opncafyr is already running at {claimed.url}", file=sys.stderr)
         if open_browser:
             webbrowser.open(open_url(claimed.url, mint_open_token(tokens)))
         return 0
+    if print_url:
+        if claimed.lock is not None:
+            claimed.lock.release()
+        print("opncafyr is not running.", file=sys.stderr)
+        return 1
     if claimed.lock is None:
         print(claimed.error, file=sys.stderr)
         return 1
@@ -115,9 +144,19 @@ def run_controller(
     if log_dir is not None:
         configure_logging(log_dir)
     try:
-        sock = _bind_loopback(port)
+        sock = _bind_loopback(port, remote.bind if remote is not None else LOOPBACK)
         port = sock.getsockname()[1]
-        security = SecurityConfig(port=port)
+        if remote is None:
+            security = SecurityConfig(port=port)
+        else:
+            security = SecurityConfig(
+                port=port,
+                extra_hosts=remote.hosts,
+                extra_origins=remote.origins,
+                base_path=remote.base_path,
+                cookie_id=remote.cookie_id,
+                secure_cookie=remote.secure_cookie,
+            )
 
         server: uvicorn.Server | None = None
 
@@ -133,12 +172,23 @@ def run_controller(
             settings=Settings(state / SETTINGS_FILE),
             tools=tools,
             open_tokens=tokens,
+            workspace=workspace,
+            container_image=container_image,
         )
         # log_config=None: uvicorn's loggers reach the root handlers set up above.
         server = uvicorn.Server(uvicorn.Config(app, log_level="info", log_config=None))
 
         url = f"http://{LOOPBACK}:{port}/"
         write_record(state, instance_id=instance_id, port=port)
+        if remote is not None:
+            print(f"opncafyr {__version__} listening on port {port} (container)", file=sys.stderr)
+            threading.Thread(
+                target=_print_when_healthy,
+                args=(url, remote, lambda: open_url(remote.public_url, mint_open_token(tokens))),
+                daemon=True,
+            ).start()
+            server.run(sockets=[sock])
+            return 0
         print(f"opncafyr {__version__} listening on {url}", file=sys.stderr)
         if not open_browser:
             print(
@@ -162,6 +212,28 @@ def run_controller(
     return 0
 
 
+def _link_note() -> str:
+    return (
+        "This link works once, within 2 minutes. For a new one run "
+        "`opncafyr-container url <study folder>` on the VM."
+    )
+
+
+def _print_when_healthy(url: str, remote: RemoteAccess, link: Callable[[], str]) -> None:
+    """Container mode: print the one-time link once the controller answers."""
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(f"{url}health", timeout=1) as resp:  # noqa: S310
+                if resp.status == 200:
+                    print(f"Open: {link()}", file=sys.stderr, flush=True)
+                    print(_link_note(), file=sys.stderr, flush=True)
+                    return
+        except OSError:
+            time.sleep(0.2)
+    print("Launcher did not become healthy.", file=sys.stderr)
+
+
 def _idle_minutes(value: str) -> int | None:
     if value.lower() == "off":
         return None
@@ -176,18 +248,65 @@ def _idle_minutes(value: str) -> int | None:
     return minutes
 
 
+REMOTE_OPTIONS = (
+    "access",
+    "public_url",
+    "local_port",
+    "allowed_host",
+    "allowed_origin",
+    "workspace",
+    "container_image",
+)
+
+
 def cmd_launch(args: argparse.Namespace) -> int:
     lifecycle = None
     if args.idle_timeout is not _SAVED:
         lifecycle = LifecycleConfig(
             override_idle=True, idle_timeout_s=minutes_to_seconds(args.idle_timeout)
         )
+    remote = None
+    workspace = None
+    if args.container:
+        if not args.port:
+            print("--container needs a fixed --port.", file=sys.stderr)
+            return 2
+        try:
+            remote = container_access(
+                port=args.port,
+                access=args.access or ACCESS_SSH,
+                public_url=args.public_url,
+                local_port=args.local_port,
+                allowed_hosts=tuple(args.allowed_host or ()),
+                allowed_origins=tuple(args.allowed_origin or ()),
+            )
+        except RemoteAccessError as exc:
+            print(exc, file=sys.stderr)
+            return 2
+        if args.container_image is not None and not IMAGE_ID_RE.match(args.container_image):
+            print("--container-image must be an image ID (sha256:<64 hex>).", file=sys.stderr)
+            return 2
+        if args.workspace is not None:
+            workspace = Path(args.workspace)
+            if not workspace.is_dir():
+                print(f"--workspace {workspace} is not a folder.", file=sys.stderr)
+                return 2
+    else:
+        given = [o for o in REMOTE_OPTIONS if getattr(args, o) not in (None, [])]
+        if given:
+            flags = ", ".join("--" + o.replace("_", "-") for o in given)
+            print(f"{flags}: only with --container (cloud container mode).", file=sys.stderr)
+            return 2
     return run_controller(
         state=state_dir(),
         port=args.port,
-        open_browser=not args.no_browser,
+        open_browser=not args.no_browser and remote is None,
         lifecycle=lifecycle,
         log_dir=logs_dir(),
+        remote=remote,
+        workspace=workspace,
+        container_image=args.container_image,
+        print_url=args.print_url,
     )
 
 
@@ -381,6 +500,28 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Only {LOOPBACK} is accepted; anything else is refused.",
     )
     launch.add_argument("--no-browser", action="store_true", help="Do not open a browser.")
+    launch.add_argument(
+        "--print-url",
+        action="store_true",
+        help="Print a fresh one-time link for the running instance instead of starting one.",
+    )
+    remote = launch.add_argument_group(
+        "cloud container mode (#42)",
+        "Only inside the opncafyr container, started by opncafyr-container. These only add "
+        "the SSH forward's or IDE proxy's own host and origin; every security check stays.",
+    )
+    remote.add_argument(
+        "--container",
+        action="store_true",
+        help="Listen on the container interface (published to the VM's 127.0.0.1 only).",
+    )
+    remote.add_argument("--access", choices=ACCESS_CHOICES, help="How the browser reaches it.")
+    remote.add_argument("--public-url", help="The IDE proxy's URL for the port.")
+    remote.add_argument("--local-port", type=int, help="ssh: the port on your own machine.")
+    remote.add_argument("--allowed-host", action="append", metavar="HOST[:PORT]")
+    remote.add_argument("--allowed-origin", action="append", metavar="SCHEME://HOST[:PORT]")
+    remote.add_argument("--workspace", help="The one study folder to serve.")
+    remote.add_argument("--container-image", help="The image ID, for provenance.")
     launch.add_argument(
         "--idle-timeout",
         type=_idle_minutes,

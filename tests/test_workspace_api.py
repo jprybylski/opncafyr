@@ -87,7 +87,7 @@ def make_client(security, jobs, recent):
 def test_pick_inspect_init_open_flow(make_client, study, jobs, recent):
     picker = FakePicker(result=study)
     api = make_client(picker)
-    assert api.get("/api/workspace").json() == {"workspace": None, "recent": []}
+    assert api.get("/api/workspace").json() == {"workspace": None, "fixed": None, "recent": []}
 
     picked = api.post("/api/workspace/pick").json()
     assert picked["cancelled"] is False
