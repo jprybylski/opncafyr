@@ -253,7 +253,7 @@ def _spdx(manifest: dict[str, Any]) -> dict[str, Any]:
         "name": f"opncafyr-bundle-{manifest['opncafyr_version']}-{manifest['platform']}",
         "documentNamespace": f"https://opncafyr.invalid/spdx/bundle/{manifest['bundle_id']}",
         "creationInfo": {
-            "created": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "created": _created(),
             "creators": [f"Tool: opncafyr-bundle-{manifest['opncafyr_version']}"],
         },
         "packages": packages,
@@ -266,6 +266,15 @@ def _spdx(manifest: dict[str, Any]) -> dict[str, Any]:
             for p in packages
         ],
     }
+
+
+def _created() -> str:
+    """The SBOM's creation time: ``SOURCE_DATE_EPOCH`` if set, else the archive's fixed
+    entry time, so two builds from the same pins are byte-identical."""
+    epoch = os.environ.get("SOURCE_DATE_EPOCH", "")
+    if epoch.isdigit():
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(epoch)))
+    return "{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}Z".format(*ZIP_TIME)
 
 
 _SPDX_ID = re.compile(r"^[A-Za-z0-9.+-]+$")

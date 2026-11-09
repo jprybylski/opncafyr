@@ -1,5 +1,6 @@
 """Cloud container mode (#42): remote access settings, the prefix, storage, fixed folder."""
 
+import os
 import re
 from pathlib import Path
 
@@ -200,7 +201,10 @@ def test_mount_type_is_the_longest_containing_mount(path, fstype):
 
 
 def _info(tmp_path, fstype):
-    return f"22 1 8:1 / {tmp_path} rw - {fstype} dev rw\n"
+    # A Linux mountinfo line naming the folder as check_storage resolves it (on Windows
+    # too, where only these tests run it).
+    mount_point = Path(os.path.realpath(tmp_path)).as_posix()
+    return f"22 1 8:1 / {mount_point} rw - {fstype} dev rw\n"
 
 
 def test_object_storage_fuse_is_refused(tmp_path):

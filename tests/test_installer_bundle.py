@@ -237,3 +237,10 @@ def test_every_install_writes_a_verification_report(world, tmp_path, layout, fak
     assert "not a validation" in doc["notice"]
     page = reports[0].with_suffix(".html").read_text("utf-8")
     assert "<script" not in page and "http" not in page.split("<body>", 1)[1].split("SHA-256")[0]
+
+
+def test_the_sbom_time_is_fixed_unless_source_date_epoch_is_set(monkeypatch):
+    monkeypatch.delenv("SOURCE_DATE_EPOCH", raising=False)
+    assert bundle_mod._created() == "2020-02-02T00:00:00Z"
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "1767225600")
+    assert bundle_mod._created() == "2026-01-01T00:00:00Z"

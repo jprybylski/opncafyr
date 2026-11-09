@@ -969,6 +969,9 @@ All notable changes to this project are documented here. The format follows
   `upstream-blocked` removed from #27.
 
 ### Fixed
+- Two offline bundles built from the same pins could differ: the SBOM recorded the
+  build time to the second. It now records `SOURCE_DATE_EPOCH`, or the archive's fixed
+  entry time (#36).
 - opnca-r's server didn't start on any installed copy on macOS, or on Windows when the
   user name has a space: "'R_TempDir' contains space". The launcher gave its tool
   servers a temp folder under the app folder (`~/Library/Application Support/...`). Tool
