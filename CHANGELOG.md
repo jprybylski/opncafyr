@@ -1064,8 +1064,12 @@ All notable changes to this project are documented here. The format follows
       (`use_artifact_size: false` in the bundled `config.yaml`); opnca-r's 2000 px PNGs came
       out about 27 inches wide. Check warns about an older project that still says `true`
       and never rewrites it.
-    - A render that quartifyr rejects as a warning (a table still too wide at its
-      smallest font) now says what the warning was, not just "status warning".
+    - The report render no longer passes quartifyr's `--strict`. quartifyr 0.3.4 warns when
+      a table is still too wide at 7 pt, and `--strict` refuses that: opnca-r's own 22-column
+      summary table can't fit a portrait page, so every default report failed (found by the
+      offline CI job's first run). The adapter now accepts a `warning` result only when every
+      warning is that one and there is no error, unfilled placeholder or missing metadata, and
+      records it in the build; any other warning still fails and now says what it was.
   - **opnca-r 0.3.2 and quartifyr 0.3.4 pinned** (`runtime/pins.toml`, `renv.lock`, the
     installer scripts and CI). opnca-r 0.3.2 leaves the flextable caption off the saved
     formatted tables (opnca-r#59). quartifyr 0.3.4 fits wide tables to the page

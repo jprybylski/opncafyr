@@ -102,7 +102,7 @@ def render(api, status="draft"):
 # --- commands ------------------------------------------------------------------------------
 
 
-def test_render_command_is_strict_offline_and_pinned(fake, tmp_path):
+def test_render_command_is_offline_and_pinned_and_not_strict(fake, tmp_path):
     project = tmp_path / "p"
     spec = Q.render_command(fake, project, "final", 600, tmp_path / "home", tmp_path / "cache")
     rscript = str(fake.executable("rscript"))
@@ -112,8 +112,10 @@ def test_render_command_is_strict_offline_and_pinned(fake, tmp_path):
         str(fake.r_library / "quartifyr/scripts/render.R"),
     ]
     args = spec.argv[3:]
-    for flag in ("--json", "--strict", "--offline"):
+    for flag in ("--json", "--offline"):
         assert flag in args
+    # --strict would refuse quartifyr's "table too wide" warning; parse_render is the gate (#62).
+    assert "--strict" not in args
     assert args[args.index("--quarto-bin") + 1] == str(fake.executable("quarto"))
     assert args[args.index("--project") + 1] == str(project)
     assert args[args.index("--shell") + 1] == str(project / "report.qmd")
@@ -183,20 +185,53 @@ def test_parse_render_names_the_files_whose_placeholders_stayed_unfilled():
     assert "{rpfy}" not in result.message
 
 
-def test_parse_render_says_what_the_warning_was_when_strict_rejects_it():
-    # quartifyr 0.3.4: a table still too wide at 7 pt is a warning, and --strict rejects it.
+WIDE = (
+    "Table(s) 1, 3 in report-draft.docx are still too wide at the minimum font size, "
+    "so a word may break."
+)
+
+
+def _result(status="warning", **extra):
     doc = {
         "schema_version": 1,
-        "status": "warning",
+        "status": status,
         "errors": [],
-        "artifacts": [],
+        "artifacts": [{"role": "draft", "path": "report-draft.docx", "sha256": "0" * 64}],
         "inputs": [],
         "versions": {},
-        "warnings": ["Table(s) 3 in report.docx are still too wide. Use a landscape section."],
+        "warnings": [],
     }
-    result = Q.parse_render(1, json.dumps(doc), None, None)
+    return json.dumps(doc | extra)
+
+
+def test_a_table_too_wide_for_the_page_is_a_warning_not_a_failure():
+    # quartifyr 0.3.4: opnca-r's 22-column summary can't fit a portrait page at 7 pt, so a
+    # default report would never render if this failed it (#62).
+    result = Q.parse_render(0, _result(warnings=[WIDE]), None, None)
+    assert result.ok and result.artifacts[0]["role"] == "draft"
+    assert result.document["warnings"] == [WIDE]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"warnings": [WIDE, "pass 2 skipped a table"]},
+        {"warnings": [WIDE], "errors": ["pass 2 failed"]},
+        {"warnings": [WIDE], "unfilled_placeholders": ["{rpfy}:t.rds"]},
+        {"warnings": [WIDE], "missing_metadata": ["title"]},
+        {"warnings": ["pass 2 skipped a table"]},
+        {"warnings": []},
+    ],
+)
+def test_any_other_warning_or_problem_still_fails_the_render(extra):
+    result = Q.parse_render(0, _result(**extra), None, None)
     assert not result.ok
-    assert "Use a landscape section." in result.message
+    if extra.get("warnings") and extra["warnings"][-1].startswith("pass 2"):
+        assert "pass 2 skipped a table" in result.message  # says what it was
+
+
+def test_a_non_zero_exit_fails_even_with_only_the_wide_table_warning():
+    assert not Q.parse_render(1, _result(warnings=[WIDE]), None, None).ok
 
 
 def test_parse_render_decides_on_exit_code_and_status(tmp_path):

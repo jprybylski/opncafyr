@@ -202,7 +202,7 @@ Every check and build works on a temporary copy of the project that holds exactl
 | Step | What it checks | What counts as success |
 |---|---|---|
 | Report **Check** | 1. The description file of every published file (the same checks as [Check published files]({{ '/guides/publishing/' | relative_url }}#step-5-check-published-files)). 2. quartifyr's own check of the report project, which lists what would block or weaken the render. | No **Blocks** findings. |
-| Report **Render** | Runs quartifyr's strict, offline render on the copy, after hashing every input. | quartifyr reports success, every placeholder is filled and no metadata is missing; the DOCX it lists is re-hashed and kept. |
+| Report **Render** | Runs quartifyr's offline render on the copy, after hashing every input. | quartifyr reports success (or only that a table is too wide for the page), every placeholder is filled and no metadata is missing; the DOCX it lists is re-hashed and kept. |
 | Deck **Check** | 1. The description files, as above. 2. deckifyr's strict check of the deck, including your fragments. A deckifyr error fails the check; its warnings are listed. | No **Blocks** findings. |
 | Deck **Build** | Builds the copy with deckifyr's strict mode. | deckifyr reports success, its build record exists, and the PPTX's fingerprint matches that record. |
 | **Download** | Re-checks the file against its build record. | The file still matches. If it was changed, the download is refused ("The DOCX no longer matches its build manifest."). |

@@ -10,9 +10,15 @@ The call contract is quartifyr 0.3.3's (issue #32 comments, docs/offline.md):
   ``initialize_report_project_offline()`` and the bundled-extension installers. pyro is
   never used and nothing reaches the network.
 - **Preflight.** ``scripts/check.R --project --shell --json``; ``check-result-v1`` on stdout.
-- **Render.** ``scripts/render.R ... --json --strict --offline --quarto-bin <pinned>``.
+- **Render.** ``scripts/render.R ... --json --offline --quarto-bin <pinned>``.
   - The result is ``render-result-v1``; extra keys are tolerated.
-  - Success means exit 0 *and* ``status == "ok"``.
+  - Success means exit 0 *and* ``status == "ok"``, or ``status == "warning"`` where every
+    warning is quartifyr 0.3.4's "a table is still too wide at the smallest font" (and there
+    is no error, unfilled placeholder or missing metadata). ``--strict`` is not passed: it
+    would refuse that one warning, and real opnca-r tables (a summary of 22 columns) can't
+    fit a portrait page at 7 pt, so every default report would fail. ``parse_render`` is the
+    gate instead, and the warning is recorded in the build (#62). The DOCX is only taken
+    from a render copy when the gate passes, so nothing incomplete looks complete.
   - Empty or non-JSON stdout is a failure with no result.
   - ``--recalculate-fields`` and ``--resolve-same-page-crossrefs`` are never passed
     (docs/spikes/libreoffice.md).
@@ -155,7 +161,6 @@ def render_command(
         "--status",
         status,
         "--json",
-        "--strict",
         "--offline",
         "--quarto-bin",
         str(runtime.executable("quarto")),
@@ -312,6 +317,24 @@ def _plain(messages: Iterable[Any], project: Path | None) -> str:
     return " ".join(out)[:2000]
 
 
+# quartifyr 0.3.4's warning for a table that does not fit its page at the smallest font. It
+# does not mean the report is incomplete, so it alone does not fail a render.
+TABLE_TOO_WIDE = "still too wide at the minimum font size"
+
+
+def only_wide_tables(doc: Mapping[str, Any]) -> bool:
+    """A ``warning`` result whose warnings are all the wide-table one, with nothing else wrong."""
+    warnings = [str(w) for w in doc.get("warnings") or []]
+    return bool(
+        doc.get("status") == "warning"
+        and warnings
+        and all(TABLE_TOO_WIDE in w for w in warnings)
+        and not doc.get("errors")
+        and not doc.get("unfilled_placeholders")
+        and not doc.get("missing_metadata")
+    )
+
+
 ERROR_CLASSES = {
     "quartifyr_quarto_timeout": "Quarto took longer than its time limit.",
     "quartifyr_render_incomplete": "The render left placeholders unfilled or metadata missing.",
@@ -335,15 +358,14 @@ def parse_render(
         if errors:
             return RenderResult(False, "quartifyr's result does not match its schema.", doc)
     status = doc.get("status")
-    if code != 0 or status != "ok":
+    if code != 0 or (status != "ok" and not only_wide_tables(doc)):
         why = ERROR_CLASSES.get(str(doc.get("error_class")), "")
         detail = _plain(doc.get("errors") or [], project)
         missing = doc.get("missing_metadata") or []
         unfilled = doc.get("unfilled_placeholders") or []
         parts = [p for p in (why, detail) if p]
-        # --strict turns a warning into a rejection. Say what the warning was: a table
-        # still too wide at quartifyr 0.3.4's smallest font reads "use fewer columns ... or
-        # a landscape section" (#62).
+        # Without --strict a warning other than the wide-table one still fails the render
+        # here. Say what it was, not just "status warning" (#62).
         warned = _plain(doc.get("warnings") or [], project)
         if warned:
             parts.append(warned)

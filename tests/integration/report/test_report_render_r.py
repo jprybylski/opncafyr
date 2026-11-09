@@ -116,9 +116,19 @@ saveRDS(autofit(ft), file.path(dir, "wide.rds"))
 """
 
 
-def _real_flextable(runtime, tmp_path) -> bytes:
+# The shape of opnca-r's real summary table: 22 columns, units in the headers. It can't fit a
+# portrait page even at quartifyr's smallest font (#62).
+MAKE_VERY_WIDE = MAKE_WIDE.replace(
+    'cols <- c("Subject", "Arm", "Cmax", "Tmax", "AUClast", "AUCinf", "Lambdaz", "HalfLife",\n'
+    '          "CLF", "VF", "Dose")',
+    'cols <- paste0(c("Subject", "Treatment", "Cmax", "Tmax", "AUClast", "AUCinf", "Lambdaz",\n'
+    '                 "HalfLife", "Clearance", "Volume", "Dose"), rep(c("A", "B"), each = 11))',
+)
+
+
+def _real_flextable(runtime, tmp_path, source: str = MAKE_WIDE) -> bytes:
     script = tmp_path / "make_wide.R"
-    script.write_text(MAKE_WIDE, "utf-8")
+    script.write_text(source, "utf-8")
     spec = rscript_command(runtime, script, env={"MAKE_DIR": str(tmp_path)})
     done = subprocess.run(  # noqa: S603 - the runtime's Rscript, a fixed script
         spec.argv,
@@ -239,3 +249,32 @@ def test_a_setting_saved_in_the_editor_changes_the_render_and_is_recorded(api):
         body = z.read("word/document.xml").decode("utf-8")
     widths = [int(w) for w in re.findall(r'<wp:extent cx="(\d+)"', body)]
     assert widths and max(widths) <= 3 * 914400, widths
+
+
+def test_a_table_too_wide_for_a_portrait_page_renders_with_a_recorded_warning(
+    api, runtime, tmp_path
+):
+    # #62: real opnca-r tables are wider than a portrait page can hold at 7 pt. quartifyr
+    # fits them as well as it can and warns; the report is still delivered, and the build
+    # records the warning, which says to use fewer columns, shorter headers or a landscape page.
+    rds = "results/tables/opnca-summary.rds"
+    flextable = _real_flextable(runtime, tmp_path, MAKE_VERY_WIDE)
+    run, _ = completed_run(api.study, "Drug A", described=True, formatted={rds: flextable})
+    pub = api.post(
+        "/api/nca/publications", json={"items": picks(run, ["summary", "summary-formatted"])}
+    ).json()["publication"]
+    job = api.post("/api/nca/report", json={"publication_id": pub["publication_id"]}).json()
+    assert wait_job(api, job["job_id"])["state"] == "completed"
+    out = api.post("/api/nca/report/render", json={"status": "draft"}).json()
+    done = wait_job(api, out["job_id"], timeout=900)
+    assert done["state"] == "completed", done["message"]
+    build = api.get("/api/nca/report").json()["builds"][0]
+    notes = [w["message"] for w in build["warnings"]]
+    assert len(notes) == 1 and "still too wide at the minimum font size" in notes[0], notes
+    docx = api.study / "report" / "builds" / out["build_id"] / "report-draft.docx"
+    with zipfile.ZipFile(docx) as z:
+        body = z.read("word/document.xml").decode("utf-8")
+    wide = [t for t in re.findall(r"<w:tbl[ >].*?</w:tbl>", body, flags=re.S) if "HalfLifeA" in t]
+    assert len(wide) == 1
+    grid = [int(w) for w in re.findall(r'<w:gridCol w:w="(\d+)"', wide[0])]
+    assert len(grid) == 22 and sum(grid) <= 9360, sum(grid)  # still fitted to the page

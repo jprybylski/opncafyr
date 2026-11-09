@@ -204,8 +204,11 @@ one publication.
    both versions stay on screen until you choose. Check and Render wait while the editor
    holds unsaved text. Draft or final is a report setting, kept in
    `report/opncafyr-settings.json`; a render asks until you choose.
-5. **Render** renders that same copy with quartifyr's strict,
-   offline render. It keeps the DOCX that quartifyr's result lists, after re-hashing it, in
+5. **Render** renders that same copy with quartifyr's offline render. The adapter, not
+   quartifyr's `--strict`, decides success: the result must be `ok`, or a `warning` whose
+   only warnings are "a table is still too wide at the minimum font size" (opnca-r's
+   22-column summary can't fit a portrait page at 7 pt, and `--strict` would refuse every
+   default report). That warning is recorded in `build.json` `warnings`. It keeps the DOCX that quartifyr's result lists, after re-hashing it, in
    `report/builds/<build-id>/` with two records:
    - `build.json` (`publish-build-v1`). It lists the publication, the exact run IDs, the
      hash of every published file, every input (hashed before the render), and the tool
