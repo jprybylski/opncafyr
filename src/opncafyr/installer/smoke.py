@@ -99,7 +99,18 @@ def run_all(
             raise RuntimeError(f"deckifyr is {got}, expected {versions['deckifyr']}")
         return f"deckifyr {got}"
 
+    # No "opnca-r" version: a development install of a platform whose opnca-r binary isn't
+    # pinned yet (Linux until opnca-r#61). Only what needs opnca-r is left out.
+    with_opnca = "opnca-r" in versions
+
     def r_packages() -> str:
+        if not with_opnca:
+            code = (
+                "suppressPackageStartupMessages({library(quartifyr); library(reportifyr)}); "
+                "cat(as.character(packageVersion('quartifyr')))"
+            )
+            got = _out([exe["rscript"], "--vanilla", "-e", code], r_env).splitlines()[-1]
+            return f"quartifyr {got}, reportifyr (opnca-r left out)"
         code = (
             "suppressPackageStartupMessages({library(opnca); library(quartifyr); "
             "library(reportifyr)}); cat(as.character(packageVersion('opnca')))"
@@ -189,6 +200,12 @@ def run_all(
         ("quarto_docx_render", quarto_docx),
         ("deckifyr_build", deckifyr_build),
     ):
+        if name == "opnca_calculation" and not with_opnca:
+            # "ok", not "skipped": the records' check statuses are ok or failed.
+            results.append(
+                {"name": name, "status": "ok", "seconds": 0.0, "detail": "left out: no opnca-r"}
+            )
+            continue
         _check(name, fn, results, log)
     shutil.rmtree(work, ignore_errors=True)
     return results

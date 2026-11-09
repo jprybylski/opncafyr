@@ -38,6 +38,7 @@ class Context:
     with_libreoffice: bool = False
     with_git: bool = True  # #56: the pinned portable Git, best effort
     build_from_source: bool = False  # #34: opnca-r from its vendored source
+    without_opnca: bool = False  # development install of a pending platform: no opnca-r
     executables: dict[str, Path] = field(default_factory=dict)
     components: dict[str, dict[str, Any]] = field(default_factory=dict)
     paths: dict[str, Path] = field(default_factory=dict)

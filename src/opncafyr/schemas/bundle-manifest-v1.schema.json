@@ -10,7 +10,7 @@
     "schema_version": {"const": 1},
     "bundle_id": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the payload digest, the platform and every (path, SHA-256)."},
     "opncafyr_version": {"type": "string", "minLength": 1},
-    "platform": {"enum": ["windows-x86_64", "macos-arm64", "macos-x86_64"]},
+    "platform": {"enum": ["windows-x86_64", "macos-arm64", "macos-x86_64", "linux-x86_64", "linux-aarch64"]},
     "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "options": {
       "type": "object",

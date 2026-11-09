@@ -9,7 +9,13 @@
   without ``recordversion``. It writes one per-user uninstall entry whose name every per-user
   R 4.6.2 shares, so the entry is snapshotted first and put back afterwards: the user's own
   R is never touched.
-- **Library, both OSes:** a local CRAN-like repository of the verified binaries, then base
+- **Linux** (#65): Posit's Ubuntu 24.04 ``.deb`` is unpacked in Python (no dpkg, no root) into
+  ``versions/<id>/r``, the original ``/opt/R/<version>`` is rewritten in R's text files, and
+  ``Rscript``, whose binary has that path compiled in, is replaced by a wrapper that names
+  ``RHOME`` (as on macOS). The ``.deb``'s system libraries are not installed: they are checked
+  first (``linux_libs``). The library comes from Posit's binary tarballs, installed one at a
+  time (parallel installs need ``make``) through ``R CMD INSTALL``.
+- **Library, all OSes:** a local CRAN-like repository of the verified binaries, then base
   R's ``install.packages(type = "binary", dependencies = FALSE)``; then the cellar (the
   opnca-r binary, the pure-R quartifyr, reportifyr and pyro tarballs); then every version is
   checked against ``renv.lock``. No renv at install time: its restore needs the Command
@@ -55,8 +61,10 @@ def install_r(ctx: Context) -> None:
         rscript = _install_macos(ctx)
     elif WINDOWS:
         rscript = _install_windows(ctx)
+    elif sys.platform.startswith("linux"):
+        rscript = _install_linux(ctx)
     else:
-        raise RuntimeError("R is installed on macOS and Windows only")
+        raise RuntimeError("R is installed on macOS, Windows and Linux only")
     done = proc.capture(
         [rscript, "--vanilla", "-e", "cat(R.version$major, R.version$minor, sep = '.')"],
         env=ctx.env(),
@@ -123,11 +131,57 @@ def _install_macos(ctx: Context) -> Path:
     return wrappers / "Rscript"
 
 
-def relocate_text_files(resources_dir: Path, old: str, new: str) -> list[Path]:
-    """Replace ``old`` with ``new`` in the text files of R's ``bin`` and ``etc`` folders."""
+def _install_linux(ctx: Context) -> Path:
+    from opncafyr.installer.archives import extract_deb_tree
+
+    r_dir = ctx.r_dir
+    if " " in str(r_dir):
+        raise RuntimeError(f"R's folder must not contain a space: {r_dir}")
+    version = ctx.pins.r_version
+    shutil.rmtree(r_dir, ignore_errors=True)
+    count = extract_deb_tree(ctx.file("r"), f"opt/R/{version}", r_dir)
+    if count < 100 or not (r_dir / "lib" / "R" / "bin" / "Rscript").is_file():
+        raise RuntimeError(f"{ctx.asset('r').file} does not hold R {version} under opt/R/{version}")
+    home = r_dir / "lib" / "R"
+    relocate_text_files(
+        r_dir,
+        f"/opt/R/{version}",
+        str(r_dir),
+        folders=("bin", "lib/R/bin", "lib/R/etc", "lib/pkgconfig"),
+    )
+    # Rscript has /opt/R/<version>/lib/R compiled in, so it only works through a wrapper that
+    # names RHOME. R starts its own child R processes through lib/R/bin/Rscript as well.
+    inner = home / "bin" / "Rscript"
+    inner.rename(home / "bin" / "Rscript.elf")
+    inner.write_text(
+        "#!/bin/sh\n# Relocated R (opncafyr): Rscript has its original prefix compiled in.\n"
+        'RHOME="$(cd "$(dirname "$0")/.." && pwd -P)"\nR_HOME="$RHOME"\n'
+        'export RHOME R_HOME\nexec "$RHOME/bin/Rscript.elf" "$@"\n',
+        "utf-8",
+    )
+    inner.chmod(0o755)
+    outer = r_dir / "bin" / "Rscript"
+    outer.unlink(missing_ok=True)
+    outer.write_text(
+        f'#!/bin/sh\nexec {shlex.quote(str(inner))} "$@"\n',
+        "utf-8",
+    )
+    outer.chmod(0o755)
+    ctx.paths["r_home"] = home
+    return outer
+
+
+def relocate_text_files(
+    resources_dir: Path,
+    old: str,
+    new: str,
+    folders: tuple[str, ...] = ("bin", "etc"),
+) -> list[Path]:
+    """Replace ``old`` with ``new`` in the text files of the given folders (default R's ``bin``
+    and ``etc``)."""
     changed = []
     needle = old.encode()
-    for folder in (resources_dir / "bin", resources_dir / "etc"):
+    for folder in (resources_dir / f for f in folders):
         for path in sorted(folder.rglob("*")):
             if path.is_symlink() or not path.is_file():
                 continue
@@ -173,8 +227,15 @@ def _install_windows(ctx: Context) -> Path:
 
 
 def contrib_dir(url: str) -> str:
-    """``bin/macosx/sonoma-arm64/contrib/4.6`` etc., from a pinned binary's URL."""
-    m = re.search(r"/(bin/(?:macosx/[^/]+|windows)/contrib/[0-9.]+)/[^/]+$", url)
+    """``bin/macosx/sonoma-arm64/contrib/4.6`` etc., from a pinned binary's URL.
+
+    A Linux binary sits at the source path (``src/contrib``) of Posit's ``__linux__/noble``
+    snapshot, which serves a binary to R's own User-Agent (#65).
+    """
+    m = re.search(
+        r"/(bin/(?:macosx/[^/]+|windows)/contrib/[0-9.]+|src/contrib)/[^/]+$",
+        url,
+    )
     if m is None:
         raise ValueError(f"not a CRAN-like binary URL: {url}")
     return m.group(1)
@@ -194,7 +255,7 @@ def install_library(ctx: Context) -> None:
     cellar = ctx.tmp / "r-cellar"
     shutil.rmtree(cellar, ignore_errors=True)
     cellar.mkdir(parents=True)
-    opnca_file = None if ctx.build_from_source else _opnca_binary(ctx)
+    opnca_file = None if ctx.build_from_source or ctx.without_opnca else _opnca_binary(ctx)
     if opnca_file is not None:
         link_or_copy(opnca_file[0], cellar / opnca_file[1])
     for name in CELLAR:
@@ -230,7 +291,10 @@ def install_library(ctx: Context) -> None:
     )
     shutil.rmtree(repo, ignore_errors=True)
     shutil.rmtree(cellar, ignore_errors=True)
-    if opnca_file is None:
+    opnca: list = []
+    if ctx.without_opnca:
+        ctx.say("warning: opnca-r is left out (development install): analysis can't run")
+    elif opnca_file is None:
         from opncafyr.installer.source_build import build_opnca
 
         built = build_opnca(ctx, lib)
@@ -239,7 +303,8 @@ def install_library(ctx: Context) -> None:
         opnca = [ctx.asset(OPNCA, f) for f in ("manifest.json", opnca_file[2])]
     ctx.paths["r_library"] = lib
     ctx.record("r-packages", "", binaries)
-    ctx.record(OPNCA, opnca[0].version, opnca)
+    if opnca:
+        ctx.record(OPNCA, opnca[0].version, opnca)
     for name in CELLAR:
         ctx.record(name, ctx.asset(name).version, [ctx.asset(name)])
 

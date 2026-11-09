@@ -129,6 +129,7 @@ def build(
     with_libreoffice: bool = False,
     with_git: bool = True,
     with_source_build: bool = False,
+    allow_pending: bool = False,
     assets_dirs: list[Path] | None = None,
     rewrite: Callable[[str], str] | None = None,
     cacert: Path | None = None,
@@ -141,7 +142,11 @@ def build(
         raise InstallError(f"Unknown platform {platform}; use one of {', '.join(SUPPORTED)}")
     pins = Pins.load(payload.runtime)
     assets = pins.assets(
-        platform, libreoffice=with_libreoffice, git=with_git, source_build=with_source_build
+        platform,
+        libreoffice=with_libreoffice,
+        git=with_git,
+        source_build=with_source_build,
+        allow_pending=allow_pending,
     )
     cache = Cache(cache_dir or Layout.default().downloads)
     local = [LocalSource(d, cache) for d in (assets_dirs or [])]

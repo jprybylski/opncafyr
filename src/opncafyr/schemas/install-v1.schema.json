@@ -14,7 +14,7 @@
     "status": {"const": "complete"},
     "install_id": {"type": "string", "pattern": "^[0-9A-Za-z.+]+-[0-9]+$"},
     "version": {"type": "string", "minLength": 1},
-    "platform": {"enum": ["windows-x86_64", "macos-arm64", "macos-x86_64"]},
+    "platform": {"enum": ["windows-x86_64", "macos-arm64", "macos-x86_64", "linux-x86_64", "linux-aarch64"]},
     "os": {"type": "string"},
     "identity": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the payload digest, platform and options; equal identity means a second install is a no-op."},
     "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},

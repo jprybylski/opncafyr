@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import io
 import os
 import shutil
 import tarfile
 import zipfile
 from pathlib import Path
+
+AR_MAGIC = b"!<arch>\n"
 
 
 def extract(archive: Path, dest: Path) -> Path:
@@ -51,3 +54,64 @@ def link_or_copy(src: Path, dest: Path) -> None:
         os.link(src, dest)
     except OSError:
         shutil.copyfile(src, dest)
+
+
+def deb_data(deb: Path) -> tarfile.TarFile:
+    """The ``data.tar.*`` inside a ``.deb`` (an ``ar`` archive), read without ``dpkg``.
+
+    Only gzip, xz and bzip2 are read (the standard library's); a zstd payload is refused with a
+    plain message, since a standard user may have no ``unzstd``.
+    """
+    blob = deb.read_bytes()
+    if not blob.startswith(AR_MAGIC):
+        raise ValueError(f"{deb.name} is not a .deb (no ar header)")
+    pos = len(AR_MAGIC)
+    while pos + 60 <= len(blob):
+        header = blob[pos : pos + 60]
+        name = header[:16].decode("ascii", "replace").strip().rstrip("/")
+        size = int(header[48:58].decode("ascii").strip())
+        body = blob[pos + 60 : pos + 60 + size]
+        if name.startswith("data.tar"):
+            if name.endswith(".zst"):
+                raise ValueError(f"{deb.name} is zstd-compressed; this installer reads gz and xz")
+            return tarfile.open(fileobj=io.BytesIO(body))
+        pos += 60 + size + (size & 1)  # members are padded to an even length
+    raise ValueError(f"{deb.name} has no data.tar member")
+
+
+def extract_deb_tree(deb: Path, prefix: str, dest: Path) -> int:
+    """Unpack the files under ``prefix`` (``opt/R/4.6.2``) of a ``.deb`` into ``dest``.
+
+    Links are refused, and so are paths that leave ``dest``: Posit's R package holds plain
+    files only, so anything else means it is not the file that was pinned. Returns the number
+    of files written.
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+    root = dest.resolve()
+    wanted = prefix.strip("/") + "/"
+    written = 0
+    with deb_data(deb) as tar:
+        for member in tar:
+            name = member.name.removeprefix("./")
+            if not name.startswith(wanted) and name != wanted.rstrip("/"):
+                continue
+            rel = name[len(wanted) :]
+            if not rel:
+                continue
+            if member.issym() or member.islnk() or not (member.isfile() or member.isdir()):
+                raise ValueError(f"{deb.name}: {name} is a link or special file")
+            target = (dest / rel).resolve()
+            if root not in target.parents:
+                raise ValueError(f"{deb.name}: {name} escapes the target")
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            source = tar.extractfile(member)
+            if source is None:
+                raise ValueError(f"{deb.name}: {name} has no content")
+            with source, target.open("wb") as out:
+                shutil.copyfileobj(source, out)
+            target.chmod(0o755 if member.mode & 0o111 else 0o644)
+            written += 1
+    return written
