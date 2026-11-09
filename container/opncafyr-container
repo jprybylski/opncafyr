@@ -165,6 +165,12 @@ echo "$port" > "$state/port"
 echo "$access" > "$state/access"
 if [[ -n "$local_port" ]]; then echo "$local_port" > "$state/local-port"; else rm -f "$state/local-port"; fi
 
+# A just-stopped container's port can stay bound for a few seconds (rootless Podman's
+# port forwarder), so wait for it rather than fail on a restart.
+port_busy() { (exec 3<> "/dev/tcp/127.0.0.1/$port") 2> /dev/null; }
+for _ in $(seq 1 40); do port_busy || break; sleep 0.5; done
+port_busy && die "port $port on 127.0.0.1 is in use; stop what uses it or pick another --port"
+
 # Its own network, so other containers on the default bridge can't reach the listener.
 "$engine" network inspect "$name" > /dev/null 2>&1 || "$engine" network create "$name" > /dev/null
 
