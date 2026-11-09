@@ -48,6 +48,7 @@ macOS) to build opnca_0.3.1-vendored.tar.gz
 | Tools Python env | Python 3.13 | `[python_envs.tools]` (`runtime/python/tools/uv.lock`, 23 packages) | deckifyr `[web,preview]` + python-docx 1.1.2, PyYAML 6.0.2, Pillow 11.1.0 (pyro's pins, compatible with deckifyr's lower bounds), and pymupdf 1.28.2: pymupdf 2.x has no macOS x86_64 wheel. One env for deckifyr and for quartifyr/reportifyr, so pyro never creates one. |
 | Rust 1.99.1, Rtools45 | repair path only | `[rust]`, `[rtools]` | rustup-init (online) and standalone toolchain archives (offline). |
 | LibreOffice 26.2.7.1 | optional | `[optional.libreoffice]` | Optional per-user download for deckifyr previews only; quartifyr's field recalculation doesn't work with it yet ([spikes/libreoffice.md](spikes/libreoffice.md)). |
+| Container image (#42) | Docker or Podman on Linux x86_64/arm64 | `[container]` (digest-pinned base, TDF LibreOffice `.deb` sets), `[ci.linux-*]` runtimes, `container/apt/lock-<platform>-<stage>.txt` | Everything above, built for Linux: R from Posit's `.deb` (tree copied, no compilers kept), the R library and opnca-r from source, Git from the locked Ubuntu set. [container.md](container.md), ADR 0009. |
 
 ## The R package set
 
@@ -85,6 +86,9 @@ uv lock --project runtime/python/tools
 #    ~540 files (GH_TOKEN for opnca-r, which is private).
 uv run python scripts/verify_pins.py
 GH_TOKEN=$(gh auth token) uv run python scripts/verify_pins.py --network
+# 5. Container: re-lock Ubuntu packages (only to re-pin), then build and check.
+scripts/container/lock_apt.sh linux-x86_64 && scripts/container/lock_apt.sh linux-aarch64
+container/build.sh && container/build.sh --full
 ```
 
 **Isolated restore check** (2026-11-06, macOS 26.6 arm64, R 4.6.1, network denied with

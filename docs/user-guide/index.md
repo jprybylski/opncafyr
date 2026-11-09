@@ -7,6 +7,7 @@ This guide shows how to install opncafyr, set up a study folder, clean and map a
 ## Chapters
 
 1. [Installing and updating](install.md)
+   - [Running on a cloud computer (container mode)](cloud-container.md)
 2. [Your study folder](study-folder.md)
 3. [Data and cleaning](data-and-cleaning.md)
 4. [Event records and files without an analyte](event-records.md)

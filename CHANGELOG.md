@@ -7,6 +7,28 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Container image and cloud container mode** (#42, ADR 0009).
+  - `container/Dockerfile` builds slim and full (LibreOffice) images for linux/amd64 and
+    linux/arm64 from `runtime/pins.toml` only. Inputs: a digest-pinned Ubuntu base, Ubuntu
+    packages locked per platform (`container/apt/`), and opnca-r built from its vendored
+    tarball through a BuildKit secret. The install runs with `--network=none` through
+    `scripts/offline/install_runtime.sh`, shared with the offline CI job. The final image
+    has no compilers.
+  - `scripts/container/check_image.sh` runs the full flow inside the image offline and
+    checks libraries, toolchain, fonts, secrets and portable paths.
+    `.github/workflows/container.yml` builds on native runners and pushes to the
+    **private** GHCR package only (never on pull requests, no Actions cache), then tests
+    container mode with Docker and Podman.
+  - `opncafyr launch --container` with `--access ssh|vscode|workbench|jupyter`: explicit
+    options add the forward's or IDE proxy's Host, Origin and URL prefix. No security
+    check is relaxed.
+  - `container/opncafyr-container` starts, reattaches, links and stops one container per
+    study folder, published to 127.0.0.1 only.
+  - Study folders on object-storage FUSE mounts are refused; network shares are probed.
+  - Manifests record the container's image ID.
+  - `[ci.linux-aarch64]` pins; `fetch.py --platform/--opnca-release/--with-libreoffice`.
+  - Guides: [container.md](docs/container.md), the user guide's cloud chapter and the
+    website's *Run on a cloud computer*.
 - **Event records and files without an analyte column** (#58, ADR 0005 Q9). NONMEM-style
   files, with separate dose and sample records, now reach a replayable one-analyte run.
   - The recipe gets an optional `events` block (recipe-v1 `schema_version` 1.1; 1.0

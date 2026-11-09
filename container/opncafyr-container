@@ -5,6 +5,7 @@
 #   opncafyr-container url <study folder>      a fresh one-time link for the running one
 #   opncafyr-container status <study folder>
 #   opncafyr-container stop <study folder>
+#   opncafyr-container forget <study folder>  stop and delete its saved settings and logs
 #
 # Options for start:
 #   --access ssh|vscode|workbench|jupyter   how your browser reaches the VM (default ssh)
@@ -32,7 +33,7 @@ usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 [[ $# -ge 1 ]] || usage 2
 cmd="$1"; shift
-case "$cmd" in -h | --help | help) usage 0 ;; start | url | status | stop) ;; *) usage 2 ;; esac
+case "$cmd" in -h | --help | help) usage 0 ;; start | url | status | stop | forget) ;; *) usage 2 ;; esac
 [[ $# -ge 1 ]] || die "name the study folder"
 study_arg="$1"; shift
 
@@ -61,9 +62,15 @@ case "$engine" in docker | podman) ;; *) die "--engine must be docker or podman"
 command -v "$engine" > /dev/null || die "$engine is not installed"
 [[ "$port" =~ ^[0-9]+$ ]] && ((port > 0 && port < 65536)) || die "--port must be a port number"
 
-[[ -d "$study_arg" ]] || die "$study_arg is not a folder"
-study="$(cd "$study_arg" && pwd -P)"
-hash="$(printf '%s' "$study" | sha256sum | cut -c1-12)"
+if [[ -d "$study_arg" ]]; then
+  study="$(cd "$study_arg" && pwd -P)"
+elif [[ "$cmd" != start && "$study_arg" == /* ]]; then
+  study="$study_arg"   # stop/forget/status for a folder that has since been removed
+else
+  die "$study_arg is not a folder"
+fi
+if command -v sha256sum > /dev/null; then sum=(sha256sum); else sum=(shasum -a 256); fi
+hash="$(printf '%s' "$study" | "${sum[@]}" | cut -c1-12)"
 name="opncafyr-$hash"
 state="${XDG_STATE_HOME:-$HOME/.local/state}/opncafyr-container/$hash"
 
@@ -106,6 +113,14 @@ case "$cmd" in
     echo "stopped $name"
     exit 0
     ;;
+  forget)
+    if running; then "$engine" stop --time 30 "$name" > /dev/null; fi
+    "$engine" volume rm "$name-state" > /dev/null 2>&1 || true
+    "$engine" network rm "$name" > /dev/null 2>&1 || true
+    rm -rf "$state"
+    echo "forgot $name (the study folder is untouched)"
+    exit 0
+    ;;
   url)
     running || die "not running for $study; use start"
     how_to_reach
@@ -140,7 +155,10 @@ launch=(launch --container --port "$port" --workspace /workspace --access "$acce
 [[ -n "$local_port" ]] && launch+=(--local-port "$local_port")
 [[ -n "$idle" ]] && launch+=(--idle-timeout "$idle")
 
-mkdir -p "$state/app"
+# The script's own notes stay on the VM; the launcher's state (settings, logs, its
+# single-instance lock) lives in a named volume, a real Linux filesystem on every engine.
+# Locks on a host folder shared into a VM (Docker Desktop's virtiofs) don't exclude.
+mkdir -p "$state"
 chmod 700 "$state"
 printf '%s\n' "${launch[@]}" > "$state/launch-args"
 echo "$port" > "$state/port"
@@ -160,7 +178,7 @@ fi
 
 "$engine" run --detach --rm --name "$name" --network "$name" \
   --publish "127.0.0.1:$port:$port" \
-  --volume "$study:/workspace" --volume "$state/app:/state" \
+  --volume "$study:/workspace" --volume "$name-state:/state" \
   --cap-drop ALL --security-opt no-new-privileges \
   --label "$LABEL=$study" --stop-timeout 30 \
   "${user[@]}" "$image" "${launch[@]}" > /dev/null

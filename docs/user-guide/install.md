@@ -10,6 +10,8 @@ The installer downloads each part it needs and checks every file against a finge
 - About 4 GB of free disk space.
 - The installer zip, `opncafyr-installer-<version>.zip`, from the person who supports opncafyr at your site.
 
+If your study data lives on a Linux cloud computer where you can run Docker or Podman, you can run opncafyr there instead: see [Running on a cloud computer (container mode)](cloud-container.md).
+
 If your computer cannot reach the internet, or your organisation blocks downloads, ask your IT team; they can use the offline bundle described in the developer documentation. The app works the same way after an offline install.
 
 ## Install on macOS

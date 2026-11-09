@@ -60,6 +60,7 @@ our adapter (#33).
 | [#93](https://github.com/jprybylski/deckifyr/issues/93) | Offline mode for the R wrappers (`uv run --no-sync`) and `init --from-repo` | Done (v0.3.6); also adds `python_env` and the web/preview packages in the R-written group. The launcher still calls the Python CLI directly | Gate 3 (#33), offline (#44) |
 | [#96](https://github.com/jprybylski/deckifyr/issues/96) | Build fails with `IndexError` when a table cell is empty (opnca-r's tables have empty cells) | Open (filed 2026-11-07, found by the offline flow, #51). Until it is pinned, the offline flow's deck has figures only (`scripts/offline/flow_check.py`, labelled temporary); a real deck with a published table fails to build | Gate 3 |
 | [#94](https://github.com/jprybylski/deckifyr/issues/94) | Accept project YAML that starts with a UTF-8 BOM | Done (v0.3.6); all project YAML/JSON/CSV/QMD reads drop a BOM, and reads no longer fall back to the Windows locale encoding | Gate 3 |
+| [#97](https://github.com/jprybylski/deckifyr/issues/97) | Record project-relative paths in `deck-manifest.json` | Open (filed 2026-11-08, found by the container image check, #42). Its input, element and output paths are absolute, so a deck build names the folder it was built in (a container's `/workspace`, or a user's home folder). Until it is pinned, `scripts/container/check_image.sh` excepts that one file from the path scan (labelled temporary); our own manifests are relative | #42 |
 
 ## jprybylski/quartifyr (public)
 

@@ -105,11 +105,11 @@ scheduled first.
   opnca-r#49–#50 in 0.2.9, opnca-r#32 and #53–#54 in 0.3.0, opnca-r#56–#58 in 0.3.1
   and deckifyr#88–#91 in 0.3.5, so no opncafyr issue is blocked upstream. The proxy slice (#15/#16) is done: both
   children run behind `/apps/<tool>/` with no rewriting ([spike result](spikes/basepath.md)).
-- **Container image, Phase A (#42).** A pinned Linux image for users on cloud VMs that
-  can run Docker. opnca-r is compiled once, when the image is built. The same image gives
-  CI and the Gate 2/3 integration tests a working runtime while the native install spikes
-  are still open. Phase B (cloud access through an SSH tunnel or IDE proxy) follows #11,
-  #15 and #16.
+- **Container image and cloud container mode (#42, [ADR 0009](decisions/0009-cloud-container-mode.md)).**
+  A pinned Linux image (amd64 and arm64, slim and full) for users on cloud VMs with
+  Docker or Podman, built from the pins with opnca-r compiled at build time, published to
+  a private GHCR package only. Cloud access through an SSH forward or an IDE proxy uses
+  explicit launch options ([container.md](container.md)).
 
 **After #1 and #5**
 - Install spikes #6 and #7 on clean standard-user accounts. They succeed only when an
@@ -194,7 +194,7 @@ scheduled first.
 | LibreOffice: optional verified per-user download for deckifyr previews (optional in offline bundles); quartifyr field recalculation off until quartifyr#84/#86 | From spike #8 (2026-11-06) | [spikes/libreoffice.md](spikes/libreoffice.md), #8 |
 | Home UI: static HTML + vanilla JS ES modules, no build step, no third-party runtime JS; axe check in CI | **Accepted** (owner, 2026-11-05) | [ADR 0006](decisions/0006-home-ui-stack.md), #18; shell build #49 |
 | Optional Git version history: gitneighbr managed mode as an adapter; pinned dugite-native Git, locked down; local snapshots by default, sending per session with a full preview; `guard_mutations` workspace lease in core | **Accepted** (owner, 2026-11-08); default ignore suggestions and review labels proposed | [ADR 0008](decisions/0008-git-version-history.md), #56 |
-| Cloud container mode in v1: supported environments, Docker vs Podman, storage types | Open | #42, #1 |
+| Cloud container mode in v1: SSH forward, VS Code Server/code-server, Posit Workbench and jupyter-server-proxy; Docker and Podman; local disk and NFS/SMB (object-storage FUSE refused); private GHCR image only, amd64 + arm64, slim + full | **Accepted** (owner, 2026-11-08); one user per VM proposed | [ADR 0009](decisions/0009-cloud-container-mode.md), #42, #1 |
 | Redistributing image archives: audience, opncafyr license, GPL source obligations, PPM binaries | Open (needs legal) | #43 |
 
 ## Extending to other tools

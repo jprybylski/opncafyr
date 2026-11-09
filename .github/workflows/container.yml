@@ -1,0 +1,200 @@
+# The private container image (#42): build on native amd64 and arm64 runners, check,
+# push to the private GHCR package, then test cloud container mode with Docker and Podman.
+#
+# This repository is public and the image holds private opnca-r, so:
+# - never on pull_request (a fork's workflow could read caches or push);
+# - build cache only in the private GHCR cache package, never type=gha (Actions caches
+#   can be restored by fork PRs) and nothing uploaded with upload-artifact (public);
+# - both packages must already exist and be private before anything is pushed, and are
+#   checked again after (docs/container.md: creating them the first time);
+# - logs print counts, IDs and hashes only.
+name: container
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - container/**
+      - runtime/**
+      - src/**
+      - docs/user-guide/**
+      - scripts/offline/**
+      - scripts/container/**
+      - scripts/container_args.py
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/container.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/jprybylski/opncafyr
+  CACHE: ghcr.io/jprybylski/opncafyr-cache
+
+jobs:
+  private:
+    name: packages exist and are private
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Check visibility
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for pkg in opncafyr opncafyr-cache; do
+            vis="$(gh api "/users/jprybylski/packages/container/$pkg" --jq .visibility)" || {
+              echo "::error::ghcr.io/jprybylski/$pkg is missing or unreadable. Create it once as a private package (docs/container.md) before CI pushes to it."
+              exit 1
+            }
+            if [ "$vis" != private ]; then
+              echo "::error::ghcr.io/jprybylski/$pkg is $vis. It must be private: the image contains private opnca-r."
+              exit 1
+            fi
+            echo "$pkg: private"
+          done
+
+  build:
+    name: build and check (${{ matrix.arch }})
+    needs: private
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: amd64, platform: linux-x86_64, runner: ubuntu-24.04 }
+          - { arch: arm64, platform: linux-aarch64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 150
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read pins
+        run: |
+          python3 - >> "$GITHUB_ENV" <<'PY'
+          import tomllib
+          print(f"UV_VERSION={tomllib.load(open('runtime/pins.toml', 'rb'))['uv']['version']}")
+          PY
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Require the opnca-r release token
+        env:
+          TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: test -n "$TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
+      - name: Build slim and full
+        env:
+          OPNCA_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          args=()
+          while IFS= read -r line; do args+=("$line"); done \
+            < <(uv run --no-project --quiet python scripts/container_args.py build-args --platform "${{ matrix.platform }}")
+          for target in slim full; do
+            docker buildx build . --file container/Dockerfile --target "$target" \
+              --platform "linux/${{ matrix.arch }}" --load --tag "opncafyr:$target" \
+              --provenance=false --sbom=false \
+              --secret id=gh_token,env=OPNCA_TOKEN \
+              --build-arg "GIT_SHA=$GITHUB_SHA" "${args[@]}" \
+              --cache-from "type=registry,ref=$CACHE:${{ matrix.arch }}" \
+              --cache-to "type=registry,ref=$CACHE:${{ matrix.arch }},mode=max"
+          done
+      - name: Check slim
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: scripts/container/check_image.sh opncafyr:slim slim
+      - name: Check full
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: scripts/container/check_image.sh opncafyr:full full
+      - name: Push by commit and architecture
+        run: |
+          for target in slim full; do
+            suffix=""; [ "$target" = full ] && suffix=-full
+            ref="$IMAGE:sha-$GITHUB_SHA-${{ matrix.arch }}$suffix"
+            docker tag "opncafyr:$target" "$ref"
+            docker push --quiet "$ref"
+            echo "$ref $(docker image inspect --format '{{.Id}}' "opncafyr:$target")"
+          done
+
+  publish:
+    name: multi-arch tags
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag
+        run: |
+          version="$(cat VERSION)"
+          for suffix in "" -full; do
+            tags=(--tag "$IMAGE:sha-${GITHUB_SHA::12}$suffix")
+            [ "$GITHUB_REF" = refs/heads/main ] && tags+=(--tag "$IMAGE:edge$suffix")
+            [[ "$GITHUB_REF" == refs/tags/v* ]] && tags+=(--tag "$IMAGE:$version$suffix")
+            docker buildx imagetools create "${tags[@]}" \
+              "$IMAGE:sha-$GITHUB_SHA-amd64$suffix" "$IMAGE:sha-$GITHUB_SHA-arm64$suffix"
+            echo "${tags[*]}"
+          done
+      - name: Still private
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          vis="$(gh api /users/jprybylski/packages/container/opncafyr --jq .visibility)"
+          [ "$vis" = private ] || { echo "::error::ghcr.io/jprybylski/opncafyr is $vis"; exit 1; }
+
+  container-mode:
+    name: container mode (${{ matrix.engine }})
+    needs: publish
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker, podman]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read pins
+        run: |
+          python3 - >> "$GITHUB_ENV" <<'PY'
+          import tomllib
+          print(f"UV_VERSION={tomllib.load(open('runtime/pins.toml', 'rb'))['uv']['version']}")
+          PY
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --locked
+      - name: Sign in and pull
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$TOKEN" | ${{ matrix.engine }} login ghcr.io -u "${{ github.actor }}" --password-stdin
+          ${{ matrix.engine }} pull --quiet "$IMAGE:sha-${GITHUB_SHA::12}"
+      - name: SSH forward, prefix proxy and security behind both
+        run: |
+          uv run python scripts/container/mode_check.py \
+            --image "$IMAGE:sha-${GITHUB_SHA::12}" --engine ${{ matrix.engine }}

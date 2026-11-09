@@ -33,6 +33,16 @@ missing="$(inside '
     | xargs -0 -n 50 ldd 2>/dev/null | grep "not found" | sort -u || true
   ldd "$rhome/bin/exec/R" | grep "not found" || true')"
 [[ -z "$missing" ]] || fail "unresolved shared libraries:"$'\n'"$missing"
+if [[ "$variant" == full ]]; then
+  # LibreOffice's UI plugins (Qt, KDE, GTK), GStreamer and Java are optional; headless
+  # conversion loads none of them.
+  missing="$(inside '
+    cd /opt/libreoffice*/program
+    for f in soffice.bin $(ls ./*.so | grep -vE "vclplug|kf5|qt5|qt6|gtk|gst|jawt|avmedia|java|kde"); do
+      LD_LIBRARY_PATH=$PWD ldd "$f" 2>/dev/null | grep "not found" | grep -v libjawt || true
+    done | sort -u')"
+  [[ -z "$missing" ]] || fail "unresolved LibreOffice libraries:"$'\n'"$missing"
+fi
 echo "   all shared objects resolve"
 
 echo "== no toolchain"
@@ -91,6 +101,18 @@ for part in ("runs", "publication", "report", "deck"):
     if part not in flow:
         sys.exit(f"FAIL: the flow has no {part}")
 PY
+  if [[ "$variant" == full ]]; then
+    echo "== LibreOffice preview (full)"
+    deck="$(cd "$out" && find work -name '*.pptx' -path '*/deck/builds/*' | head -1)"
+    [[ -n "$deck" ]] || fail "the smoke flow built no deck"
+    docker run --rm --network none --user 4321:4321 -v "$out:/out" -e HOME=/out/tmp \
+      --entrypoint bash "$image" -euo pipefail -c '
+        soffice="$(/opt/opncafyr/rt/python/bin/python3 -c "import json; print(json.load(open(\"/opt/opncafyr/runtime/runtime.json\"))[\"executables\"][\"soffice\"])")"
+        # Its own profile on the container filesystem, as deckifyr gives it.
+        "$soffice" -env:UserInstallation=file:///tmp/lo-profile --headless --convert-to pdf --outdir /out/preview "/out/'"$deck"'" > /dev/null'
+    [[ -s "$out/preview/$(basename "${deck%.pptx}").pdf" ]] || fail "LibreOffice made no preview"
+    echo "   the deck converts to PDF offline"
+  fi
   echo "== portable study (other path, other uid)"
   docker run --rm --network none --user 0 -v "$out:/out" --entrypoint bash "$image" -c \
     'cp -a /out/work /moved && chown -R 2468:2468 /moved && mv /moved /out/moved'
@@ -105,7 +127,7 @@ PY
     --include='*.json' --include='*.R' --include='*.yaml' --exclude=deck-manifest.json || true)"
   [[ -z "$absolute" ]] || fail "files in the study name a container path:"$'\n'"$absolute"
   echo "   runs verify at another path and owner; no container paths in manifests or scripts"
-  docker run --rm --user 0 -v "$out:/out" --entrypoint rm "$image" -rf /out/work /out/moved /out/tmp /out/app
+  docker run --rm --user 0 -v "$out:/out" --entrypoint rm "$image" -rf /out/work /out/moved /out/tmp /out/app /out/preview
 fi
 
 echo "== size"

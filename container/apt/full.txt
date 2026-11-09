@@ -11,3 +11,6 @@ libxrandr2
 libxext6
 libxrender1
 libxml2
+# Not in the TDF .debs' Depends, but every LibreOffice library links it (checked by
+# scripts/container/check_image.sh, even headless)
+libx11-xcb1

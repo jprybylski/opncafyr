@@ -176,9 +176,9 @@ jobs:
         run: |
           sudo apt-get update -qq
           # container/apt/build.txt: the same list the container's build stage uses (#42).
+          mapfile -t build_pkgs < <(grep -v '^#' container/apt/build.txt)
           sudo apt-get install -y -qq --no-install-recommends \
-            ./assets/runtime/r-4.6.2_1_amd64.deb strace \
-            $(grep -v '^#' container/apt/build.txt)
+            ./assets/runtime/r-4.6.2_1_amd64.deb strace "${build_pkgs[@]}"
       - name: Offline phase (network namespace, traced)
         run: |
           sudo -E unshare --net sh -c '

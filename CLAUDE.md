@@ -31,6 +31,7 @@ src/opncafyr/
   r/             fixed R programs run by the launcher
   web/static/    home page assets
 installer/       install.sh (macOS), install.bat -> install.ps1 (Windows)
+container/       Dockerfile, apt locks, build.sh, opncafyr-container (cloud container mode, #42)
 runtime/         pins.toml: exact runtime/package versions and checksums
   r/             renv.lock + binaries.toml: the app-private R library, per platform
   python/tools/  locked uv project for the tools' Python (deckifyr, quartifyr, reportifyr)
@@ -60,7 +61,12 @@ adapter without changing core navigation or the workspace schema. If a change ne
 tool-specific logic in `core/`, it belongs in an adapter or workflow instead.
 
 **Security.** The local URL is a security boundary.
-- Bind only to `127.0.0.1`; children bind to their own loopback ports.
+- Bind only to `127.0.0.1`; children bind to their own loopback ports. The one exception
+  is `opncafyr launch --container` inside the image, which the launch script publishes to
+  the VM's `127.0.0.1` only (ADR 0009).
+- Remote access (cloud container mode) comes only from explicit `launch` options
+  (`core.remote`), never from environment variables or IDE detection. Presets only add
+  the forward's or proxy's Host/Origin and the URL prefix; they never weaken a check.
 - Every request passes the Host check; state-changing requests need the per-launch
   session secret and a same-origin `Origin` if present. Never add CORS headers.
 - Resolve every workspace path with `core.workspace.resolve_in_root`.
@@ -69,6 +75,9 @@ tool-specific logic in `core/`, it belongs in an adapter or workflow instead.
   can never name an executable or add a command.
 - No raw subject/patient values in logs, URLs, telemetry or diagnostic bundles. No dataset
   leaves the machine by default.
+- The container image contains private opnca-r and this repository is public: push it only
+  to the private GHCR package, never build it on `pull_request`, and never put its layers
+  in the Actions cache or in workflow artifacts (`.github/workflows/container.yml`).
 
 **Science.** opnca-r is the calculation authority; never implement NCA here.
 - One analyte per run, filtered by the exact raw value of the analyte column.
@@ -79,6 +88,8 @@ tool-specific logic in `core/`, it belongs in an adapter or workflow instead.
 - Completed runs are immutable; any change to cleaning, mapping, exclusions or rules
   creates a new run. Only `completed` runs may be published.
 - Publication and build manifests pin exact run IDs and artifact SHA-256s, never "latest".
+- Manifests and scripts store study-relative paths only, so a run made in a container
+  replays natively and the reverse; provenance names the image ID, never a tag (ADR 0009).
 
 **Offline-capable (supported v1 use case).** Most installs are online: the installer
 downloads pinned, checksummed assets. Firewalled environments (such as GxP cloud
@@ -100,6 +111,8 @@ analytical systems) are common, though, so offline has to work too.
 **Files.** Manifests and workspace JSON are schema-validated and written with
 `core.manifest.atomic_write_json`. Incomplete output directories must never look complete.
 The workspace metadata folder is `.opncafyr/` and its schema is versioned with migrations.
+A study folder must be on a filesystem that renames atomically (`core.storage`): object-
+storage FUSE mounts are refused.
 
 ## Upstream tools
 

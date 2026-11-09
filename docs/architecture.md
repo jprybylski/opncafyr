@@ -150,6 +150,16 @@ and the API carry text written for a person.
    native picker the controller runs (`core/picker.py`): `/api/workspace/*` accepts only
    a folder picked in this session or one on the recent list (paths only, in the app
    state dir).
+
+   In cloud container mode (#42, ADR 0009) the browser is on another computer and
+   reaches the container through an SSH forward or an IDE proxy. `core/remote.py` turns
+   explicit `launch --container` options (never environment variables) into extra
+   Host/Origin entries and a URL prefix. `core/security.py` adds them to the allow-lists,
+   scopes the cookie to the prefix, and `BasePathMiddleware` accepts the prefix whether
+   or not the proxy strips it. Every check above still applies. The port is published
+   to the VM's loopback only; behind an IDE proxy the IDE's login is the boundary, so v1
+   assumes one user per VM. `--workspace` fixes the one study folder (no picker), and
+   `core/storage.py` refuses object-storage FUSE mounts, which fake atomic rename.
 4. **Controller ↔ tools.** Only installed descriptors are trusted; executables come from
    the pinned runtime record (`runtime-v1`, `core/runtime.py`). Every process starts
    through `proctree.spawn`: an argv list whose first item is an absolute runtime path,

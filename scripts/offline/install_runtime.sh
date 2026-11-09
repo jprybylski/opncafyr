@@ -100,11 +100,16 @@ TOOLS_ENV="$PREFIX/envs/tools/.venv"
 uv venv --quiet --python "$PYTHON" "$LAUNCHER_ENV"
 uv pip install --python "$LAUNCHER_ENV/bin/python" --require-hashes \
   --requirement "$ASSETS/requirements/launcher.offline.txt"
-uv pip install --python "$LAUNCHER_ENV/bin/python" --no-deps "$ASSETS"/wheelhouse/opncafyr-*.whl
+# opncafyr itself, unless it is installed later (the container image does that in its own
+# layer, so a source change doesn't rebuild the R library).
+launcher_wheels=("$ASSETS"/wheelhouse/opncafyr-*.whl)
+if [[ -f "${launcher_wheels[0]}" ]]; then
+  uv pip install --python "$LAUNCHER_ENV/bin/python" --no-deps "${launcher_wheels[@]}"
+fi
 uv venv --quiet --python "$PYTHON" "$TOOLS_ENV"
 uv pip install --python "$TOOLS_ENV/bin/python" --require-hashes \
   --requirement "$ASSETS/requirements/tools.offline.txt"
-"$LAUNCHER_ENV/bin/python" -c 'import opncafyr, fastapi; print("launcher env ok")'
+"$LAUNCHER_ENV/bin/python" -c 'import fastapi, httpx, uvicorn; print("launcher env ok")'
 "$TOOLS_ENV/bin/python" -c 'import deckifyr, docx, yaml, PIL, pymupdf; print("tools env ok")'
 done_step
 

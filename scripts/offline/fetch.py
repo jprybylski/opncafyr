@@ -272,7 +272,7 @@ class Fetcher:
         write_packages_index(contrib)
         return count
 
-    def wheelhouse(self, uv: str) -> None:
+    def wheelhouse(self, uv: str, launcher_wheel: bool = True) -> None:
         reqs = self.out / "requirements"
         reqs.mkdir(parents=True, exist_ok=True)
         wheels = self.out / "wheelhouse"
@@ -323,7 +323,8 @@ class Fetcher:
                 ],
                 cwd=ROOT,
             )
-        _run([uv, "build", "--wheel", "--quiet", "--out-dir", str(wheels)], cwd=ROOT)
+        if launcher_wheel:
+            _run([uv, "build", "--wheel", "--quiet", "--out-dir", str(wheels)], cwd=ROOT)
         for wheel in sorted(wheels.glob("*.whl")):
             self.records.append(
                 {
@@ -412,6 +413,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--with-libreoffice", action="store_true", help="also LibreOffice, for the -full image"
     )
+    parser.add_argument(
+        "--no-launcher-wheel",
+        action="store_true",
+        help="leave out opncafyr's own wheel (the container builds it in its own stage)",
+    )
     parser.add_argument("--uv", default=shutil.which("uv") or "uv")
     args = parser.parse_args(argv)
     out = args.out.resolve()
@@ -423,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
             runtimes["libreoffice"] = fetcher.libreoffice()
         cellar = fetcher.cellar(args.opnca_vendored, args.opnca_release)
         count = fetcher.r_repository()
-        fetcher.wheelhouse(args.uv)
+        fetcher.wheelhouse(args.uv, launcher_wheel=not args.no_launcher_wheel)
     except (FetchError, subprocess.CalledProcessError, KeyError) as exc:
         print(f"fetch failed: {exc}", file=sys.stderr)
         return 1
