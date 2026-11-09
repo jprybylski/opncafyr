@@ -1,5 +1,14 @@
 /* NCA Analysis page. Uses the shell's tokens (app.css); adds layout only. */
 .nca-body { display: grid; gap: var(--space-4); }
+/* A control outside a .field (the "Add a step" select, the pair editors) has no background
+   of its own; in dark mode some browsers fall back to a grey that fails contrast (#63). */
+.nca-body select, .nca-body input:not([type="checkbox"]):not([type="radio"]), .nca-body textarea {
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.6rem;
+}
 .nca-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; }
 .nca-steps { margin: 0; padding-left: 1.5em; display: grid; gap: var(--space-2); }
 .nca-steps li { padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
