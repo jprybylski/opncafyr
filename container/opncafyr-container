@@ -75,6 +75,15 @@ name="opncafyr-$hash"
 state="${XDG_STATE_HOME:-$HOME/.local/state}/opncafyr-container/$hash"
 
 running() { [[ "$("$engine" container inspect --format '{{.State.Running}}' "$name" 2> /dev/null)" == true ]]; }
+exists() { "$engine" container inspect "$name" > /dev/null 2>&1; }
+# Stop, then wait until the engine has removed the container (--rm): removing its
+# network or volume before that cleanup ends breaks it, and rootless Podman then leaves
+# its port forwarder holding the port.
+stop_and_wait() {
+  if running; then "$engine" stop --time 30 "$name" > /dev/null || true; fi
+  for _ in $(seq 1 60); do exists || return 0; sleep 0.5; done
+  "$engine" rm --force "$name" > /dev/null 2>&1 || true
+}
 
 print_link() {
   local args=()
@@ -109,12 +118,12 @@ case "$cmd" in
     ;;
   stop)
     running || { echo "not running"; exit 0; }
-    "$engine" stop --time 30 "$name" > /dev/null
+    stop_and_wait
     echo "stopped $name"
     exit 0
     ;;
   forget)
-    if running; then "$engine" stop --time 30 "$name" > /dev/null; fi
+    stop_and_wait
     "$engine" volume rm "$name-state" > /dev/null 2>&1 || true
     "$engine" network rm "$name" > /dev/null 2>&1 || true
     rm -rf "$state"
@@ -164,6 +173,9 @@ printf '%s\n' "${launch[@]}" > "$state/launch-args"
 echo "$port" > "$state/port"
 echo "$access" > "$state/access"
 if [[ -n "$local_port" ]]; then echo "$local_port" > "$state/local-port"; else rm -f "$state/local-port"; fi
+
+# A stopped container left behind (a failed --rm cleanup) would block the name.
+if exists; then "$engine" rm --force "$name" > /dev/null 2>&1 || true; fi
 
 # A just-stopped container's port can stay bound for a few seconds (rootless Podman's
 # port forwarder), so wait for it rather than fail on a restart.
