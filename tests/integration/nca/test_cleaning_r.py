@@ -260,7 +260,8 @@ def test_editing_a_step_leaves_the_earlier_result_stale_and_the_source_alone(api
     r = api.put(f"/api/nca/recipes/{doc['id']}", json={"recipe": edited})
     assert r.status_code == 200, r.text
     assert r.json()["sha256"] != before["sha256"]
-    assert api.get(f"/api/nca/recipes/{doc['id']}/result?kind=full").status_code == 409
+    stale = api.get(f"/api/nca/recipes/{doc['id']}/result?kind=full")
+    assert stale.status_code == 404 and stale.json()["detail"]["code"] == "not_ready"
     assert api.get(f"/api/nca/recipes/{doc['id']}/analytes").status_code == 409
     second = apply(api, doc["id"])
     assert second["summary"]["steps"][1]["op"] == "exclude"
