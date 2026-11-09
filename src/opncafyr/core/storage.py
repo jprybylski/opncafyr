@@ -72,7 +72,8 @@ def _unescape(field: str) -> str:
 def mount_type(path: Path, mountinfo: str) -> str:
     """The filesystem type of the longest mount point containing ``path``."""
     best, best_type = "", "unknown"
-    target = str(path)
+    # mountinfo is Linux's; compare in POSIX form so the tests also run on Windows.
+    target = path.as_posix()
     for line in mountinfo.splitlines():
         left, sep, right = line.partition(" - ")
         if not sep:
