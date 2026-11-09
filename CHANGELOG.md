@@ -7,6 +7,24 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Edit a saved cleaning step, and findings next to the steps** (#63).
+  - **Edit** on each cleaning step opens its form on the saved values and note. **Save step**
+    replaces the step in the same place through the usual whole-recipe save and its
+    validation, and **Cancel** changes nothing. A refused edit keeps the form open with the
+    reason and what was typed. While one step is open, the other steps' buttons wait. Every
+    kind of step the page can add is covered (a browser test opens and saves each one back
+    unchanged, and the recipe hash stays the same). A step with a combined row condition
+    (`all`) or settings the form can't show is not editable; it says why. No new server route.
+  - A **Findings** panel under the step adder shows the last check's blocking findings and
+    warnings with their hints, for the analyte and specimen and time it was checked. It is a
+    native `<details>` (keyboard operable, scrolls inside itself, sticky on wide screens). The
+    acknowledgement boxes stay in section 5.
+  - Findings are tied to the recipe hash they were checked against. After a change to a step,
+    the mapping or the source they are marked **Out of date** and hidden in both places, and
+    no acknowledgement carries over (the server already refused one made under another hash).
+    Before, a mapping-only change left the findings on screen as if current.
+  - The Runs table's last column header, which was empty, is now "Action" (found by the first
+    accessibility check of the Analysis page).
 - **Container image and cloud container mode** (#42, ADR 0009).
   - `container/Dockerfile` builds slim and full (LibreOffice) images for linux/amd64 and
     linux/arm64 from `runtime/pins.toml` only. Inputs: a digest-pinned Ubuntu base, Ubuntu

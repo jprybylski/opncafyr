@@ -35,7 +35,7 @@ export function initRuns(stack, state) {
         actions,
       ];
     });
-    sec.body.append(table(["Run", "Analyte", "Label", "State", "Created", ""], rows, "Runs"));
+    sec.body.append(table(["Run", "Analyte", "Label", "State", "Created", "Action"], rows, "Runs"));
   }
 
   // Open a run in opnca-r (#27): one session at a time, on the run's frozen input.

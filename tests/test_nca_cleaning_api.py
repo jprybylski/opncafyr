@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import copy
+
 import pytest
 
-from nca_helpers import make_study, nca_client, new_recipe
+from nca_helpers import SOURCE, make_study, nca_client, new_recipe
 
 
 @pytest.fixture
 def api(security, tmp_path):
     study = make_study(tmp_path)
     with nca_client(security, tmp_path, study) as client:
+        client.study = study
         yield client
 
 
@@ -86,3 +89,67 @@ def test_result_before_apply_is_not_ready(api):
     doc = new_recipe(api)
     r = api.get(f"/api/nca/recipes/{doc['id']}/result", params={"kind": "preview"})
     assert r.status_code == 404 and r.json()["detail"]["code"] == "not_ready"
+
+
+STEPS = [
+    {"op": "trim", "args": {"columns": ["PCTESTCD", "PCSPEC"]}, "note": "stray spaces"},
+    {
+        "op": "exclude",
+        "args": {"where": {"column": "PCSPEC", "equals": "URINE"}, "reason": "Not plasma"},
+        "note": "plasma only",
+    },
+    {"op": "report_dupes", "args": {"columns": ["USUBJID", "PCTESTCD", "AFRLT"]}},
+]
+
+
+def _put(api, doc):
+    return api.put(f"/api/nca/recipes/{doc['id']}", json={"recipe": doc})
+
+
+def test_editing_a_step_replaces_it_in_place_and_changes_the_hash(api):
+    # #63: Edit saves the whole recipe with one step replaced. The order, the other steps and
+    # their notes stay; the hash changes, which is what makes cleaning, checks and
+    # acknowledgements stale; the source file is not touched.
+    doc = new_recipe(api, steps=STEPS)
+    source = api.study / "source-data" / SOURCE
+    source_bytes = source.read_bytes()
+    before = api.get(f"/api/nca/recipes/{doc['id']}").json()
+
+    edited = copy.deepcopy(before["recipe"])
+    edited["steps"][1] = {
+        "op": "exclude",
+        "args": {"where": {"column": "PCSPEC", "in": ["URINE", "SERUM"]}, "reason": "Not plasma"},
+        "note": "plasma only, revised",
+    }
+    r = _put(api, edited)
+    assert r.status_code == 200, r.text
+    after = r.json()
+    assert after["sha256"] != before["sha256"]
+    steps = after["recipe"]["steps"]
+    assert [s["op"] for s in steps] == ["trim", "exclude", "report_dupes"]
+    assert steps[1]["args"]["where"] == {"column": "PCSPEC", "in": ["URINE", "SERUM"]}
+    assert steps[1]["note"] == "plasma only, revised"
+    assert steps[0] == STEPS[0] and steps[2] == STEPS[2]  # the others are as they were
+    again = api.get(f"/api/nca/recipes/{doc['id']}").json()
+    assert again["sha256"] == after["sha256"] and again["recipe"]["steps"] == steps
+    assert source.read_bytes() == source_bytes
+
+
+def test_an_invalid_edit_is_refused_with_its_step_and_changes_nothing(api):
+    doc = new_recipe(api, steps=STEPS)
+    before = api.get(f"/api/nca/recipes/{doc['id']}").json()
+    bad = copy.deepcopy(before["recipe"])
+    bad["steps"][1]["args"]["where"] = {"column": "NO_SUCH_COLUMN", "equals": "x"}
+    r = _put(api, bad)
+    assert r.status_code == 422
+    assert r.json()["detail"]["step"] == 2 and r.json()["detail"]["code"] == "recipe_invalid"
+    now = api.get(f"/api/nca/recipes/{doc['id']}").json()
+    assert now["sha256"] == before["sha256"] and now["recipe"]["steps"] == before["recipe"]["steps"]
+
+
+def test_saving_an_unchanged_step_keeps_the_hash(api):
+    # Edit then Save without changing anything must not make the checks stale.
+    doc = new_recipe(api, steps=STEPS)
+    before = api.get(f"/api/nca/recipes/{doc['id']}").json()
+    r = _put(api, before["recipe"])
+    assert r.status_code == 200 and r.json()["sha256"] == before["sha256"]

@@ -31,7 +31,7 @@ A *recipe* is the list of cleaning steps for one imported file, kept in order. S
 1. In **1. Source and recipe**, under **Imported file**, choose the file you imported on the **Data** page.
 2. Select **New recipe**, or choose a recipe you made before under **Recipe**. Each one shows how many steps it has.
 3. In **2. Cleaning steps**, choose a step in **Add a step…**, fill in the small form, and select **Add step**. **Note (optional)** lets you say why the step is needed; the note is kept with the recipe.
-4. Use **Up**, **Down** and **Remove** to change the order or take a step out.
+4. Use **Up**, **Down** and **Remove** to change the order or take a step out. Use **Edit** to change a step you already added: its form opens with the values and note filled in, **Save step** replaces it in the same place, and **Cancel** changes nothing. If the change can't be saved, the form stays open with the reason and what you typed. A step that combines several row conditions can't be opened in the form yet; remove it and add it again. Either way the recipe has changed, so apply it and run the checks again.
 
 Every value you type is matched exactly, including spaces and letter case.
 
@@ -202,6 +202,10 @@ Select **Save mapping** to keep your choices. Anything that still blocks is list
 | analyte endpoints mixed | The analyte column keeps more than one endpoint code. | Map the endpoint column itself as the analyte code. |
 
 After you change the recipe, select **Apply to all rows** again, then **Run checks** again.
+
+While you work on the recipe, the blocking findings and warnings of the last check, with their hints, are also shown in a **Findings** panel directly below the step adder in **2. Cleaning steps**. Open it with Enter or Space on its title. It names the analyte and specimen it was checked for and the time. It has no acknowledgement boxes: those stay under **5. Analyte and checks**, and **Back to the full findings and acknowledgements** takes you there.
+
+When you change a step, the mapping or the source, the findings are from an earlier version of the recipe. The panel then says **Out of date**, hides them, and says to apply the recipe and run the checks again. The same message replaces the list under **5. Analyte and checks**, and any acknowledgement you ticked must be given again after the new check.
 
 Other warnings you may see are **lloq varies** (the LLOQ is not the same on every row, which can be right after an assay change), **time negative** (predose samples are normal) and **id usubjid not one to one** (a second subject ID column does not match the subject ID one to one). Notes need no action.
 

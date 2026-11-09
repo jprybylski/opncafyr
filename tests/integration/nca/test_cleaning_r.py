@@ -235,3 +235,34 @@ def test_steps_json_is_valid_json(api, study):
     folder = next((study / ".opncafyr" / "cleaned").glob(f"{doc['id']}-*"))
     meta = json.loads((folder / "meta.json").read_text("utf-8"))
     assert meta["recipe_id"] == doc["id"] and meta["sample_rows"] == 0
+
+
+def test_editing_a_step_leaves_the_earlier_result_stale_and_the_source_alone(api, study):
+    # #63: Edit saves one step in place. The applied result belongs to the old recipe hash,
+    # so it is no longer offered; applying again gives the new one. The source is untouched.
+    source = study / "source-data" / SOURCE
+    source_bytes = source.read_bytes()
+    doc = new_recipe(
+        api,
+        steps=[
+            {"op": "trim", "args": {"columns": ["PCTESTCD"]}, "note": "ids"},
+            {
+                "op": "exclude",
+                "args": {"where": {"column": "PCSPEC", "equals": "URINE"}, "reason": "Not plasma"},
+            },
+        ],
+    )
+    first = apply(api, doc["id"])
+    assert api.get(f"/api/nca/recipes/{doc['id']}/result?kind=full").status_code == 200
+    before = api.get(f"/api/nca/recipes/{doc['id']}").json()
+    edited = before["recipe"]
+    edited["steps"][1]["args"]["reason"] = "Urine is not part of this analysis"
+    r = api.put(f"/api/nca/recipes/{doc['id']}", json={"recipe": edited})
+    assert r.status_code == 200, r.text
+    assert r.json()["sha256"] != before["sha256"]
+    assert api.get(f"/api/nca/recipes/{doc['id']}/result?kind=full").status_code == 409
+    assert api.get(f"/api/nca/recipes/{doc['id']}/analytes").status_code == 409
+    second = apply(api, doc["id"])
+    assert second["summary"]["steps"][1]["op"] == "exclude"
+    assert first["summary"]["source_rows"] == second["summary"]["source_rows"]
+    assert source.read_bytes() == source_bytes

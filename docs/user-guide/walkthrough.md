@@ -157,6 +157,14 @@ For step 11, paste these 16 line numbers into the box, one per line:
 
 Why remove some rows and exclude others? Line 24 and subject `TA-008` are real samples that should not count, so they stay in the data, marked as excluded, with a reason opnca-r can see. The removed rows are not usable as data, so they go to the rejected-row log.
 
+**Fix a step with Edit.** If a step has a wrong value, such as the wrong line number, you don't need to remove it and add it again:
+
+1. Select **Edit** on the step. Its form opens with its values and note filled in, under "Editing step N". The other steps' buttons wait until you finish.
+2. Change the value, then select **Save step**. The step stays in its place. **Cancel** changes nothing. If the recipe can't take the change (for example a later step needs a column this step made), the form stays open with the reason and what you typed.
+3. The recipe has changed, so select **Apply to all rows** again, then run the checks again.
+
+To practise: open step 7, change the line number from `150` to `105`, save, apply and run the checks. The finding for the dose that differs returns, now next to a step that removes the wrong row. Edit step 7 back to `150`.
+
 Then run the recipe:
 
 1. Select **Apply to all rows**.
@@ -168,7 +176,7 @@ Then run the recipe:
 ## Step 7. Check PARENT and acknowledge its warnings
 
 1. In **5. Analyte and checks**, choose `"PARENT"` (now 81 rows) and the specimen `"PLASMA"` (77 rows).
-2. Select **Run checks**. There should be no blocking findings now, and three warnings.
+2. Select **Run checks**. There should be no blocking findings now, and three warnings. A copy of the blocking findings and warnings, with their hints, now also appears under **2. Cleaning steps**, so you can fix the recipe without scrolling back here.
 3. Read each warning, then tick **I have reviewed this and want to go on**:
    - **Warning: lloq varies**: subject `TA-002`'s rows carry an LLOQ of 0.10; all other `PARENT` plasma rows carry 0.05.
    - **Warning: time negative**: subject `TA-003`'s predose sample was taken 15 minutes before the dose (line 38).
