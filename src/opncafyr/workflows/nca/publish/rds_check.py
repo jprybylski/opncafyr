@@ -5,8 +5,10 @@ opnca-r before 0.3.2 saved each formatted table as a flextable that carries its 
 cloud walkthrough a report that included one kept its ``{rpfy}`` placeholder unfilled, and
 the render stopped. The likely reason is that reportifyr 0.4.0 matches a table to its
 placeholder by the paragraph just before the table, and a caption paragraph sits there.
-That is not confirmed (reportifyr is external), so this check only reports what it can see
-in the file and names the observed effect. A report with such a table is not rendered; the
+Rendering the same table with and without a caption confirmed that the caption is what leaves
+the placeholder unfilled (reportifyr 0.4.0, quartifyr 0.3.4); why is still read from the code.
+Reportifyr is external, so the check only reports what it can see in the file and names the
+observed effect. A report with such a table is not rendered; the
 CSV version of the same table, or the deck, can be used instead. The published file is
 never changed: its hash is recorded in the publication.
 

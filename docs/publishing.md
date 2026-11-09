@@ -171,7 +171,8 @@ one publication.
      a flextable, can't be read, or carries a caption. Each is a blocking finding, and
      Render refuses before it starts. Only a status per file is written. The likely cause
      (reportifyr 0.4.0 finds a table by the paragraph before it, and the caption sits
-     there) is read from the code, not confirmed;
+     there) was confirmed with the real tools: the same table with a caption stays unfilled,
+     and without one it is filled;
    - a warning when `report/config.yaml` still says `use_artifact_size: true`. The bundled
      template says `false`: with `true`, reportifyr inserts each figure at its pixel size,
      and opnca-r's 2000 px PNGs come out about 27 inches wide. An existing project's file

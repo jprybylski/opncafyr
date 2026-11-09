@@ -296,7 +296,12 @@ class ReportService(projects.ProjectJobs):
     def _assemble(self, root: Path, publication: dict[str, Any], dest: Path) -> list[str]:
         with self.project_lock(root):
             projects.copy_project(self.project(root), dest, _skip)
-        return projects.copy_publication(root, publication, dest)
+        copied = projects.copy_publication(root, publication, dest)
+        # reportifyr's table step fails on a missing OUTPUTS/tables, so a publication of
+        # figures only could not be rendered (found with the real tools, #62).
+        for folder in projects.OUTPUT_FOLDERS:
+            (dest / projects.OUTPUTS / folder).mkdir(parents=True, exist_ok=True)
+        return copied
 
     def check(self, manager: JobManager, root: Path, timeout_s: float = CHECK_TIMEOUT_S) -> str:
         with self.lock:

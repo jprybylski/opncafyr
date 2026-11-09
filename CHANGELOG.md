@@ -992,7 +992,8 @@ All notable changes to this project are documented here. The format follows
       Check and Render with a message naming the file; use its CSV, or put it in a deck.
       A fixed R program inspects each file (`r/report_rds_check.R`); only a status is
       written. A table that isn't a flextable, or can't be read, is refused too. The cause
-      is read from reportifyr's code and not confirmed on the failing install. opnca-r
+      was confirmed with the real tools (reportifyr 0.4.0, quartifyr 0.3.4): the same table with a
+      caption leaves its placeholder unfilled, and without one it is filled. opnca-r
       0.3.2 leaves the caption off (opnca-r#59), so the refusal now means a run saved by an
       earlier opnca-r, and the message says to make a new run.
     - The render error now names the files whose placeholders stayed unfilled, not just
@@ -1010,8 +1011,17 @@ All notable changes to this project are documented here. The format follows
     (quartifyr#88); the guides say how to put a table on a landscape page. Hashes match
     each release's `SHA256SUMS` and `verify_pins.py --network` passes for both. quartifyr
     0.3.4 was pinned within its 24 hour refresh window: re-verify it after
-    2026-11-10T19:53Z. Not yet run against a real render: a DOCX with a wide table, a
-    landscape section and an opnca-r 0.3.2 formatted table.
+    2026-11-10T19:53Z.
+  - **Checked with the real tools** on a developer machine (macOS, R 4.6.1, Quarto
+    1.10.18; not the container image): a formatted table saved by opnca-r 0.3.2 has no
+    caption and fills its placeholder; the same table with a caption does not. An
+    11-column formatted table is fitted to 6.5 inches with a fixed layout, and a 2000 px
+    figure is no wider than 6.5 inches. New integration tests cover these. A table too
+    wide for a portrait page at 7 pt (14 columns with long header words) makes the strict
+    render fail with quartifyr's message; a landscape section for it was not rendered.
+  - **A publication of figures only now renders.** reportifyr's table step fails on a
+    missing `OUTPUTS/tables`, which the render's staging copy never had when no table was
+    published. The staging copy now always has `figures`, `tables` and `listings`.
   - **Deck: formatted tables.** A formatted table (`.rds`) is a `reportifyr` element (a
     picture), as deckifyr requires; as a `table` element it failed with a content error.
     deckifyr's `E_INTERNAL` now reads as an unexpected error in the deck tool, with the

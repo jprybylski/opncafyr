@@ -333,7 +333,7 @@ def test_render_builds_a_docx_with_a_manifest_of_exact_runs(api, ready):
     assert build["build_id"] == out["build_id"] and sorted(build["runs"]) == sorted([a, b])
     assert build["publication_id"] == pub["publication_id"]
     assert [i["sha256"] for i in build["items"]] == [i["published_sha256"] for i in pub["items"]]
-    assert build["settings"]["status"] == "draft" and build["tools"]["quartifyr"] == "0.3.3"
+    assert build["settings"]["status"] == "draft" and build["tools"]["quartifyr"] == "0.3.4"
     folder = api.study / "report" / "builds" / out["build_id"]
     assert sorted(p.name for p in folder.iterdir()) == [
         "build.json",

@@ -86,6 +86,7 @@ def saved_files(
     mean: bool = True,
     described: bool = False,
     empty_cell: bool = False,
+    formatted: dict[str, bytes] | None = None,
 ) -> dict[str, bytes]:
     tag = f"{analyte} {run_id}"
     files = {
@@ -109,6 +110,7 @@ def saved_files(
     if described:
         for rel in DESCRIBED_EXTRA:
             files[rel] = png(rel) if rel.endswith(".png") else f"{rel} {tag}\n".encode()
+    files |= formatted or {}  # real flextable bytes, for the R-backed tests (#62)
     return files
 
 
@@ -122,13 +124,16 @@ def completed_run(
     mean: bool = True,
     described: bool = False,
     empty_cell: bool = False,
+    formatted: dict[str, bytes] | None = None,
 ) -> tuple[str, Path]:
     """A run of ``analyte`` moved to ``state`` (reviewing or completed) the real way.
 
     ``described``: the artifacts carry opnca-r 0.3.1's ``artifacts.json`` schema-2 fields,
     as ``save.accept`` keeps them (#59); otherwise they are an older save's.
     ``empty_cell``: the summary table has a parameter that couldn't be estimated, written as
-    an empty field, as opnca-r does (#62; deckifyr#96)."""
+    an empty field, as opnca-r does (#62; deckifyr#96).
+    ``formatted``: bytes for named files (such as a real flextable ``.rds``) in place of the
+    stand-ins."""
     (root / ".opncafyr").mkdir(parents=True, exist_ok=True)
     run_id, staging = R.stage_run(root)
     (staging / "input").mkdir()
@@ -143,7 +148,7 @@ def completed_run(
     folder = R.publish_run(staging, run_id)
     R.set_state(folder, "running")
     artifacts = []
-    for rel, data in saved_files(analyte, run_id, mean, described, empty_cell).items():
+    for rel, data in saved_files(analyte, run_id, mean, described, empty_cell, formatted).items():
         path = folder / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)

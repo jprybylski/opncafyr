@@ -119,7 +119,7 @@ def render(args: list[str], here: Path) -> int:
         "missing_metadata": [],
         "inputs": [],
         "versions": {
-            "quartifyr": "0.3.3",
+            "quartifyr": "0.3.4",
             "reportifyr": "0.4.0",
             "quarto": "1.11.9",
             "libreoffice": None,
