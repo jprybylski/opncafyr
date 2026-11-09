@@ -2,19 +2,21 @@
 # Build the opncafyr image locally (#42).
 #
 #   container/build.sh [--full] [--platform linux-x86_64|linux-aarch64] [--tag NAME]
-#                      [--assets DIR] [--no-check]
+#                      [--assets DIR] [--apt-mirror URL] [--no-check]
 #
 # Every build argument comes from runtime/pins.toml (scripts/container_args.py). opnca-r is
 # private: the token is passed as a BuildKit secret, taken from GH_TOKEN or `gh auth token`,
 # and never lands in a layer. With --assets DIR (a folder from scripts/offline/fetch.py,
 # fetched and verified elsewhere) nothing is downloaded and no token is needed.
 # The default platform is this machine's; another one runs under emulation (slow).
+# --apt-mirror takes Ubuntu packages from a mirror (same signatures, same locked versions).
 # Afterwards scripts/container/check_image.sh runs unless --no-check.
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 target=slim
 tag=""
 assets=""
+apt_mirror=""
 check=1
 case "$(uname -m)" in
   arm64 | aarch64) platform=linux-aarch64 ;;
@@ -26,6 +28,7 @@ while (($#)); do
     --platform) platform="$2"; shift ;;
     --tag) tag="$2"; shift ;;
     --assets) assets="$(cd "$2" && pwd)"; shift ;;
+    --apt-mirror) apt_mirror="$2"; shift ;;
     --no-check) check=0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
@@ -48,7 +51,8 @@ done < <(cd "$REPO" && uv run --quiet python scripts/container_args.py build-arg
 argv=(docker buildx build "$REPO" --file "$REPO/container/Dockerfile"
   --platform "$docker_platform" --target "$target" --tag "$tag" --load
   --provenance=false --sbom=false
-  --build-arg "GIT_SHA=$(git -C "$REPO" rev-parse HEAD)" "${build_args[@]}")
+  --build-arg "GIT_SHA=$(git -C "$REPO" rev-parse HEAD)" --build-arg "APT_MIRROR=$apt_mirror"
+  "${build_args[@]}")
 if [[ -n "$assets" ]]; then
   argv+=(--build-context "assets=$assets")
 else

@@ -10,6 +10,15 @@ set -euo pipefail
 lock="$1"
 mapfile -t pkgs < <(grep -v '^#' "$lock" | sed '/^$/d')
 state() { dpkg-query -W -f '${Package}=${Version}\n' | sort; }
+# APT_MIRROR (optional): an Ubuntu archive mirror to use instead of archive.ubuntu.com and
+# security.ubuntu.com, e.g. an internal mirror (#36) or the Azure mirror GitHub's runners
+# use. It changes where the files come from, never what: apt still checks Ubuntu's
+# signatures, and the lock still pins every version. arm64 (ports.ubuntu.com) is unaffected.
+if [[ -n "${APT_MIRROR:-}" ]]; then
+  [[ "$APT_MIRROR" == */ ]] || APT_MIRROR="$APT_MIRROR/"
+  sed -i -e "s|http://archive.ubuntu.com/ubuntu/|$APT_MIRROR|g" \
+    -e "s|http://security.ubuntu.com/ubuntu/|$APT_MIRROR|g" /etc/apt/sources.list.d/ubuntu.sources
+fi
 tmp="$(mktemp -d)"
 state > "$tmp/before"
 export DEBIAN_FRONTEND=noninteractive

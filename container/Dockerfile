@@ -27,10 +27,12 @@ ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE} AS base
 ARG PLATFORM
+# Optional Ubuntu mirror (container/apt/install.sh); not a pin: versions come from the locks.
+ARG APT_MIRROR=
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC
 COPY container/apt/ /opt/opncafyr-apt/
-RUN test -n "${PLATFORM}" && /opt/opncafyr-apt/install.sh "/opt/opncafyr-apt/lock-${PLATFORM}-runtime.txt"
+RUN test -n "${PLATFORM}" && APT_MIRROR="${APT_MIRROR}" /opt/opncafyr-apt/install.sh "/opt/opncafyr-apt/lock-${PLATFORM}-runtime.txt"
 
 FROM base AS fetch
 ARG PLATFORM
@@ -63,9 +65,10 @@ RUN uv build --wheel --quiet --out-dir /wheel && rm -rf /tmp/uv-cache
 
 FROM base AS build
 ARG PLATFORM
+ARG APT_MIRROR=
 ARG R_VERSION
 ARG R_DEB_FILE
-RUN /opt/opncafyr-apt/install.sh "/opt/opncafyr-apt/lock-${PLATFORM}-build.txt"
+RUN APT_MIRROR="${APT_MIRROR}" /opt/opncafyr-apt/install.sh "/opt/opncafyr-apt/lock-${PLATFORM}-build.txt"
 RUN --mount=type=bind,from=assets,target=/assets \
     dpkg -i "/assets/runtime/${R_DEB_FILE}" && test -x "/opt/R/${R_VERSION}/bin/Rscript"
 # The install itself runs with no network, exactly as in the offline CI job (#44). Only
@@ -115,10 +118,11 @@ CMD ["launch", "--container", "--port", "8765", "--workspace", "/workspace"]
 
 FROM slim AS full
 ARG PLATFORM
+ARG APT_MIRROR=
 ARG LIBREOFFICE_FILE
 USER root
 RUN --mount=type=bind,from=assets,target=/assets \
-    /opt/opncafyr-apt/install.sh "/opt/opncafyr-apt/lock-${PLATFORM}-full.txt" \
+    APT_MIRROR="${APT_MIRROR}" /opt/opncafyr-apt/install.sh "/opt/opncafyr-apt/lock-${PLATFORM}-full.txt" \
  && mkdir /tmp/lo \
  && tar --no-same-owner -xzf "/assets/runtime/${LIBREOFFICE_FILE}" -C /tmp/lo --strip-components=1 \
  && dpkg -i /tmp/lo/DEBS/*.deb \

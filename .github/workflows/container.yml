@@ -71,8 +71,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { arch: amd64, platform: linux-x86_64, runner: ubuntu-24.04 }
-          - { arch: arm64, platform: linux-aarch64, runner: ubuntu-24.04-arm }
+          # amd64 runners can't reliably reach archive.ubuntu.com; they use Azure's mirror,
+          # as the runners themselves do. Same signatures, same locked versions.
+          - { arch: amd64, platform: linux-x86_64, runner: ubuntu-24.04, apt_mirror: "http://azure.archive.ubuntu.com/ubuntu/" }
+          - { arch: arm64, platform: linux-aarch64, runner: ubuntu-24.04-arm, apt_mirror: "" }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 150
     permissions:
@@ -111,7 +113,8 @@ jobs:
               --platform "linux/${{ matrix.arch }}" --load --tag "opncafyr:$target" \
               --provenance=false --sbom=false \
               --secret id=gh_token,env=OPNCA_TOKEN \
-              --build-arg "GIT_SHA=$GITHUB_SHA" "${args[@]}" \
+              --build-arg "GIT_SHA=$GITHUB_SHA" --build-arg "APT_MIRROR=${{ matrix.apt_mirror }}" \
+              "${args[@]}" \
               --cache-from "type=registry,ref=$CACHE:${{ matrix.arch }}" \
               --cache-to "type=registry,ref=$CACHE:${{ matrix.arch }},mode=max"
           done

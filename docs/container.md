@@ -75,6 +75,11 @@ the first time on a laptop; most of it is the R library and opnca-r built from s
 Measured (arm64, 2026-11-08): slim is 2672 MiB uncompressed and 788 MiB gzip; full is 3727 MiB
 and 1076 MiB gzip. Both are under GitHub's 2 GiB limit per release file (#43).
 
+`--apt-mirror URL` (build argument `APT_MIRROR`) takes the Ubuntu packages from a mirror,
+such as an internal one (#36) or Azure's, which the amd64 CI runners use because they can't
+reach `archive.ubuntu.com` reliably. Only the source changes: apt still checks Ubuntu's
+signatures, and the locks still pin every version.
+
 ### Re-pinning the Ubuntu packages
 
 `scripts/container/lock_apt.sh linux-x86_64` (and `linux-aarch64`) regenerates the locks
