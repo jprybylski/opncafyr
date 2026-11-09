@@ -1,0 +1,17 @@
+# Build context for container/Dockerfile (#42): an allow-list. Only what the image build
+# reads goes in. Never study data, never tests/ (the smoke test mounts the checkout
+# instead), never local runtimes or caches.
+*
+!src/
+!docs/user-guide/
+!runtime/
+!scripts/offline/
+!container/apt/
+!pyproject.toml
+!uv.lock
+!VERSION
+!README.md
+!.python-version
+**/__pycache__
+**/*.pyc
+src/opncafyr/adapters/example_echo
