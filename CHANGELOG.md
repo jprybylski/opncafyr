@@ -974,6 +974,14 @@ All notable changes to this project are documented here. The format follows
     error after a later request succeeds. The first request can run before a study folder
     is open; that case now says "Open a study folder…" instead of showing an error, and a
     slow earlier request can't overwrite a newer one.
+  - Version history trusts exactly the study folder you opened. In the container the mount
+    is often owned by another user, and Git then refused it ("dubious ownership"). The
+    launcher now writes one `safe.directory` entry, for that folder's resolved path, into
+    its own Git configuration file for the managed gitneighbr only. Never `*`, never a
+    parent folder; the entry is replaced when another study opens and the person's Git
+    name and email in that file are kept. The container also warns at start when the
+    study folder's owner isn't the user running opncafyr, and the cloud container guide
+    says how to match them. Not reproduced here: needs a mount with a different owner.
 - Two offline bundles built from the same pins could differ: the SBOM recorded the
   build time to the second. It now records `SOURCE_DATE_EPOCH`, or the archive's fixed
   entry time (#36).

@@ -342,3 +342,16 @@ def test_manifests_record_the_container_image():
     assert "container_image" not in provenance.base_tools()
     with pytest.raises(ValueError):
         provenance.set_container_image("ghcr.io/x:latest")
+
+
+def test_a_folder_owned_by_someone_else_is_reported_without_a_path(tmp_path, monkeypatch):
+    # Git refuses such a folder ("dubious ownership"); the container start says why (#62).
+    if not hasattr(os, "geteuid"):
+        pytest.skip("POSIX owners only")
+    assert storage.owner_mismatch(tmp_path) is None
+    monkeypatch.setattr(os, "geteuid", lambda: os.stat(tmp_path).st_uid + 1)
+    message = storage.owner_mismatch(tmp_path)
+    assert message is not None
+    assert "--user" in message and "opncafyr-container" in message
+    assert str(tmp_path) not in message
+    assert storage.owner_mismatch(tmp_path / "missing") is None

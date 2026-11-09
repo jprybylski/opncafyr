@@ -112,6 +112,7 @@ def run_controller(
     from opncafyr.core.logs import configure_logging, reset_logging
     from opncafyr.core.registry import DescriptorError, load_descriptors
     from opncafyr.core.security import SecurityConfig
+    from opncafyr.core.storage import owner_mismatch
 
     try:
         tools = load_descriptors()
@@ -182,6 +183,9 @@ def run_controller(
         write_record(state, instance_id=instance_id, port=port)
         if remote is not None:
             print(f"opncafyr {__version__} listening on port {port} (container)", file=sys.stderr)
+            mismatch = owner_mismatch(workspace) if workspace is not None else None
+            if mismatch:
+                print(f"Warning: {mismatch}", file=sys.stderr)
             threading.Thread(
                 target=_print_when_healthy,
                 args=(url, remote, lambda: open_url(remote.public_url, mint_open_token(tokens))),

@@ -108,6 +108,7 @@ unchanged. The adapter needs 0.2.0 or later.
 | [#42](https://github.com/jprybylski/gitneighbr/issues/42) | Launcher policy: groups, protected paths, review labels, send-blocked, `.gitignore` template at setup only | Done (v0.2.0) | #56 |
 | [#43](https://github.com/jprybylski/gitneighbr/issues/43) | Send/Update with a full, preview-bound history check; HTTPS token via env only | Done (v0.2.0); tested against a real HTTPS `git http-backend` | #56 remote |
 | [#44](https://github.com/jprybylski/gitneighbr/issues/44) | `SHA256SUMS` on releases; `clone --`; sanitised PR stderr | Done (v0.2.0) | pins |
+| [#48](https://github.com/jprybylski/gitneighbr/issues/48) | Say when Git refuses the folder because another user owns it (`OWNERSHIP`), instead of `GIT_DIR_INVALID` | Open (filed 2026-11-09). Temporary workaround here: the launcher writes one `safe.directory` entry for the exact study folder into its own `git_config` file (`trust_study_folder`, #62); the container start also warns when the owner differs | #62 |
 
 Pinned as a cellar package (`[packages.gitneighbr]`, 0.2.1: PR #47 removed GitHub wording
 from the managed status summary, found while making the guide's screenshots). Testing on Windows CI also
