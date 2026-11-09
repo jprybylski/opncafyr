@@ -155,7 +155,7 @@ def make_world(
         pins += ["", f"[packages.{pkg}]", f'version = "{ver}"', 'license = "GPL-3.0-or-later"']
         pins += [f'release_url = "{BASE}/{pkg}/"', f"[packages.{pkg}.assets]"]
         pins += [f'"{name}" = "{digest}"']
-    pins += ["", "[packages.deckifyr]", 'version = "0.3.6"', 'license = "GPL-3.0-or-later"']
+    pins += ["", "[packages.deckifyr]", 'version = "0.3.7"', 'license = "GPL-3.0-or-later"']
     if git is not None:
         url, digest = _file(world, "git", GIT_ARCHIVE, git)
         pins += ["", "[optional.git]", 'status = "optional"', "default = true"]

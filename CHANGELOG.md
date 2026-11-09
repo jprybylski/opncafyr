@@ -1000,8 +1000,14 @@ All notable changes to this project are documented here. The format follows
   - **Deck: formatted tables.** A formatted table (`.rds`) is a `reportifyr` element (a
     picture), as deckifyr requires; as a `table` element it failed with a content error.
     deckifyr's `E_INTERNAL` now reads as an unexpected error in the deck tool, with the
-    exception's name, instead of "deckifyr reported an error". The deckifyr 0.3.7 pin (empty
-    CSV cells, deckifyr#96) follows its release.
+    exception's name, instead of "deckifyr reported an error".
+  - **deckifyr 0.3.7 pinned** (`runtime/pins.toml`, the tools lock and `wheels.toml`): a
+    table with an empty header or data cell builds, and the cell stays empty (deckifyr#96,
+    the `IndexError` from the walkthrough). The wheel, sdist and R tarball match the release's
+    `SHA256SUMS`, and `verify_pins.py --network` passes for the section. Decks with
+    tables no longer need the figures-only workaround: the offline flow's deck holds tables
+    again (the `offline` CI job is the first run of that), and the guides' "known issue"
+    text and the walkthrough's figures-only publication are gone.
   - **Revise a publication.** **Revise** on the Publications card ticks that publication's
     files in the curator, so you can add or remove files and publish a new, separate
     publication. It records `revises` (optional, additive in `publication-v1`; also accepted

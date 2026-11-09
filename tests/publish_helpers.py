@@ -81,13 +81,19 @@ DESCRIBED_EXTRA = (
 
 
 def saved_files(
-    analyte: str, run_id: str, mean: bool = True, described: bool = False
+    analyte: str,
+    run_id: str,
+    mean: bool = True,
+    described: bool = False,
+    empty_cell: bool = False,
 ) -> dict[str, bytes]:
     tag = f"{analyte} {run_id}"
     files = {
         "analysis.R": b'df <- read.csv("input/analysis.csv")\n',
         "analysis-record.json": b'{"data": {}}\n',
-        "results/opnca-summary.csv": f"metric,mean,note\ncmax,1.5,{tag}\n".encode(),
+        "results/opnca-summary.csv": (
+            f"metric,mean,note\ncmax,1.5,{tag}\n" + (f"auc_inf,,{tag}\n" if empty_cell else "")
+        ).encode(),
         "results/opnca-parameters-wide.csv": f"USUBJID,cmax,note\nS-001,1.5,{tag}\n".encode(),
         "results/opnca-parameters-long.csv": b"profile_id,metric,value\nS-001,cmax,1\n",
         "results/figures/profiles-linear.png": png(f"linear {tag}"),
@@ -115,11 +121,14 @@ def completed_run(
     replay: str = "passed",
     mean: bool = True,
     described: bool = False,
+    empty_cell: bool = False,
 ) -> tuple[str, Path]:
     """A run of ``analyte`` moved to ``state`` (reviewing or completed) the real way.
 
     ``described``: the artifacts carry opnca-r 0.3.1's ``artifacts.json`` schema-2 fields,
-    as ``save.accept`` keeps them (#59); otherwise they are an older save's."""
+    as ``save.accept`` keeps them (#59); otherwise they are an older save's.
+    ``empty_cell``: the summary table has a parameter that couldn't be estimated, written as
+    an empty field, as opnca-r does (#62; deckifyr#96)."""
     (root / ".opncafyr").mkdir(parents=True, exist_ok=True)
     run_id, staging = R.stage_run(root)
     (staging / "input").mkdir()
@@ -134,7 +143,7 @@ def completed_run(
     folder = R.publish_run(staging, run_id)
     R.set_state(folder, "running")
     artifacts = []
-    for rel, data in saved_files(analyte, run_id, mean, described).items():
+    for rel, data in saved_files(analyte, run_id, mean, described, empty_cell).items():
         path = folder / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)

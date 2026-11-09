@@ -42,9 +42,9 @@ Select **Check**. The check runs on a copy that holds exactly the publication's 
 
 **Check** and **Build** wait while the deck editor or the fragment editor has unsaved changes. Save them, or close the deck editor.
 
-## Known issue: tables with empty cells
+## Tables with empty cells
 
-This version of the deck tool can't build a slide from a table with an empty cell. opnca-r's tables have empty cells whenever a parameter can't be calculated, for example a profile without λz. The build then fails with "IndexError: tuple index out of range". Until a fixed version ships, publish the figures on their own for the deck (untick the tables on **Publish**) and set the deck up from that publication. The report has no such limit.
+A table with an empty cell builds: the cell stays empty on the slide. opnca-r's tables have empty cells whenever a parameter can't be calculated, for example a profile without λz. A formatted table (`.rds`) goes on its slide as a picture.
 
 ## Build and download
 

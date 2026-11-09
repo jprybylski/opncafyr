@@ -11,7 +11,7 @@
 - **Preview probe.** LibreOffice previews are offered only when a short conversion
   finishes in time (docs/spikes/libreoffice.md).
 
-deckifyr is pinned in ``runtime/pins.toml`` (0.3.6). Executables come from the installed
+deckifyr is pinned in ``runtime/pins.toml`` (0.3.7). Executables come from the installed
 runtime, never from workspace content. Deck logic stays in deckifyr. Deck projects are
 treated as trusted user-authored projects: Quarto fragments and ``.rds`` flextables may
 run R (docs/plan.md, risk table).
@@ -217,7 +217,7 @@ def _doc(text: str) -> dict[str, Any] | None:
 
 
 def parse_cli(code: int, stdout: str, stderr: str, base: Path | None = None) -> CliResult:
-    """Decide a CLI run from its exit code and JSON (deckifyr 0.3.6 contract).
+    """Decide a CLI run from its exit code and JSON (deckifyr 0.3.7 contract).
 
     Success is exit 0 with ``{"status": "ok", "result_version": 1}`` on stdout. A deckifyr
     error is JSON on stderr. Usage errors (exit 2), signals and crashes print no JSON:

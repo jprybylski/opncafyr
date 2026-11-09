@@ -145,8 +145,10 @@ the standard user with the network blocked. It uses the installed launcher's Pyt
 runtime: macOS leg 7b under `sandbox-exec`, the Windows `flow` leg under the firewall
 rule. Any logged attempt fails the job.
 
-The deck in the flow has figures only for now: deckifyr 0.3.6 can't build a table with an
-empty cell ([deckifyr#96](https://github.com/jprybylski/deckifyr/issues/96)).
+The deck in the flow holds tables as well as the figure. opnca-r's tables have empty cells,
+which deckifyr could not build before 0.3.7
+([deckifyr#96](https://github.com/jprybylski/deckifyr/issues/96)). Not run locally when the
+pin changed: the `offline` CI job is the first run of it.
 
 Desktop platforms are covered by the install spikes' offline variants (#6, #7) and, later,
 network-disabled VMs in the install matrix (#37).

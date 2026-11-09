@@ -117,8 +117,7 @@ The deck is a deckifyr project in the study folder's `deck` folder. You edit its
   <figcaption>The deck card after the deck has been set up. Without LibreOffice, "with slide previews" can't be ticked.</figcaption>
 </figure>
 
-{: .warning }
-> **Known issue: tables with empty cells.** This version of the deck tool can't build a slide from a table that has an empty cell. opnca-r's tables have empty cells whenever a parameter can't be calculated, for example a profile without λz (the terminal elimination rate constant). The build fails with "IndexError: tuple index out of range". Until a fixed version ships, make a publication with the figures only (untick the tables on **Publish**) and set the deck up from it. The report has no such limit.
+A table with an empty cell builds: the cell stays empty on the slide. opnca-r's tables have empty cells whenever a parameter can't be calculated, for example a profile without λz (the terminal elimination rate constant). A formatted table (`.rds`) goes on its slide as a picture.
 
 ### Step 1. Set up the deck
 
@@ -179,7 +178,7 @@ Otherwise the card lists **Deck check findings**, each marked **Blocks** or **Wa
 > "The build finished." A new row in the builds table, with a **Download PPTX** link.
 
 {: .fix }
-> **"IndexError: tuple index out of range"** — see the known issue above: build the deck from a figures-only publication.
+> **"unexpected error in the deck tool"** — see [Troubleshooting]({{ '/guides/troubleshooting/' | relative_url }}); make a support bundle.
 >
 > **"with slide previews" is greyed out ("LibreOffice is not installed.")** — not a fault. Decks build without previews. Whoever supports your install can add LibreOffice with the installer's `--with-libreoffice` option.
 

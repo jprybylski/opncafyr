@@ -109,7 +109,7 @@ If the analyte you want shows no rows, check its exact text. `"METAB"` and `"MET
 A failed build keeps nothing, so you can try again as often as you need.
 
 {: .fix }
-> **A deck build stops with "IndexError: tuple index out of range"** — this is a known issue in this version of the deck tool: it can't put a table with an empty cell on a slide. Build the deck from a publication with figures only. See [Build reports and decks]({{ '/guides/reports-and-decks/' | relative_url }}).
+> **A deck build stops with "unexpected error in the deck tool"** — the deck tool failed on something it didn't expect, not on your settings. Nothing is recorded for a failed build. Make a support bundle and include the message. Tables with empty cells build; they aren't the cause.
 
 ## Version history won't set up, save or send
 

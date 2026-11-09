@@ -580,10 +580,10 @@ sha256 = "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
 
 [[tools.windows-x86_64]]
 name = "deckifyr"
-version = "0.3.6"
-file = "deckifyr-0.3.6-py3-none-any.whl"
-url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.6/deckifyr-0.3.6-py3-none-any.whl"
-sha256 = "25b150a834249c2d63bd86b629ef92715be4aafa98d029bf1c9bae7328e82328"
+version = "0.3.7"
+file = "deckifyr-0.3.7-py3-none-any.whl"
+url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/deckifyr-0.3.7-py3-none-any.whl"
+sha256 = "9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe"
 
 [[tools.windows-x86_64]]
 name = "fastapi"
@@ -734,10 +734,10 @@ sha256 = "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
 
 [[tools.macos-arm64]]
 name = "deckifyr"
-version = "0.3.6"
-file = "deckifyr-0.3.6-py3-none-any.whl"
-url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.6/deckifyr-0.3.6-py3-none-any.whl"
-sha256 = "25b150a834249c2d63bd86b629ef92715be4aafa98d029bf1c9bae7328e82328"
+version = "0.3.7"
+file = "deckifyr-0.3.7-py3-none-any.whl"
+url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/deckifyr-0.3.7-py3-none-any.whl"
+sha256 = "9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe"
 
 [[tools.macos-arm64]]
 name = "fastapi"
@@ -888,10 +888,10 @@ sha256 = "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
 
 [[tools.macos-x86_64]]
 name = "deckifyr"
-version = "0.3.6"
-file = "deckifyr-0.3.6-py3-none-any.whl"
-url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.6/deckifyr-0.3.6-py3-none-any.whl"
-sha256 = "25b150a834249c2d63bd86b629ef92715be4aafa98d029bf1c9bae7328e82328"
+version = "0.3.7"
+file = "deckifyr-0.3.7-py3-none-any.whl"
+url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/deckifyr-0.3.7-py3-none-any.whl"
+sha256 = "9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe"
 
 [[tools.macos-x86_64]]
 name = "fastapi"

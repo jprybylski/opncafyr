@@ -52,10 +52,9 @@ ANALYTE_COLUMN = N.EXPECTED["standard_setup"]["mapping"]["ANALYTE"]
 # opnca-r's page draws its figures in the browser and sends them with the save; there is
 # no browser here, so a stand-in PNG goes in its place. The tables are opnca-r's own.
 FIGURE = "profiles-linear"
-# TEMPORARY (jprybylski/deckifyr#96): deckifyr 0.3.6 fails to build a table with an empty
-# cell, and opnca-r's tables have them. Until a fixed deckifyr is pinned, the deck gets a
-# publication of each run's figure only; the report keeps the tables.
-DECK_ITEMS = (FIGURE,)
+# The deck gets the tables too: opnca-r's tables have empty cells, which deckifyr could not
+# build before 0.3.7 (jprybylski/deckifyr#96), so a deck table is part of this check.
+DECK_ITEMS = ("summary", "listing", FIGURE)
 
 
 class FlowError(RuntimeError):

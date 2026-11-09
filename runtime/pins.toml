@@ -170,22 +170,23 @@ r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.deckifyr]
 license = "GPL-3.0-or-later"
-version = "0.3.6"
+version = "0.3.7"
 source = "github:jprybylski/deckifyr"
-release_url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.6/"
+release_url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/"
 extras = ["web", "preview"]
 # Installed as a wheel into [python_envs.tools]; that uv.lock pins it by this URL and
 # hash, and pins every transitive dependency (the wheel's own are lower bounds only).
 # v0.3.5 (2026-11-06) added the request guard, trust policy and atomic builds (#88-#91).
 # v0.3.6 (2026-11-07, tag dccb088) adds offline mode for the R wrappers and BOM-tolerant
 # project files (#93, #94). Its release workflow no longer re-tags or replaces a release.
-wheel = "deckifyr-0.3.6-py3-none-any.whl"
+# v0.3.7 (2026-11-09) builds a table with an empty cell (#96).
+wheel = "deckifyr-0.3.7-py3-none-any.whl"
 
 [packages.deckifyr.assets]
-"deckifyr-0.3.6-py3-none-any.whl" = "25b150a834249c2d63bd86b629ef92715be4aafa98d029bf1c9bae7328e82328"
-"deckifyr-0.3.6.tar.gz" = "c4f4295aace89591d3ae48e3bce959205b1c953b9c02fb0006aa44906225b51e"
-"deckifyr_0.3.6.tar.gz" = "051684c94686a6581df7e9313a47a4e389911c91d70d8842c8e80c35a816aab1"  # R wrapper, not installed
-"SHA256SUMS" = "46054da5eba9d3d8ebdcb772c21824a0bd034273b9cfea6ae90ed9a3fea2bc66"
+"deckifyr-0.3.7-py3-none-any.whl" = "9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe"
+"deckifyr-0.3.7.tar.gz" = "00632691aa6eda327514cccd821999b94dc6b73a6d8d0af6a372cad65141d5d3"
+"deckifyr_0.3.7.tar.gz" = "86555d3f65c4a126195e2b58da06a5b80b00b051f12a93ef0b8d0c0356138d3b"  # R wrapper, not installed
+"SHA256SUMS" = "a769cdac83c45e1cb512e17a64218b246afec928a9480987b2a7e3e438241f54"
 
 [packages.quartifyr]
 license = "GPL-3.0-or-later"

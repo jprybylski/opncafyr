@@ -237,14 +237,11 @@ In **4. Report (DOCX)**:
 
 ## Step 14. Build the PowerPoint deck
 
-**Known issue:** the deck tool in this version can't build a slide from a table that has an empty cell, and this exercise's tables have some (subject `TA-008` has no values, and some METAB profiles have no λz). The build would stop with "IndexError: tuple index out of range". Until a fixed version ships, give the deck its own publication with the figures only:
+The deck uses the same publication as the report, `PARENT and METAB`. Some of this exercise's tables have empty cells (subject `TA-008` has no values, and some METAB profiles have no λz): they stay empty on their slides.
 
-1. On **Publish**, in **1. Choose tables and figures**, untick the **Parameter summary** and the **Individual parameter listing** in both run boxes. Keep the figures ticked.
-2. Under **Label (optional)**, type `Figures for the deck`, select **Check**, then **Publish**. The figures were already published in Step 12, so **Check** shows them as **Already published (same bytes)**: the new publication reuses the same files.
+In **5. Deck (PPTX)**:
 
-Then, in **5. Deck (PPTX)**:
-
-1. Under **Publication**, choose `Figures for the deck`.
+1. Under **Publication**, choose `PARENT and METAB`.
 2. Select **Set up deck** and wait for it to finish. The button then changes to **Use this publication**, and **Edit fragments** appears. If you already set up a deck from another publication, the button reads **Use this publication**: select it and choose **Replace presentation.yaml**.
 3. If you like, select **Open editor**. The deckifyr editor opens under **Apps** on the left. Double-click the title text on the first slide, type a new title, click outside the text, and select **Save** at the top of the editor. Then select **Publish** on the left and select **Close editor**.
 4. Select **Check**. The card should say "The last check found nothing to fix."

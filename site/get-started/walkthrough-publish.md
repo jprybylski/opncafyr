@@ -69,20 +69,11 @@ When you open the report, Word may ask whether to update fields. That is expecte
 
 ## Step 14. Build the PowerPoint deck
 
-{: .warning }
-> **Known issue:** the deck tool in this version can't build a slide from a table that has an empty cell, and this exercise's tables have some (subject `TA-008` has no values, and some METAB profiles have no λz). The build would stop with "IndexError: tuple index out of range". Until a fixed version ships, give the deck its own publication with the figures only. The Word report has no such limit.
+The deck uses the same publication as the report, `PARENT and METAB`. Some of this exercise's tables have empty cells (subject `TA-008` has no values, and some METAB profiles have no λz): they stay empty on their slides.
 
-First, publish the figures on their own:
+In **5. Deck (PPTX)**:
 
-1. On **Publish**, in **1. Choose tables and figures**, untick the **Parameter summary** and the **Individual parameter listing** in both run boxes. Keep the figures ticked.
-2. Under **Label (optional)**, type `Figures for the deck`, select **Check**, then **Publish**.
-
-{: .expect }
-> The figures were already published in Step 12, so **Check** shows them as **Already published (same bytes)**: the new publication reuses the same files.
-
-Then, in **5. Deck (PPTX)**:
-
-1. Under **Publication**, choose `Figures for the deck`.
+1. Under **Publication**, choose `PARENT and METAB`.
 2. Select **Set up deck** and wait for it to finish. The button then changes to **Use this publication**, and **Edit fragments** appears. If you already set up a deck from another publication, the button reads **Use this publication**: select it and choose **Replace presentation.yaml**.
 3. If you like, select **Open editor**. The deckifyr editor opens under **Apps** on the left. Double-click the title text on the first slide, type a new title, click outside the text, and select **Save** at the top of the editor. Then select **Publish** on the left and select **Close editor**.
 4. Select **Check**.
@@ -100,7 +91,7 @@ Then, in **5. Deck (PPTX)**:
 > - After **Build**, the build appears in the table, with when it was made, the publication and the runs it used.
 
 {: .fix }
-> - **The build stops with "IndexError: tuple index out of range"** — the deck's publication includes a table. Close the deck editor if it is open, then choose `Figures for the deck` under **Publication** and select **Use this publication**; if the app asks, choose **Replace presentation.yaml**. Then **Check** and **Build** again.
+> - **The build stops with a message about an unexpected error in the deck tool** — make a support bundle (see [Troubleshooting]({{ '/guides/troubleshooting/' | relative_url }})). Nothing is recorded for a failed build.
 > - **Check or Build waits** — the deck editor or the fragment editor has unsaved changes. Save them, or close the deck editor.
 > - **The editor's own Build button** makes a draft for you to look at. The app does not record it; only **Build** on the **Publish** page makes a recorded build.
 

@@ -54,7 +54,7 @@ Every file below is pinned to an exact version and checked against a fingerprint
 | opnca-r | 0.3.1 | the NCA calculations |
 | quartifyr | 0.3.3 | building the Word report |
 | reportifyr | 0.4.0 | report footnotes from the description files |
-| deckifyr | 0.3.6 | the deck editor and building the PowerPoint deck |
+| deckifyr | 0.3.7 | the deck editor and building the PowerPoint deck |
 | pyro | 0.1.1 | a helper package that reportifyr and quartifyr need |
 
 The R packages the tools depend on come from a fixed, dated snapshot and are installed into the app's private R library. opnca-r is installed from a ready-built package for your platform, so a normal install compiles nothing.

@@ -44,7 +44,7 @@ Select assets by `manifest.json` fields, never by file name. Since v0.2.7 every 
 ## jprybylski/deckifyr (public)
 
 #82–#86 were released in v0.3.4 (PR #87), #88–#91 in v0.3.5 (PR #92, 2026-11-06) and
-#93–#94 in v0.3.6 (PR #95, 2026-11-07). All were reviewed. Remaining gaps are handled in
+#93–#94 in v0.3.6 (PR #95, 2026-11-07) and #96 in v0.3.7 (2026-11-09). All were reviewed except v0.3.7, which was pinned after its asset hashes matched the release's `SHA256SUMS` and a diff of the fix. Remaining gaps are handled in
 our adapter (#33).
 
 | Issue | What | Status | Needed by |
@@ -59,7 +59,7 @@ our adapter (#33).
 | [#90](https://github.com/jprybylski/deckifyr/issues/90) | Atomic PPTX, previews and manifest; JSON for every `--json` failure | Done (v0.3.5); argparse errors and signals print no JSON; stale preview files can remain | Gate 3 |
 | [#91](https://github.com/jprybylski/deckifyr/issues/91) | Releases can't change after publishing; small contract gaps | Done (v0.3.5); GitHub's immutable-releases setting is still off | Gate 0 pins |
 | [#93](https://github.com/jprybylski/deckifyr/issues/93) | Offline mode for the R wrappers (`uv run --no-sync`) and `init --from-repo` | Done (v0.3.6); also adds `python_env` and the web/preview packages in the R-written group. The launcher still calls the Python CLI directly | Gate 3 (#33), offline (#44) |
-| [#96](https://github.com/jprybylski/deckifyr/issues/96) | Build fails with `IndexError` when a table cell is empty (opnca-r's tables have empty cells) | Open (filed 2026-11-07, found by the offline flow, #51). Until it is pinned, the offline flow's deck has figures only (`scripts/offline/flow_check.py`, labelled temporary); a real deck with a published table fails to build | Gate 3 |
+| [#96](https://github.com/jprybylski/deckifyr/issues/96) | Build fails with `IndexError` when a table cell is empty (opnca-r's tables have empty cells) | Done (v0.3.7, 2026-11-09), pinned in #62. Empty header and data cells stay empty in the PPTX. The offline flow's deck holds tables again (`scripts/offline/flow_check.py`). A formatted `.rds` table still has to be a `reportifyr` element, not `table`: that is the adapter's job (#62) | Gate 3 |
 | [#94](https://github.com/jprybylski/deckifyr/issues/94) | Accept project YAML that starts with a UTF-8 BOM | Done (v0.3.6); all project YAML/JSON/CSV/QMD reads drop a BOM, and reads no longer fall back to the Windows locale encoding | Gate 3 |
 | [#97](https://github.com/jprybylski/deckifyr/issues/97) | Record project-relative paths in `deck-manifest.json` | Open (filed 2026-11-08, found by the container image check, #42). Its input, element and output paths are absolute, so a deck build names the folder it was built in (a container's `/workspace`, or a user's home folder). Until it is pinned, `scripts/container/check_image.sh` excepts that one file from the path scan (labelled temporary); our own manifests are relative | #42 |
 
