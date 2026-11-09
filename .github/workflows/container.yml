@@ -12,9 +12,8 @@ name: container
 
 on:
   push:
-    # TEMPORARY (#42): the feature branch, to run the first build before merging.
-    # Remove it before merging; only main and tags may publish.
-    branches: [main, feat/42-cloud-container]
+    # Only main and tags publish.
+    branches: [main]
     tags: ["v*"]
     paths:
       - container/**
