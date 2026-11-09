@@ -107,6 +107,19 @@ written. The same file published again reuses the existing copy and its sidecar.
 record is written last. If publishing is interrupted, the files already copied are listed
 as **not recorded** under "Published files", and reports and decks never use them.
 
+### Revising a publication (#62)
+
+A publication is never edited. To add or remove files, **Revise** on the Publications card
+ticks that publication's files in the curator; you change the selection and publish it
+like any other. `POST /api/nca/publications` takes an optional `revises` (a recorded
+publication's id, which must exist), and the new record carries it as an optional
+`revises` field of `publication-v1` (additive; older records stay valid). It is
+informational: the earlier record and its files are not touched, and a report or deck
+bound to it stays bound, with its builds, until you choose the new publication there
+(`POST /api/nca/report` or `/deck`, which asks first if you edited the text). Files both
+publications list keep one copy. Files only the earlier one lists stay in `OUTPUTS/` and
+remain recorded by it.
+
 ### Metadata sidecars
 
 reportifyr adds footnotes from a sidecar: the source script, notes and abbreviations. It

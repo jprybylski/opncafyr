@@ -355,3 +355,58 @@ def test_published_names_are_deterministic(study):
         f"OUTPUTS/figures/drug-a_{run_id}_profiles-linear.png"
     )
     assert os.path.basename(C.sidecar_path("OUTPUTS/figures/x.png")) == "x_png_metadata.json"
+
+
+# --- revising a publication (#62) --------------------------------------------------------
+
+
+def _pub_bytes(api, publication_id: str) -> bytes:
+    return (api.study / ".opncafyr" / "publications" / f"{publication_id}.json").read_bytes()
+
+
+def test_a_revision_is_a_new_publication_and_leaves_the_earlier_one_alone(api):
+    run_id, _ = completed_run(api.study)
+    first = post(api, picks(run_id, ("summary", "profiles-linear"))).json()["publication"]
+    before = _pub_bytes(api, first["publication_id"])
+    files_before = {p.name for p in (api.study / "OUTPUTS").rglob("*") if p.is_file()}
+
+    # Drop one file, add two: the explicit selection decides, nothing is inferred.
+    chosen = picks(run_id, ("summary", "listing", "profiles-log"))
+    r = post(api, chosen, revises=first["publication_id"], label="Revised")
+    assert r.status_code == 201, r.text
+    second = r.json()["publication"]
+    validate(second, "publication-v1")
+    assert second["publication_id"] != first["publication_id"]
+    assert second["revises"] == first["publication_id"] and second["label"] == "Revised"
+    assert {i["artifact"] for i in second["items"]} == {"summary", "listing", "profiles-log"}
+
+    # The earlier record is byte-for-byte what it was, and its files are still in place.
+    assert _pub_bytes(api, first["publication_id"]) == before
+    earlier = api.get(f"/api/nca/publications/{first['publication_id']}").json()
+    assert earlier["changed"] == [] and "revises" not in earlier["publication"]
+    assert files_before <= {p.name for p in (api.study / "OUTPUTS").rglob("*") if p.is_file()}
+    # A file both publications list keeps one copy and the same hash.
+    keep = lambda doc: next(i for i in doc["items"] if i["artifact"] == "summary")  # noqa: E731
+    assert keep(first)["published_sha256"] == keep(second)["published_sha256"]
+    listed = api.get("/api/nca/publications").json()["publications"]
+    assert {p["publication_id"] for p in listed} == {
+        first["publication_id"],
+        second["publication_id"],
+    }
+
+
+def test_a_revision_must_name_a_publication_that_exists(api):
+    run_id, _ = completed_run(api.study)
+    r = post(api, picks(run_id, ("summary",)), revises="pub-20260101T000000Z-abcd")
+    assert r.status_code == 404
+    assert not list((api.study / ".opncafyr" / "publications").glob("*.json"))
+    assert post(api, picks(run_id, ("summary",)), revises="not-an-id").status_code == 422
+
+
+def test_a_revision_with_nothing_selected_is_refused(api):
+    run_id, _ = completed_run(api.study)
+    first = post(api, picks(run_id, ("summary",))).json()["publication"]
+    r = post(api, [], revises=first["publication_id"])
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "nothing_selected"
+    listed = api.get("/api/nca/publications").json()["publications"]
+    assert [p["publication_id"] for p in listed] == [first["publication_id"]]

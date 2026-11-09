@@ -132,3 +132,47 @@ def test_a_failed_publications_list_does_not_outlive_a_later_success(published_p
     publications.get_by_role("table").wait_for()  # the home study already lists one
     assert publications.get_by_text("Not ready yet.").count() == 0
     assert publications.get_by_text("Error:").count() == 0
+
+
+def test_revise_a_publication_makes_a_new_one_and_leaves_the_first(published_page, home):
+    # #62: add or remove files after publishing by starting a new publication from an
+    # explicit selection. The first publication, and anything built from it, is unchanged.
+    page, run_id = published_page
+    curator = page.locator("#nca-curator")
+    curator.get_by_text(run_id).wait_for()
+    curator.get_by_role("button", name="Check").click()
+    curator.get_by_text("6 file(s) ready to publish.").wait_for()
+    curator.get_by_role("button", name="Publish").click()
+    done = curator.get_by_text(re.compile(r"Recorded pub-"))
+    done.wait_for()
+    first = re.search(r"pub-\d{8}T\d{6}Z-[0-9a-f]{4}", done.inner_text()).group(0)
+    first_file = home.study / ".opncafyr" / "publications" / f"{first}.json"
+    before = first_file.read_bytes()
+
+    publications = page.locator("#nca-publications")
+    publications.get_by_text(first).wait_for()
+    publications.get_by_role("button", name=re.compile(f"Revise {first}")).click()
+    note = curator.get_by_text(re.compile(f"Revising {first}"))
+    note.wait_for()
+    assert "6 of its 6 file(s) are ticked" in curator.inner_text()
+    boxes = curator.get_by_role("checkbox")
+    assert sum(boxes.nth(i).is_checked() for i in range(boxes.count())) == 6
+    # Remove one file and add the optional boxplot, then check and publish.
+    curator.get_by_role(
+        "checkbox", name=re.compile("Individual concentration–time profiles \\(log\\)")
+    ).uncheck()
+    curator.get_by_role("checkbox", name=re.compile("Boxplot", re.I)).first.check()
+    publish = curator.get_by_role("button", name="Publish")
+    assert publish.is_disabled()  # the new selection has to be checked first
+    curator.get_by_role("button", name="Check").click()
+    curator.get_by_text("6 file(s) ready to publish.").wait_for()
+    publish.click()
+    revised = curator.get_by_text(re.compile(rf"It revises {first}"))
+    revised.wait_for()
+    second = re.search(r"Recorded (pub-\d{8}T\d{6}Z-[0-9a-f]{4})", curator.inner_text()).group(1)
+    assert second != first
+    assert curator.get_by_text(re.compile("Revising pub-")).count() == 0  # revising ended
+    publications.get_by_text(second).wait_for()
+    assert publications.get_by_text(first).count() == 1
+    assert first_file.read_bytes() == before
+    assert page.errors == []

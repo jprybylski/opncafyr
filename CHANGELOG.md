@@ -1002,6 +1002,13 @@ All notable changes to this project are documented here. The format follows
     deckifyr's `E_INTERNAL` now reads as an unexpected error in the deck tool, with the
     exception's name, instead of "deckifyr reported an error". The deckifyr 0.3.7 pin (empty
     CSV cells, deckifyr#96) follows its release.
+  - **Revise a publication.** **Revise** on the Publications card ticks that publication's
+    files in the curator, so you can add or remove files and publish a new, separate
+    publication. It records `revises` (optional, additive in `publication-v1`; also accepted
+    by `POST /api/nca/publications`). The earlier publication, its files, and the reports and
+    decks bound to it stay as they were; a report or deck changes publication only when you
+    choose it there. Files whose run can no longer be published are left out, and the card
+    says how many.
 - Two offline bundles built from the same pins could differ: the SBOM recorded the
   build time to the second. It now records `SOURCE_DATE_EPOCH`, or the archive's fixed
   entry time (#36).

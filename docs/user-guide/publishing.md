@@ -56,6 +56,16 @@ If publishing is interrupted, the files already copied are not part of any publi
 
 This card lists every publication: its ID, label, analytes, number of files and when it was made. A report or deck is built from one publication.
 
+### Add or remove files: revise a publication
+
+A publication never changes. To add or remove files, make a new one from it:
+
+1. In the **Publications** table, select **Revise** on the publication to start from.
+2. The **Choose tables and figures** card ticks that publication's files. Tick or untick files, including files from other completed runs. Files whose run can't be published any more are left out, and the card says how many.
+3. Select **Check**, then **Publish**. The message says "It revises pub-…".
+
+The new publication has its own ID and is a separate record that says which publication it started from. The earlier publication, its files, and every report or deck build made from it stay exactly as they were. A report or deck moves to the new publication only when you choose it there with **Use this publication**. **Stop revising** returns the card to its usual selection.
+
 ## 3. Published files
 
 Select **Check published files** to check everything in `OUTPUTS`: that each file has its description file, and that they still match. The card lists any problem, with **Blocks** or **Warning**. Run this check if you suspect a file in `OUTPUTS` was changed.

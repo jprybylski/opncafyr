@@ -397,6 +397,32 @@ def test_a_changed_publication_is_refused(api, ready):
         assert r.status_code == 409 and r.json()["detail"]["code"] == "publication_changed"
 
 
+def test_a_revision_does_not_move_the_report_or_change_its_builds(api, ready):
+    # #62: the report moves to a revised publication only when asked.
+    pub, a, b = ready
+    mode(api, "ok")
+    out, job = render(api)
+    assert job["state"] == "completed", job["message"]
+    before = api.get("/api/nca/report").json()
+    build_file = api.study / "report" / "builds" / out["build_id"] / "build.json"
+    recorded = build_file.read_bytes()
+
+    r = api.post(
+        "/api/nca/publications",
+        json={"items": picks(a, ("summary",)), "revises": pub["publication_id"]},
+    )
+    assert r.status_code == 201, r.text
+    revised = r.json()["publication"]
+
+    after = api.get("/api/nca/report").json()
+    assert after["binding"]["publication_id"] == pub["publication_id"] != revised["publication_id"]
+    assert [x["build_id"] for x in after["builds"]] == [x["build_id"] for x in before["builds"]]
+    assert build_file.read_bytes() == recorded
+    # Binding the report to the revision is the existing, deliberate step.
+    rebind = api.post("/api/nca/report", json={"publication_id": revised["publication_id"]})
+    assert rebind.status_code == 200, rebind.text
+
+
 def test_rebinding_over_an_edited_report_asks_first(api, ready):
     pub, a, _ = ready
     qmd = api.study / "report" / "report.qmd"

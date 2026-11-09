@@ -83,6 +83,8 @@ class PublishBody(BaseModel):
     items: list[PickBody] = Field(max_length=curator.MAX_ITEMS)
     dry_run: bool = False
     label: str | None = Field(default=None, max_length=200)
+    # The recorded publication this one revises (#62); the earlier one stays as it is.
+    revises: str | None = Field(default=None, pattern=r"^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$")
 
 
 def mount(app: FastAPI, ctx: Context) -> None:
@@ -119,7 +121,7 @@ def mount(app: FastAPI, ctx: Context) -> None:
         try:
             if body.dry_run:
                 return {"plan": curator.plan(root, picks, bundled_footnotes()).to_dict()}
-            doc = curator.publish(root, picks, bundled_footnotes(), body.label)
+            doc = curator.publish(root, picks, bundled_footnotes(), body.label, body.revises)
         except curator.PublishError as exc:
             raise failure(exc) from None
         return JSONResponse({"publication": doc}, status_code=201)
