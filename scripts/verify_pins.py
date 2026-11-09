@@ -165,6 +165,7 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
             errors.append(f"[packages.{pkg}] is missing")
     errors += _check_source_build(pins, supported)
     errors += _check_optional(pins)
+    errors += _check_container(pins, root)
 
     errors += _check_r_packages(pins, supported, root, assets)
     errors += _check_python_envs(pins, root)
@@ -193,6 +194,54 @@ def _check_source_build(pins: dict[str, Any], supported: list[str]) -> list[str]
     for platform in supported:
         if platform.startswith("windows") and platform not in rtools.get("assets", {}):
             errors.append(f"[rtools] has no installer for {platform}")
+    return errors
+
+
+LINUX_PLATFORMS = ("linux-x86_64", "linux-aarch64")
+LINUX_RUNTIMES = {"uv", "python", "quarto", "r", "rust"}
+DIGEST_RE = re.compile(r"^[^@\s]+@sha256:[0-9a-f]{64}$")
+APT_STAGES = ("runtime", "build", "full")
+LOCK_LINE_RE = re.compile(r"^[a-z0-9][a-z0-9+.-]*(:[a-z0-9]+)?=[A-Za-z0-9.+~:-]+$")
+
+
+def _check_container(pins: dict[str, Any], root: Path) -> list[str]:
+    """The Linux runtime sets and the container image's own pins (#42)."""
+    errors = []
+    ci = pins.get("ci", {})
+    for platform in LINUX_PLATFORMS:
+        have = set(ci.get(platform, {}))
+        if have != LINUX_RUNTIMES:
+            errors.append(
+                f"[ci.{platform}] must pin exactly {sorted(LINUX_RUNTIMES)}, has {sorted(have)}"
+            )
+    container = pins.get("container")
+    if container is None:
+        return [*errors, "[container] is missing"]
+    if not DIGEST_RE.match(str(container.get("base_image", ""))):
+        errors.append("[container] base_image must be pinned by digest (name@sha256:...)")
+    locks = root / str(container.get("apt_locks", "container/apt"))
+    lo = container.get("libreoffice", {})
+    if set(lo.get("platforms", [])) != set(LINUX_PLATFORMS):
+        errors.append("[container.libreoffice] must cover both Linux platforms")
+    desktop = pins.get("optional", {}).get("libreoffice", {}).get("version")
+    if lo.get("version") != desktop:
+        errors.append("[container.libreoffice] version differs from [optional.libreoffice]")
+    if (root / "container").is_dir():
+        for platform in LINUX_PLATFORMS:
+            for stage in APT_STAGES:
+                errors += _check_apt_lock(locks / f"lock-{platform}-{stage}.txt", root)
+    return errors
+
+
+def _check_apt_lock(path: Path, root: Path) -> list[str]:
+    """Every line of an apt lock names one package at one exact version."""
+    rel = path.relative_to(root) if path.is_relative_to(root) else path
+    if not path.is_file():
+        return [f"{rel} is missing (scripts/container/lock_apt.sh)"]
+    errors = []
+    for n, line in enumerate(path.read_text("utf-8").splitlines(), 1):
+        if line and not line.startswith("#") and not LOCK_LINE_RE.match(line):
+            errors.append(f"{rel}:{n} is not package=version: {line!r}")
     return errors
 
 

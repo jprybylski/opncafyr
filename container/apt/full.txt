@@ -1,0 +1,13 @@
+# Extra Ubuntu packages in the -full image (#42): what LibreOffice's .deb set needs beyond
+# container/apt/runtime.txt. The TDF .debs themselves are pinned in runtime/pins.toml
+# ([container.libreoffice]); their Depends are resolved into the lock.
+libxinerama1
+libdbus-1-3
+libcups2t64
+libsm6
+libice6
+libnss3
+libxrandr2
+libxext6
+libxrender1
+libxml2

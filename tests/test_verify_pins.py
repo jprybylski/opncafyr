@@ -210,3 +210,43 @@ def test_optional_git_needs_every_platform(tree):
     )
     errors, _ = _check(tree)
     assert "[optional.git] has no asset for windows-x86_64" in errors
+
+
+def test_both_linux_platforms_pin_the_same_runtimes():
+    pins = tomllib.loads((ROOT / "runtime/pins.toml").read_text("utf-8"))
+    for platform in ("linux-x86_64", "linux-aarch64"):
+        assert set(pins["ci"][platform]) == {"uv", "python", "quarto", "r", "rust"}
+
+
+def test_container_base_image_must_be_pinned_by_digest(tree):
+    _edit(
+        tree,
+        "runtime/pins.toml",
+        'base_image = "docker.io/library/ubuntu:24.04@sha256:',
+        'base_image = "docker.io/library/ubuntu:24.04" # @sha256:',
+    )
+    errors, _ = _check(tree)
+    assert any("base_image must be pinned by digest" in e for e in errors)
+
+
+def test_apt_locks_must_name_exact_versions(tree):
+    locks = tree / "container" / "apt"
+    locks.mkdir(parents=True)
+    for platform in ("linux-x86_64", "linux-aarch64"):
+        for stage in ("runtime", "build", "full"):
+            (locks / f"lock-{platform}-{stage}.txt").write_text(
+                "# header\nzlib1g=1:1.3.dfsg-3.1ubuntu2.1\n"
+            )
+    assert _check(tree)[0] == []
+    (locks / "lock-linux-aarch64-full.txt").write_text("libreoffice\n")
+    errors, _ = _check(tree)
+    assert any("lock-linux-aarch64-full.txt:1 is not package=version" in e for e in errors)
+    (locks / "lock-linux-x86_64-build.txt").unlink()
+    errors, _ = _check(tree)
+    assert any("lock-linux-x86_64-build.txt is missing" in e for e in errors)
+
+
+def test_a_linux_platform_missing_a_runtime_is_reported(tree):
+    _edit(tree, "runtime/pins.toml", "[ci.linux-aarch64.rust]", "[ci.linux-aarch64.rustc]")
+    errors, _ = _check(tree)
+    assert any("[ci.linux-aarch64] must pin exactly" in e for e in errors)

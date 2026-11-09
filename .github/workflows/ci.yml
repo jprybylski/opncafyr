@@ -175,11 +175,10 @@ jobs:
       - name: Install the pinned R and the system libraries (online prerequisites)
         run: |
           sudo apt-get update -qq
+          # container/apt/build.txt: the same list the container's build stage uses (#42).
           sudo apt-get install -y -qq --no-install-recommends \
             ./assets/runtime/r-4.6.2_1_amd64.deb strace \
-            libcurl4-openssl-dev libssl-dev libxml2-dev libgit2-dev libsodium-dev \
-            libfontconfig1-dev libfreetype-dev libharfbuzz-dev libfribidi-dev \
-            libpng-dev libjpeg-dev libtiff-dev libwebp-dev libcairo2-dev libuv1-dev
+            $(grep -v '^#' container/apt/build.txt)
       - name: Offline phase (network namespace, traced)
         run: |
           sudo -E unshare --net sh -c '

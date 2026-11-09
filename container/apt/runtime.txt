@@ -1,0 +1,50 @@
+# Ubuntu packages in every opncafyr image (#42): shared libraries for R, the R library,
+# Quarto and the Python envs, plus fonts and Git. One package per line. No compilers and no
+# -dev packages (scripts/container/check_image.sh fails on either). Never add proprietary
+# fonts such as ttf-mscorefonts-installer: the image must stay redistributable (#43).
+ca-certificates
+tzdata
+git
+fontconfig
+fonts-dejavu-core
+fonts-liberation
+# R itself (the runtime side of the Posit .deb's Depends)
+libopenblas0-pthread
+libgfortran5
+libgomp1
+libicu74
+libpcre2-8-0
+libbz2-1.0
+liblzma5
+libzstd1
+libdeflate0
+zlib1g
+libtirpc3t64
+libreadline8t64
+libcairo2
+libpango-1.0-0
+libpangocairo-1.0-0
+libglib2.0-0t64
+libjpeg8
+libpng16-16t64
+libtiff6
+libtcl8.6
+libtk8.6
+libx11-6
+libxt6t64
+libpaper-utils
+unzip
+zip
+# The R library's system libraries (runtime side of container/apt/build.txt)
+libcurl4t64
+libssl3t64
+libxml2
+libgit2-1.7
+libsodium23
+libfontconfig1
+libfreetype6
+libharfbuzz0b
+libfribidi0
+libwebp7
+libwebpmux3
+libuv1t64

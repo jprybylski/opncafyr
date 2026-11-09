@@ -1,0 +1,20 @@
+# System packages for building the R library from source (#42, #44). One package per line.
+# Used by the offline CI job (.github/workflows/ci.yml) and the container's build stage.
+# Not installed in the final image: container/apt/runtime.txt holds the shared libraries.
+libcurl4-openssl-dev
+libssl-dev
+libxml2-dev
+libgit2-dev
+libsodium-dev
+libfontconfig1-dev
+libfreetype-dev
+libharfbuzz-dev
+libfribidi-dev
+libpng-dev
+libjpeg-dev
+libtiff-dev
+libwebp-dev
+libcairo2-dev
+libuv1-dev
+# Unpacking the Rust toolchain (.tar.xz)
+xz-utils
