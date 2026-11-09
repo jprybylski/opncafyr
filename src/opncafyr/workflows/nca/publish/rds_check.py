@@ -1,6 +1,7 @@
 """Preflight for formatted tables (``.rds``) in a report (#62).
 
-opnca-r saves each formatted table as a flextable that carries its own caption. In the
+opnca-r before 0.3.2 saved each formatted table as a flextable that carries its own caption
+(opnca-r#59 removed it in 0.3.2, but a run's files are immutable, so older runs keep it). In the
 cloud walkthrough a report that included one kept its ``{rpfy}`` placeholder unfilled, and
 the render stopped. The likely reason is that reportifyr 0.4.0 matches a table to its
 placeholder by the paragraph just before the table, and a caption paragraph sits there.
@@ -28,9 +29,9 @@ PROGRAM = "report_rds_check.R"
 TIMEOUT_S = 120.0
 
 CAPTIONED = (
-    "This formatted table has a caption of its own. A report that included one left its "
-    "placeholder unfilled (#62), so it can't be rendered yet. Use the CSV version of the "
-    "table in the report, or use this one in a deck."
+    "This formatted table has a caption of its own (opnca-r before 0.3.2), which left its "
+    "placeholder unfilled (#62). Use the CSV version in the report, use this one in a deck, "
+    "or make a new run."
 )
 NOT_FLEXTABLE = (
     "This .rds file is not a formatted table (a flextable), so the report can't place it."

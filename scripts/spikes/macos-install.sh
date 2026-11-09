@@ -21,8 +21,8 @@
 #                     `R CMD config`, i.e. make with R_HOME/etc/Makeconf, which breaks on
 #                     one). Default: ~/.opncafyr-spike/r
 #   --repo DIR        opncafyr checkout (runtime/python/tools); default: this script's repo
-#   --fixture FILE    quartifyr v0.3.3 source archive (for examples/demo-report);
-#                     default: DIR/quartifyr-v0.3.3-src.tar.gz
+#   --fixture FILE    quartifyr v0.3.4 source archive (for examples/demo-report);
+#                     default: DIR/quartifyr-v0.3.4-src.tar.gz
 #   --libreoffice DMG also run the #8 LibreOffice checks with this DMG
 #   --vendored        also try the vendored opnca-r source build (repair path, ADR 0004)
 #   --quarantine-test also check what Gatekeeper does with quarantined copies
@@ -51,7 +51,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$ASSETS" ] && [ -f "$ASSETS/assets.tsv" ] || { echo "--assets DIR with assets.tsv is required" >&2; exit 2; }
-FIXTURE="${FIXTURE:-$ASSETS/quartifyr-v0.3.3-src.tar.gz}"
+FIXTURE="${FIXTURE:-$ASSETS/quartifyr-v0.3.4-src.tar.gz}"
 if [ "$(id -u)" -eq 0 ]; then echo "do not run as root" >&2; exit 2; fi
 
 ARCH="$(uname -m)"
@@ -233,7 +233,7 @@ s_r_repo() {
   awk -F'\t' '$1=="r-binary"{print $3}' "$ASSETS/assets.tsv" | while read -r f; do ln -sf "$(asset_file "$f")" "$contrib/"; done
   "$ROOT/bin/Rscript" -e 'tools::write_PACKAGES(commandArgs(TRUE)[1], type = "mac.binary"); tools::write_PACKAGES(commandArgs(TRUE)[2], type = "source")' "$contrib" "$RREPO/src/contrib"
   # Cellar: opnca-r binary under the name renv expects, and the pure-R tarballs.
-  cp "$(asset_file "opnca_0.3.1_R4.6_${PLATFORM}.tgz")" "$CELLAR/opnca_0.3.1.tgz"
+  cp "$(asset_file "opnca_0.3.2_R4.6_${PLATFORM}.tgz")" "$CELLAR/opnca_0.3.2.tgz"
   for p in quartifyr reportifyr pyro; do cp "$(asset "package:$p")" "$CELLAR/"; done
   ls "$CELLAR"; echo "binaries: $(find "$contrib" -name '*.tgz' | wc -l | tr -d ' ')"
 }
@@ -282,8 +282,8 @@ s_r_install() {
     from_repo <- names(Filter(function(e) identical(e$Source, "Repository"), lock))
     install.packages(setdiff(from_repo, "jsonlite"), lib = lib, repos = repo, type = "binary",
                      dependencies = FALSE, quiet = TRUE)
-    install.packages(file.path(cellar, "opnca_0.3.1.tgz"), lib = lib, repos = NULL, type = "binary")
-    for (f in c("pyro_0.1.1.tar.gz", "reportifyr_0.4.0.tar.gz", "quartifyr_0.3.3.tar.gz"))
+    install.packages(file.path(cellar, "opnca_0.3.2.tgz"), lib = lib, repos = NULL, type = "binary")
+    for (f in c("pyro_0.1.1.tar.gz", "reportifyr_0.4.0.tar.gz", "quartifyr_0.3.4.tar.gz"))
       install.packages(file.path(cellar, f), lib = lib, repos = NULL, type = "source")
     bad <- Filter(function(p) !identical(tryCatch(packageDescription(p, lib.loc = lib, fields = "Version"),
                                                   warning = function(w) NA), lock[[p]]$Version), names(lock))
@@ -304,7 +304,7 @@ s_opnca_calc() {
                     CONC = c(0, 10, 5, 2.5, 0.625, 0, 20, 10, 5, 1.25), DOSE = rep(100, 10),
                     ROUTE = rep("extravascular", 10))
     x <- as.data.frame(opnca(d, metrics = c("cmax", "tmax", "auclast", "lambda_z", "half_life")))
-    # Reference: opnca-r 0.2.7 to 0.3.1 on the dev machine (and the tests in opnca-r test-basic-nca.R).
+    # Reference: opnca-r 0.2.7 to 0.3.2 on the dev machine (and the tests in opnca-r test-basic-nca.R).
     ref <- c(P1.cmax = 10, P1.tmax = 1, P1.auclast = 24.837056812223246, P1.lambda_z = 0.346573590279973,
              P1.half_life = 2, P2.cmax = 20, P2.tmax = 1, P2.auclast = 49.674113624446498,
              P2.lambda_z = 0.346573590279973, P2.half_life = 2)
@@ -360,7 +360,7 @@ s_report() {
   # The app creates report projects itself; here quartifyr's demo report stands in,
   # without its committed pyproject.toml/uv.lock/renv (an app-made project has none).
   rm -rf "$REPORT"; mkdir -p "$REPORT"
-  tar xzf "$FIXTURE" -C "$REPORT" --strip-components 3 "quartifyr-0.3.3/examples/demo-report"
+  tar xzf "$FIXTURE" -C "$REPORT" --strip-components 3 "quartifyr-0.3.4/examples/demo-report"
   rm -rf "$REPORT/.Rprofile" "$REPORT/renv" "$REPORT/renv.lock" "$REPORT/pyproject.toml" "$REPORT/uv.lock"
   cd "$REPORT"
   # reportifyr's project setup goes through pyro: `uv lock` + `uv sync` of its pinned
@@ -412,7 +412,7 @@ s_quarantine() {
 }
 
 s_vendored() {
-  # Repair path only (ADR 0004): build opnca_0.3.1-vendored.tar.gz. Needs a C toolchain.
+  # Repair path only (ADR 0004): build opnca_0.3.2-vendored.tar.gz. Needs a C toolchain.
   echo "CLT: $(xcode-select -p 2>&1)"; echo "clang: $(/usr/bin/clang --version 2>&1 | head -1)"
   local rs; rs="$(asset rust-standalone)"
   [ -n "$rs" ] || { echo "no rust standalone asset in assets.tsv"; return 1; }
@@ -424,7 +424,7 @@ s_vendored() {
   "$rust/bin/cargo" --version; "$rust/bin/rustc" --version
   mkdir -p "$ROOT/tmp/vlib"
   PATH="$rust/bin:$PATH" NOT_CRAN="" R_LIBS="$RLIB" "$ROOT/bin/R" CMD INSTALL --library="$ROOT/tmp/vlib" \
-    "$(asset_file opnca_0.3.1-vendored.tar.gz)"
+    "$(asset_file opnca_0.3.2-vendored.tar.gz)"
 }
 
 s_libreoffice() {

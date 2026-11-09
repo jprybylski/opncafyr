@@ -52,8 +52,8 @@ These are deliberate and are not expected to change.
 
 | Issue | Workaround |
 |---|---|
-| **Formatted tables (`.rds`) can't go in a report.** opnca-r saves them with a caption of their own, and the report tools leave that table's place unfilled. The report check refuses them. | Use the CSV version of the table in the report, or the formatted one in a deck. |
-| **Wide tables are squeezed to the page width in a report, and there is no landscape page.** A table with many columns can get a very narrow column. | Choose fewer columns, or adjust the DOCX in Word afterwards (the app doesn't record those edits). |
+| **A formatted table (`.rds`) from a run saved before opnca-r 0.3.2 can't go in a report.** opnca-r saved it with a caption of its own, and the report tools leave that table's place unfilled. The report check refuses it. | Make a new run and publish that, or use the CSV version of the table in the report, or the formatted one in a deck. |
+| **A table that is too wide to fit a report page stops the render.** Tables are fitted to the page and the text is made smaller down to 7 pt; one that still doesn't fit is named in the message. Widths are estimated, not measured. | Choose fewer columns or shorter headers, or put the table on a landscape page: in **Edit report**, add `{{< landscape >}}` before it and `{{< portrait >}}` after it. Figures keep their portrait size. |
 | **Word asks whether to update fields** when you open a report. | Expected; the app doesn't recalculate fields when it builds the report. |
 | **Slide previews need LibreOffice**, which is optional and not installed by default. | Decks build without previews. |
 | **Reports can't be built in a study folder inside a hidden folder** (one whose name starts with a dot). | Keep study folders in an ordinary folder, such as Documents. |

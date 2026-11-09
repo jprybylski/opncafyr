@@ -53,7 +53,7 @@ The names are opnca-r's, and so is the flag that says whether a file shows subje
 | Boxplot of each parameter by profile (figures) | No | No |
 | Any of these tables, **(formatted)** | No | As the table |
 
-A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers, a caption and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Runs saved by an earlier opnca-r keep their earlier names, such as "Parameter summary" and "Individual parameter listing".
+A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Runs saved by an earlier opnca-r keep their earlier names, such as "Parameter summary" and "Individual parameter listing".
 
 Items that show subject IDs carry the label **shows subject IDs**. Think about who will see the report or deck before you keep them.
 

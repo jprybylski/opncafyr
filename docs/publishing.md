@@ -55,7 +55,8 @@ Two rules are the launcher's own:
   next to its CSV, never pre-selected, and only when the CSV itself is offered. deckifyr
   renders them in a deck (as a `reportifyr` element). In a report, a formatted table that
   carries its own caption left its placeholder unfilled (#62); the report check and
-  render refuse it (see Check below), and opnca-r#59 asks for the caption to go. The CSV
+  render refuse it (see Check below). opnca-r 0.3.2 leaves the caption off (opnca-r#59),
+  so only a run saved by an earlier opnca-r still has one; a new run fixes it. The CSV
   stays the table the replay checks.
 - **Tables the replay didn't check.** A CSV table that opnca-r marks
   `replay.reproduced: false` (the bioequivalence tables) is not offered, and neither is

@@ -33,7 +33,7 @@ comments on #15/#16, #27, #28, #32, #33 and #34.
 | [#56](https://github.com/mantra-opnca/opnca-r/issues/56) | Launcher-declared unit labels: preset `units`, read-only page fields, `UNITS_LOCKED`, `--require-explicit-units`, `effective_settings.units_source` | Done (v0.3.1), checked against a running server (`tests/integration/nca/test_units_r.py`): the preset's labels reach the record, `analysis.R` and the result tables, and estimates are unchanged. `--require-explicit-settings` now implies the units requirement. Its `preset_mapping` config omits `units`; the page config has `units` and `units_source` instead | #57 |
 | [#57](https://github.com/mantra-opnca/opnca-r/issues/57) | Honour `--no-guess-roles` on the server (`ROLE_REQUIRED`) and in the Bioequivalence view | Done (v0.3.1). The preset also takes `period`, `treatment` and `sequence`; the launcher doesn't set them, since it runs NCA only | #27 |
 | [#58](https://github.com/mantra-opnca/opnca-r/issues/58) | `artifacts.json` says whether a saved file shows subject identifiers (`identifies_subjects`, separate from `subject_level`) | Done (v0.3.1). Boxplots are `identifies_subjects: false`. The curator's "shows subject IDs" is this flag for runs saved by 0.3.1 (#59) | Publishing (#31) |
-| [#59](https://github.com/mantra-opnca/opnca-r/issues/59) | Leave the flextable caption off the exported `.rds` tables, so reportifyr can place them (it can't match a captioned table to its `{rpfy}` placeholder; cause read from the code, not yet confirmed on the failing install) | Open (filed 2026-11-09). Temporary workaround here: the report check and render refuse a captioned `.rds` with a specific message (`workflows/nca/publish/rds_check.py`, #62) | #62 |
+| [#59](https://github.com/mantra-opnca/opnca-r/issues/59) | Leave the flextable caption off the exported `.rds` tables, so reportifyr can place them (it can't match a captioned table to its `{rpfy}` placeholder; cause read from the code, not yet confirmed on the failing install) | Done (v0.3.2, 2026-11-09, pinned in #62), as asked; not yet confirmed on the failing install. The report check and render still refuse a captioned `.rds` (`workflows/nca/publish/rds_check.py`), which now means a run saved by an earlier opnca-r | #62 |
 
 Gaps still open after 0.3.1: a killed save leaves `.opnca-save.lock/` for 600 s (#46).
 
@@ -66,7 +66,7 @@ our adapter (#33).
 ## jprybylski/quartifyr (public)
 
 #69–#72 (PR #74) and #75–#78 (PR #79) were released in v0.3.2 (2026-11-05) and reviewed.
-The follow-ups #81–#86 (PR #87) were reviewed and released in v0.3.3 (2026-11-07). The release workflow may still refresh a release
+The follow-ups #81–#86 (PR #87) were reviewed and released in v0.3.3 (2026-11-07). v0.3.4 (2026-11-09) releases #88; it was pinned inside the 24 hour window, so its hashes and tag are to be re-checked after 2026-11-10T19:53Z. The release workflow may still refresh a release
 (move the tag, replace the tarball) within 24 hours of publishing; that is intentional, for
 quick fixes, so pin a quartifyr release only after that window has passed.
 
@@ -86,7 +86,7 @@ quick fixes, so pin a quartifyr release only after that window has passed.
 | [#84](https://github.com/jprybylski/quartifyr/issues/84) | Field recalculation always times out on macOS (LibreOffice 26.2) | Done (v0.3.3), verified upstream on macOS 26.6 only; recalculation stays off in the adapter until re-verified (#8) | Gate 3 (#32), #8 |
 | [#85](https://github.com/jprybylski/quartifyr/issues/85) | Offline report setup without pyro: one Python env for both passes | Done (v0.3.3) as `initialize_report_project_offline()`; uv is still required (reportifyr runs it). The adapter uses it (#32); the `.venv` and init-marker workaround was never needed | Gate 3 (#32), offline |
 | [#86](https://github.com/jprybylski/quartifyr/issues/86) | Field recalculation hangs and orphans soffice on Windows (malformed profile URL) | Done (v0.3.3), with process tests run upstream on Windows 11; recalculation stays off in the adapter until re-verified (#8) | Gate 3 (#32), #8 |
-| [#88](https://github.com/jprybylski/quartifyr/issues/88) | Fit wide tables to the page width (reportifyr fixes it at 6 in and squeezes columns) and support landscape sections | Open (filed 2026-11-09). Here: figures use `default_fig_width` (`use_artifact_size: false` in the bundled `config.yaml`) and `check` warns about an older project that doesn't; wide tables and landscape wait for this | #62 |
+| [#88](https://github.com/jprybylski/quartifyr/issues/88) | Fit wide tables to the page width (reportifyr fixes it at 6 in and squeezes columns) and support landscape sections | Done (v0.3.4, 2026-11-09, pinned in #62): tables fit the page (`fit_tables`, on by default) and `{{< landscape >}}` / `{{< portrait >}}` start and end a landscape section. A table still too wide at 7 pt is a warning, which our `--strict` render rejects; the message carries it. Figures still use `default_fig_width` (`use_artifact_size: false` in the bundled `config.yaml`, and `check` warns about an older project that doesn't), because reportifyr sizes them. Not yet measured on a real DOCX | #62 |
 
 Offline installation is a supported v1 use case (2026-11-04). pyro and reportifyr (A2-ai,
 external) also reach the network during project setup. opncafyr handles that in its

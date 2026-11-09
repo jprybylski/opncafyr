@@ -79,7 +79,7 @@ Under **Status**, choose **Draft** or **Final**. This is a saved setting of the 
 Otherwise the card lists **Report check findings**, each marked **Blocks** or **Warning**, with the check, the file and what is wrong. See [What the checks mean](#what-the-checks-mean).
 
 {: .fix }
-> **A formatted table (`.rds`) is listed as Blocks** — the report tools can't place a formatted table that carries its own caption: a report that included one left that table's place unfilled. Use the CSV version of the table in the report, or use the formatted one in a deck. **Render** stops for the same reason.
+> **A formatted table (`.rds`) is listed as Blocks** — the report tools can't place a formatted table that carries its own caption: a report that included one left that table's place unfilled. Runs saved by opnca-r 0.3.2 or later don't have this caption, so make a new run and publish that. Or use the CSV version of the table in the report, or the formatted one in a deck. **Render** stops for the same reason.
 >
 > **A warning about `use_artifact_size`** — an older report project still sizes figures by their pixels, which can run past the page. Set `use_artifact_size: false` in `report/config.yaml` and render again. New reports already have it.
 

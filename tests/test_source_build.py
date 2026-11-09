@@ -88,7 +88,7 @@ def test_repair_with_the_flag_stages_a_new_install_and_records_it(tmp_path, layo
     assert record["options"] == {"libreoffice": False, "build_from_source": True}
     validate(record, "install-v1")
     files = {f["file"] for c in record["components"] for f in c["files"]}
-    assert "opnca_0.3.1-vendored.tar.gz" in files
+    assert "opnca_0.3.2-vendored.tar.gz" in files
     assert "rust-1.99.1-aarch64-apple-darwin.tar.xz" in files
     # A later install of the same version keeps the source-built install.
     again: list[str] = []
@@ -109,7 +109,7 @@ def test_a_failed_source_build_keeps_the_previous_install(tmp_path, layout, fake
 def test_a_missing_vendored_tarball_stops_before_anything_changes(tmp_path, layout, fakes):
     world = make_world(tmp_path / "w", source_build=True)
     assert install(layout, world.payload, assets=[world.assets]) == 0
-    (world.assets / "opnca_0.3.1-vendored.tar.gz").unlink()
+    (world.assets / "opnca_0.3.2-vendored.tar.gz").unlink()
     with pytest.raises(InstallError, match="opnca-r"):
         install(
             layout,
@@ -121,7 +121,7 @@ def test_a_missing_vendored_tarball_stops_before_anything_changes(tmp_path, layo
     assert layout.install_ids() == ["0.0.1-1"]
 
 
-@pytest.mark.parametrize("victim", ["manifest.json", "opnca_0.3.1_R4.6_macos-arm64.tgz"])
+@pytest.mark.parametrize("victim", ["manifest.json", "opnca_0.3.2_R4.6_macos-arm64.tgz"])
 def test_a_tampered_opnca_file_in_a_bundle_keeps_the_previous_install(
     tmp_path, layout, fakes, victim
 ):

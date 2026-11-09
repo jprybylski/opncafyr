@@ -183,6 +183,22 @@ def test_parse_render_names_the_files_whose_placeholders_stayed_unfilled():
     assert "{rpfy}" not in result.message
 
 
+def test_parse_render_says_what_the_warning_was_when_strict_rejects_it():
+    # quartifyr 0.3.4: a table still too wide at 7 pt is a warning, and --strict rejects it.
+    doc = {
+        "schema_version": 1,
+        "status": "warning",
+        "errors": [],
+        "artifacts": [],
+        "inputs": [],
+        "versions": {},
+        "warnings": ["Table(s) 3 in report.docx are still too wide. Use a landscape section."],
+    }
+    result = Q.parse_render(1, json.dumps(doc), None, None)
+    assert not result.ok
+    assert "Use a landscape section." in result.message
+
+
 def test_parse_render_decides_on_exit_code_and_status(tmp_path):
     ok = {"schema_version": 1, "status": "ok", "errors": [], "artifacts": [{"role": "draft"}]}
     assert Q.parse_render(0, json.dumps(ok), None, None).ok

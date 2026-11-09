@@ -341,6 +341,12 @@ def parse_render(
         missing = doc.get("missing_metadata") or []
         unfilled = doc.get("unfilled_placeholders") or []
         parts = [p for p in (why, detail) if p]
+        # --strict turns a warning into a rejection. Say what the warning was: a table
+        # still too wide at quartifyr 0.3.4's smallest font reads "use fewer columns ... or
+        # a landscape section" (#62).
+        warned = _plain(doc.get("warnings") or [], project)
+        if warned:
+            parts.append(warned)
         if missing:
             parts.append(f"Missing metadata: {', '.join(map(str, missing))}.")
         if unfilled:

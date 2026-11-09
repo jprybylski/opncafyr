@@ -28,7 +28,7 @@ Each completed run has a box with its analyte, its run ID, when it was made, and
 | Boxplot of each parameter by profile (figures) | No | No |
 | Any of these tables, **(formatted)** | No | As the table |
 
-A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers, a caption and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Pick either, or both.
+A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Pick either, or both.
 
 Items that show subject IDs are marked **shows subject IDs**. If a run was saved without the mean figures, the box says so; make a new run and keep them ticked in opnca-r's **Save to run folder** box to include them. A table that the replay doesn't recompute, such as a bioequivalence table, can't be published, and the box says why.
 

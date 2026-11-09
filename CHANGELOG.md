@@ -987,16 +987,26 @@ All notable changes to this project are documented here. The format follows
       Check and Render with a message naming the file; use its CSV, or put it in a deck.
       A fixed R program inspects each file (`r/report_rds_check.R`); only a status is
       written. A table that isn't a flextable, or can't be read, is refused too. The cause
-      is read from reportifyr's code and not confirmed on the failing install; opnca-r#59
-      asks for the caption to go.
+      is read from reportifyr's code and not confirmed on the failing install. opnca-r
+      0.3.2 leaves the caption off (opnca-r#59), so the refusal now means a run saved by an
+      earlier opnca-r, and the message says to make a new run.
     - The render error now names the files whose placeholders stayed unfilled, not just
       their number.
     - Figures use the 6 inch default width instead of their pixel size
       (`use_artifact_size: false` in the bundled `config.yaml`); opnca-r's 2000 px PNGs came
       out about 27 inches wide. Check warns about an older project that still says `true`
       and never rewrites it.
-    - Wide tables squeezed to 6 inches, and landscape pages, wait for quartifyr#88 and
-      stay open in #62.
+    - A render that quartifyr rejects as a warning (a table still too wide at its
+      smallest font) now says what the warning was, not just "status warning".
+  - **opnca-r 0.3.2 and quartifyr 0.3.4 pinned** (`runtime/pins.toml`, `renv.lock`, the
+    installer scripts and CI). opnca-r 0.3.2 leaves the flextable caption off the saved
+    formatted tables (opnca-r#59). quartifyr 0.3.4 fits wide tables to the page
+    (`fit_tables`, on by default) and adds `{{< landscape >}}` and `{{< portrait >}}`
+    (quartifyr#88); the guides say how to put a table on a landscape page. Hashes match
+    each release's `SHA256SUMS` and `verify_pins.py --network` passes for both. quartifyr
+    0.3.4 was pinned within its 24 hour refresh window: re-verify it after
+    2026-11-10T19:53Z. Not yet run against a real render: a DOCX with a wide table, a
+    landscape section and an opnca-r 0.3.2 formatted table.
   - **Deck: formatted tables.** A formatted table (`.rds`) is a `reportifyr` element (a
     picture), as deckifyr requires; as a `table` element it failed with a content error.
     deckifyr's `E_INTERNAL` now reads as an unexpected error in the deck tool, with the
