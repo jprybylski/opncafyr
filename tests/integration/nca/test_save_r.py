@@ -71,7 +71,7 @@ def test_a_save_moves_the_run_to_review_with_every_artifact(env):
     for art in listing["artifacts"]:
         fields = [k for k in export.DESCRIBED if k in art]
         assert {k: art[k] for k in fields} == {k: kept[art["path"]][k] for k in fields}
-    assert run["tools"]["opnca-r"] == "0.3.1" and run["tools"]["R"].startswith("R version")
+    assert run["tools"]["opnca-r"] == "0.3.3" and run["tools"]["R"].startswith("R version")
     assert run["nca_settings"]["effective_settings"]
     # The labels opnca-r used are the run's, set by the preset (#57, opnca-r#56).
     assert run["nca_settings"]["effective_settings"]["units"] == run["analysis_units"]

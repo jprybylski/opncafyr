@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from opncafyr.installer.platforms import SUPPORTED
+from opncafyr.installer.platforms import SUPPORTED, opnca_name
 from opncafyr.installer.verify import InstallError
 
 # R packages that don't come from CRAN; their tarballs go in the cellar.
@@ -42,6 +42,9 @@ class Asset:
     # An optional component installed by default (``default = true``, e.g. Git, #56): if
     # it can't be fetched or installed, the install goes on without it.
     best_effort: bool = False
+    # The User-Agent a download must send. Posit serves a Linux R package as a binary only to
+    # R's own User-Agent, and as source otherwise (#65); empty means the default.
+    user_agent: str = ""
 
     @property
     def path(self) -> str:
@@ -103,6 +106,7 @@ class Pins:
         libreoffice: bool = False,
         git: bool = True,
         source_build: bool = False,
+        allow_pending: bool = False,
     ) -> list[Asset]:
         """Every pinned file an install of ``platform`` needs.
 
@@ -110,11 +114,32 @@ class Pins:
         it, as a best-effort asset. ``source_build`` adds what ``repair
         --build-from-source`` needs (#34): opnca-r's vendored source tarball, the
         standalone Rust toolchain and, on Windows, Rtools.
+
+        A platform in ``[platforms].pending`` has no opnca-r binary yet (Linux, opnca-r#61) and
+        is refused, unless ``allow_pending``: a development install without opnca-r.
         """
         if platform not in SUPPORTED:
             raise PinsError(f"Unsupported platform {platform}")
+        pending = platform in self.pending
+        if pending and not allow_pending:
+            raise PinsError(
+                f"Native {platform} install is not released yet: it needs opnca-r's Linux "
+                "binary (opnca-r#61). Use the container (opncafyr-container) for now."
+            )
+        if source_build and platform.startswith("linux"):
+            raise PinsError(
+                "A source build is not offered on Linux: it needs a C toolchain, and the native "
+                "Linux install runs without a compiler. Use a released opnca-r binary."
+            )
+        if libreoffice and platform.startswith("linux"):
+            raise PinsError(
+                "LibreOffice is not offered on a native Linux install (it needs system libraries "
+                "an unprivileged user can't add). Slide previews are unavailable; the container "
+                "image has them."
+            )
         out = [self._runtime(name, platform) for name in ("uv", "python", "r", "quarto")]
-        out += self._opnca(platform)
+        if not pending:
+            out += self._opnca(platform)
         out += self._cellar()
         out += self._r_binaries(platform)
         out += self._wheels(platform)
@@ -132,11 +157,21 @@ class Pins:
             seen[asset.path] = asset
         return list(seen.values())
 
+    @property
+    def pending(self) -> list[str]:
+        return [str(p) for p in self.pins.get("platforms", {}).get("pending", [])]
+
     def _runtime(self, name: str, platform: str, section: tuple[str, ...] = ()) -> Asset:
         node: Any = self.pins
         for key in (*section, name):
             node = node[key]
-        entry = node["assets"][platform]
+        entry = node["assets"].get(platform)
+        if entry is None and platform.startswith("linux") and not section:
+            # Linux runtimes are pinned once, under [ci.<platform>.<name>], which the container
+            # image and the offline CI job read too (#42, #65).
+            entry = self.pins["ci"][platform][name]["assets"][platform]
+        if entry is None:
+            raise PinsError(f"{name} has no pinned file for {platform}")
         url = entry["url"]
         return Asset(
             component=name,
@@ -152,7 +187,8 @@ class Pins:
 
     def _opnca(self, platform: str) -> list[Asset]:
         pin = self.pins["packages"][OPNCA]
-        binary = [f for f in pin["assets"] if f"_{platform}." in f]
+        plat, arch = opnca_name(platform)
+        binary = [f for f in pin["assets"] if f"_{plat}-{arch}." in f]
         if len(binary) != 1:
             raise PinsError(f"Expected one opnca-r binary for {platform}, found {binary}")
         return [
@@ -237,6 +273,7 @@ class Pins:
                     entry["url"],
                     entry["sha256"],
                     entry["version"],
+                    user_agent=str(self.binaries.get("user_agents", {}).get(platform, "")),
                 )
             )
         return out

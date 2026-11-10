@@ -33,6 +33,7 @@ from opncafyr.core.remote import (
     RemoteAccess,
     RemoteAccessError,
     container_access,
+    native_access,
 )
 from opncafyr.paths import app_root, logs_dir, state_dir
 
@@ -112,6 +113,7 @@ def run_controller(
     from opncafyr.core.logs import configure_logging, reset_logging
     from opncafyr.core.registry import DescriptorError, load_descriptors
     from opncafyr.core.security import SecurityConfig
+    from opncafyr.core.storage import owner_mismatch
 
     try:
         tools = load_descriptors()
@@ -125,7 +127,7 @@ def run_controller(
         if remote is not None or print_url:
             public = remote.public_url if remote is not None else claimed.url
             print(open_url(public, mint_open_token(tokens)))
-            print(_link_note(), file=sys.stderr)
+            print(_link_note(remote), file=sys.stderr)
             return 0
         print(f"opncafyr is already running at {claimed.url}", file=sys.stderr)
         if open_browser:
@@ -181,7 +183,15 @@ def run_controller(
         url = f"http://{LOOPBACK}:{port}/"
         write_record(state, instance_id=instance_id, port=port)
         if remote is not None:
-            print(f"opncafyr {__version__} listening on port {port} (container)", file=sys.stderr)
+            mode = "remote, on this machine's loopback" if remote.native else "container"
+            print(f"opncafyr {__version__} listening on port {port} ({mode})", file=sys.stderr)
+            mismatch = (
+                owner_mismatch(workspace, container=not remote.native)
+                if workspace is not None
+                else None
+            )
+            if mismatch:
+                print(f"Warning: {mismatch}", file=sys.stderr)
             threading.Thread(
                 target=_print_when_healthy,
                 args=(url, remote, lambda: open_url(remote.public_url, mint_open_token(tokens))),
@@ -212,7 +222,12 @@ def run_controller(
     return 0
 
 
-def _link_note() -> str:
+def _link_note(remote: RemoteAccess | None = None) -> str:
+    if remote is not None and remote.native:
+        return (
+            "This link works once, within 2 minutes. For a new one run the same "
+            "`opncafyr launch --remote …` command again on the VM."
+        )
     return (
         "This link works once, within 2 minutes. For a new one run "
         "`opncafyr-container url <study folder>` on the VM."
@@ -227,7 +242,7 @@ def _print_when_healthy(url: str, remote: RemoteAccess, link: Callable[[], str])
             with urllib.request.urlopen(f"{url}health", timeout=1) as resp:  # noqa: S310
                 if resp.status == 200:
                     print(f"Open: {link()}", file=sys.stderr, flush=True)
-                    print(_link_note(), file=sys.stderr, flush=True)
+                    print(_link_note(remote), file=sys.stderr, flush=True)
                     return
         except OSError:
             time.sleep(0.2)
@@ -267,12 +282,26 @@ def cmd_launch(args: argparse.Namespace) -> int:
         )
     remote = None
     workspace = None
-    if args.container:
+    if args.container and args.remote:
+        print("--container and --remote are different modes; use one.", file=sys.stderr)
+        return 2
+    if args.container or args.remote:
+        mode = "--container" if args.container else "--remote"
         if not args.port:
-            print("--container needs a fixed --port.", file=sys.stderr)
+            print(f"{mode} needs a fixed --port.", file=sys.stderr)
             return 2
+        if args.remote and not args.workspace:
+            print(
+                "--remote needs --workspace: there is no folder picker on a headless VM.",
+                file=sys.stderr,
+            )
+            return 2
+        if args.remote and args.container_image is not None:
+            print("--container-image is only for --container.", file=sys.stderr)
+            return 2
+        make_access = container_access if args.container else native_access
         try:
-            remote = container_access(
+            remote = make_access(
                 port=args.port,
                 access=args.access or ACCESS_SSH,
                 public_url=args.public_url,
@@ -295,7 +324,11 @@ def cmd_launch(args: argparse.Namespace) -> int:
         given = [o for o in REMOTE_OPTIONS if getattr(args, o) not in (None, [])]
         if given:
             flags = ", ".join("--" + o.replace("_", "-") for o in given)
-            print(f"{flags}: only with --container (cloud container mode).", file=sys.stderr)
+            print(
+                f"{flags}: only with --container (cloud container mode) or --remote "
+                "(a native Linux VM).",
+                file=sys.stderr,
+            )
             return 2
     return run_controller(
         state=state_dir(),
@@ -506,14 +539,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print a fresh one-time link for the running instance instead of starting one.",
     )
     remote = launch.add_argument_group(
-        "cloud container mode (#42)",
-        "Only inside the opncafyr container, started by opncafyr-container. These only add "
-        "the SSH forward's or IDE proxy's own host and origin; every security check stays.",
+        "cloud container mode (#42) and native Linux VMs (#65)",
+        "--container: only inside the opncafyr container, started by opncafyr-container. "
+        "--remote: on a native Linux VM. These only add the SSH forward's or IDE proxy's own "
+        "host and origin; every security check stays.",
     )
     remote.add_argument(
         "--container",
         action="store_true",
         help="Listen on the container interface (published to the VM's 127.0.0.1 only).",
+    )
+    remote.add_argument(
+        "--remote",
+        action="store_true",
+        help="A native Linux VM (#65), no container: listen on the VM's 127.0.0.1 only and "
+        "print the one-time link; needs --port and --workspace.",
     )
     remote.add_argument("--access", choices=ACCESS_CHOICES, help="How the browser reaches it.")
     remote.add_argument("--public-url", help="The IDE proxy's URL for the port.")

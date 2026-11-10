@@ -42,7 +42,19 @@ The opnca-r release is not public. To use it, you need the opnca-r release files
 
 ## Option 1. Build an offline bundle
 
-A bundle holds every pinned file for one platform, plus the installer. Build it on any connected Mac or Windows PC, for any supported platform, from the unzipped installer (`opncafyr-installer-<version>`).
+A bundle holds every pinned file for one platform, plus the installer. Build it on any connected Mac or Windows PC, for any supported platform, from the unzipped installer (`opncafyr-installer-<version>`). This is a generated payload, not the `installer/` directory in a source checkout. The source copy of `install.sh` alone cannot run: it also needs the generated `bootstrap.tsv`, `payload.json`, wheel and pins. There is no public installer zip download yet.
+
+### Test from a source checkout
+
+From the repository root on a connected Mac or Windows PC with `uv` installed, first build the installer payload:
+
+```sh
+uv run python scripts/make_installer.py --out dist --zip
+```
+
+This writes `dist/opncafyr-installer-<version>/` and `dist/opncafyr-installer-<version>.zip`. Unzip the zip, or use the generated folder directly; run its `install.sh` or `install.bat`, not `installer/install.sh` or `installer/install.bat` from the source tree. The installer zip contains the installer and its pins. It does not contain the downloaded runtime assets. The separate `opncafyr-bundle-<version>-<platform>.zip` is what the `bundle` command creates.
+
+For a quick check of bundle creation, offline installation and mirror rules using test files, run `uv run pytest tests/test_installer_bundle.py -q` from the repository root. The full commands below need access to the pinned public downloads and the private opnca-r release files, either in an `--assets` folder or through `GH_TOKEN`/`GITHUB_TOKEN`. They download roughly 550 MB per platform. A complete offline installation also needs a supported target computer; see [Install offline from a bundle]({{ '/guides/offline-install/' | relative_url }}).
 
 1. Put the opnca-r release files in one folder.
 2. Open Terminal (macOS) or Command Prompt (Windows) in the installer folder.
@@ -65,7 +77,7 @@ Options:
 
 | Option | Meaning |
 |---|---|
-| `--platform` | `windows-x86_64`, `macos-arm64` (Apple silicon) or `macos-x86_64` (Intel). Default: this machine's platform. |
+| `--platform` | `windows-x86_64`, `macos-arm64` (Apple silicon), `macos-x86_64` (Intel), `linux-x86_64` or `linux-aarch64` (Ubuntu 24.04). Default: this machine's platform. |
 | `--out DIR` | The folder to write the bundle in (required). |
 | `--archive` | Also write `opncafyr-bundle-<version>-<platform>.zip`. |
 | `--assets DIR` | A folder of pinned files to use before downloading, such as the opnca-r files. Can be repeated. |

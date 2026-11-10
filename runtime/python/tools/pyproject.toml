@@ -16,7 +16,7 @@ name = "opncafyr-tools-env"
 version = "0"
 requires-python = "==3.13.*"
 dependencies = [
-    "deckifyr[web,preview]==0.3.6",
+    "deckifyr[web,preview]==0.3.7",
     "python-docx==1.1.2",
     "pyyaml==6.0.2",
     "pillow==11.1.0",
@@ -34,4 +34,4 @@ required-environments = [
 ]
 
 [tool.uv.sources]
-deckifyr = { url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.6/deckifyr-0.3.6-py3-none-any.whl" }
+deckifyr = { url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/deckifyr-0.3.7-py3-none-any.whl" }

@@ -21,7 +21,7 @@ from typing import Any
 import httpx
 
 from opncafyr.core.adapter import ChildActivity, ChildView, LaunchContext, LaunchSpec
-from opncafyr.core.manifest import atomic_write_json
+from opncafyr.core.manifest import atomic_write_json, atomic_write_text
 
 API_TOKEN_HEADER = "X-Gitneighbr-Token"  # noqa: S105 - a name, not a secret
 SHUTDOWN_TOKEN_HEADER = "X-Gitneighbr-Shutdown-Token"  # noqa: S105 - a name, not a secret
@@ -43,6 +43,49 @@ def git_exec_path(git: Path) -> Path | None:
         if candidate.is_dir():
             return candidate
     return None
+
+
+TRUST_BEGIN = "# opncafyr: begin trusted study folder (rewritten at every launch)"
+TRUST_END = "# opncafyr: end trusted study folder"
+
+
+def trust_study_folder(config: Path, root: Path) -> None:
+    """Let the managed Git open the selected study folder even if another user owns it (#62).
+
+    Git refuses a repository that belongs to another user ("dubious ownership"). In a
+    container the study folder is a mount whose owner often isn't the container's user.
+    The trust is exactly the folder the person selected, resolved: one ``safe.directory``
+    entry in the launcher-owned file that is the managed Git's only global configuration
+    (``GIT_CONFIG_GLOBAL``). Never ``*``, never a parent folder, and nothing read from the
+    workspace: the path comes from the session. gitneighbr still refuses anything that isn't
+    that exact folder. Rewritten at every launch, so the entry for a previous study doesn't
+    stay. Other entries in the file, such as the person's Git name and email, are kept.
+    """
+    value = root.resolve().as_posix()
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in value):
+        raise ValueError("The study folder's path has a control character; Git can't trust it.")
+    quoted = value.replace("\\", "\\\\").replace('"', '\\"')
+    kept: list[str] = []
+    in_block = False
+    old = config.read_text(encoding="utf-8").splitlines() if config.is_file() else []
+    for line in old:
+        stripped = line.strip()
+        if stripped == TRUST_BEGIN:
+            in_block = True
+            continue
+        if in_block:
+            if stripped == TRUST_END:
+                in_block = False
+                continue
+            # A block cut short by a hand edit ends at the first line that isn't ours.
+            if not stripped or stripped.lower() == "[safe]" or stripped.startswith("directory"):
+                continue
+            in_block = False
+        kept.append(line)
+    while kept and not kept[-1].strip():
+        kept.pop()
+    block = [TRUST_BEGIN, "[safe]", f'\tdirectory = "{quoted}"', TRUST_END]
+    atomic_write_text(config, "\n".join([*kept, *([""] if kept else []), *block]) + "\n")
 
 
 def _inside(path: Path, root: Path) -> bool:
@@ -78,6 +121,7 @@ class GitneighbrWebApp:
         if not config.is_absolute() or _inside(config, root):
             raise ValueError("gitneighbr git_config must be absolute and outside the workspace.")
         config.parent.mkdir(parents=True, exist_ok=True)
+        trust_study_folder(config, root)
         features = "local,remote" if session.get("remote") else "local"
 
         # The policy is launcher-written and kept outside the workspace, so nothing in the

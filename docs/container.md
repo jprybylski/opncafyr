@@ -194,9 +194,9 @@ Supported storage for the study folder:
 
 | | Native installer | Container |
 |---|---|---|
-| Where | Windows 11, macOS 15+ desktops | Linux cloud VMs with Docker or Podman |
+| Where | Windows 11, macOS 15+ desktops; Ubuntu 24.04 VMs (`install.md`, native Linux, #65) | Linux cloud VMs with Docker or Podman |
 | Admin rights | none | to run Docker or Podman (usually already granted) |
-| opnca-r | prebuilt binary | built from the vendored source, in the image |
+| opnca-r | prebuilt binary (Linux: since opnca-r 0.3.3) | built from the vendored source, in the image |
 | Slide previews | optional LibreOffice download | the `full` image |
 | Runs replay in the other | yes | yes |
 

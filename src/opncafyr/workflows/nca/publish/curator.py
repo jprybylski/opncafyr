@@ -368,10 +368,21 @@ def new_publication_id(root: Path) -> str:
 
 
 def publish(
-    root: Path, picks: list[Pick], footnotes: sidecars.Footnotes, label: str | None = None
+    root: Path,
+    picks: list[Pick],
+    footnotes: sidecars.Footnotes,
+    label: str | None = None,
+    revises: str | None = None,
 ) -> dict[str, Any]:
-    """Copy ``picks`` into ``OUTPUTS/`` and record the publication. Returns its manifest."""
+    """Copy ``picks`` into ``OUTPUTS/`` and record the publication. Returns its manifest.
+
+    ``revises`` names the recorded publication this one starts from (#62). The new
+    publication is a separate record with its own id; the earlier one, and every report or
+    deck bound to it, is not touched. A report or deck moves to it only when asked.
+    """
     with _lock:
+        if revises is not None:
+            read_publication(root, revises)  # must exist and be valid
         planned = plan(root, picks, footnotes)
         if planned.conflicts:
             raise PublishError(
@@ -406,14 +417,16 @@ def publish(
                 "The published copies don't match their runs; nothing was recorded.",
                 report=sidecars.preflight(findings),
             )
-        doc = _manifest(root, planned, label)
+        doc = _manifest(root, planned, label, revises)
         atomic_write_json(
             resolve_in_root(root, f"{PUBLICATIONS_DIR}/{doc['publication_id']}.json"), doc, SCHEMA
         )
         return doc
 
 
-def _manifest(root: Path, planned: Plan, label: str | None) -> dict[str, Any]:
+def _manifest(
+    root: Path, planned: Plan, label: str | None, revises: str | None = None
+) -> dict[str, Any]:
     runs = []
     for run_id, (folder, manifest) in planned.runs.items():
         analyte = manifest["analyte"]
@@ -454,6 +467,8 @@ def _manifest(root: Path, planned: Plan, label: str | None) -> dict[str, Any]:
     }
     if label:
         doc["label"] = label
+    if revises:
+        doc["revises"] = revises
     return doc
 
 

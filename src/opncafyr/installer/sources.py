@@ -77,7 +77,9 @@ class LocalSource:
     """A bundle (folder or zip) or a folder of pinned files. Never touches the network."""
 
     def __init__(self, location: Path, cache: Cache) -> None:
-        self.location = Path(location)
+        # A bundle may be passed as ".". Its files can become process executables
+        # (the Windows R installer), which must have absolute paths.
+        self.location = Path(location).resolve()
         self.cache = cache
         self._names: dict[str, list[Path]] | None = None
         self._zip: zipfile.ZipFile | None = None
@@ -174,11 +176,12 @@ class DownloadSource:
     def token(self) -> str | None:
         return next((self.environ[k] for k in TOKEN_ENV if self.environ.get(k)), None)
 
-    def _argv(self, url: str, out: Path) -> list[str]:
+    def _argv(self, url: str, out: Path, user_agent: str = "") -> list[str]:
         argv = [self.curl, "--silent", "--show-error", "--fail", "--location"]
         argv += ["--proto", "=https", "--proto-redir", "=https"]
         argv += ["--retry", "3", "--retry-delay", "2", "--connect-timeout", "30"]
-        argv += ["--user-agent", self.user_agent, "--output", str(out)]
+        # A Linux R binary is served only to R's own User-Agent (#65); the pins name it.
+        argv += ["--user-agent", user_agent or self.user_agent, "--output", str(out)]
         if sys.platform == "win32":
             argv.append("--ssl-revoke-best-effort")  # revocation checks fail behind proxies
         if self.cacert is not None:
@@ -209,7 +212,7 @@ class DownloadSource:
             url, headers = self._github_asset(asset, url)
         elif asset.private:
             pass  # a mirror serves private files like any other
-        argv = self._argv(url, part)
+        argv = self._argv(url, part, asset.user_agent)
         if headers:
             argv[1:1] = ["--config", "-"]
         try:

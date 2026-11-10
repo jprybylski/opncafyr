@@ -30,6 +30,7 @@ The page refuses, and says why, when:
 
 - **the folder is inside another Git project** that starts in a folder above it. Nothing in either is changed. Move the study folder elsewhere, or ask whoever manages that project.
 - **the Git project uses settings the app doesn't support**, such as Git LFS, encryption filters, submodules, or settings that run other programs. The page names the setting so you can ask for help.
+- **a different user owns the folder than the one running the app.** This happens in the cloud container when the folder was created by another account, or the container was started without `opncafyr-container`. The app opens version history for exactly the study folder you opened, and no other, so this refusal is now rare; if Git still says it can't open the folder, make the owner match (see [Cloud container](cloud-container.md#files-and-owners)).
 
 ## Save a snapshot
 

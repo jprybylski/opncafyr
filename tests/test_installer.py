@@ -100,7 +100,7 @@ def test_tampered_file_is_refused_naming_the_component(world, layout, fakes):
 
 
 def test_missing_bundle_file_names_the_component(world, layout, fakes):
-    (world.bundle / "assets" / "opnca-r" / "opnca_0.3.1_R4.6_macos-arm64.tgz").unlink()
+    (world.bundle / "assets" / "opnca-r" / "opnca_0.3.3_R4.6_macos-arm64.tgz").unlink()
     with pytest.raises(MissingAssets) as exc:
         run(layout, world.payload, from_bundle=world.bundle)
     assert exc.value.components == ["opnca-r"]
@@ -229,7 +229,9 @@ def test_only_one_installer_at_a_time(world, layout, fakes):
 # --- uninstall --------------------------------------------------------------------------
 
 
-def test_uninstall_removes_app_files_and_never_a_workspace(tmp_path, world, layout, fakes):
+def test_uninstall_removes_app_files_and_never_a_workspace(
+    tmp_path, world, layout, fakes, monkeypatch
+):
     from opncafyr.installer import uninstall as un
 
     assert run(layout, world.payload, assets=[world.assets]) == 0
@@ -242,8 +244,8 @@ def test_uninstall_removes_app_files_and_never_a_workspace(tmp_path, world, layo
         json.dumps({"schema_version": "1.0", "workspaces": [{"path": str(workspace)}]}), "utf-8"
     )
     removed_icons: list[bool] = []
-    un.icons.remove = lambda layout, log: removed_icons.append(True)  # type: ignore[assignment]
-    un.icons.existing = lambda: []  # type: ignore[assignment]
+    monkeypatch.setattr(un.icons, "remove", lambda layout, log: removed_icons.append(True))
+    monkeypatch.setattr(un.icons, "existing", lambda: [])
     assert un.uninstall(layout, force=False, dry_run=False, say=lambda m: None) == 0
     assert not layout.root.exists()
     assert not layout.r_root.exists()
@@ -252,12 +254,12 @@ def test_uninstall_removes_app_files_and_never_a_workspace(tmp_path, world, layo
     assert (workspace / ".opncafyr" / "workspace.json").is_file()
 
 
-def test_uninstall_can_leave_the_folder_it_runs_from(world, layout, fakes):
+def test_uninstall_can_leave_the_folder_it_runs_from(world, layout, fakes, monkeypatch):
     from opncafyr.installer import uninstall as un
 
     assert run(layout, world.payload, assets=[world.assets]) == 0
-    un.icons.remove = lambda layout, log: None  # type: ignore[assignment]
-    un.icons.existing = lambda: []  # type: ignore[assignment]
+    monkeypatch.setattr(un.icons, "remove", lambda layout, log: None)
+    monkeypatch.setattr(un.icons, "existing", lambda: [])
     leave = layout.installer_copy
     assert un.uninstall(layout, force=False, dry_run=False, say=lambda m: None, leave=leave) == 0
     assert sorted(p.name for p in layout.root.iterdir()) == ["installer"]

@@ -136,7 +136,7 @@ scheduled first.
 
 **Gate 3**
 - Starts once #29 proves runs can be replayed. The quartifyr adapter (#32) calls quartifyr
-  0.3.3's `render.R --strict --json --offline` and `check.R --json` in a staging copy of
+  0.3.3's `render.R --json --offline` (`--strict` until 0.3.4, then the adapter's own gate, #62) and `check.R --json` in a staging copy of
   the project that holds only the bound publication's files. It keeps only the DOCX
   listed in the result, after re-hashing it. Quarto refuses a project inside a hidden
   folder, so the render copy lives in the build's staging folder rather than
@@ -168,7 +168,7 @@ scheduled first.
 | A cross-site page drives a child's loopback port directly | Exclusions, results or decks changed without the session secret | Upstream Host allow-list, API token injected by the proxy, and rejection of cross-site requests; negative test in the harness | #16, #27, #33, opnca-r#40, deckifyr#88 |
 | A deck project file names an executable or a path outside the project | Breaks the rule that workspace files never name an executable | Pass `--trusted-binaries-only` with absolute pinned `--rscript-bin`/`--quarto-bin`/`--soffice-bin` (done upstream in 0.3.5) | #33, deckifyr#89 |
 | A deck project's Quarto fragments (code chunks, filters) or reportifyr `.rds` files run code | Workspace files execute code despite the trusted-binaries rule | **Decided (owner, 2026-11-07):** deck and report projects are trusted, user-authored projects. Quarto blocks (see #52) and flextable `.rds` files, possibly made by other tools, are allowed. Code runs only through the pinned binaries (`--trusted-binaries-only`), with an allow-listed environment and launcher-owned staging copies. The generated NCA results deck contains no executable fragments, and data text is quoted or reduced to plain words before it goes into a deck or report source | #33, #52 |
-| Partial or stale report renders look complete | Silent incomplete deliverables | `render.R --strict --json` (done upstream); render in staging; trust only hashes in the result | #32, quartifyr#69, quartifyr#77, quartifyr#81 |
+| Partial or stale report renders look complete | Silent incomplete deliverables | `render.R --json` (done upstream), with the adapter accepting only an `ok` result or the wide-table warning (#62); render in staging; trust only hashes in the result | #32, quartifyr#69, quartifyr#77, quartifyr#81 |
 | Unsaved deck edits lost on stop | Data loss | `POST /api/shutdown` refuses while there are unsaved edits (done); the launcher's idle timer and Quit check deckifyr's `dirty` flag and ask before saving (done, #14); SIGTERM only as a fallback | #14, #33, deckifyr#83 |
 | Cloud users reach the app through an SSH tunnel or IDE proxy (different Host/Origin, URL prefix) | App unreachable, or security checks loosened ad hoc | Explicit base-path and allow-list settings with tested presets; the session token is always required; the port is published to VM loopback only | #42, #15, #16, opnca-r#24, deckifyr#82 |
 | Shared-origin localStorage leaks a mapping between analytes | Wrong column mapping | Scope or disable it upstream; the launcher always passes an explicit mapping | #27, opnca-r#30 |
@@ -187,7 +187,7 @@ scheduled first.
 | Workspace metadata folder is `.opncafyr/`, with a versioned schema | Accepted | spec allowed a rename |
 | No reportifyr changes; sidecar validation lives in the launcher | Accepted | #30 |
 | Offline installation supported in v1 alongside the default online install (native and container) | **Accepted** (owner, 2026-11-04) | #1, #36, #44, [offline.md](offline.md) |
-| v1 matrix: Windows 11 x86_64, macOS arm64/x86_64 (macOS 15 until opnca-r#45), R 4.6.2; 30-min configurable idle timeout; no native Linux | **Accepted** (owner, 2026-11-06) | [ADR 0003](decisions/0003-platform-matrix.md), #1 |
+| v1 matrix: Windows 11 x86_64, macOS arm64/x86_64 (macOS 15 until opnca-r#45), R 4.6.2; 30-min configurable idle timeout; native Linux (Ubuntu 24.04, x86_64 and aarch64) added 2026-11-09 with opnca-r 0.3.3 | **Accepted** (owner, 2026-11-06; Linux amendment 2026-11-09) | [ADR 0003](decisions/0003-platform-matrix.md), #1, #65 |
 | Data conventions and warning-vs-blocking checks: exact-code analyte filter plus specimen role, declared units, explicit BLQ/LLOQ steps and BLQ rules, reasons for every exclusion, duplicates and undosed profiles blocking | **Accepted** (owner, 2026-11-05); provisional until checked on sponsor data | [ADR 0005](decisions/0005-data-conventions.md), #2 |
 | Generic quartifyr NCA report and deckifyr bundled default deck (both shipped, never fetched); all four artifact types pre-selected; coded subject IDs allowed in outputs, never in logs/URLs/diagnostics; direct identifiers need an explicit choice; source copied by default | **Accepted** (owner, 2026-11-06) | [ADR 0007](decisions/0007-templates-and-identifiable-data.md), #3 |
 | opnca-r from prebuilt binaries; vendored source tarball only as a repair/exception fallback (option C) | **Accepted** (owner, 2026-11-06) | [ADR 0004](decisions/0004-opnca-r-binaries-with-vendored-fallback.md), #4 |

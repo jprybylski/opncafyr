@@ -6,6 +6,7 @@ in it.
 from __future__ import annotations
 
 import csv
+import re
 import zipfile
 
 import pytest
@@ -37,6 +38,8 @@ def test_bundle_after_a_real_run(security, tmp_path, runtime, monkeypatch):
         text = "\n".join(zf.read(n).decode("utf-8") for n in zf.namelist())
     ids, concs = _fixture_values()
     assert [i for i in ids if i in text] == []
-    assert [c for c in concs if c in text] == []
+    # A concentration is a whole number token. A bare substring test also matched the
+    # milliseconds of a timestamp ("...:21.151Z"), which failed one CI run in a while.
+    assert [c for c in concs if re.search(rf"(?<![\w.:+-]){re.escape(c)}(?!\w)", text)] == []
     assert str(study) not in text
     assert '"workspace": "<study:Study>"' in text

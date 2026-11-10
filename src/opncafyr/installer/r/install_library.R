@@ -10,6 +10,11 @@
 # Base R only: no renv (its restore needs the Command Line Tools on macOS and goes online
 # for packages missing from an index), no compilers (binaries and pure-R sources only), and
 # the only repository is the local one, so a missing file fails instead of downloading.
+#
+# Linux (#65): R's package type there is "source", and Posit's Linux binaries are tarballs at the
+# source path, so they are installed with type = "source" (R CMD INSTALL sees the `Built:` field
+# and unpacks the binary), one at a time: a parallel install runs `make`, which a no-compiler VM
+# doesn't have.
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 6L) stop("usage: install_library.R <lib> <repo> <contrib> <cellar> <lock.tsv> <opnca>")
 lib <- normalizePath(args[[1]], winslash = "/", mustWork = TRUE)
@@ -21,12 +26,14 @@ opnca_file <- if (identical(args[[6]], "-")) NA_character_ else file.path(cellar
 
 .libPaths(lib)
 repo_url <- paste0("file:///", sub("^/", "", repo))
+linux <- grepl("linux", R.version$os, fixed = TRUE)
 type <- .Platform$pkgType
 expected <- sub("^REPO/", "", utils::contrib.url("REPO", type = type))
 if (!identical(expected, contrib)) {
   stop(sprintf("this R expects binaries in %s, the pins provide %s", expected, contrib))
 }
-index_type <- if (.Platform$OS.type == "windows") "win.binary" else "mac.binary"
+index_type <- if (linux) "source" else if (.Platform$OS.type == "windows") "win.binary" else "mac.binary"
+install_type <- if (linux) "source" else "binary"
 tools::write_PACKAGES(file.path(repo, contrib), type = index_type)
 options(
   repos = c(local = repo_url),
@@ -37,16 +44,18 @@ options(
 started <- Sys.time()
 from_repo <- lock$name[lock$source == "Repository"]
 cat(sprintf("installing %d binary packages\n", length(from_repo)))
-utils::install.packages(from_repo, lib = lib, repos = repo_url, type = "binary",
-                        dependencies = FALSE, quiet = TRUE)
+utils::install.packages(from_repo, lib = lib, repos = repo_url, type = install_type,
+                        dependencies = FALSE, Ncpus = 1L, quiet = TRUE)
 
 if (!is.na(opnca_file)) {
   cat("installing opnca-r from its verified binary\n")
-  utils::install.packages(opnca_file, lib = lib, repos = NULL, type = "binary", quiet = TRUE)
+  utils::install.packages(opnca_file, lib = lib, repos = NULL, type = install_type, quiet = TRUE)
 }
 
 # The pure-R tool packages, each after the cellar packages it depends on.
 tarballs <- list.files(cellar, pattern = "\\.tar\\.gz$", full.names = TRUE)
+# On Linux the opnca-r binary is a .tar.gz too: it was installed above, not a pure-R source.
+if (!is.na(opnca_file)) tarballs <- setdiff(tarballs, opnca_file)
 pkg_of <- function(f) sub("_.*$", "", basename(f))
 deps_of <- function(f) {
   tmp <- tempfile()

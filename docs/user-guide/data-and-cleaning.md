@@ -49,7 +49,7 @@ Steps run from top to bottom. A recipe with no steps uses the data as it is. Not
 1. Choose a step in **Add a step…**. A small form opens.
 2. Fill in the form. **Note (optional)** lets you say why the step is needed; the note is kept with the recipe.
 3. Select **Add step**, or **Cancel** to close the form.
-4. Use **Up**, **Down** and **Remove** to change the order or take a step out.
+4. Use **Up**, **Down** and **Remove** to change the order or take a step out. Use **Edit** to change a step you already added: its form opens with the values and note filled in, **Save step** replaces it in the same place, and **Cancel** changes nothing. If the change can't be saved, the form stays open with the reason and what you typed. A step that combines several row conditions can't be opened in the form yet; remove it and add it again. Either way the recipe has changed, so apply it and run the checks again.
 
 Every value you type is matched exactly, including spaces and letter case.
 

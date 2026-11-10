@@ -2,6 +2,10 @@
 
 Most problems show up as a message on the page you are using, or as a failed job. Start there: the app writes its messages for you to read, and they usually say what to do.
 
+## The Linux installer lists missing libraries
+
+On Ubuntu 24.04 the installer checks, before it changes anything, that the system libraries opncafyr needs are installed. It cannot add them without administrator rights. If some are missing it prints their names and the Ubuntu packages to ask for. Send that list to your administrator and run the installer again. The same message appears if the computer is not Ubuntu 24.04 or its C library is older than the installer needs; in that case use the container (see [Running on a cloud computer](cloud-container.md)).
+
 ## A tool shows Unavailable
 
 On **Home**, each tool in the **Tools** card shows its health. **Unavailable** means the app could not start or find that tool. The tile shows a short reason underneath.
@@ -61,9 +65,9 @@ If the analyte you want shows no rows, check its exact text. `"METAB"` and `"MET
 
 A failed render keeps nothing, so you can render again as often as you need. Deck builds work the same way: read the message on the **5. Deck (PPTX)** card and select **Check** first.
 
-## A deck build fails with "IndexError"
+## A deck build stops with "unexpected error in the deck tool"
 
-A deck built from a publication with tables stops with "IndexError: tuple index out of range". This is a known issue in this version of the deck tool: it can't put a table with an empty cell on a slide. See [Known issue: tables with empty cells](decks.md#known-issue-tables-with-empty-cells).
+This means the deck tool failed on something it didn't expect, not that your deck is wrong. Nothing is recorded for a failed build. Make a support bundle (see [Getting help](#getting-help)) and include the build's message. Tables with empty cells are not the cause: they build (see [Tables with empty cells](decks.md#tables-with-empty-cells)).
 
 ## Version history won't set up, save or send
 

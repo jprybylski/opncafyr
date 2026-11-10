@@ -33,6 +33,8 @@ comments on #15/#16, #27, #28, #32, #33 and #34.
 | [#56](https://github.com/mantra-opnca/opnca-r/issues/56) | Launcher-declared unit labels: preset `units`, read-only page fields, `UNITS_LOCKED`, `--require-explicit-units`, `effective_settings.units_source` | Done (v0.3.1), checked against a running server (`tests/integration/nca/test_units_r.py`): the preset's labels reach the record, `analysis.R` and the result tables, and estimates are unchanged. `--require-explicit-settings` now implies the units requirement. Its `preset_mapping` config omits `units`; the page config has `units` and `units_source` instead | #57 |
 | [#57](https://github.com/mantra-opnca/opnca-r/issues/57) | Honour `--no-guess-roles` on the server (`ROLE_REQUIRED`) and in the Bioequivalence view | Done (v0.3.1). The preset also takes `period`, `treatment` and `sequence`; the launcher doesn't set them, since it runs NCA only | #27 |
 | [#58](https://github.com/mantra-opnca/opnca-r/issues/58) | `artifacts.json` says whether a saved file shows subject identifiers (`identifies_subjects`, separate from `subject_level`) | Done (v0.3.1). Boxplots are `identifies_subjects: false`. The curator's "shows subject IDs" is this flag for runs saved by 0.3.1 (#59) | Publishing (#31) |
+| [#59](https://github.com/mantra-opnca/opnca-r/issues/59) | Leave the flextable caption off the exported `.rds` tables, so reportifyr can place them (it can't match a captioned table to its `{rpfy}` placeholder; a caption is what leaves it unfilled, confirmed with the real tools) | Done (v0.3.2, 2026-11-09, pinned in #62), as asked; the table fills without the caption (developer machine, not yet the container image). The report check and render still refuse a captioned `.rds` (`workflows/nca/publish/rds_check.py`), which now means a run saved by an earlier opnca-r | #62 |
+| [#61](https://github.com/mantra-opnca/opnca-r/issues/61) | Publish Linux binaries (x86_64 and arm64, R 4.6) in each release, with `glibc_min` in the manifest (no source build, compiler or root on the target) | Done (v0.3.3, 2026-11-09, pinned in #65): `linux-x86_64` and `linux-arm64`, built on Ubuntu 24.04, `glibc_min` 2.39, linking only glibc, libstdc++, libgcc and R; the release fails above 2.39. The manifest says `arm64` where our platform is `linux-aarch64` (`installer/platforms.py` maps it). `[platforms].pending` is empty | #65 |
 
 Gaps still open after 0.3.1: a killed save leaves `.opnca-save.lock/` for 600 s (#46).
 
@@ -43,7 +45,7 @@ Select assets by `manifest.json` fields, never by file name. Since v0.2.7 every 
 ## jprybylski/deckifyr (public)
 
 #82–#86 were released in v0.3.4 (PR #87), #88–#91 in v0.3.5 (PR #92, 2026-11-06) and
-#93–#94 in v0.3.6 (PR #95, 2026-11-07). All were reviewed. Remaining gaps are handled in
+#93–#94 in v0.3.6 (PR #95, 2026-11-07) and #96 in v0.3.7 (2026-11-09). All were reviewed except v0.3.7, which was pinned after its asset hashes matched the release's `SHA256SUMS` and a diff of the fix. Remaining gaps are handled in
 our adapter (#33).
 
 | Issue | What | Status | Needed by |
@@ -58,14 +60,14 @@ our adapter (#33).
 | [#90](https://github.com/jprybylski/deckifyr/issues/90) | Atomic PPTX, previews and manifest; JSON for every `--json` failure | Done (v0.3.5); argparse errors and signals print no JSON; stale preview files can remain | Gate 3 |
 | [#91](https://github.com/jprybylski/deckifyr/issues/91) | Releases can't change after publishing; small contract gaps | Done (v0.3.5); GitHub's immutable-releases setting is still off | Gate 0 pins |
 | [#93](https://github.com/jprybylski/deckifyr/issues/93) | Offline mode for the R wrappers (`uv run --no-sync`) and `init --from-repo` | Done (v0.3.6); also adds `python_env` and the web/preview packages in the R-written group. The launcher still calls the Python CLI directly | Gate 3 (#33), offline (#44) |
-| [#96](https://github.com/jprybylski/deckifyr/issues/96) | Build fails with `IndexError` when a table cell is empty (opnca-r's tables have empty cells) | Open (filed 2026-11-07, found by the offline flow, #51). Until it is pinned, the offline flow's deck has figures only (`scripts/offline/flow_check.py`, labelled temporary); a real deck with a published table fails to build | Gate 3 |
+| [#96](https://github.com/jprybylski/deckifyr/issues/96) | Build fails with `IndexError` when a table cell is empty (opnca-r's tables have empty cells) | Done (v0.3.7, 2026-11-09), pinned in #62. Empty header and data cells stay empty in the PPTX. The offline flow's deck holds tables again (`scripts/offline/flow_check.py`). A formatted `.rds` table still has to be a `reportifyr` element, not `table`: that is the adapter's job (#62) | Gate 3 |
 | [#94](https://github.com/jprybylski/deckifyr/issues/94) | Accept project YAML that starts with a UTF-8 BOM | Done (v0.3.6); all project YAML/JSON/CSV/QMD reads drop a BOM, and reads no longer fall back to the Windows locale encoding | Gate 3 |
 | [#97](https://github.com/jprybylski/deckifyr/issues/97) | Record project-relative paths in `deck-manifest.json` | Open (filed 2026-11-08, found by the container image check, #42). Its input, element and output paths are absolute, so a deck build names the folder it was built in (a container's `/workspace`, or a user's home folder). Until it is pinned, `scripts/container/check_image.sh` excepts that one file from the path scan (labelled temporary); our own manifests are relative | #42 |
 
 ## jprybylski/quartifyr (public)
 
 #69–#72 (PR #74) and #75–#78 (PR #79) were released in v0.3.2 (2026-11-05) and reviewed.
-The follow-ups #81–#86 (PR #87) were reviewed and released in v0.3.3 (2026-11-07). The release workflow may still refresh a release
+The follow-ups #81–#86 (PR #87) were reviewed and released in v0.3.3 (2026-11-07). v0.3.4 (2026-11-09) releases #88; it was pinned inside the 24 hour window, so its hashes and tag are to be re-checked after 2026-11-10T19:53Z. The release workflow may still refresh a release
 (move the tag, replace the tarball) within 24 hours of publishing; that is intentional, for
 quick fixes, so pin a quartifyr release only after that window has passed.
 
@@ -85,6 +87,7 @@ quick fixes, so pin a quartifyr release only after that window has passed.
 | [#84](https://github.com/jprybylski/quartifyr/issues/84) | Field recalculation always times out on macOS (LibreOffice 26.2) | Done (v0.3.3), verified upstream on macOS 26.6 only; recalculation stays off in the adapter until re-verified (#8) | Gate 3 (#32), #8 |
 | [#85](https://github.com/jprybylski/quartifyr/issues/85) | Offline report setup without pyro: one Python env for both passes | Done (v0.3.3) as `initialize_report_project_offline()`; uv is still required (reportifyr runs it). The adapter uses it (#32); the `.venv` and init-marker workaround was never needed | Gate 3 (#32), offline |
 | [#86](https://github.com/jprybylski/quartifyr/issues/86) | Field recalculation hangs and orphans soffice on Windows (malformed profile URL) | Done (v0.3.3), with process tests run upstream on Windows 11; recalculation stays off in the adapter until re-verified (#8) | Gate 3 (#32), #8 |
+| [#88](https://github.com/jprybylski/quartifyr/issues/88) | Fit wide tables to the page width (reportifyr fixes it at 6 in and squeezes columns) and support landscape sections | Done (v0.3.4, 2026-11-09, pinned in #62): tables fit the page (`fit_tables`, on by default) and `{{< landscape >}}` / `{{< portrait >}}` start and end a landscape section. A table still too wide at 7 pt is a warning; opnca-r's own 22-column summary is one. `--strict` would refuse it, so the adapter no longer passes `--strict` and accepts that one warning, and only that one (`only_wide_tables`), recording it in the build. Figures still use `default_fig_width` (`use_artifact_size: false` in the bundled `config.yaml`, and `check` warns about an older project that doesn't), because reportifyr sizes them. Not yet measured on a real DOCX | #62 |
 
 Offline installation is a supported v1 use case (2026-11-04). pyro and reportifyr (A2-ai,
 external) also reach the network during project setup. opncafyr handles that in its
@@ -108,6 +111,7 @@ unchanged. The adapter needs 0.2.0 or later.
 | [#42](https://github.com/jprybylski/gitneighbr/issues/42) | Launcher policy: groups, protected paths, review labels, send-blocked, `.gitignore` template at setup only | Done (v0.2.0) | #56 |
 | [#43](https://github.com/jprybylski/gitneighbr/issues/43) | Send/Update with a full, preview-bound history check; HTTPS token via env only | Done (v0.2.0); tested against a real HTTPS `git http-backend` | #56 remote |
 | [#44](https://github.com/jprybylski/gitneighbr/issues/44) | `SHA256SUMS` on releases; `clone --`; sanitised PR stderr | Done (v0.2.0) | pins |
+| [#48](https://github.com/jprybylski/gitneighbr/issues/48) | Say when Git refuses the folder because another user owns it (`OWNERSHIP`), instead of `GIT_DIR_INVALID` | Open (filed 2026-11-09). Temporary workaround here: the launcher writes one `safe.directory` entry for the exact study folder into its own `git_config` file (`trust_study_folder`, #62); the container start also warns when the owner differs | #62 |
 
 Pinned as a cellar package (`[packages.gitneighbr]`, 0.2.1: PR #47 removed GitHub wording
 from the managed status summary, found while making the guide's screenshots). Testing on Windows CI also

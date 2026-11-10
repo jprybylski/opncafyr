@@ -102,7 +102,7 @@ def render(api, status="draft"):
 # --- commands ------------------------------------------------------------------------------
 
 
-def test_render_command_is_strict_offline_and_pinned(fake, tmp_path):
+def test_render_command_is_offline_and_pinned_and_not_strict(fake, tmp_path):
     project = tmp_path / "p"
     spec = Q.render_command(fake, project, "final", 600, tmp_path / "home", tmp_path / "cache")
     rscript = str(fake.executable("rscript"))
@@ -112,8 +112,10 @@ def test_render_command_is_strict_offline_and_pinned(fake, tmp_path):
         str(fake.r_library / "quartifyr/scripts/render.R"),
     ]
     args = spec.argv[3:]
-    for flag in ("--json", "--strict", "--offline"):
+    for flag in ("--json", "--offline"):
         assert flag in args
+    # --strict would refuse quartifyr's "table too wide" warning; parse_render is the gate (#62).
+    assert "--strict" not in args
     assert args[args.index("--quarto-bin") + 1] == str(fake.executable("quarto"))
     assert args[args.index("--project") + 1] == str(project)
     assert args[args.index("--shell") + 1] == str(project / "report.qmd")
@@ -165,6 +167,73 @@ def test_a_formatted_table_is_placed_like_a_csv_one():
     assert lines[i - 2] == '{{< tbl_caption "Tbl1" "Summary (formatted), A" >}}'
 
 
+def test_parse_render_names_the_files_whose_placeholders_stayed_unfilled():
+    # #62: "Unfilled placeholders: 1." didn't say which table.
+    doc = {
+        "schema_version": 1,
+        "status": "error",
+        "error_class": "quartifyr_render_incomplete",
+        "errors": [],
+        "artifacts": [],
+        "unfilled_placeholders": [f"{{rpfy}}:t{i}.rds" for i in range(7)],
+    }
+    result = Q.parse_render(1, json.dumps(doc), None, None)
+    assert not result.ok
+    assert "Unfilled placeholders: 7 (t0.rds, t1.rds, t2.rds, t3.rds, t4.rds and 2 more)." in (
+        result.message
+    )
+    assert "{rpfy}" not in result.message
+
+
+WIDE = (
+    "Table(s) 1, 3 in report-draft.docx are still too wide at the minimum font size, "
+    "so a word may break."
+)
+
+
+def _result(status="warning", **extra):
+    doc = {
+        "schema_version": 1,
+        "status": status,
+        "errors": [],
+        "artifacts": [{"role": "draft", "path": "report-draft.docx", "sha256": "0" * 64}],
+        "inputs": [],
+        "versions": {},
+        "warnings": [],
+    }
+    return json.dumps(doc | extra)
+
+
+def test_a_table_too_wide_for_the_page_is_a_warning_not_a_failure():
+    # quartifyr 0.3.4: opnca-r's 22-column summary can't fit a portrait page at 7 pt, so a
+    # default report would never render if this failed it (#62).
+    result = Q.parse_render(0, _result(warnings=[WIDE]), None, None)
+    assert result.ok and result.artifacts[0]["role"] == "draft"
+    assert result.document["warnings"] == [WIDE]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"warnings": [WIDE, "pass 2 skipped a table"]},
+        {"warnings": [WIDE], "errors": ["pass 2 failed"]},
+        {"warnings": [WIDE], "unfilled_placeholders": ["{rpfy}:t.rds"]},
+        {"warnings": [WIDE], "missing_metadata": ["title"]},
+        {"warnings": ["pass 2 skipped a table"]},
+        {"warnings": []},
+    ],
+)
+def test_any_other_warning_or_problem_still_fails_the_render(extra):
+    result = Q.parse_render(0, _result(**extra), None, None)
+    assert not result.ok
+    if extra.get("warnings") and extra["warnings"][-1].startswith("pass 2"):
+        assert "pass 2 skipped a table" in result.message  # says what it was
+
+
+def test_a_non_zero_exit_fails_even_with_only_the_wide_table_warning():
+    assert not Q.parse_render(1, _result(warnings=[WIDE]), None, None).ok
+
+
 def test_parse_render_decides_on_exit_code_and_status(tmp_path):
     ok = {"schema_version": 1, "status": "ok", "errors": [], "artifacts": [{"role": "draft"}]}
     assert Q.parse_render(0, json.dumps(ok), None, None).ok
@@ -212,6 +281,160 @@ def test_check_combines_launcher_and_quartifyr_findings(api, ready):
     assert report["findings"][0]["path"] == "report.qmd"  # not the staging path
 
 
+def _with_formatted_table(api, state: str):
+    run, _ = completed_run(api.study, "Drug A", described=True)
+    pub = publish(api, run, artifacts=("summary", "summary-formatted"))
+    set_up(api, pub)
+    (api.fake / "rds.txt").write_text(state, "utf-8")
+    return pub, run
+
+
+def test_check_names_a_captioned_formatted_table(api):
+    # #62: a flextable that carries its own caption left its placeholder unfilled.
+    _with_formatted_table(api, "captioned")
+    job = wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    hit = [f for f in findings if f["check"] == "rds-captioned"]
+    assert len(hit) == 1 and hit[0]["severity"] == "error"
+    assert hit[0]["path"].endswith("summary-formatted.rds")
+    assert "CSV" in hit[0]["message"] and "deck" in hit[0]["message"]
+
+
+@pytest.mark.parametrize(
+    ("state", "check"), [("not_flextable", "rds-not-flextable"), ("unreadable", "rds-unreadable")]
+)
+def test_check_names_an_rds_that_is_not_a_formatted_table(api, state, check):
+    _with_formatted_table(api, state)
+    job = wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    assert [f["check"] for f in findings if f["check"].startswith("rds-")] == [check]
+
+
+def test_render_refuses_a_captioned_formatted_table_and_makes_no_build(api):
+    _with_formatted_table(api, "captioned")
+    mode(api, "ok")
+    r = api.post("/api/nca/report/render", json={"status": "draft"})
+    assert r.status_code == 200, r.text
+    job = wait_job(api, r.json()["job_id"], 60)
+    assert job["state"] == "failed"
+    assert "summary-formatted.rds" in job["message"] and "CSV" in job["message"]
+    assert api.get("/api/nca/report").json()["builds"] == []
+
+
+def test_a_formatted_table_without_a_caption_renders(api):
+    _with_formatted_table(api, "ok")
+    mode(api, "ok")
+    out, job = render(api)
+    assert job["state"] == "completed", job["message"]
+
+
+def test_a_report_without_formatted_tables_never_starts_the_rds_check(api, ready):
+    (api.fake / "rds.txt").write_text("captioned", "utf-8")  # would block if it were run
+    mode(api, "ok")
+    out, job = render(api)
+    assert job["state"] == "completed", job["message"]
+
+
+def test_new_report_projects_size_figures_by_the_page_not_their_pixels(api, ready):
+    # #62: opnca-r's 2000 x 1200 PNG came out about 27 inches wide.
+    text = (api.study / "report" / "report" / "config.yaml").read_text("utf-8")
+    assert "use_artifact_size: false" in text
+
+
+def test_check_warns_about_an_older_projects_pixel_sized_figures(api, ready):
+    config = api.study / "report" / "report" / "config.yaml"
+    config.write_text(
+        config.read_text("utf-8").replace("use_artifact_size: false", "use_artifact_size: true"),
+        "utf-8",
+    )
+    job = wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    hit = [f for f in findings if f["check"] == "figure-size"]
+    assert len(hit) == 1 and hit[0]["severity"] == "warning"
+    assert hit[0]["path"] == "report/config.yaml"
+    assert "use_artifact_size: true" in config.read_text("utf-8")  # never rewritten
+
+
+def test_the_editor_offers_the_two_yaml_files_after_the_report(api, ready):
+    # #64: bounded exceptions to "sources only"; nothing else in the subfolder.
+    files = api.get(EDIT).json()["files"]
+    paths = [f["path"] for f in files]
+    assert paths[:3] == ["report.qmd", "report/config.yaml", "report/standard_footnotes.yaml"]
+    assert not any(
+        p.startswith(("builds", "OUTPUTS", "_extensions", "report/draft")) for p in paths
+    )
+    by = {f["path"]: f for f in files}
+    assert by["report/config.yaml"]["label"] == "Report settings (config.yaml)"
+    assert by["report/config.yaml"]["syntax"] == "yaml"
+    assert "figure width" in by["report/config.yaml"]["help"]
+    assert "abbreviations" in by["report/standard_footnotes.yaml"]["help"]
+
+
+def _open_config(api):
+    return api.post(f"{EDIT}/read", json={"path": "report/config.yaml"}).json()
+
+
+def _save_config(api, doc, text):
+    return api.post(
+        f"{EDIT}/save",
+        json={"path": "report/config.yaml", "text": text, "expected_sha256": doc["sha256"]},
+    )
+
+
+def test_saving_a_setting_checks_it_in_plain_words(api, ready):
+    doc = _open_config(api)
+    good = _save_config(
+        api, doc, doc["text"].replace("default_fig_width: 6", "default_fig_width: 5")
+    )
+    assert good.status_code == 200 and good.json()["warnings"] == []
+    doc = _open_config(api)
+    bad = _save_config(api, doc, doc["text"] + 'use_artifact_size: "no"\nfig_aligment: left\n')
+    assert bad.status_code == 200  # a warning never stops a save
+    notes = " ".join(bad.json()["warnings"])
+    assert "fig_aligment" in notes and "spelling" in notes
+    broken = _save_config(api, _open_config(api), "strict: [\n")
+    assert "not valid YAML" in broken.json()["warnings"][0]
+
+
+def test_check_reports_the_settings_problems_and_where_to_fix_them(api, ready):
+    config = api.study / "report" / "report" / "config.yaml"
+    config.write_text(config.read_text("utf-8") + "fig_aligment: left\n", "utf-8")
+    job = wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    assert job["state"] == "completed", job["message"]
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    hit = [f for f in findings if f["check"] == "config-yaml"]
+    assert len(hit) == 1 and hit[0]["severity"] == "warning"
+    assert hit[0]["path"] == "report/config.yaml" and "Report settings" in hit[0]["message"]
+
+
+@pytest.mark.parametrize(
+    "text", ["strict: [\n", "report_dir_name: elsewhere\n", "outputs_dir_name: ../x\n"]
+)
+def test_render_refuses_a_settings_file_that_would_break_the_project(api, ready, text):
+    config = api.study / "report" / "report" / "config.yaml"
+    config.write_text(text, "utf-8")
+    mode(api, "ok")
+    out, job = render(api)
+    assert job["state"] == "failed"
+    assert "Report settings" in job["message"] and "Run Check" in job["message"]
+    assert api.get("/api/nca/report").json()["builds"] == []
+
+
+def test_the_figure_size_finding_points_at_the_editor(api, ready):
+    config = api.study / "report" / "report" / "config.yaml"
+    config.write_text(
+        config.read_text("utf-8").replace("use_artifact_size: false", "use_artifact_size: true"),
+        "utf-8",
+    )
+    wait_job(api, api.post("/api/nca/report/check").json()["job_id"], 60)
+    findings = api.get("/api/nca/report").json()["check"]["findings"]
+    (hit,) = [f for f in findings if f["check"] == "figure-size"]
+    assert "Edit report" in hit["message"] and "Report settings" in hit["message"]
+
+
 def test_render_builds_a_docx_with_a_manifest_of_exact_runs(api, ready):
     pub, a, b = ready
     mode(api, "ok")
@@ -222,7 +445,7 @@ def test_render_builds_a_docx_with_a_manifest_of_exact_runs(api, ready):
     assert build["build_id"] == out["build_id"] and sorted(build["runs"]) == sorted([a, b])
     assert build["publication_id"] == pub["publication_id"]
     assert [i["sha256"] for i in build["items"]] == [i["published_sha256"] for i in pub["items"]]
-    assert build["settings"]["status"] == "draft" and build["tools"]["quartifyr"] == "0.3.3"
+    assert build["settings"]["status"] == "draft" and build["tools"]["quartifyr"] == "0.3.4"
     folder = api.study / "report" / "builds" / out["build_id"]
     assert sorted(p.name for p in folder.iterdir()) == [
         "build.json",
@@ -300,6 +523,32 @@ def test_a_changed_publication_is_refused(api, ready):
     ):
         r = api.post(path, json=body)
         assert r.status_code == 409 and r.json()["detail"]["code"] == "publication_changed"
+
+
+def test_a_revision_does_not_move_the_report_or_change_its_builds(api, ready):
+    # #62: the report moves to a revised publication only when asked.
+    pub, a, b = ready
+    mode(api, "ok")
+    out, job = render(api)
+    assert job["state"] == "completed", job["message"]
+    before = api.get("/api/nca/report").json()
+    build_file = api.study / "report" / "builds" / out["build_id"] / "build.json"
+    recorded = build_file.read_bytes()
+
+    r = api.post(
+        "/api/nca/publications",
+        json={"items": picks(a, ("summary",)), "revises": pub["publication_id"]},
+    )
+    assert r.status_code == 201, r.text
+    revised = r.json()["publication"]
+
+    after = api.get("/api/nca/report").json()
+    assert after["binding"]["publication_id"] == pub["publication_id"] != revised["publication_id"]
+    assert [x["build_id"] for x in after["builds"]] == [x["build_id"] for x in before["builds"]]
+    assert build_file.read_bytes() == recorded
+    # Binding the report to the revision is the existing, deliberate step.
+    rebind = api.post("/api/nca/report", json={"publication_id": revised["publication_id"]})
+    assert rebind.status_code == 200, rebind.text
 
 
 def test_rebinding_over_an_edited_report_asks_first(api, ready):
@@ -380,16 +629,20 @@ def set_status(api, value):
     return out.json()["sha256"]
 
 
-def test_the_report_editor_offers_only_the_report_sources(api, ready):
+def test_the_report_editor_offers_only_the_report_sources_and_two_yaml_files(api, ready):
     (api.study / "report" / "notes.md").write_text("Notes\n", "utf-8")
     doc = api.get(EDIT).json()
     assert doc["title"] == "Report source"
-    assert [f["path"] for f in doc["files"]] == ["report.qmd", "notes.md"]
+    assert [f["path"] for f in doc["files"]] == [
+        "report.qmd",
+        "report/config.yaml",
+        "report/standard_footnotes.yaml",
+        "notes.md",
+    ]
     assert doc["settings"]["values"] == {"status": None, "reference_doc": "bundled"}
     for path in (
         "_quarto.yml",
-        "report/config.yaml",
-        "report/standard_footnotes.yaml",
+        "report/draft/report.docx",
         "OUTPUTS/tables/x.csv",
         "builds/x/build.json",
         "_extensions/quartifyr/a.lua",

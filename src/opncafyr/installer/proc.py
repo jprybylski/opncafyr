@@ -83,7 +83,10 @@ def base_env(
     keep = _KEEP_WINDOWS if sys.platform == "win32" else _KEEP_POSIX
     env = {k: src[k] for k in keep if k in src}
     env["PATH"] = os.pathsep.join([*(str(p) for p in path_prepend), system_path()])
-    if sys.platform != "win32":
+    if sys.platform.startswith("linux"):
+        # en_US.UTF-8 is often not generated on a minimal VM; C.UTF-8 always exists (#65).
+        env["LANG"] = env["LC_ALL"] = "C.UTF-8"
+    elif sys.platform != "win32":
         env["LANG"] = env["LC_ALL"] = "en_US.UTF-8"
     if tmpdir is not None:
         tmpdir.mkdir(parents=True, exist_ok=True)

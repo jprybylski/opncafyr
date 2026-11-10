@@ -172,14 +172,32 @@ def test_the_generated_deck_quotes_data_and_has_no_bom():
     assert "injected" not in doc
 
 
-def test_a_formatted_table_is_a_table_slide():
-    """#59: deckifyr renders a flextable ``.rds`` table source (deckifyr#57)."""
+def test_a_formatted_table_is_a_picture_slide_and_a_csv_table_a_native_one():
+    """#62: deckifyr renders a flextable ``.rds`` only as a ``reportifyr`` element (a picture).
+
+    Under ``type: table`` it raises E_CONTENT_VALIDATION ("use a 'type: reportifyr'
+    element instead", deckifyr 0.3.6), so a deck with a formatted table could not build."""
     items = [
-        D.DeckItem("a_b_summary-formatted.rds", "table", "Summary", "A", "20261103T142512Z-7c4e")
+        D.DeckItem("a_b_summary-formatted.rds", "table", "Summary", "A", "20261103T142512Z-7c4e"),
+        D.DeckItem("a_b_summary.csv", "table", "Summary", "A", "20261103T142512Z-7c4e"),
     ]
     doc = yaml.safe_load(D.nca_results_presentation(items, "pub-20261104T090000Z-1a2b", None))
-    content = doc["slides"][1]["elements"]["content"]
-    assert content["type"] == "table" and content["source"] == "{rpfy}:a_b_summary-formatted.rds"
+    formatted = doc["slides"][1]["elements"]["content"]
+    assert formatted["type"] == "reportifyr"
+    assert formatted["value"] == "{rpfy}:a_b_summary-formatted.rds"
+    assert "source" not in formatted
+    native = doc["slides"][2]["elements"]["content"]
+    assert native["type"] == "table" and native["source"] == "{rpfy}:a_b_summary.csv"
+
+
+def test_an_unexpected_deckifyr_error_is_readable_and_names_the_exception():
+    err = json.dumps(
+        {"status": "error", "code": "E_INTERNAL", "message": "IndexError: tuple index out of range"}
+    )
+    out = D.parse_cli(1, "", err)
+    assert not out.ok
+    assert "unexpected error in the deck tool" in out.message
+    assert "IndexError: tuple index out of range" in out.message
 
 
 # --- the workflow --------------------------------------------------------------------------

@@ -16,10 +16,17 @@ export function initCurator(stack, state) {
   label.maxLength = 200;
   const actions = el("div", null, "nca-row");
   const plan = el("div");
-  sec.body.append(picker, field("Label (optional)", label), actions, plan);
+  // Shown while a publication is being revised (#62): a new publication from an explicit
+  // selection, started from an earlier one. The earlier one is never changed.
+  const revision = el("div", null, "card-note");
+  revision.hidden = true;
+  revision.tabIndex = -1;
+  sec.body.append(revision, picker, field("Label (optional)", label), actions, plan);
 
   let boxes = []; // [{input, run_id, artifact}]
   let checkedKey = null;
+  let revising = null; // the publication id being revised, or null
+  let seed = null; // that publication, until its files are ticked
   const selection = () => boxes.filter((b) => b.input.checked).map((b) => ({ run_id: b.run_id, artifact: b.artifact }));
   const key = () => JSON.stringify(selection());
 
@@ -47,11 +54,18 @@ export function initCurator(stack, state) {
     publish.disabled = true;
     setStatus(sec.status, "Publishing…");
     try {
-      const out = await post("api/nca/publications", { items: selection(), label: label.value.trim() || null });
+      const out = await post("api/nca/publications", {
+        items: selection(),
+        label: label.value.trim() || null,
+        revises: revising,
+      });
       const pub = out.publication;
-      setStatus(sec.status, `Recorded ${pub.publication_id}: ${pub.items.length} file(s) from ${pub.runs.length} run(s).`);
+      const base = revising;
+      setStatus(sec.status, `Recorded ${pub.publication_id}: ${pub.items.length} file(s) from ${pub.runs.length} run(s).` +
+        (base ? ` It revises ${base}, which is unchanged. A report or deck uses it only when you choose it there.` : ""));
       plan.replaceChildren();
       checkedKey = null;
+      stopRevising();
       state.changed("publications");
     } catch (e) {
       setStatus(sec.status, e.message, true);
@@ -73,13 +87,36 @@ export function initCurator(stack, state) {
     }
   }
 
+  // A refresh error is shown until the next refresh succeeds (#62). Other messages here,
+  // such as "Recorded pub-…", are left alone. A newer refresh supersedes an older one, so a
+  // slow early failure can't overwrite a later success.
+  let seq = 0;
+  let refreshFailed = false;
   async function refresh() {
+    const mine = ++seq;
     let data;
     try {
       data = await getJSON("api/nca/publish/runs");
     } catch (e) {
+      if (mine !== seq) return;
+      boxes = [];
+      checkedKey = null;
+      publish.disabled = true;
+      plan.replaceChildren();
+      picker.replaceChildren();
+      if (e.code === "no_workspace") {
+        refreshFailed = false;
+        setStatus(sec.status, "");
+        picker.append(el("p", "Open a study folder to choose files to publish.", "muted"));
+        return;
+      }
+      refreshFailed = true;
       return setStatus(sec.status, e.message, true);
     }
+    if (mine !== seq) return;
+    if (refreshFailed) setStatus(sec.status, "");
+    refreshFailed = false;
+    if (seed === null) stopRevising(); // the boxes are rebuilt, so a revision's ticks are gone
     boxes = [];
     checkedKey = null;
     publish.disabled = true;
@@ -94,6 +131,52 @@ export function initCurator(stack, state) {
         el("span", r.run_id, "path"), r.analyte ? raw(r.analyte.value) : "", r.reason || "",
       ]), "Runs that can't be published"));
     }
+  }
+
+  function stopRevising() {
+    revising = null;
+    revision.hidden = true;
+    revision.replaceChildren();
+  }
+
+  // Tick exactly the earlier publication's files that can still be offered (#62).
+  function applySeed() {
+    if (seed === null) return;
+    const from = seed;
+    seed = null;
+    const wanted = new Set(from.items.map((i) => `${i.run_id}/${i.artifact}`));
+    let found = 0;
+    for (const b of boxes) {
+      b.input.checked = wanted.has(`${b.run_id}/${b.artifact}`);
+      if (b.input.checked) found += 1;
+    }
+    revising = from.publication_id;
+    label.value = from.label || "";
+    checkedKey = null;
+    publish.disabled = true;
+    plan.replaceChildren();
+    const left = from.items.length - found;
+    revision.replaceChildren();
+    revision.append(
+      el("strong", "Revising "),
+      el("span", from.publication_id, "path"),
+      `: ${found} of its ${from.items.length} file(s) are ticked. Tick or untick files, then Check and Publish. ` +
+        "This makes a new publication; the earlier one and anything built from it stay as they are. " +
+        (left ? `${left} file(s) can't be offered now (their run can no longer be published) and are left out. ` : ""),
+    );
+    revision.append(button("Stop revising", () => { refresh(); }, "btn btn-sm"));
+    revision.hidden = false;
+    revision.focus();
+  }
+
+  async function startRevising(id) {
+    try {
+      seed = (await getJSON(`api/nca/publications/${encodeURIComponent(id)}`)).publication;
+    } catch (e) {
+      return setStatus(sec.status, e.message, true);
+    }
+    await refresh();
+    applySeed();
   }
 
   function runBlock(run) {
@@ -120,7 +203,8 @@ export function initCurator(stack, state) {
   }
 
   state.onChange((what) => {
-    if (what === "workspace" || what === "publications" || what === "shown") refresh();
+    if (what === "revise" && state.reviseFrom) startRevising(state.reviseFrom);
+    else if (what === "workspace" || what === "publications" || what === "shown") refresh();
   });
   refresh();
 }
@@ -129,24 +213,51 @@ export function initPublications(stack, state) {
   const sec = section(stack, "nca-publications", "2. Publications",
     "Each publication is a fixed set of files from exact runs. Reports and decks are built from one publication.");
 
+  // The first refresh can run before a study folder is open. Its error must not outlive a
+  // later successful refresh, and a slow earlier request must not overwrite a later one (#62).
+  let seq = 0;
   async function refresh() {
+    const mine = ++seq;
     let data;
     try {
       data = await getJSON("api/nca/publications");
     } catch (e) {
+      if (mine !== seq) return;
+      state.publications = [];
+      sec.body.replaceChildren();
+      if (e.code === "no_workspace") {
+        setStatus(sec.status, "");
+        sec.body.append(el("p", "Open a study folder to see its publications.", "muted"));
+        return;
+      }
       return setStatus(sec.status, e.message, true);
     }
+    if (mine !== seq) return;
+    setStatus(sec.status, "");
     state.publications = data.publications.filter((p) => p.state === "recorded");
     sec.body.replaceChildren();
     if (!data.publications.length) {
       sec.body.append(el("p", "No publications yet.", "muted"));
     } else {
-      sec.body.append(table(["Publication", "Label", "Analytes", "Files", "Created"], data.publications.map((p) => [
+      sec.body.append(table(["Publication", "Label", "Analytes", "Files", "Created", "Revise"], data.publications.map((p) => [
         el("span", p.publication_id, "path"), p.label || (p.state === "incomplete" ? "Incomplete" : ""),
         (p.runs || []).map((r) => r.analyte.label || r.analyte.value).join(", "), String(p.items ?? ""), formatTime(p.created_at),
+        p.state === "recorded" ? reviseButton(p.publication_id) : "",
       ]), "Publications"));
     }
     state.changed("publications-listed");
+  }
+
+  // Start a new publication from this one's files (#62). It is a different publication with
+  // its own id; this one, and the report or deck built from it, are not changed.
+  function reviseButton(id) {
+    const b = button("Revise", () => {
+      state.reviseFrom = id;
+      state.changed("revise");
+      document.getElementById("nca-curator")?.scrollIntoView({ block: "start" });
+    }, "btn btn-sm");
+    b.setAttribute("aria-label", `Revise ${id}: choose a different set of files`);
+    return b;
   }
 
   state.onChange((what) => {

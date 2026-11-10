@@ -26,6 +26,9 @@ Download and unzip the installer (`opncafyr-installer-<version>.zip`), then:
 Then start opncafyr from **opncafyr** in `~/Applications` (macOS) or from the Desktop or
 Start Menu shortcut (Windows).
 
+**Linux** (Ubuntu 24.04, x86_64 or aarch64) has its own section below: it installs from an
+offline bundle, as an ordinary user, and is reached through an SSH forward or an IDE proxy.
+
 opnca-r's release is private. An online install downloads it through the GitHub API
 when `GH_TOKEN` (or `GITHUB_TOKEN`) is set to a token that can read it. Otherwise, put
 the pinned opnca-r files (`manifest.json` and the binary for your platform, from the
@@ -44,17 +47,65 @@ Options for `install` and `repair`:
 | `--dry-run` | Report what would happen; change nothing. |
 | `--cacert FILE`, `--proxy URL` | For HTTPS through a corporate proxy. The installer uses the system `curl`, so the OS trust store and `HTTPS_PROXY` apply too. |
 
+## Native Linux (Ubuntu 24.04)
+
+For a single-user cloud VM where Docker and Podman are not allowed (ADR 0003, amended for
+#65), supported since opnca-r 0.3.3 published its Linux binaries (mantra-opnca/opnca-r#61).
+
+What it needs: **Ubuntu 24.04** (x86_64 or aarch64) with **glibc 2.39 or later**, a standard
+user (never root), about 4 GB free on a local filesystem, and these **system libraries**,
+which the installer checks before it changes anything but cannot install (no apt, no root):
+
+```
+libbz2-1.0 libcairo2 libcurl4t64 libdeflate0 libfontconfig1 libfreetype6 libfribidi0
+libgcc-s1 libgfortran5 libgit2-1.7 libglib2.0-0t64 libgomp1 libharfbuzz0b libicu74
+libjpeg-turbo8 liblzma5 libopenblas0-pthread libpango-1.0-0 libpangocairo-1.0-0
+libpcre2-8-0 libpng16-16t64 libreadline8t64 libsodium23 libssl3t64 libstdc++6 libtiff6
+libtirpc3t64 libuv1t64 libwebp7 libwebpmux3 libxml2 libzstd1 zlib1g
+```
+
+`fonts-dejavu-core` (or any font) is recommended for reports. If a library is missing, the
+installer lists it with the packages to ask an administrator for and stops. It needs no
+compiler, `make`, `sudo`, apt or network; the bundle is read with `unzip`, `bsdtar` or
+`python3`, or from an unzipped folder.
+
+```sh
+# On a connected machine (any Mac, Windows PC or Linux machine):
+./install.sh bundle --platform linux-x86_64 --out bundles --archive   # or linux-aarch64
+# Copy bundles/opncafyr-bundle-<version>-linux-x86_64 (or the .zip) to the VM, then, as the user:
+opncafyr-bundle-<version>-linux-x86_64/installer/install.sh install --from-bundle opncafyr-bundle-<version>-linux-x86_64
+```
+
+`repair`, `uninstall` and updates work as on the other platforms (an update that fails keeps
+the old install). The app root is `${XDG_DATA_HOME:-~/.local/share}/opncafyr`, and
+`<app root>/bin/opncafyr` starts it. There is no desktop and no folder picker, so name the
+study folder and a port, and reach it from your own browser:
+
+```sh
+~/.local/share/opncafyr/bin/opncafyr launch --remote --port 8765 --workspace ~/study
+# on your own machine:  ssh -L 8765:127.0.0.1:8765 <vm>   then open the link it printed
+```
+
+`--remote` listens on the VM's `127.0.0.1` only. For an IDE proxy, add `--access vscode|
+jupyter|workbench --public-url <the URL the IDE shows>`. Every check (Host, Origin, session
+secret) is the one cloud container mode uses; one user per VM. **Not available on Linux:**
+LibreOffice slide previews and `repair --build-from-source` (both need what a no-root,
+no-compiler install lacks); the container has them.
+
 ## What goes where
 
 ```
 <app root>/                         %LOCALAPPDATA%\opncafyr  or  ~/Library/Application Support/opncafyr
+                                    or ${XDG_DATA_HOME:-~/.local/share}/opncafyr (Linux)
   current                           which install is active (symlink on macOS, a file on Windows)
   versions/<version>-<n>/           one complete install
     install.json                    written last: the install's record (schema install-v1)
     runtime/runtime.json            the executables the launcher may start (runtime-v1)
     python/  uv/  launcher/  tools/  rlib/  quarto/  wheelhouse/  installer/
     r/                              Windows: R 4.6.2 (from R's own installer, /CURRENTUSER)
+                                    Linux: R 4.6.2 unpacked from Posit's .deb and relocated
     bin/Rscript                     macOS: wrapper for the relocated R
+  bin/opncafyr                      Linux: starts the launcher (there is no icon)
   installer/                        copy of the active installer (repair, uninstall)
   state/  logs/  cache/
 ~/Library/opncafyr/versions/<id>/   macOS only: R.framework (R needs a path without a space)
@@ -74,8 +125,9 @@ SHA-256 (from `bootstrap.tsv`), unpacks it to `cache/bootstrap/`, and runs
 before importing the installer from the opncafyr wheel. The installer itself uses only the
 standard library.
 
-1. **Preflight.** Supported OS and version (Windows 11, macOS 15), not root, the app root
-   writable, about 4 GB free, and no other installer running. If the bundled Python can't
+1. **Preflight.** Supported OS and version (Windows 11, macOS 15, Ubuntu 24.04 with glibc
+   2.39 and the system libraries above), not root, the app root writable, about 4 GB free, and
+   no other installer running. If the bundled Python can't
    run (organisational application control), the wrapper says so.
 2. **Resolve and verify.** Every pinned file for the platform is found in the download
    cache, a bundle or `--assets`, or downloaded (in parallel, with the system `curl`).
@@ -190,7 +242,22 @@ inside the installer before anything is installed.
 
 ### 1. Build a bundle on a connected machine
 
-Any connected Mac or Windows PC can build a bundle for any supported platform:
+The commands below run from a generated installer payload, not the source tree's
+`installer/` directory. There is no public installer zip download yet. From a source
+checkout, create the complete installer folder and zip first:
+
+```sh
+uv run python scripts/make_installer.py --out dist --zip
+```
+
+Then run `install.sh` or `install.bat` from `dist/opncafyr-installer-<version>/`.
+That folder includes the generated `bootstrap.tsv`, `payload.json`, wheel and pins;
+`installer/install.sh` in the checkout does not. The installer zip contains the
+installer, while `bundle --archive` produces a separate, platform-specific zip with
+all pinned assets. The full build requires access to the private opnca-r release
+(`--assets` or `GH_TOKEN`/`GITHUB_TOKEN`) and the public pinned downloads.
+
+Any connected Mac, Windows PC or Linux machine can build a bundle for any supported platform:
 
 ```sh
 # macOS, for Windows users:
@@ -202,12 +269,14 @@ rem Windows, for Mac users:
 install.bat bundle --platform macos-arm64 --out bundles --archive --assets <folder>
 ```
 
-- `--platform`: `windows-x86_64`, `macos-arm64` or `macos-x86_64` (default: this machine).
+- `--platform`: `windows-x86_64`, `macos-arm64`, `macos-x86_64`, `linux-x86_64` or
+  `linux-aarch64` (default: this machine). Linux can't be built into a released bundle until
+  opnca-r publishes its Linux binary (#65).
 - `--archive` also writes `opncafyr-bundle-<version>-<platform>.zip`.
 - `--with-libreoffice` adds LibreOffice (optional, for slide previews; about 300–400 MB).
 - Git for version history is included by default (about 50–70 MB); `--without-git` leaves it out.
 - `--with-source-build` adds what `repair --build-from-source` needs: opnca-r's vendored
-  tarball, the Rust toolchain and, for Windows, Rtools45 (about 600 MB more).
+  tarball, the Rust toolchain and, for Windows, Rtools45 (about 600 MB more). Not on Linux.
 - `--mirror mirror.toml` fetches from internal mirrors instead (below).
 - An installed opncafyr can do the same with `opncafyr bundle …`.
 

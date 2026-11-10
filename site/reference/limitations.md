@@ -44,7 +44,7 @@ These are deliberate and are not expected to change.
 | **The installer and the app are not code-signed (Windows) or notarized (macOS).** Offline bundles have no detached signature. | Get the installer from the person who supports opncafyr at your site. For offline bundles, administrators can compare the installer payload digest with the value from whoever supplied the installer. |
 | **No ready-made offline bundles are published with releases.** | An administrator builds one on a connected computer. See [Offline install]({{ '/guides/offline-install/' | relative_url }}). |
 | **Version history sends only over HTTPS, to an existing Git repository.** SSH addresses, Git LFS, submodules, encryption filters and study folders inside another Git project aren't supported. | Use the HTTPS address and an access token. Keep study folders outside other Git projects. The page explains any refusal and changes nothing. |
-| **No native Linux install.** A container image for cloud computers is under discussion. | Use macOS or Windows. |
+| **The native Linux install supports Ubuntu 24.04 only, and needs some system libraries.** It can't add them without administrator rights; it checks first and lists what is missing. It has no slide previews and no `repair --build-from-source`. | On another Linux, or to avoid the library step, use the [container]({{ '/get-started/install-cloud-container/' | relative_url }}). See [Install on Linux]({{ '/get-started/install-linux/' | relative_url }}). |
 | **macOS 14 and earlier, Windows 10 and Windows on Arm are not supported.** | See [Platforms and versions]({{ '/reference/platforms/' | relative_url }}). |
 | **No public download page.** The opnca-r release is not public. | Ask whoever provides your opncafyr install. |
 
@@ -52,7 +52,8 @@ These are deliberate and are not expected to change.
 
 | Issue | Workaround |
 |---|---|
-| **Deck tables with empty cells fail to build** ("IndexError: tuple index out of range"). opnca-r's tables have empty cells whenever a parameter can't be calculated. | Build the deck from a publication with the figures only. The report has no such limit. See [Build reports and decks]({{ '/guides/reports-and-decks/' | relative_url }}). |
+| **A formatted table (`.rds`) from a run saved before opnca-r 0.3.2 can't go in a report.** opnca-r saved it with a caption of its own, and the report tools leave that table's place unfilled. The report check refuses it. | Make a new run and publish that, or use the CSV version of the table in the report, or the formatted one in a deck. |
+| **A very wide table can't fit a portrait report page, even at 7 pt.** opnca-r's summary table, with 22 columns, is one. The report is still made, the table is fitted as well as it can be, and the build records a note naming it; a word in it may break across lines. Widths are estimated, not measured. | Choose fewer columns or shorter headers, or put the table on a landscape page: in **Edit report**, add `{{< landscape >}}` before it and `{{< portrait >}}` after it. Figures keep their portrait size. |
 | **Word asks whether to update fields** when you open a report. | Expected; the app doesn't recalculate fields when it builds the report. |
 | **Slide previews need LibreOffice**, which is optional and not installed by default. | Decks build without previews. |
 | **Reports can't be built in a study folder inside a hidden folder** (one whose name starts with a dot). | Keep study folders in an ordinary folder, such as Documents. |

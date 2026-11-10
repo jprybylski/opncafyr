@@ -11,8 +11,11 @@ from opncafyr.adapters.gitneighbr import (
     API_TOKEN_HEADER,
     SHUTDOWN_TOKEN_ENV,
     SHUTDOWN_TOKEN_HEADER,
+    TRUST_BEGIN,
+    TRUST_END,
     GitneighbrWebApp,
     git_exec_path,
+    trust_study_folder,
 )
 from opncafyr.core.adapter import ChildActivity, LaunchContext, SupportsActivity
 from opncafyr.core.registry import load_descriptors
@@ -119,6 +122,86 @@ def test_git_config_inside_the_study_is_refused(tmp_path, runtime, study):
         GitneighbrWebApp().launch(_ctx(tmp_path, runtime), bad)
     with pytest.raises(ValueError, match="workspace_root"):
         GitneighbrWebApp().launch(_ctx(tmp_path, runtime), session(tmp_path, tmp_path / "nope"))
+
+
+def _safe_entries(config: Path) -> list[str]:
+    """What Git itself reads as safe.directory from this file."""
+    import shutil
+    import subprocess
+
+    git = shutil.which("git")
+    if git is None:
+        pytest.skip("git is not installed")
+    out = subprocess.run(  # noqa: S603 - fixed argv, test only
+        [git, "config", "--file", str(config), "--get-all", "safe.directory"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return out.stdout.splitlines()
+
+
+def test_launch_trusts_exactly_the_selected_study_folder(tmp_path, runtime, study):
+    # A mounted study folder in a container is often owned by another user, and Git then
+    # refuses it. The managed Git's only global config names this one folder (#62).
+    s = session(tmp_path, study)
+    GitneighbrWebApp().launch(_ctx(tmp_path, runtime), s)
+    config = Path(s["git_config"])
+    assert _safe_entries(config) == [study.resolve().as_posix()]
+    text = config.read_text()
+    assert "*" not in text.replace(TRUST_BEGIN, "").replace(TRUST_END, "")
+    assert study not in config.resolve().parents  # still outside the study folder
+
+
+def test_the_trust_follows_the_open_study_and_keeps_the_persons_identity(tmp_path):
+    first, second = tmp_path / "A study", tmp_path / "B study"
+    first.mkdir()
+    second.mkdir()
+    config = tmp_path / "gitconfig"
+    config.write_text("[user]\n\tname = Ada\n\temail = ada@example.org\n")
+    trust_study_folder(config, first)
+    trust_study_folder(config, second)
+    trust_study_folder(config, second)  # again: still one entry
+    assert _safe_entries(config) == [second.resolve().as_posix()]
+    text = config.read_text()
+    assert text.startswith("[user]\n\tname = Ada\n\temail = ada@example.org\n")
+    assert text.count(TRUST_BEGIN) == 1 and text.count(TRUST_END) == 1
+    # Git writing the identity later, as gitneighbr does, doesn't disturb the entry.
+    config.write_text(text + "[core]\n\teditor = true\n")
+    trust_study_folder(config, first)
+    assert _safe_entries(config) == [first.resolve().as_posix()]
+    assert "editor = true" in config.read_text()
+
+
+def test_a_trust_block_cut_short_by_a_hand_edit_doesnt_eat_other_settings(tmp_path):
+    study = tmp_path / "s"
+    study.mkdir()
+    config = tmp_path / "gitconfig"
+    config.write_text(f'{TRUST_BEGIN}\n[safe]\n\tdirectory = "/old"\n[user]\n\tname = Ada\n')
+    trust_study_folder(config, study)
+    assert _safe_entries(config) == [study.resolve().as_posix()]
+    assert "name = Ada" in config.read_text()
+
+
+def test_a_path_with_quotes_or_backslashes_round_trips(tmp_path):
+    odd = tmp_path / 'Study "Q" back\\slash'
+    try:
+        odd.mkdir()
+    except OSError:
+        pytest.skip("this filesystem can't hold the name")
+    config = tmp_path / "gitconfig"
+    trust_study_folder(config, odd)
+    assert _safe_entries(config) == [odd.resolve().as_posix()]
+
+
+def test_a_path_with_a_control_character_is_refused(tmp_path):
+    odd = tmp_path / "bad\nname"
+    try:
+        odd.mkdir()
+    except OSError:
+        pytest.skip("this filesystem can't hold the name")
+    with pytest.raises(ValueError, match="control character"):
+        trust_study_folder(tmp_path / "gitconfig", odd)
 
 
 def test_a_git_that_finds_its_own_helpers_gets_no_exec_path(tmp_path):

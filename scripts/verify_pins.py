@@ -60,7 +60,9 @@ CRAN_BIN = "https://cran.r-project.org/bin/macosx/"
 CELLAR = ("opnca-r", "quartifyr", "reportifyr", "pyro", "gitneighbr")
 CELLAR_R_NAMES = {"opnca-r": "opnca"}
 # Release packages a platform binary must exist for, and how to spot it in a file name.
+# opnca-r's file names spell the Linux arm architecture arm64; our platform is linux-aarch64.
 PLATFORM_BINARIES = {"opnca-r": "_{platform}."}
+OPNCA_NAMES = {"linux-aarch64": "linux-arm64"}
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,7 @@ class Asset:
     url: str
     sha256: str
     private: bool = False
+    user_agent: str = ""  # a Linux R binary is only served for R's own User-Agent (#65)
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -105,6 +108,18 @@ def _runtime_sections(pins: dict[str, Any]) -> Iterator[tuple[str, dict[str, Any
     yield from walk(pins, "")
 
 
+def _linux_runtime(pins: dict[str, Any], name: str, platform: str) -> dict[str, Any] | None:
+    """The Linux asset of a top-level runtime section.
+
+    Linux runtimes are pinned once, under ``[ci.<platform>.<name>]``, which the container image
+    and the offline CI job already read (#42). The native installer reads the same entry
+    (``installer/pins.py``), so there is one pin and one hash (#65).
+    """
+    if not platform.startswith("linux"):
+        return None
+    return pins.get("ci", {}).get(platform, {}).get(name, {}).get("assets", {}).get(platform)
+
+
 def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str], list[Asset]]:
     errors: list[str] = []
     assets: list[Asset] = []
@@ -126,7 +141,7 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
             continue
         wanted = section.get("platforms", supported)
         for platform in wanted:
-            entry = section["assets"].get(platform)
+            entry = section["assets"].get(platform) or _linux_runtime(pins, name, platform)
             if entry is None:
                 errors.append(f"[{name}] has no asset for {platform}")
                 continue
@@ -157,8 +172,12 @@ def check_structure(pins: dict[str, Any], root: Path = ROOT) -> tuple[list[str],
             assets.append(Asset(f"packages.{pkg}", filename, base + filename, sha, private))
         pattern = PLATFORM_BINARIES.get(pkg)
         if pattern:
+            pending = pins.get("platforms", {}).get("pending", [])
             for platform in supported:
-                if not any(pattern.format(platform=platform) in f for f in files):
+                if platform in pending:
+                    continue  # its binary is not released yet (opnca-r#61): see [platforms]
+                name = OPNCA_NAMES.get(platform, platform)
+                if not any(pattern.format(platform=name) in f for f in files):
                     errors.append(f"[packages.{pkg}] has no binary for {platform}")
     for pkg in CELLAR:
         if pkg not in pins.get("packages", {}):
@@ -188,7 +207,8 @@ def _check_source_build(pins: dict[str, Any], supported: list[str]) -> list[str]
         errors.append("[rust] has no toolchain version")
     standalone = rust.get("standalone", {}).get("assets", {})
     for platform in supported:
-        if platform not in standalone:
+        # No source build on Linux (#65): a stripped VM has no C toolchain to pair with Rust.
+        if platform not in standalone and not platform.startswith("linux"):
             errors.append(f"[rust.standalone] has no archive for {platform}")
     rtools = pins.get("rtools", {})
     for platform in supported:
@@ -328,6 +348,11 @@ def _check_r_packages(
     renv = lock["Packages"].get("renv", {}).get("Version")
     if renv != section.get("renv"):
         errors.append(f"renv.lock has renv {renv}, [r_packages].renv says {section.get('renv')}")
+    agents = binaries.get("user_agents", {})
+    for platform in supported:
+        if platform.startswith("linux") and not str(agents.get(platform, "")).startswith("R ("):
+            errors.append(f"binaries.toml [user_agents] has no R user agent for {platform}")
+    linux_repo = repo.replace("/cran/", "/cran/__linux__/noble/", 1) if repo else ""
     for name, entry in lock["Packages"].items():
         if entry.get("Source") == "Repository":
             pinned = binaries.get("packages", {}).get(name, {})
@@ -339,11 +364,18 @@ def _check_r_packages(
                 if b["version"] != entry["Version"]:
                     errors.append(f"binaries.toml {name} {platform} is {b['version']}")
                 from_cran = b.get("origin") == "cran" and b["url"].startswith(CRAN_BIN)
-                if not (b["url"].startswith(f"{repo}/") or from_cran) or not SHA_RE.match(
-                    b["sha256"]
-                ):
+                own = b["url"].startswith((f"{repo}/", f"{linux_repo}/"))
+                if not (own or from_cran) or not SHA_RE.match(b["sha256"]):
                     errors.append(f"binaries.toml {name} {platform} has a bad url or sha256")
-                assets.append(Asset("r_packages", f"{name} {platform}", b["url"], b["sha256"]))
+                assets.append(
+                    Asset(
+                        "r_packages",
+                        f"{name} {platform}",
+                        b["url"],
+                        b["sha256"],
+                        user_agent=str(agents.get(platform, "")),
+                    )
+                )
         else:
             pkg = next((p for p in CELLAR if CELLAR_R_NAMES.get(p, p) == name), None)
             if entry.get("Source") != "Cellar":
@@ -383,7 +415,7 @@ def _token() -> str | None:
 
 
 def _open(asset: Asset) -> Any:
-    headers = {"User-Agent": "opncafyr-verify-pins/1"}
+    headers = {"User-Agent": asset.user_agent or "opncafyr-verify-pins/1"}
     m = re.match(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$", asset.url)
     token = _token()
     if asset.private and m and token:

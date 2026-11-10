@@ -53,8 +53,53 @@ def test_committed_pins_pass():
 
 def test_every_supported_platform_has_runtimes():
     pins = tomllib.loads((ROOT / "runtime/pins.toml").read_text("utf-8"))
+    supported = set(pins["platforms"]["supported"])
+    linux = {p for p in supported if p.startswith("linux")}
     for name in ("uv", "python", "r", "quarto"):
-        assert set(pins[name]["assets"]) == set(pins["platforms"]["supported"])
+        # Linux runtimes are pinned once, under [ci.<platform>], and read from there (#65).
+        assert set(pins[name]["assets"]) == supported - linux
+        for platform in linux:
+            assert set(pins["ci"][platform][name]["assets"]) == {platform}
+
+
+def test_a_pending_platform_needs_no_opnca_binary_but_a_supported_one_does(tree):
+    pins = tomllib.loads((tree / "runtime/pins.toml").read_text("utf-8"))
+    assert pins["platforms"]["pending"] == []  # opnca-r 0.3.3 published its Linux binaries
+    # Without its binary a supported platform is an error ...
+    _edit(
+        tree,
+        "runtime/pins.toml",
+        '"opnca_0.3.3_R4.6_linux-x86_64.tar.gz" = ',
+        '"opnca_0.3.3_R4.6_linux-i686.tar.gz" = ',
+    )
+    errors, _ = _check(tree)
+    assert "[packages.opnca-r] has no binary for linux-x86_64" in errors
+    # ... and only listing it as pending excuses it, for that platform alone.
+    _edit(tree, "runtime/pins.toml", "pending = []", 'pending = ["linux-x86_64"]')
+    errors, _ = _check(tree)
+    assert not any("has no binary" in e for e in errors)
+
+
+def test_the_arm_binary_is_matched_under_opnca_rs_own_name_for_it(tree):
+    _edit(
+        tree,
+        "runtime/pins.toml",
+        '"opnca_0.3.3_R4.6_linux-arm64.tar.gz" = ',
+        '"opnca_0.3.3_R4.6_linux-aarch64.tar.gz" = ',
+    )
+    errors, _ = _check(tree)
+    assert "[packages.opnca-r] has no binary for linux-aarch64" in errors
+
+
+def test_linux_r_binaries_need_their_user_agent(tree):
+    _edit(
+        tree,
+        "runtime/r/binaries.toml",
+        '[user_agents]\nlinux-x86_64 = "R (',
+        '[user_agents]\nlinux-x86_64 = "(',
+    )
+    errors, _ = _check(tree)
+    assert any("no R user agent for linux-x86_64" in e for e in errors)
 
 
 def test_tbd_is_rejected(tree):
@@ -100,7 +145,7 @@ def test_malformed_sha_is_rejected(tree):
 
 
 def test_opnca_needs_a_binary_per_platform(tree):
-    _edit(tree, "runtime/pins.toml", '"opnca_0.3.1_R4.6_windows-x86_64.zip" = ', '"x.zip" = ')
+    _edit(tree, "runtime/pins.toml", '"opnca_0.3.3_R4.6_windows-x86_64.zip" = ', '"x.zip" = ')
     errors, _ = _check(tree)
     assert "[packages.opnca-r] has no binary for windows-x86_64" in errors
 
@@ -131,11 +176,11 @@ def test_tools_lock_must_pin_the_deckifyr_wheel_hash(tree):
     _edit(
         tree,
         "runtime/python/tools/uv.lock",
-        "sha256:25b150a834249c2d63bd86b629ef92715be4aafa98d029bf1c9bae7328e82328",
+        "sha256:9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe",
         "sha256:" + "0" * 64,
     )
     errors, _ = _check(tree)
-    assert any("does not pin deckifyr-0.3.6-py3-none-any.whl" in e for e in errors)
+    assert any("does not pin deckifyr-0.3.7-py3-none-any.whl" in e for e in errors)
 
 
 def test_cran_binaries_only_with_origin(tree):
@@ -166,7 +211,7 @@ def test_every_section_needs_a_license(tree):
 
 
 def test_wheels_toml_must_pin_the_deckifyr_wheel(tree):
-    _edit(tree, "runtime/python/wheels.toml", "25b150a834249c2d", "0000000000000000")
+    _edit(tree, "runtime/python/wheels.toml", "9ce26f749c17dfe9", "0000000000000000")
     errors, _ = _check(tree)
     assert any("does not pin the deckifyr wheel" in e for e in errors)
 

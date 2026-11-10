@@ -687,6 +687,7 @@ dialog.support-dialog { max-width: min(56rem, calc(100vw - 2rem)); width: 100%; 
 .files-bar .spacer { flex: 1; }
 .files-modes .btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent); }
 .files-find input { font: inherit; padding: var(--space-1) var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); min-width: 10rem; }
+.files-help { margin: 0 0 var(--space-3); color: var(--muted); max-width: 70ch; }
 .files-content { display: grid; gap: var(--space-3); min-width: 0; }
 .files-source { display: grid; grid-template-columns: auto minmax(0, 1fr); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
 .files-gutter, .files-text { font-family: var(--mono); font-size: var(--text-sm); line-height: 1.5; margin: 0; padding: var(--space-2); }

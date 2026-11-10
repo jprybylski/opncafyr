@@ -28,7 +28,7 @@ Each completed run has a box with its analyte, its run ID, when it was made, and
 | Boxplot of each parameter by profile (figures) | No | No |
 | Any of these tables, **(formatted)** | No | As the table |
 
-A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers, a caption and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Pick either, or both.
+A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Pick either, or both.
 
 Items that show subject IDs are marked **shows subject IDs**. If a run was saved without the mean figures, the box says so; make a new run and keep them ticked in opnca-r's **Save to run folder** box to include them. A table that the replay doesn't recompute, such as a bioequivalence table, can't be published, and the box says why.
 
@@ -55,6 +55,16 @@ If publishing is interrupted, the files already copied are not part of any publi
 ## 2. Publications
 
 This card lists every publication: its ID, label, analytes, number of files and when it was made. A report or deck is built from one publication.
+
+### Add or remove files: revise a publication
+
+A publication never changes. To add or remove files, make a new one from it:
+
+1. In the **Publications** table, select **Revise** on the publication to start from.
+2. The **Choose tables and figures** card ticks that publication's files. Tick or untick files, including files from other completed runs. Files whose run can't be published any more are left out, and the card says how many.
+3. Select **Check**, then **Publish**. The message says "It revises pub-…".
+
+The new publication has its own ID and is a separate record that says which publication it started from. The earlier publication, its files, and every report or deck build made from it stay exactly as they were. A report or deck moves to the new publication only when you choose it there with **Use this publication**. **Stop revising** returns the card to its usual selection.
 
 ## 3. Published files
 

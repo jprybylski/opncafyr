@@ -52,8 +52,11 @@ built from them:
 Two rules are the launcher's own:
 - **Formatted tables.** When flextable is installed, opnca-r also saves each table as a
   formatted flextable, `results/tables/<id>.rds` (`derived_from` its CSV). It is offered
-  next to its CSV, never pre-selected, and only when the CSV itself is offered. reportifyr
-  0.4.0 places `.rds` tables in a report, and deckifyr renders them in a deck. The CSV
+  next to its CSV, never pre-selected, and only when the CSV itself is offered. deckifyr
+  renders them in a deck (as a `reportifyr` element). In a report, a formatted table that
+  carries its own caption left its placeholder unfilled (#62); the report check and
+  render refuse it (see Check below). opnca-r 0.3.2 leaves the caption off (opnca-r#59),
+  so only a run saved by an earlier opnca-r still has one; a new run fixes it. The CSV
   stays the table the replay checks.
 - **Tables the replay didn't check.** A CSV table that opnca-r marks
   `replay.reproduced: false` (the bioequivalence tables) is not offered, and neither is
@@ -105,6 +108,19 @@ written. The same file published again reuses the existing copy and its sidecar.
 record is written last. If publishing is interrupted, the files already copied are listed
 as **not recorded** under "Published files", and reports and decks never use them.
 
+### Revising a publication (#62)
+
+A publication is never edited. To add or remove files, **Revise** on the Publications card
+ticks that publication's files in the curator; you change the selection and publish it
+like any other. `POST /api/nca/publications` takes an optional `revises` (a recorded
+publication's id, which must exist), and the new record carries it as an optional
+`revises` field of `publication-v1` (additive; older records stay valid). It is
+informational: the earlier record and its files are not touched, and a report or deck
+bound to it stays bound, with its builds, until you choose the new publication there
+(`POST /api/nca/report` or `/deck`, which asks first if you edited the text). Files both
+publications list keep one copy. Files only the earlier one lists stay in `OUTPUTS/` and
+remain recorded by it.
+
 ### Metadata sidecars
 
 reportifyr adds footnotes from a sidecar: the source script, notes and abbreviations. It
@@ -150,6 +166,21 @@ one publication.
 3. **Check** runs two sets of checks on a copy of the project that holds exactly the
    publication's files, each checked against its recorded hash:
    - the launcher's sidecar checks;
+   - the formatted-table check (#62): a small R program (`r/report_rds_check.R`) reads each
+     `.rds` copy, which was matched to its hash when copied, and reports a table that isn't
+     a flextable, can't be read, or carries a caption. Each is a blocking finding, and
+     Render refuses before it starts. Only a status per file is written. The likely cause
+     (reportifyr 0.4.0 finds a table by the paragraph before it, and the caption sits
+     there) was confirmed with the real tools: the same table with a caption stays unfilled,
+     and without one it is filled;
+   - a warning when `report/config.yaml` still says `use_artifact_size: true`. The bundled
+     template says `false`: with `true`, reportifyr inserts each figure at its pixel size,
+     and opnca-r's 2000 px PNGs come out about 27 inches wide. An existing project's file
+     is never rewritten; the finding says to change it in **Edit report**, **Report
+     settings**;
+   - the settings file's plain-language checks (`config-yaml`, #64): not YAML or a changed
+     `report_dir_name`/`outputs_dir_name` is an error, a setting the template lacks or of the
+     wrong kind is a warning;
    - quartifyr's `check.R`.
 
    It lists what would block or weaken the render.
@@ -159,12 +190,25 @@ one publication.
      front matter, shortcodes, divs, chunks and placeholders exactly as they are;
    - the **preview** is approximate and runs nothing.
 
+   The same editor offers two YAML files as bounded exceptions (#64), after the report:
+   **Report settings** (`report/config.yaml`) and **Footnotes** (`report/standard_footnotes.yaml`).
+   Each opens in source mode with a short description above it. A save is checked in plain
+   words: not YAML, a setting the template doesn't have (a likely typo), or a value of the
+   wrong kind are shown as notes and the save still happens. Check repeats the check as
+   findings (`config-yaml`), and Render refuses a settings file that isn't YAML or that
+   changes `report_dir_name` or `outputs_dir_name`, which the app builds the project around.
+   Nothing else under `report/` is offered. Both files are copied into every render and
+   recorded as build inputs.
+
    Save writes only if the file hasn't changed on disk since you opened it; otherwise
    both versions stay on screen until you choose. Check and Render wait while the editor
    holds unsaved text. Draft or final is a report setting, kept in
    `report/opncafyr-settings.json`; a render asks until you choose.
-5. **Render** renders that same copy with quartifyr's strict,
-   offline render. It keeps the DOCX that quartifyr's result lists, after re-hashing it, in
+5. **Render** renders that same copy with quartifyr's offline render. The adapter, not
+   quartifyr's `--strict`, decides success: the result must be `ok`, or a `warning` whose
+   only warnings are "a table is still too wide at the minimum font size" (opnca-r's
+   22-column summary can't fit a portrait page at 7 pt, and `--strict` would refuse every
+   default report). That warning is recorded in `build.json` `warnings`. It keeps the DOCX that quartifyr's result lists, after re-hashing it, in
    `report/builds/<build-id>/` with two records:
    - `build.json` (`publish-build-v1`). It lists the publication, the exact run IDs, the
      hash of every published file, every input (hashed before the render), and the tool

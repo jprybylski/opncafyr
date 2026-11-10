@@ -61,6 +61,11 @@ def _source_args(p: argparse.ArgumentParser) -> None:
         "by default; if it fails, the install goes on without it)",
     )
     p.add_argument("--dry-run", action="store_true", help="check and report; change nothing")
+    p.add_argument(
+        "--allow-pending",
+        action="store_true",
+        help=argparse.SUPPRESS,  # development only: a platform whose opnca-r isn't pinned yet
+    )
     p.add_argument("--cacert", type=Path, help="CA bundle for HTTPS (corporate proxies)")
     p.add_argument("--proxy", help="HTTPS proxy URL (default: HTTPS_PROXY)")
     p.add_argument(
@@ -113,6 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="include what `repair --build-from-source` needs (vendored opnca-r, Rust, Rtools)",
     )
+    b.add_argument("--allow-pending", action="store_true", help=argparse.SUPPRESS)
     b.add_argument("--cacert", type=Path)
     b.add_argument("--proxy")
     return parser
@@ -134,6 +140,7 @@ def _bundle(args: argparse.Namespace, payload: payload_mod.Payload) -> int:
         with_libreoffice=args.with_libreoffice,
         with_git=not args.without_git,
         with_source_build=args.with_source_build,
+        allow_pending=args.allow_pending,
         assets_dirs=list(args.assets),
         rewrite=rewrite,
         cacert=args.cacert,
@@ -186,6 +193,7 @@ def main(argv: list[str] | None = None, *, payload_dir: Path | None = None) -> i
             cacert=args.cacert,
             proxy=args.proxy,
             skip_disk_check=args.skip_disk_check,
+            allow_pending=args.allow_pending,
             reinstall=args.reinstall,
             build_from_source=getattr(args, "build_from_source", False),
         )

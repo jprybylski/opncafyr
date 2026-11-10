@@ -505,7 +505,7 @@ matches to 1e-10; since opnca-r 0.3.0 that API no longer rounds numbers.
   copy. `check.R` exits 1 when it finds an error, so the job accepts exit codes 0 and 1
   (`JobRequest.ok_exit_codes`).
 - **Render** (`report.render`):
-  `render.R --strict --offline --json --quarto-bin <pinned> --reference-doc <abs>`.
+  `render.R --offline --json --quarto-bin <pinned> --reference-doc <abs>` (no `--strict`: `parse_render` is the gate and accepts a `warning` only when it is quartifyr's "table too wide for the page" one, #62).
   - The job runs in `report/builds/<id>.staging/work`, because Quarto refuses a project
     inside a hidden folder.
   - Inputs are hashed before the run.

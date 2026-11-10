@@ -1,4 +1,4 @@
-"""#16: deckifyr 0.3.6 behind /apps/deckifyr/, including the attacks from the upstream review."""
+"""#16: deckifyr 0.3.7 behind /apps/deckifyr/, including the attacks from the upstream review."""
 
 from __future__ import annotations
 

@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from opncafyr.installer import icons, platforms, proc, smoke, support
+from opncafyr.installer import icons, linux_libs, platforms, proc, smoke, support
 from opncafyr.installer.layout import INSTALL_RECORD, Layout, remove_tree
 from opncafyr.installer.payload import Payload
 from opncafyr.installer.pins import Asset, Pins
@@ -63,6 +63,9 @@ class Options:
     reinstall: bool = False  # stage again even if the same payload is installed
     # repair only (#34): build opnca-r from its vendored source instead of the binary
     build_from_source: bool = False
+    # Development only: install a platform that is still pending (no opnca-r binary yet,
+    # Linux until opnca-r#61) without opnca-r. Analysis can't run; everything else can.
+    allow_pending: bool = False
 
     @property
     def offline(self) -> bool:
@@ -90,6 +93,8 @@ def identity(payload: Payload, platform: str, opts: Options) -> str:
         "libreoffice": opts.with_libreoffice,
         "git": opts.with_git,
     }
+    if opts.allow_pending:
+        doc["allow_pending"] = True  # a different install from the complete one
     return sha256_bytes(json.dumps(doc, sort_keys=True).encode())
 
 
@@ -134,13 +139,18 @@ def quick_check(layout: Layout, install_id: str) -> list[str]:
     return problems
 
 
-def expected_versions(pins: Pins, payload: Payload) -> dict[str, str]:
-    return {
+def expected_versions(
+    pins: Pins, payload: Payload, *, without_opnca: bool = False
+) -> dict[str, str]:
+    versions = {
         "opncafyr": payload.version,
         "deckifyr": pins.version("deckifyr"),
         "opnca-r": pins.version("opnca-r"),
         "quarto": pins.version("quarto"),
     }
+    if without_opnca:
+        del versions["opnca-r"]  # the smoke checks then leave out what needs opnca-r
+    return versions
 
 
 # --- the installer ---------------------------------------------------------------------
@@ -171,6 +181,9 @@ class Installer:
     def preflight(self) -> tuple[str, str]:
         platform = platforms.detect()
         os_desc = platforms.check_os_version(platform)
+        if platform.startswith("linux"):
+            # No apt and no root: the system libraries must already be there (#65).
+            linux_libs.check_libraries()
         if hasattr(os, "geteuid") and os.geteuid() == 0:
             raise InstallError("Don't run the installer as root: it installs for one user.")
         root = self.layout.root
@@ -262,6 +275,7 @@ class Installer:
             libreoffice=self.opts.with_libreoffice,
             git=self.opts.with_git,
             source_build=self.opts.build_from_source,
+            allow_pending=self.opts.allow_pending,
         )
         if self.opts.dry_run:
             return self.dry_run(platform, assets)
@@ -296,6 +310,9 @@ class Installer:
                     return 0
             return self.stage_and_activate(platform, os_desc, pins, assets, ident, active)
 
+    def _without_opnca(self, pins: Pins) -> bool:
+        return self.opts.allow_pending and platforms.detect() in pins.pending
+
     def check_active(self, active: str, pins: Pins) -> list[str]:
         problems = quick_check(self.layout, active)
         if problems:
@@ -305,7 +322,7 @@ class Installer:
         env = proc.base_env(offline=True, cache=self.layout.cache, tmpdir=tmpdir)
         results = smoke.run_all(
             runtime_doc(self.layout, active),
-            versions=expected_versions(pins, self.payload),
+            versions=expected_versions(pins, self.payload, without_opnca=self._without_opnca(pins)),
             env=env,
             work=vdir / "tmp" / "smoke",
             log=self.run_log.dir / "smoke.log" if self.run_log else None,
@@ -381,6 +398,7 @@ class Installer:
             with_libreoffice=self.opts.with_libreoffice,
             with_git=self.opts.with_git,
             build_from_source=self.opts.build_from_source,
+            without_opnca=self._without_opnca(pins),
         )
         for component, problem in skipped.items():
             ctx.report_optional(component, "failed", f"not fetched: {problem}"[-500:])
@@ -399,7 +417,9 @@ class Installer:
             self.say("[smoke tests]")
             results = smoke.run_all(
                 runtime_doc(self.layout, install_id),
-                versions=expected_versions(pins, self.payload),
+                versions=expected_versions(
+                    pins, self.payload, without_opnca=self._without_opnca(pins)
+                ),
                 env=ctx.env(),
                 work=ctx.tmp / "smoke",
                 log=ctx.log("smoke"),
@@ -515,6 +535,15 @@ class Installer:
             icons.create(self.layout, install_id, self.payload.version, log)
         except (proc.ProcError, OSError) as exc:
             self.say(f"warning: could not create the icon (run `repair` later): {exc}")
+        if sys.platform.startswith("linux"):
+            launcher = icons.linux_launcher(self.layout)
+            self.say(
+                f"start it with: {launcher} launch --remote --port 8765 --workspace <study folder>"
+            )
+            self.say(
+                "  (no desktop here: reach it through an SSH forward or your IDE's proxy; "
+                "see the guide)"
+            )
         self._refresh_installer_copy(install_id)
         self.collect_garbage(keep={install_id, *([previous] if previous else [])})
 

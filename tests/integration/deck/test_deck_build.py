@@ -52,7 +52,7 @@ def test_generated_deck_validates_and_builds(api, deck):
     validate(build, "publish-build-v1")
     assert sorted(build["runs"]) == sorted([a, b])
     assert [i["sha256"] for i in build["items"]] == [i["published_sha256"] for i in pub["items"]]
-    assert build["tools"]["deckifyr"] == "0.3.6"
+    assert build["tools"]["deckifyr"] == "0.3.7"
     pptx = api.study / "deck" / "builds" / build["build_id"] / "nca-results.pptx"
     assert R.sha256_file(pptx) == next(o["sha256"] for o in build["outputs"] if o["role"] == "pptx")
     with zipfile.ZipFile(pptx) as z:
@@ -104,3 +104,23 @@ def test_build_with_previews_when_libreoffice_works(api, deck, runtime):
     folder = api.study / "deck" / "builds" / build["build_id"]
     for o in previews:
         assert R.sha256_file(folder / o["path"]) == o["sha256"]
+
+
+def test_a_table_with_an_empty_cell_builds(api):
+    # #62: deckifyr 0.3.6 raised IndexError for an empty cell (deckifyr#96, fixed in 0.3.7).
+    # opnca-r writes an inestimable parameter as an empty field.
+    a, _ = completed_run(api.study, "Drug A", empty_cell=True)
+    pub = api.post("/api/nca/publications", json={"items": picks(a, ["summary", "listing"])})
+    assert pub.status_code == 201, pub.text
+    out = api.post(
+        "/api/nca/deck", json={"publication_id": pub.json()["publication"]["publication_id"]}
+    ).json()
+    assert wait_job(api, out["job_id"], 120)["state"] == "completed"
+    r = api.post("/api/nca/deck/build", json={"previews": False})
+    assert r.status_code == 200, r.text
+    job = wait_job(api, r.json()["job_id"], 300)
+    assert job["state"] == "completed", job["message"]
+    build = api.get("/api/nca/deck").json()["builds"][0]
+    pptx = api.study / "deck" / "builds" / build["build_id"] / "nca-results.pptx"
+    with zipfile.ZipFile(pptx) as z:
+        assert any(n.startswith("ppt/slides/slide") for n in z.namelist())

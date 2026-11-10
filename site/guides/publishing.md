@@ -53,7 +53,7 @@ The names are opnca-r's, and so is the flag that says whether a file shows subje
 | Boxplot of each parameter by profile (figures) | No | No |
 | Any of these tables, **(formatted)** | No | As the table |
 
-A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers, a caption and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Runs saved by an earlier opnca-r keep their earlier names, such as "Parameter summary" and "Individual parameter listing".
+A **(formatted)** table is the same table as opnca-r laid it out, with units in the headers and footnotes. Reports and decks show it as it is. The plain table is the one the replay checked. Runs saved by an earlier opnca-r keep their earlier names, such as "Parameter summary" and "Individual parameter listing".
 
 Items that show subject IDs carry the label **shows subject IDs**. Think about who will see the report or deck before you keep them.
 
@@ -140,8 +140,20 @@ The card **2. Publications** lists every publication in the study folder:
 | **Analytes** | The analytes of the runs it holds. |
 | **Files** | How many files it holds. |
 | **Created** | When it was made. |
+| **Revise** | Starts a new publication from this one's files (see below). |
 
 You can't edit or delete a publication from the app. To publish a different selection, make a new publication; the files it shares with an earlier one are reused, not copied twice.
+
+### Add or remove files: revise a publication
+
+1. In the **Publications** table, select **Revise** on the publication to start from.
+2. The card **1. Choose tables and figures** ticks that publication's files. Tick or untick files, including files from other completed runs. Files whose run can't be published any more are left out, and the card says how many.
+3. Select **Check**, then **Publish**.
+
+{: .expect }
+> The message names the new publication and says "It revises pub-…, which is unchanged."
+
+The new publication has its own ID and records which one it started from. The earlier publication, its files, and every report or deck build made from it stay as they were. A report or deck moves to the new publication only when you choose it there with **Use this publication**. **Stop revising** returns the card to its usual selection.
 
 To look at the published files themselves, open the study folder's `OUTPUTS` folder in Finder or File Explorer. Open the files to read them, but don't change, rename or delete them.
 

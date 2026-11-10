@@ -7,6 +7,7 @@ import {
   waitForJob,
 } from "./common.js";
 import { eventsPanel } from "./events.js";
+import { initPinned } from "./findings.js";
 
 // One entry per step kind the user can add. "derive" has three forms in the UI.
 const OPS = {
@@ -73,6 +74,24 @@ const opLabel = (step) => {
   return OPS[step.op]?.label || step.op;
 };
 
+// The form kind a saved step was made with (the inverse of OPS' `op`/`fn`).
+const kindOf = (step) => (step.op === "derive" ? `derive_${step.args.fn}` : step.op);
+
+// Why a saved step can't be opened in the form, or null when it can (#63). The form only
+// shows what it can write back, so a step that holds more would lose it silently.
+function cannotEdit(step) {
+  const kind = kindOf(step);
+  const spec = OPS[kind];
+  if (!spec) return "This kind of step can't be edited here.";
+  const known = new Set(["fn", ...spec.fields.map((f) => f[0])]);
+  if (Object.keys(step.args).some((k) => !known.has(k))) return "This step has settings the form can't show.";
+  const unsupported = (w) => !w || w.all || !("column" in w);
+  if (spec.fields.some((f) => f[2] === "where") && unsupported(step.args.where)) {
+    return "This row condition combines several conditions, which the form can't show.";
+  }
+  return null;
+}
+
 function describeWhere(w) {
   if (w.all) return w.all.map(describeWhere).join(" and ");
   if ("equals" in w) return `${w.column} is "${w.equals}"`;
@@ -101,6 +120,18 @@ function describe(step) {
 
 // --- Small editors ------------------------------------------------------------------
 
+// Select a saved value. One that isn't offered any more (a column an earlier step renames,
+// say) is added and labelled, never dropped: a silent change would save a different step.
+function selectSaved(select, value) {
+  let option = [...select.options].find((o) => o.value === value);
+  if (!option) {
+    option = el("option", `${value} (not among the columns now)`);
+    option.value = value;
+    select.append(option);
+  }
+  option.selected = true;
+}
+
 function columnSelect(columns, multiple) {
   const s = multiple ? el("select") : choice(columns);
   if (multiple) {
@@ -108,6 +139,10 @@ function columnSelect(columns, multiple) {
     s.size = Math.min(8, Math.max(3, columns.length));
     for (const c of columns) { const o = el("option", c); o.value = c; s.append(o); }
   }
+  s.set = (value) => {
+    if (multiple) value.forEach((v) => selectSaved(s, v));
+    else selectSaved(s, value);
+  };
   return s;
 }
 
@@ -115,9 +150,10 @@ function columnSelect(columns, multiple) {
 function pairsEditor(kind) {
   const box = el("div", null, "nca-pairs");
   const rows = el("div", null, "nca-pairs");
-  const add = () => {
+  const add = (fromValue = "", toValue = null) => {
     const row = el("div", null, "nca-row");
     const from = el("input");
+    from.value = fromValue;
     from.setAttribute("aria-label", kind === "bools" ? "Value (exact text)" : "Replace (exact text)");
     let to;
     if (kind === "bools") {
@@ -127,11 +163,17 @@ function pairsEditor(kind) {
       to = el("input");
       to.setAttribute("aria-label", "With");
     }
+    if (toValue !== null) to.value = String(toValue);
     row.append(from, el("span", kind === "bools" ? "means" : "→"), to, button("Remove", () => row.remove(), "btn btn-ghost btn-sm"));
     rows.append(row);
   };
   add();
-  box.append(rows, button("Add a value", add, "btn btn-ghost btn-sm"));
+  box.append(rows, button("Add a value", () => add(), "btn btn-ghost btn-sm"));
+  box.set = (saved) => {
+    rows.replaceChildren();
+    for (const [from, to] of Object.entries(saved)) add(from, to);
+    if (!rows.children.length) add();
+  };
   box.read = () => {
     const out = {};
     for (const row of rows.children) {
@@ -160,6 +202,12 @@ function whereEditor(columns) {
   const values = el("textarea");
   values.setAttribute("aria-label", "Value or values, exact text");
   box.append(col, how, values);
+  box.set = (w) => {
+    selectSaved(col, w.column);
+    if ("is_blank" in w) how.value = "is_blank";
+    else if ("in" in w) { how.value = "in"; values.value = w.in.join("\n"); }
+    else { how.value = "equals"; values.value = w.equals; }
+  };
   box.read = () => {
     if (!col.value) throw new Error("Choose the column the rows are picked by.");
     if (!how.value) throw new Error("Choose a condition.");
@@ -173,10 +221,15 @@ function whereEditor(columns) {
   return box;
 }
 
-function stepForm(kind, columns, onAdd, onCancel) {
+// `edit` (#63): { heading, saved } opens the form on a saved step: its arguments and note
+// filled in, and "Save step" in place of "Add step". Nothing is written until it is saved.
+function stepForm(kind, columns, onAdd, onCancel, edit = null) {
   const spec = OPS[kind];
   const form = el("div", null, "nca-form");
-  form.append(el("strong", spec.label));
+  const heading = el("strong", edit ? edit.heading : spec.label);
+  heading.tabIndex = -1; // focus lands here when the form opens
+  form.heading = heading;
+  form.append(heading);
   const readers = {};
   for (const [name, label, type, options] of spec.fields) {
     let control;
@@ -187,6 +240,11 @@ function stepForm(kind, columns, onAdd, onCancel) {
     else if (type === "where") control = whereEditor(columns);
     else control = el("input");
     form.append(field(label, control));
+    if (edit && name in edit.saved.args) {
+      const saved = edit.saved.args[name];
+      if (control.set) control.set(saved);
+      else control.value = saved;
+    }
     readers[name] = () => {
       if (control.read) return control.read();
       if (type === "columns") {
@@ -199,11 +257,12 @@ function stepForm(kind, columns, onAdd, onCancel) {
     };
   }
   const note = el("input");
+  if (edit && edit.saved.note) note.value = edit.saved.note;
   form.append(field("Note (optional)", note, "Why this step is needed. Kept with the recipe."));
   const status = el("p", null, "status");
   const actions = el("div", null, "nca-row");
   actions.append(
-    button("Add step", () => {
+    button(edit ? "Save step" : "Add step", () => {
       try {
         const args = {};
         if (spec.fn) args.fn = spec.fn;
@@ -230,6 +289,8 @@ export function initCleaning(stack, state) {
     "Steps run in this order. Nothing is removed unless a step says so, with a reason.");
   const result = section(stack, "nca-clean-result", "3. Result",
     "Preview runs the steps on the first 200 rows; Apply runs them on every row.");
+  // The analyte checks' findings, pinned under the steps while you fix them (#63).
+  initPinned(steps.card, steps.status, state);
 
   const sourceSel = choice([]);
   const recipeSel = choice([]);
@@ -269,6 +330,7 @@ export function initCleaning(stack, state) {
   }
 
   async function loadRecipe(id) {
+    editing = null; // an open edit belongs to the recipe that was shown
     if (!id) {
       Object.assign(state, { recipe: null, sha256: null, columns: [], header: [], problem: null });
       state.changed("recipe");
@@ -284,16 +346,17 @@ export function initCleaning(stack, state) {
     await showResult("full", true);
   }
 
-  async function save(recipe, report) {
+  async function save(recipe, report, afterSave) {
     try {
       const data = await send("PUT", `api/nca/recipes/${encodeURIComponent(recipe.id)}`, { recipe });
       Object.assign(state, { recipe: data.recipe, sha256: data.sha256, columns: data.columns, problem: null });
+      if (afterSave) afterSave();
       const option = recipeSel.selectedOptions[0];
       if (option && option.value === data.id) option.textContent = `${data.id} (${data.steps} steps)`;
       state.changed("recipe");
       render();
       result.body.replaceChildren();
-      setStatus(result.status, "The recipe changed. Preview or apply it again.");
+      setStatus(result.status, "The recipe changed. Preview or apply it again, then run the checks again.");
       return true;
     } catch (e) {
       (report || ((m) => setStatus(steps.status, m, true)))(e.message);
@@ -301,9 +364,14 @@ export function initCleaning(stack, state) {
     }
   }
 
+  // The step being edited (an index), and the one whose Edit button gets focus back (#63).
+  let editing = null;
+  let focusEdit = null;
+
   function render() {
     steps.body.replaceChildren();
     const recipe = state.recipe;
+    if (!recipe || (editing !== null && !recipe.steps[editing])) editing = null;
     if (!recipe) {
       steps.body.append(el("p", "Choose or make a recipe.", "muted"));
       return;
@@ -313,6 +381,11 @@ export function initCleaning(stack, state) {
     const list = el("ol", null, "nca-steps");
     recipe.steps.forEach((step, i) => {
       const li = el("li");
+      if (i === editing) {
+        li.append(editForm(recipe, step, i));
+        list.append(li);
+        return;
+      }
       const headRow = el("div", null, "nca-step-head");
       headRow.append(el("strong", opLabel(step)));
       const actions = el("span", null, "actions");
@@ -322,11 +395,17 @@ export function initCleaning(stack, state) {
         copy.steps.splice(i + delta, 0, s);
         save(copy);
       };
+      const busy = editing !== null; // finish or cancel the open edit first
+      const why = cannotEdit(step);
+      const edit = button("Edit", () => { editing = i; render(); }, "btn btn-ghost btn-sm");
+      edit.disabled = busy || Boolean(why);
+      edit.setAttribute("aria-label", `Edit step ${i + 1}`);
+      if (why) edit.title = why;
       const up = button("Up", () => move(-1), "btn btn-ghost btn-sm");
-      up.disabled = i === 0;
+      up.disabled = busy || i === 0;
       up.setAttribute("aria-label", `Move step ${i + 1} up`);
       const down = button("Down", () => move(1), "btn btn-ghost btn-sm");
-      down.disabled = i === recipe.steps.length - 1;
+      down.disabled = busy || i === recipe.steps.length - 1;
       down.setAttribute("aria-label", `Move step ${i + 1} down`);
       const remove = button("Remove", () => {
         const copy = structuredClone(recipe);
@@ -334,10 +413,12 @@ export function initCleaning(stack, state) {
         save(copy);
       }, "btn btn-ghost btn-sm");
       remove.setAttribute("aria-label", `Remove step ${i + 1}`);
-      actions.append(up, down, remove);
+      remove.disabled = busy;
+      actions.append(edit, up, down, remove);
       headRow.append(actions);
       li.append(headRow, el("p", describe(step), "nca-args"));
       if (step.note) li.append(el("p", `Note: ${step.note}`, "nca-args"));
+      if (why) li.append(el("p", `Can't be edited here: ${why} Remove it and add it again, or edit the recipe file.`, "nca-args"));
       list.append(li);
     });
     if (recipe.steps.length) steps.body.append(list);
@@ -362,6 +443,26 @@ export function initCleaning(stack, state) {
       button("Apply to all rows", () => run("full"), "btn btn-primary btn-sm"),
     );
     steps.body.append(actions, slot);
+    if (focusEdit !== null) {
+      const target = list.children[focusEdit]?.querySelector(".nca-step-head button");
+      focusEdit = null;
+      if (target) target.focus();
+    }
+  }
+
+  // The form for one saved step (#63). Save replaces the step at the same position through
+  // the usual whole-recipe save and its validation; a refusal keeps the form and the draft.
+  function editForm(recipe, step, i) {
+    const close = () => { editing = null; focusEdit = i; };
+    const columns = [...new Set([...(state.header || []), ...state.columns])]
+      .filter((c) => c !== "opncafyr_line" && !c.startsWith("opncafyr_"));
+    const form = stepForm(kindOf(step), columns, async (changed, report) => {
+      const copy = structuredClone(recipe);
+      copy.steps[i] = changed;
+      await save(copy, report, close);
+    }, () => { close(); render(); }, { heading: `Editing step ${i + 1}: ${opLabel(step)}`, saved: step });
+    queueMicrotask(() => form.heading.focus());
+    return form;
   }
 
   async function run(kind) {

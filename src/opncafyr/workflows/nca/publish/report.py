@@ -41,6 +41,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from opncafyr.adapters import quartifyr as Q
+from opncafyr.adapters.quartifyr import config_yaml
 from opncafyr.adapters.quartifyr import editor as QE
 from opncafyr.core import runs as runs_core
 from opncafyr.core.adapter import SettingsInvalid
@@ -59,6 +60,7 @@ from opncafyr.core.runtime import RuntimeUnavailable
 from opncafyr.paths import WORKSPACE_META_DIR, app_root
 from opncafyr.workflows.nca.publish import projects, sidecars
 from opncafyr.workflows.nca.publish.curator import PublishError
+from opncafyr.workflows.nca.publish.rds_check import rds_findings
 
 if TYPE_CHECKING:
     from opncafyr.workflows.nca.api import Context
@@ -294,7 +296,12 @@ class ReportService(projects.ProjectJobs):
     def _assemble(self, root: Path, publication: dict[str, Any], dest: Path) -> list[str]:
         with self.project_lock(root):
             projects.copy_project(self.project(root), dest, _skip)
-        return projects.copy_publication(root, publication, dest)
+        copied = projects.copy_publication(root, publication, dest)
+        # reportifyr's table step fails on a missing OUTPUTS/tables, so a publication of
+        # figures only could not be rendered (found with the real tools, #62).
+        for folder in projects.OUTPUT_FOLDERS:
+            (dest / projects.OUTPUTS / folder).mkdir(parents=True, exist_ok=True)
+        return copied
 
     def check(self, manager: JobManager, root: Path, timeout_s: float = CHECK_TIMEOUT_S) -> str:
         with self.lock:
@@ -314,7 +321,11 @@ class ReportService(projects.ProjectJobs):
         def build(ctx: JobContext):
             try:
                 listed = self._assemble(root, publication, ctx.cwd)
-                launcher = _sidecar_findings(ctx.cwd, listed)
+                launcher = (
+                    _sidecar_findings(ctx.cwd, listed)
+                    + rds_findings(ctx.runtime, ctx.cwd, listed, ctx.tmpdir)
+                    + config_findings(ctx.cwd)
+                )
                 (ctx.tmpdir / "launcher.json").write_text(json.dumps(launcher), "utf-8")
                 return Q.check_command(ctx.runtime, ctx.cwd, ctx.tmpdir / "home", cache)
             except (PublishError, RuntimeUnavailable) as exc:
@@ -399,6 +410,22 @@ class ReportService(projects.ProjectJobs):
                         "sidecars_invalid",
                         f"{len(errors)} metadata problem(s), such as: {errors[0]['message']} "
                         "Run Check for the full list.",
+                    )
+                bad_config = [f for f in config_findings(ctx.cwd) if f["severity"] == "error"]
+                if bad_config:
+                    raise PublishError(
+                        "config_invalid",
+                        f"{bad_config[0]['message']} Run Check for the full list.",
+                    )
+                tables = [
+                    f
+                    for f in rds_findings(ctx.runtime, ctx.cwd, listed, ctx.tmpdir)
+                    if f["severity"] == "error"
+                ]
+                if tables:
+                    raise PublishError(
+                        "rds_table",
+                        f"{tables[0]['path']}: {tables[0]['message']} Run Check for the full list.",
                     )
                 missing = [
                     p
@@ -526,6 +553,46 @@ class ReportService(projects.ProjectJobs):
             stale = sorted(p for p, sha in recorded.items() if now(p) != sha)
             out["stale_inputs"][build["build_id"]] = stale
         return out
+
+
+def config_findings(project: Path) -> list[dict[str, Any]]:
+    """Findings for ``report/config.yaml`` (#62, #64); the file never changes here.
+
+    Errors (not YAML, or a changed folder setting) block Render. A setting that looks wrong is
+    a warning. Projects set up before the template changed keep their own file: with
+    ``use_artifact_size: true`` an opnca-r PNG (2000 x 1200 pixels, no resolution) is inserted
+    about 27 inches wide, which has its own finding.
+    """
+    path = project / Q.CONFIG
+    try:
+        text = path.read_text("utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    out = [
+        {
+            "check": "config-yaml",
+            "severity": p.severity,
+            "path": Q.CONFIG,
+            "message": f"{p.message} Open it with Edit report, then Report settings.",
+        }
+        for p in config_yaml.check_config(text)
+    ]
+    doc, _ = config_yaml.parse(text, "")
+    if isinstance(doc, dict) and doc.get("use_artifact_size") is True:
+        out.append(
+            {
+                "check": "figure-size",
+                "severity": "warning",
+                "path": Q.CONFIG,
+                "message": (
+                    "use_artifact_size is true, so figures are inserted at their pixel size "
+                    "and can run past the page. Choose Edit report, then Report settings "
+                    "(config.yaml), change it to false (the figure width is then "
+                    "default_fig_width, 6 inches), save, and render again."
+                ),
+            }
+        )
+    return out
 
 
 def _sidecar_findings(project: Path, listed: list[str]) -> list[dict[str, Any]]:

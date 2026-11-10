@@ -2,7 +2,7 @@
 
 > **Research use only.** This workspace has not been validated for clinical or regulatory decisions.
 
-If your study data lives on a cloud computer (a Linux virtual machine) where you can run Docker or Podman, you can run opncafyr there in a container instead of installing it on your own computer. The app, R, opnca-r and the other tools run on the cloud computer next to your data. Your own computer only shows the pages in its web browser.
+If your study data lives on a cloud computer (a Linux virtual machine) where you can run Docker or Podman, you can run opncafyr there in a container instead of installing it on your own computer. (If you cannot run Docker or Podman there, you can install natively on Ubuntu 24.04: see [Installing and updating](install.md).) The app, R, opnca-r and the other tools run on the cloud computer next to your data. Your own computer only shows the pages in its web browser.
 
 Use the normal installer ([Installing and updating](install.md)) on a Windows or Mac desktop. Use container mode when:
 
@@ -71,6 +71,14 @@ To stop it:
 opncafyr-container stop ~/studies/ABC-101
 ```
 
+## Files and owners
+
+`opncafyr-container` runs the app as you (`--user`, or `--userns=keep-id` with rootless Podman), so the files it writes in your study folder belong to you. If you start the image any other way, it runs as a different user and the study folder's owner no longer matches. The app then prints a warning when it starts, and Git, which refuses folders owned by someone else, may not open version history.
+
+Start it with `opncafyr-container`, or pass `--user "$(id -u):$(id -g)"` to `docker run`. If the folder was created by another account (for example with `sudo`), change its owner to yours first.
+
+Version history in the container is allowed to open exactly the study folder you started it with. It is never allowed to open another folder or a Git project above it.
+
 ## Keep it private
 
 opncafyr listens only on the cloud computer's own loopback address (`127.0.0.1`). Reach it only through `ssh -L` or your IDE's proxy.
@@ -82,6 +90,7 @@ opncafyr listens only on the cloud computer's own loopback address (`127.0.0.1`)
 - **"could not pull" the image:** the image is private. Ask for access, sign in with `docker login ghcr.io` (or `podman login`), or load the image from a file.
 - **"object storage ... can't replace files safely":** the study folder is on an object-storage drive. Copy it to the cloud computer's disk or a network file share.
 - **The link says "Open opncafyr from its shortcut":** the link was already used or is more than 2 minutes old. Run `opncafyr-container url <study folder>`.
+- **Version history says the folder can't be used, or the app warns that the folder belongs to another user:** the folder's owner and the user running the app differ. See [Files and owners](#files-and-owners).
 - **Nothing loads over SSH:** check that the `ssh -L` terminal is still open and that you used the port it names.
 
 For anything else, see [Troubleshooting and getting help](troubleshooting.md).

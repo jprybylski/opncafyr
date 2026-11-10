@@ -15,6 +15,11 @@
     "publication_id": {"type": "string", "pattern": "^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$"},
     "created_at": {"type": "string", "format": "date-time"},
     "label": {"type": "string", "maxLength": 200},
+    "revises": {
+      "description": "The publication this one revises: its files were the starting point for a different selection (#62). Informational: the earlier publication, and every report or deck built from it, stay as they are.",
+      "type": "string",
+      "pattern": "^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$"
+    },
     "tools": {
       "type": "object",
       "required": ["opncafyr", "sidecar_format"],

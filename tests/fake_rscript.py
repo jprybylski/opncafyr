@@ -55,6 +55,20 @@ def check(args: list[str]) -> int:
     return 0
 
 
+def rds_check(here: Path) -> int:
+    """report_rds_check.R: every .rds gets the status in ``rds.txt`` (default ok)."""
+    note = here / "rds.txt"
+    status = note.read_text("utf-8").strip() if note.exists() else "ok"
+    names = Path(os.environ["RDS_CHECK_LIST"]).read_text("utf-8").split()
+    Path(os.environ["RDS_CHECK_OUT"]).write_text(
+        json.dumps(
+            {"schema_version": 1, "files": [{"path": rel, "status": status} for rel in names]}
+        ),
+        "utf-8",
+    )
+    return 0
+
+
 def render(args: list[str], here: Path) -> int:
     project = Path(arg(args, "--project"))
     status = arg(args, "--status")
@@ -105,7 +119,7 @@ def render(args: list[str], here: Path) -> int:
         "missing_metadata": [],
         "inputs": [],
         "versions": {
-            "quartifyr": "0.3.3",
+            "quartifyr": "0.3.4",
             "reportifyr": "0.4.0",
             "quarto": "1.11.9",
             "libreoffice": None,
@@ -133,6 +147,8 @@ def main() -> int:
     script, rest = Path(args[1]), args[2:]
     if script.name == "quartifyr_setup.R":
         return setup()
+    if script.name == "report_rds_check.R":
+        return rds_check(here)
     if script.name == "check.R":
         return check(rest)
     if script.name == "render.R":

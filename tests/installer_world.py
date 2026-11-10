@@ -101,8 +101,8 @@ def make_world(
         pins += ["", f"[{name}]", f'version = "{ver}"', 'license = "MIT"']
         pins += [f"[{name}.assets.{PLATFORM}]", f'url = "{url}"', f'sha256 = "{digest}"']
 
-    manifest = {"schema_version": 1, "package": "opnca", "version": "0.3.1"}
-    binary = "opnca_0.3.1_R4.6_macos-arm64.tgz"
+    manifest = {"schema_version": 1, "package": "opnca", "version": "0.3.3"}
+    binary = "opnca_0.3.3_R4.6_macos-arm64.tgz"
     _, bin_sha = _file(world, "opnca-r", binary)
     entries = [
         {
@@ -114,7 +114,7 @@ def make_world(
             "sha256": bin_sha,
         }
     ]
-    vendored = "opnca_0.3.1-vendored.tar.gz"
+    vendored = "opnca_0.3.3-vendored.tar.gz"
     if source_build:
         _, vendored_sha = _file(world, "opnca-r", vendored)
         entries.append({"asset": vendored, "kind": "source-vendored", "sha256": vendored_sha})
@@ -126,7 +126,7 @@ def make_world(
     pins += [
         "",
         "[packages.opnca-r]",
-        'version = "0.3.1"',
+        'version = "0.3.3"',
         'license = "Apache-2.0"',
         "private = true",
         f'release_url = "{BASE}/opnca-r/"',
@@ -145,7 +145,7 @@ def make_world(
         pins += [f'sha256 = "{rust_sha}"', "", "[rtools]", 'version = "45"']
         pins += ['platforms = ["windows-x86_64"]']
     for pkg, ver in (
-        ("quartifyr", "0.3.3"),
+        ("quartifyr", "0.3.4"),
         ("reportifyr", "0.4.0"),
         ("pyro", "0.1.1"),
         ("gitneighbr", "0.2.1"),
@@ -155,7 +155,7 @@ def make_world(
         pins += ["", f"[packages.{pkg}]", f'version = "{ver}"', 'license = "GPL-3.0-or-later"']
         pins += [f'release_url = "{BASE}/{pkg}/"', f"[packages.{pkg}.assets]"]
         pins += [f'"{name}" = "{digest}"']
-    pins += ["", "[packages.deckifyr]", 'version = "0.3.6"', 'license = "GPL-3.0-or-later"']
+    pins += ["", "[packages.deckifyr]", 'version = "0.3.7"', 'license = "GPL-3.0-or-later"']
     if git is not None:
         url, digest = _file(world, "git", GIT_ARCHIVE, git)
         pins += ["", "[optional.git]", 'status = "optional"', "default = true"]
@@ -171,7 +171,7 @@ def make_world(
         "R": {"Version": "4.6.2"},
         "Packages": {
             "R6": {"Package": "R6", "Version": "2.6.1", "Source": "Repository"},
-            "opnca": {"Package": "opnca", "Version": "0.3.1", "Source": "Cellar"},
+            "opnca": {"Package": "opnca", "Version": "0.3.3", "Source": "Cellar"},
         },
     }
     (runtime / "r" / "renv.lock").write_text(json.dumps(lock), "utf-8")

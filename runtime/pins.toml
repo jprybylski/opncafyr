@@ -17,10 +17,20 @@ schema_version = 1
 
 [platforms]
 # Decided in ADR 0003 (#1): Windows 11 x86_64, macOS arm64/x86_64, R 4.6.2. No arm64
-# Windows, no Windows 10, no native Linux (Linux only through the container, #42).
-supported = ["windows-x86_64", "macos-arm64", "macos-x86_64"]
+# Windows, no Windows 10. Native Linux (Ubuntu 24.04, x86_64 and aarch64) was added by the
+# ADR 0003 amendment of #65; before that, Linux ran only through the container (#42).
+supported = ["windows-x86_64", "macos-arm64", "macos-x86_64", "linux-x86_64", "linux-aarch64"]
+# A supported platform whose opnca-r binary is not pinned yet. The pins check skips only that
+# requirement for it, and the installer refuses it (unless told, for development, that
+# opnca-r will be missing). Empty since opnca-r 0.3.3 published its Linux binaries (#61);
+# the mechanism stays for the next platform. Remove a platform from this list in the commit
+# that pins its opnca-r binary.
+pending = []
 windows_min = "11"
-macos_min = "15"           # opnca-r 0.3.1 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
+linux_os = "ubuntu"        # /etc/os-release ID and VERSION_ID of the one supported Linux (#65)
+linux_os_version = "24.04"
+linux_glibc_min = "2.39"   # Posit's R and Posit's noble R binaries are built on Ubuntu 24.04
+macos_min = "15"           # opnca-r 0.3.3 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
                            # this waits on Quarto, uv Python, wheel and CRAN-binary checks (ADR 0003, #1)
 
 # --- Python ---------------------------------------------------------------------------
@@ -77,7 +87,7 @@ deckifyr = true
 
 [r]
 license = "GPL-2.0-or-later"
-version = "4.6.2"          # ADR 0003. opnca-r 0.3.1 binaries are built on R 4.6.2.
+version = "4.6.2"          # ADR 0003. opnca-r 0.3.3 binaries are built on R 4.6.2.
 # CRAN installers, used as pinned files only (rig's user mode downloads its own copy).
 # Windows: the Inno Setup installer in /CURRENTUSER mode (#6). macOS: the .pkg payload is
 # expanded and R.framework relocated, editing only text files, to an R root whose path
@@ -121,7 +131,7 @@ version = "1.11.9"         # quartifyr's bundled extensions need >= 1.6.36
 # (inst/extensions/): quarto-plus is an unmodified copy of A2-ai/quarto-plus at be6ac44
 # (MIT), quartifyr's own is GPL-3.0-or-later. They are copied into report projects with
 # quartifyr::install_quarto_extensions(); `quarto add` is never run.
-extensions = ["quartifyr (in quartifyr 0.3.3)", "A2-ai/quarto-plus@be6ac44 (in quartifyr 0.3.3)"]
+extensions = ["quartifyr (in quartifyr 0.3.4)", "A2-ai/quarto-plus@be6ac44 (in quartifyr 0.3.4)"]
 
 [quarto.assets.macos-arm64]
 url = "https://github.com/quarto-dev/quarto-cli/releases/download/v1.11.9/quarto-1.11.9-macos.tar.gz"
@@ -140,10 +150,10 @@ sha256 = "eda220a2f39c392f622049de013ddf7b4dfdf019ba877f251be14ce43e5734d1"
 
 [packages.opnca-r]
 license = "Apache-2.0"
-version = "0.3.1"
+version = "0.3.3"
 source = "github:mantra-opnca/opnca-r"
 private = true             # verify_pins.py --network needs GH_TOKEN
-release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.1/"
+release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.3/"
 # v0.2.7 (2026-11-06) added the launcher API token, --no-overwrite and --require-blq-rules
 # (#40-#43). v0.2.8 (2026-11-07) sent the whole shutdown response (#47), built macOS
 # binaries for R's own minimum (#45) and added the save lock and effective_settings (#46).
@@ -152,56 +162,69 @@ release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.1/
 # (2026-11-08) added unit labels (#32), the research-use line in analysis.R (#53) and
 # artifacts.json schema 2 (#54). v0.3.1 (2026-11-08, commit 5cffa65) takes the unit labels
 # in the preset and locks them (#56), refuses unset roles under --no-guess-roles (#57) and
-# adds identifies_subjects to artifacts.json (#58). Imports are unchanged (R6); flextable,
-# a new Suggests, is already in renv.lock. Select assets by manifest.json fields
+# adds identifies_subjects to artifacts.json (#58). v0.3.2 (2026-11-09, commit aacae2a)
+# leaves the flextable caption off the saved formatted tables (#59). v0.3.3 (2026-11-09,
+# commit 9f7cd63) publishes Linux binaries for x86_64 and arm64, built on Ubuntu 24.04 with
+# glibc_min 2.39 and linking only glibc, libstdc++, libgcc and R (#61), and fixes row states
+# in FIM (#60). Imports are unchanged (R6); flextable, a new Suggests, is already in
+# renv.lock. The manifest spells the Linux arch arm64, where our platform is linux-aarch64
+# (installer/platforms.py maps it). Select assets by manifest.json fields
 # (kind/platform/arch/r_minor), never by file name. manifest.json (schema_version 1) is
 # not in SHA256SUMS, so pin its hash here.
-manifest_sha256 = "35ca6a8093302989403e13839c8dd3694476480bd40cf042ba743e87165e1500"
-sha256sums_sha256 = "c696e2a6eedf29ef60f4a12d9078edc6fb005e972e836589c90063dde221cf49"
-source_commit = "5cffa6591fd9886ba3be25978fd5e1b3bdd5fb37"
+manifest_sha256 = "2342ab85d6b4d55ada8bee5aa2519f868bd24b41fd3b9ce185d7172466769744"
+sha256sums_sha256 = "ab3ebf46b9f0cc9d5bc987a5bde4ca6ccdc96072e1e0a4dc8f11f48017fe3a36"
+source_commit = "9f7cd63af2a1ed0202a8a2ff473fb6df4a3abb41"
 r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.opnca-r.assets]
-"manifest.json" = "35ca6a8093302989403e13839c8dd3694476480bd40cf042ba743e87165e1500"
-"opnca_0.3.1_R4.6_macos-arm64.tgz" = "e6a8c39312a1a2f34af329579572f87ed372d412dac907163c6161b7701dc44c"
-"opnca_0.3.1_R4.6_macos-x86_64.tgz" = "89243141916bcee4f54e1530538a3e241fd36218e5c8d5a6c045a6cb9c5eee03"
-"opnca_0.3.1_R4.6_windows-x86_64.zip" = "60d64bc0c868f78fea31eddd3a5f47ad6ccd3444ad6043b8ead5e0c9b06abd33"
-"opnca_0.3.1-vendored.tar.gz" = "6958d66c31b434562b0ad34e2c851381cde19178798333e21c5a3fce543f7c7d"  # offline source fallback
+"manifest.json" = "2342ab85d6b4d55ada8bee5aa2519f868bd24b41fd3b9ce185d7172466769744"
+"opnca_0.3.3_R4.6_linux-x86_64.tar.gz" = "958d38d8418d1bd263083d4e0ac2a3b823d84dc59083b289132f99d3a377cfe6"
+"opnca_0.3.3_R4.6_linux-arm64.tar.gz" = "a7f9044b4f76a292c46d2584b126fed72b5b78cd91067a7eeabb250d2a460b9b"
+"opnca_0.3.3_R4.6_macos-arm64.tgz" = "5e99b9de6d316f38bb679992b6d23db0dcc39d28760e25cd46136802313a224b"
+"opnca_0.3.3_R4.6_macos-x86_64.tgz" = "292a1b2ab08d00ec0ae8c86d9d9c8baf8ca0d7d6ec602ef8035ebd33fccb3970"
+"opnca_0.3.3_R4.6_windows-x86_64.zip" = "d85e8d576fd692d428d90fbddc53d5128530c853e1a5d0566db9385527e5ae63"
+"opnca_0.3.3-vendored.tar.gz" = "e918cf8a6de80a63ef795250abf061fac75b5b440a2e816b9bcfab0d4da848cb"  # offline source fallback
 
 [packages.deckifyr]
 license = "GPL-3.0-or-later"
-version = "0.3.6"
+version = "0.3.7"
 source = "github:jprybylski/deckifyr"
-release_url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.6/"
+release_url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/"
 extras = ["web", "preview"]
 # Installed as a wheel into [python_envs.tools]; that uv.lock pins it by this URL and
 # hash, and pins every transitive dependency (the wheel's own are lower bounds only).
 # v0.3.5 (2026-11-06) added the request guard, trust policy and atomic builds (#88-#91).
 # v0.3.6 (2026-11-07, tag dccb088) adds offline mode for the R wrappers and BOM-tolerant
 # project files (#93, #94). Its release workflow no longer re-tags or replaces a release.
-wheel = "deckifyr-0.3.6-py3-none-any.whl"
+# v0.3.7 (2026-11-09) builds a table with an empty cell (#96).
+wheel = "deckifyr-0.3.7-py3-none-any.whl"
 
 [packages.deckifyr.assets]
-"deckifyr-0.3.6-py3-none-any.whl" = "25b150a834249c2d63bd86b629ef92715be4aafa98d029bf1c9bae7328e82328"
-"deckifyr-0.3.6.tar.gz" = "c4f4295aace89591d3ae48e3bce959205b1c953b9c02fb0006aa44906225b51e"
-"deckifyr_0.3.6.tar.gz" = "051684c94686a6581df7e9313a47a4e389911c91d70d8842c8e80c35a816aab1"  # R wrapper, not installed
-"SHA256SUMS" = "46054da5eba9d3d8ebdcb772c21824a0bd034273b9cfea6ae90ed9a3fea2bc66"
+"deckifyr-0.3.7-py3-none-any.whl" = "9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe"
+"deckifyr-0.3.7.tar.gz" = "00632691aa6eda327514cccd821999b94dc6b73a6d8d0af6a372cad65141d5d3"
+"deckifyr_0.3.7.tar.gz" = "86555d3f65c4a126195e2b58da06a5b80b00b051f12a93ef0b8d0c0356138d3b"  # R wrapper, not installed
+"SHA256SUMS" = "a769cdac83c45e1cb512e17a64218b246afec928a9480987b2a7e3e438241f54"
 
 [packages.quartifyr]
 license = "GPL-3.0-or-later"
-version = "0.3.3"
+version = "0.3.4"
 source = "github:jprybylski/quartifyr"
-release_url = "https://github.com/jprybylski/quartifyr/releases/download/v0.3.3/"
+release_url = "https://github.com/jprybylski/quartifyr/releases/download/v0.3.4/"
 # v0.3.3 (2026-11-07) releases #81-#86 (PR #87, reviewed). Tag v0.3.3 points at 7bc7eb1.
 # quartifyr's release workflow may refresh a release (re-tag, replace the tarball) within
 # 24 hours of publishing, by design. 0.3.3 was published 2026-11-07T00:29Z and pinned
 # inside that window at the owner's request; re-verify the tarball, SHA256SUMS and tag
-# after 2026-11-08T00:29Z. Its bundled Quarto extensions are unchanged from 0.3.2.
-commit = "7bc7eb121987de4b8aaef66a931b5b25a90e3fdf"
+# after 2026-11-08T00:29Z (done 2026-11-09: tarball and SHA256SUMS still matched).
+# v0.3.4 (2026-11-09T19:53Z, tag bc557b5) fits wide tables to the page and adds the
+# landscape and portrait shortcodes (#88). Imports and Python dependencies are unchanged
+# (the new step uses lxml, which the bundled engine already needs), and quarto-plus is
+# byte-identical to 0.3.3. Pinned inside the 24 hour window: re-verify the tarball,
+# SHA256SUMS and tag after 2026-11-10T19:53Z.
+commit = "bc557b582a2e33da7d2dc7d569e8a33c048871aa"
 
 [packages.quartifyr.assets]
-"quartifyr_0.3.3.tar.gz" = "31aab4ad5a60f578d3f122a622a6c24b0460d64e9fc2a095632a9b7eb9eba610"
-"SHA256SUMS" = "387499079415bfd41990ec9bd5dec88fef09f9422121572576f1f2067f7fde16"
+"quartifyr_0.3.4.tar.gz" = "603cf8d93fe9fd540fffe9166bfee81ae4bbd6124d698179dba22fb923b14dda"
+"SHA256SUMS" = "c85755ff413b9eb3e93fe30574e8ce39dba58a7001aee64174863cb912be0f93"
 
 [packages.reportifyr]
 license = "GPL-3.0-or-later"
@@ -249,7 +272,7 @@ commit = "a353093d82b6e46cf91a374f4e1b96450d08c780"
 "SHA256SUMS" = "2121877aba60c17866cb7ae0ad3b0b3edca4a0e8a8dd67ae504c54bd59b7d7cf"
 
 # --- Repair path only (ADR 0004) ---------------------------------------------------------
-# Never installed on a normal install. Only to build opnca_0.3.1-vendored.tar.gz when a
+# Never installed on a normal install. Only to build opnca_0.3.3-vendored.tar.gz when a
 # binary can't be used (e.g. macOS below the binary's minimum). macOS also needs the
 # Command Line Tools for this path (#7).
 
@@ -260,6 +283,7 @@ windows_target = "x86_64-pc-windows-gnu"   # with the Rtools MinGW linker
 [rust.rustup_init]
 license = "MIT OR Apache-2.0"
 version = "1.29.3"
+platforms = ["windows-x86_64", "macos-arm64", "macos-x86_64"]   # no source build on Linux (#65)
 
 [rust.rustup_init.assets.macos-arm64]
 url = "https://static.rust-lang.org/rustup/archive/1.29.3/aarch64-apple-darwin/rustup-init"
@@ -275,6 +299,7 @@ sha256 = "f6289656ce42e1099f3cbc6f10ef6321dfde54773faf599dd36fd3b1f07d9103"
 
 [rust.standalone]
 license = "MIT OR Apache-2.0"
+platforms = ["windows-x86_64", "macos-arm64", "macos-x86_64"]   # no source build on Linux (#65)
 # Offline equivalent of rustup: the standalone toolchain archives.
 
 [rust.standalone.assets.macos-arm64]
@@ -435,6 +460,9 @@ status = "optional"
 version = "26.2.7.1"       # "still" branch
 license = "MPL-2.0"
 
+# Not on Linux: previews would need a root install of its libraries (#65), so the native
+# Linux installer refuses --with-libreoffice. The container image has its own pin.
+platforms = ["windows-x86_64", "macos-arm64", "macos-x86_64"]
 [optional.libreoffice.assets.macos-arm64]
 url = "https://downloadarchive.documentfoundation.org/libreoffice/old/26.2.7.1/mac/aarch64/LibreOffice_26.2.7.1_MacOS_aarch64.dmg"
 sha256 = "97430a2c13f4f76d2a82c438f61792fc937d0a3d8ddf1e65b33bbe8f39b8f335"
@@ -472,6 +500,14 @@ sha256 = "1110de343de11cc6f469b782b60f36217b9199b5e06875dd65baa26dd60563c7"
 [optional.git.assets.macos-x86_64]
 url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-macOS-x64.tar.gz"
 sha256 = "52cc663281e1ec2f1d76ba781193ca4847e62dbbf767f6c99ec9ec5b978a7659"
+
+[optional.git.assets.linux-x86_64]
+url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-ubuntu-x64.tar.gz"
+sha256 = "1efd8ce0516b670b6b6d0f49ecaf395ceb8cf7fff3f5857259763d97a1238df9"
+
+[optional.git.assets.linux-aarch64]
+url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-ubuntu-arm64.tar.gz"
+sha256 = "d5ce120515bf3013a014e6a918aa87ec0f7a6f5f9687c48d50127e637cb9b6c2"
 
 [optional.git.assets.windows-x86_64]
 url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-windows-x64.tar.gz"

@@ -163,7 +163,10 @@ def pick_folder(
             if proc.returncode != 0:
                 raise PickerError("The folder picker failed to open.")
         else:
-            raise PickerUnavailable("This platform has no native folder picker.")
+            raise PickerUnavailable(
+                "This platform has no native folder picker. On a Linux computer, start opncafyr "
+                "with `opncafyr launch --remote --port <port> --workspace <study folder>`."
+            )
     except subprocess.TimeoutExpired:
         raise PickerError("The folder picker was open too long and was closed.") from None
     except OSError:

@@ -16,6 +16,9 @@ only. These programs use base R and jsonlite, plus the one tool package a progra
   generated `clean.R`, followed by one call per recipe step.
 - `nca_format_check.R`: `opnca::check_data_format()` on one analyte selection (#24); writes
   roles, column names and opnca-r's issue texts, never a value.
+- `report_rds_check.R`: reads each formatted table (`.rds`) a report would use and writes a
+  status per file (ok, captioned, not_flextable, unreadable), never a value (#62). Run by
+  `workflows/nca/publish/rds_check.py` in the report Check and Render.
 - `quartifyr_setup.R`: lays out a report project offline with quartifyr 0.3.3's
   `initialize_report_project_offline()` and its bundled-extension installers (#32); the
   folder comes from `QUARTIFYR_SETUP_DIR`.

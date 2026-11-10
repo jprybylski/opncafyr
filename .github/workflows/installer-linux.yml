@@ -1,0 +1,75 @@
+name: Installer (Linux)
+
+# The native Linux install (#65), end to end, as an unprivileged user in a minimal Ubuntu 24.04
+# container with no network, no compiler, no make and no sudo: the offline bundle built twice
+# and compared, a computer with a library missing refused by name, install, a second run (no-op),
+# repair, the Gate 2 flow on the install (two real opnca-r runs, replay, publish, DOCX report,
+# PPTX deck: scripts/offline/flow_check.py), a native launch reached through its forward
+# (foreign Host, Origin and a missing session secret refused), a tampered asset and a missing asset refused with the old install
+# still running, an update killed part-way and then completed, uninstall leaving a workspace.
+# Every installer command runs under strace and scripts/offline/check_trace.py fails on any
+# connection attempt that leaves the machine. scripts/installer_ci/linux.sh has the legs.
+#
+# x86_64 and aarch64 each run natively (public repositories get hosted arm64 runners).
+#
+# opnca-r is private: the job needs OPNCA_R_RELEASE_TOKEN to download its Linux binary (0.3.3).
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "installer/**"
+      - "runtime/**"
+      - "src/opncafyr/installer/**"
+      - "src/opncafyr/core/remote.py"
+      - "src/opncafyr/cli.py"
+      - "scripts/make_installer.py"
+      - "scripts/installer_ci/linux*.sh"
+      - "scripts/offline/check_trace.py"
+      - "scripts/offline/flow_check.py"
+      - "scripts/offline/allowed_attempts.toml"
+      - ".github/workflows/installer-linux.yml"
+  push:
+    branches: [main, "ci/**"]
+    paths:
+      - "installer/**"
+      - "runtime/**"
+      - "src/opncafyr/installer/**"
+      - "scripts/installer_ci/linux*.sh"
+      - ".github/workflows/installer-linux.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: native install (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {arch: x86_64, runner: ubuntu-24.04}
+          - {arch: aarch64, runner: ubuntu-24.04-arm}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build the installer payload (and one for a later version, for the update leg)
+        run: |
+          uv run python scripts/make_installer.py --out dist
+          uv run python scripts/make_installer.py --out dist-newer --version "$(cat VERSION).post1"
+      - name: Native install legs (unprivileged, no network)
+        env:
+          GH_TOKEN: ${{ secrets.OPNCA_R_RELEASE_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::OPNCA_R_RELEASE_TOKEN is required"; exit 1; }
+          bash scripts/installer_ci/linux.sh "${{ matrix.arch }}" "dist/opncafyr-installer-$(cat VERSION)" \
+            installer-linux-ci "dist-newer/opncafyr-installer-$(cat VERSION).post1"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-linux-${{ matrix.arch }}
+          path: |
+            installer-linux-ci/inner/
+            installer-linux-ci/*.log
+          if-no-files-found: ignore

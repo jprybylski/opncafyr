@@ -11,7 +11,13 @@ from opncafyr.cli import main
 from opncafyr.core import storage
 from opncafyr.core.app import create_app
 from opncafyr.core.bootstrap import mint_open_token
-from opncafyr.core.remote import CONTAINER_BIND, RemoteAccessError, container_access
+from opncafyr.core.remote import (
+    CONTAINER_BIND,
+    LOOPBACK,
+    RemoteAccessError,
+    container_access,
+    native_access,
+)
 from opncafyr.core.security import SESSION_HEADER, SecurityConfig
 from opncafyr.core.supervisor import Supervisor
 
@@ -98,9 +104,17 @@ def test_security_config_rejects_a_malformed_base_path():
 # --- every check still holds behind each access route ---------------------------------
 
 
-@pytest.fixture(params=sorted(PRESETS))
+# Every check runs for the container and for a native Linux VM (#65): the two differ in the
+# bind address only, and the security checks must hold identically behind each access route.
+MODES = {"container": container_access, "native": native_access}
+
+
+@pytest.fixture(
+    params=[(m, p) for m in MODES for p in sorted(PRESETS)], ids=lambda x: f"{x[0]}-{x[1]}"
+)
 def remote_client(request, tmp_path):
-    remote = container_access(port=PORT, **PRESETS[request.param])
+    mode, preset = request.param
+    remote = MODES[mode](port=PORT, **PRESETS[preset])
     security = security_for(remote)
     app = create_app(security, open_tokens=tmp_path / "tokens")
     origin = "/".join(remote.public_url.split("/")[:3])
@@ -342,3 +356,83 @@ def test_manifests_record_the_container_image():
     assert "container_image" not in provenance.base_tools()
     with pytest.raises(ValueError):
         provenance.set_container_image("ghcr.io/x:latest")
+
+
+def test_a_folder_owned_by_someone_else_is_reported_without_a_path(tmp_path, monkeypatch):
+    # Git refuses such a folder ("dubious ownership"); the container start says why (#62).
+    if not hasattr(os, "geteuid"):
+        pytest.skip("POSIX owners only")
+    assert storage.owner_mismatch(tmp_path) is None
+    monkeypatch.setattr(os, "geteuid", lambda: os.stat(tmp_path).st_uid + 1)
+    message = storage.owner_mismatch(tmp_path)
+    assert message is not None
+    assert "--user" in message and "opncafyr-container" in message
+    assert str(tmp_path) not in message
+    assert storage.owner_mismatch(tmp_path / "missing") is None
+
+
+# --- a native Linux VM (#65) --------------------------------------------------------------
+
+
+@pytest.mark.parametrize("name", sorted(PRESETS))
+def test_native_is_the_container_with_a_loopback_listener(name):
+    inside = container_access(port=PORT, **PRESETS[name])
+    native = native_access(port=PORT, **PRESETS[name])
+    assert (inside.bind, native.bind) == (CONTAINER_BIND, LOOPBACK)
+    assert not inside.native and native.native
+    # Same allow-lists, prefix and URL: only the listener differs, so no check is weaker.
+    assert (native.hosts, native.origins, native.base_path, native.public_url) == (
+        inside.hosts,
+        inside.origins,
+        inside.base_path,
+        inside.public_url,
+    )
+
+
+def test_native_refuses_what_the_container_refuses():
+    with pytest.raises(RemoteAccessError, match="needs --public-url"):
+        native_access(port=PORT, access="vscode")
+    with pytest.raises(RemoteAccessError, match="--local-port is for ssh"):
+        native_access(
+            port=PORT,
+            access="jupyter",
+            local_port=9000,
+            public_url=PRESETS["jupyter"]["public_url"],
+        )
+
+
+def test_remote_and_container_are_exclusive(capsys):
+    assert main(["launch", "--container", "--remote", "--port", "8765"]) == 2
+    assert "different modes" in capsys.readouterr().err
+
+
+def test_remote_needs_a_fixed_port_and_a_folder(capsys, tmp_path):
+    assert main(["launch", "--remote"]) == 2
+    assert "--remote needs a fixed --port" in capsys.readouterr().err
+    assert main(["launch", "--remote", "--port", "8765"]) == 2
+    assert "no folder picker" in capsys.readouterr().err
+    missing = str(tmp_path / "missing")
+    assert main(["launch", "--remote", "--port", "8765", "--workspace", missing]) == 2
+    assert "is not a folder" in capsys.readouterr().err
+
+
+def test_remote_has_no_container_image(capsys, tmp_path):
+    argv = ["launch", "--remote", "--port", "8765", "--workspace", str(tmp_path)]
+    assert main([*argv, "--container-image", "sha256:" + "a" * 64]) == 2
+    assert "only for --container" in capsys.readouterr().err
+
+
+def test_remote_refuses_bad_access_options(capsys, tmp_path):
+    argv = ["launch", "--remote", "--port", "8765", "--workspace", str(tmp_path)]
+    assert main([*argv, "--access", "vscode"]) == 2
+    assert "needs --public-url" in capsys.readouterr().err
+
+
+def test_the_owner_warning_names_the_right_fix_for_each_mode(monkeypatch, tmp_path):
+    from opncafyr.core import storage
+
+    monkeypatch.setattr(storage.os, "geteuid", lambda: os.stat(tmp_path).st_uid + 1, raising=False)
+    inside = storage.owner_mismatch(tmp_path)
+    native = storage.owner_mismatch(tmp_path, container=False)
+    assert "opncafyr-container" in inside and "opncafyr-container" not in native
+    assert "Run opncafyr as the user who owns the folder" in native

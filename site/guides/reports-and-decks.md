@@ -57,6 +57,13 @@ The new report has one captioned table or figure for each published file, with f
 3. Select **Save** (or press Ctrl+S, or Cmd+S on a Mac) to keep your changes, or **Discard changes**.
 4. Select **Publish** on the left to go back to the report card.
 
+The editor lists two more files after the report, and they open as plain text with a short description above them:
+
+- **Report settings (config.yaml)** holds how tables, figures and footnotes are filled in: the figure width, the footnote style and similar. Most reports need no change. Each line reads `setting: value`, where a value is `true` or `false`, a number or text, as the file's own comments say. Keep `report_dir_name` and `outputs_dir_name` as they are.
+- **Footnotes (standard_footnotes.yaml)** holds the abbreviations and footnote wording that a published file's description may name.
+
+Saving one of them notes anything that looks wrong, such as a misspelled setting or text where `true` or `false` belongs; the save still happens. **Check** lists the same notes, and **Render** stops if the settings file isn't valid YAML or changes the two folder names.
+
 You can also open the editor from the quartifyr tile on **Home**, with **Edit project files**.
 
 If the file changed on disk while you were editing, nothing is overwritten. The editor shows "The file changed on disk" with both versions. Choose **Keep mine (replace the disk version)** or **Use the disk version (discard mine)**.
@@ -77,6 +84,11 @@ Under **Status**, choose **Draft** or **Final**. This is a saved setting of the 
 > "The last check found nothing to fix."
 
 Otherwise the card lists **Report check findings**, each marked **Blocks** or **Warning**, with the check, the file and what is wrong. See [What the checks mean](#what-the-checks-mean).
+
+{: .fix }
+> **A formatted table (`.rds`) is listed as Blocks** — the report tools can't place a formatted table that carries its own caption: a report that included one left that table's place unfilled. Runs saved by opnca-r 0.3.2 or later don't have this caption, so make a new run and publish that. Or use the CSV version of the table in the report, or the formatted one in a deck. **Render** stops for the same reason.
+>
+> **A warning about `use_artifact_size`** — an older report project still sizes figures by their pixels, which can run past the page. Select **Edit report**, then **Report settings (config.yaml)**, change `use_artifact_size: true` to `false`, save, and render again. New reports already have it.
 
 ### Step 5. Render and download
 
@@ -112,8 +124,7 @@ The deck is a deckifyr project in the study folder's `deck` folder. You edit its
   <figcaption>The deck card after the deck has been set up. Without LibreOffice, "with slide previews" can't be ticked.</figcaption>
 </figure>
 
-{: .warning }
-> **Known issue: tables with empty cells.** This version of the deck tool can't build a slide from a table that has an empty cell. opnca-r's tables have empty cells whenever a parameter can't be calculated, for example a profile without λz (the terminal elimination rate constant). The build fails with "IndexError: tuple index out of range". Until a fixed version ships, make a publication with the figures only (untick the tables on **Publish**) and set the deck up from it. The report has no such limit.
+A table with an empty cell builds: the cell stays empty on the slide. opnca-r's tables have empty cells whenever a parameter can't be calculated, for example a profile without λz (the terminal elimination rate constant). A formatted table (`.rds`) goes on its slide as a picture.
 
 ### Step 1. Set up the deck
 
@@ -174,7 +185,7 @@ Otherwise the card lists **Deck check findings**, each marked **Blocks** or **Wa
 > "The build finished." A new row in the builds table, with a **Download PPTX** link.
 
 {: .fix }
-> **"IndexError: tuple index out of range"** — see the known issue above: build the deck from a figures-only publication.
+> **"unexpected error in the deck tool"** — see [Troubleshooting]({{ '/guides/troubleshooting/' | relative_url }}); make a support bundle.
 >
 > **"with slide previews" is greyed out ("LibreOffice is not installed.")** — not a fault. Decks build without previews. Whoever supports your install can add LibreOffice with the installer's `--with-libreoffice` option.
 
@@ -191,7 +202,7 @@ Every check and build works on a temporary copy of the project that holds exactl
 | Step | What it checks | What counts as success |
 |---|---|---|
 | Report **Check** | 1. The description file of every published file (the same checks as [Check published files]({{ '/guides/publishing/' | relative_url }}#step-5-check-published-files)). 2. quartifyr's own check of the report project, which lists what would block or weaken the render. | No **Blocks** findings. |
-| Report **Render** | Runs quartifyr's strict, offline render on the copy, after hashing every input. | quartifyr reports success, every placeholder is filled and no metadata is missing; the DOCX it lists is re-hashed and kept. |
+| Report **Render** | Runs quartifyr's offline render on the copy, after hashing every input. | quartifyr reports success (or only that a table is too wide for the page), every placeholder is filled and no metadata is missing; the DOCX it lists is re-hashed and kept. |
 | Deck **Check** | 1. The description files, as above. 2. deckifyr's strict check of the deck, including your fragments. A deckifyr error fails the check; its warnings are listed. | No **Blocks** findings. |
 | Deck **Build** | Builds the copy with deckifyr's strict mode. | deckifyr reports success, its build record exists, and the PPTX's fingerprint matches that record. |
 | **Download** | Re-checks the file against its build record. | The file still matches. If it was changed, the download is refused ("The DOCX no longer matches its build manifest."). |

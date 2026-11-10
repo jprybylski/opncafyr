@@ -1,4 +1,5 @@
-"""The icon a user clicks: a minimal ``.app`` on macOS, ``.lnk`` shortcuts on Windows.
+"""The icon a user clicks: a minimal ``.app`` on macOS, ``.lnk`` shortcuts on Windows, and a
+launcher script on Linux.
 
 - **macOS:** ``~/Applications/opncafyr.app`` with an ``Info.plist`` and a shell stub that
   starts ``<app root>/current/launcher/bin/python -m opncafyr launch`` in the background
@@ -9,6 +10,12 @@
   ``WScript.Shell`` by ``ps/icons_windows.ps1``. A shortcut can't follow the pointer
   file, so it names the active install's ``pythonw.exe`` and is rewritten on activation.
   Its icon is ``opncafyr.ico``, copied into the version folder next to the launcher.
+
+- **Linux** (#65): a headless VM has no desktop, so there is no icon, only
+  ``<app root>/bin/opncafyr``, a two-line script that runs
+  ``<app root>/current/launcher/bin/python -m opncafyr "$@"``. It goes through the ``current``
+  link, so an update needs no new script. The installer prints its path and never edits a shell
+  profile or ``PATH``.
 
 Both icon files are exported from ``web/static/logo-mark.svg`` by
 ``scripts/export_logo.py`` and ship in ``installer/assets/``; nothing is downloaded.
@@ -37,6 +44,22 @@ def macos_app_path(environ: dict[str, str] | None = None) -> Path:
     env = os.environ if environ is None else environ
     base = Path(env[APPS_DIR_ENV]) if env.get(APPS_DIR_ENV) else Path.home() / "Applications"
     return base / f"{APP_NAME}.app"
+
+
+def linux_launcher(layout: Layout) -> Path:
+    return layout.root / "bin" / APP_NAME
+
+
+def write_linux_launcher(layout: Layout) -> Path:
+    path = linux_launcher(layout)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    python = layout.root / "current" / "launcher" / "bin" / "python"
+    path.write_text(
+        f'#!/bin/sh\nexec {shlex.quote(str(python))} -m opncafyr "$@"\n',
+        "utf-8",
+    )
+    path.chmod(0o755)
+    return path
 
 
 def icon_bytes(name: str) -> bytes:
@@ -139,6 +162,8 @@ def create(layout: Layout, install_id: str, version: str, log: Path) -> list[Pat
             icon=str(icon),
         )
         return existing()
+    if sys.platform.startswith("linux"):
+        return [write_linux_launcher(layout)]
     return []
 
 
@@ -155,7 +180,7 @@ def existing() -> list[Path]:
             if lnk.exists():
                 found.append(lnk)
         return found
-    return []
+    return []  # Linux's launcher script lives inside the app root, which uninstall removes
 
 
 def present(layout: Layout) -> bool:
@@ -169,6 +194,9 @@ def present(layout: Layout) -> bool:
         )
     if sys.platform == "win32":
         return len(existing()) == len(windows_shortcut_dirs())
+    if sys.platform.startswith("linux"):
+        script = linux_launcher(layout)
+        return script.is_file() and str(layout.root) in script.read_text("utf-8")
     return True
 
 
@@ -179,6 +207,8 @@ def remove(layout: Layout, log: Path) -> None:
         remove_tree(macos_app_path())
     elif sys.platform == "win32":
         _run_ps("remove", layout, log)
+    elif sys.platform.startswith("linux"):
+        linux_launcher(layout).unlink(missing_ok=True)
 
 
 def _desktop() -> Path:

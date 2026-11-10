@@ -80,3 +80,16 @@ opnca-r 0.2.7 (pinned in `runtime/pins.toml`) now provides:
   Offline line above.
 - "Still to confirm: #34, a renv cellar restore" no longer applies.
 
+
+## Amendment (2026-11-09, #65): Linux
+- Native Linux (ADR 0003 amendment) installs opnca-r from a **prebuilt Linux binary**, selected
+  by `manifest.json` fields like the others (`platform: "linux"`, `arch: "x86_64"` or
+  `"arm64"`, `r_minor: "4.6"`; the pins name the platform `linux-aarch64`, mapped at the
+  manifest boundary). opnca-r 0.3.3 publishes them (mantra-opnca/opnca-r#61), built on Ubuntu 24.04 with `glibc_min`
+  2.39 and linking only glibc, libstdc++, libgcc and R. Until a platform's binary is pinned,
+  `[platforms].pending` in `runtime/pins.toml` keeps the installer from offering it; the list
+  is empty now.
+- **There is no source build on Linux.** The vendored tarball needs a C toolchain beside Rust,
+  which a no-compiler VM doesn't have, so `repair --build-from-source` and `bundle
+  --with-source-build` are refused there. The container still builds from the vendored tarball
+  at image build time.

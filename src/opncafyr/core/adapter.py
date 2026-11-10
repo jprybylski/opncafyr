@@ -128,6 +128,7 @@ class EditableFile:
     label: str
     syntax: str = "text"  # one of SYNTAXES; md/qmd/rmd also get the visual mode
     max_bytes: int = DEFAULT_MAX_EDIT_BYTES
+    help: str = ""  # a sentence or two on what the file does, shown above the editor
 
 
 @dataclass(frozen=True)

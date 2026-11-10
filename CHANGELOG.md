@@ -7,6 +7,71 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Native Linux install: Ubuntu 24.04, x86_64 and aarch64, no root, apt, compiler or
+  container** (#65, ADR 0003 amended). It uses opnca-r 0.3.3, which publishes the Linux
+  binaries (opnca-r#61); opnca-r is pinned at 0.3.3 for every platform. opnca-r's manifest
+  calls the arm architecture `arm64`, where our platform is `linux-aarch64`; one function maps
+  it (`installer/platforms.py`). `[platforms].pending` stays as a mechanism and is empty.
+  - **Installer.** `install.sh` runs on Linux and reads a ZIP bundle with `unzip`, `bsdtar` or
+    `python3`. Preflight checks Ubuntu 24.04, glibc 2.39 or later and not root, then the 36
+    shared libraries the stack links (`installer/linux_libs.py`), and names the missing ones
+    with the Ubuntu packages to ask an administrator for; it never runs apt. R is Posit's
+    `.deb`, unpacked in Python (links refused) and relocated, with `Rscript` replaced by a
+    wrapper that names `RHOME`. The library is Posit's noble binaries, pinned per
+    architecture with the User-Agent that selects them, and installed one at a time (no
+    `make`). `<app root>/bin/opncafyr` starts it. LibreOffice and `repair
+    --build-from-source` are refused on Linux. Update, repair, rollback and uninstall are the
+    existing code paths.
+  - **Launch.** `opncafyr launch --remote` is the native counterpart of `--container`: the
+    listener stays on the VM's `127.0.0.1`, reached through an SSH forward or an IDE proxy,
+    with a fixed `--workspace` (no folder picker on a headless VM). Every Host, Origin,
+    session-secret and `Sec-Fetch-Site` check is the container's, and the tests run for both.
+  - **Pins.** `linux-x86_64` and `linux-aarch64` in `runtime/pins.toml` (Linux runtimes are
+    pinned once, under `[ci.<platform>]`), 126 R package binaries per architecture in
+    `binaries.toml` (the generator fails when a download is not a binary built for its
+    architecture), manylinux wheels, dugite-native Git, and opnca-r 0.3.3's Linux binaries
+    (hashes checked against the release's `SHA256SUMS` and manifest). Existing platforms'
+    pins are unchanged except opnca-r's version. `--allow-pending` (development) installs a
+    platform that is still pending, without opnca-r.
+  - **Checked** on a developer Mac in Ubuntu 24.04 containers, as an unprivileged user with
+    no network, no compiler and no `make`: on arm64 the install ran end to end with opnca-r's
+    own smoke calculation, the DOCX and PPTX smoke builds, and the full Gate 2 flow (two real
+    analyses, replay, publish, DOCX report, PPTX deck). `installer-linux.yml` runs the same
+    legs natively on both architectures under strace: a computer missing one library refused
+    by name; install; a no-op second run; repair; the flow; a native launch reached through
+    its forward (a foreign Host, a foreign Origin and a missing session secret refused);
+    a tampered and a missing asset refused with the old install still running; an update
+    killed part-way, then completed; uninstall leaving a workspace; and no connection attempt
+    in any trace. Not run: a real firewalled VM.
+- **Edit the report's settings and footnotes in the app** (#64). The project-file editor
+  now lists two YAML files after the report, as bounded exceptions to "report sources
+  only": **Report settings** (`report/config.yaml`) and **Footnotes**
+  (`report/standard_footnotes.yaml`). Each shows a short description above it. A save is
+  checked in plain words and never refused: not valid YAML (with the line), a setting
+  the bundled template doesn't have, a value of the wrong kind, or a changed
+  `report_dir_name`/`outputs_dir_name`. **Check** repeats these as `config-yaml` findings;
+  **Render** refuses a settings file that isn't YAML or changes the two folder names. The
+  figure-size finding (#62) now says where to change it. New report projects get comments
+  in `config.yaml`; existing projects keep theirs. Nothing else under `report/` is offered;
+  deckifyr keeps its own editor and opnca-r's stays off. Both guides list the files.
+- **Edit a saved cleaning step, and findings next to the steps** (#63).
+  - **Edit** on each cleaning step opens its form on the saved values and note. **Save step**
+    replaces the step in the same place through the usual whole-recipe save and its
+    validation, and **Cancel** changes nothing. A refused edit keeps the form open with the
+    reason and what was typed. While one step is open, the other steps' buttons wait. Every
+    kind of step the page can add is covered (a browser test opens and saves each one back
+    unchanged, and the recipe hash stays the same). A step with a combined row condition
+    (`all`) or settings the form can't show is not editable; it says why. No new server route.
+  - A **Findings** panel under the step adder shows the last check's blocking findings and
+    warnings with their hints, for the analyte and specimen and time it was checked. It is a
+    native `<details>` (keyboard operable, scrolls inside itself, sticky on wide screens). The
+    acknowledgement boxes stay in section 5.
+  - Findings are tied to the recipe hash they were checked against. After a change to a step,
+    the mapping or the source they are marked **Out of date** and hidden in both places, and
+    no acknowledgement carries over (the server already refused one made under another hash).
+    Before, a mapping-only change left the findings on screen as if current.
+  - The Runs table's last column header, which was empty, is now "Action" (found by the first
+    accessibility check of the Analysis page).
 - **Container image and cloud container mode** (#42, ADR 0009).
   - `container/Dockerfile` builds slim and full (LibreOffice) images for linux/amd64 and
     linux/arm64 from `runtime/pins.toml` only. Inputs: a digest-pinned Ubuntu base, Ubuntu
@@ -871,6 +936,8 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- Clarified how to build the installer payload from a source checkout before testing
+  offline bundle creation, and distinguished the installer zip from a platform bundle.
 - opnca-r is pinned at 0.3.1, which releases opnca-r#32, #53 and #54 (0.3.0) and #56–#58
   (0.3.1). Imports are unchanged. flextable, a new suggested package, is already in
   `renv.lock`.
@@ -969,6 +1036,79 @@ All notable changes to this project are documented here. The format follows
   `upstream-blocked` removed from #27.
 
 ### Fixed
+- Resolve local bundle and asset folders to absolute paths before staging, so a
+  Windows offline install can launch the pinned R installer when given `--from-bundle .`.
+  The offline guide also uses an absolute Windows bundle path for older installers.
+- **Cloud `-full` walkthrough failures** (#62).
+  - The Publications list and the file picker on the Publish page no longer keep an
+    error after a later request succeeds. The first request can run before a study folder
+    is open; that case now says "Open a study folder…" instead of showing an error, and a
+    slow earlier request can't overwrite a newer one.
+  - Version history trusts exactly the study folder you opened. In the container the mount
+    is often owned by another user, and Git then refused it ("dubious ownership"). The
+    launcher now writes one `safe.directory` entry, for that folder's resolved path, into
+    its own Git configuration file for the managed gitneighbr only. Never `*`, never a
+    parent folder; the entry is replaced when another study opens and the person's Git
+    name and email in that file are kept. The container also warns at start when the
+    study folder's owner isn't the user running opncafyr, and the cloud container guide
+    says how to match them. Not reproduced here: needs a mount with a different owner.
+  - **Report: formatted tables and figure width.**
+    - A formatted table (`.rds`) that carries its own caption is refused by the report
+      Check and Render with a message naming the file; use its CSV, or put it in a deck.
+      A fixed R program inspects each file (`r/report_rds_check.R`); only a status is
+      written. A table that isn't a flextable, or can't be read, is refused too. The cause
+      was confirmed with the real tools (reportifyr 0.4.0, quartifyr 0.3.4): the same table with a
+      caption leaves its placeholder unfilled, and without one it is filled. opnca-r
+      0.3.2 leaves the caption off (opnca-r#59), so the refusal now means a run saved by an
+      earlier opnca-r, and the message says to make a new run.
+    - The render error now names the files whose placeholders stayed unfilled, not just
+      their number.
+    - Figures use the 6 inch default width instead of their pixel size
+      (`use_artifact_size: false` in the bundled `config.yaml`); opnca-r's 2000 px PNGs came
+      out about 27 inches wide. Check warns about an older project that still says `true`
+      and never rewrites it.
+    - The report render no longer passes quartifyr's `--strict`. quartifyr 0.3.4 warns when
+      a table is still too wide at 7 pt, and `--strict` refuses that: opnca-r's own 22-column
+      summary table can't fit a portrait page, so every default report failed (found by the
+      offline CI job's first run). The adapter now accepts a `warning` result only when every
+      warning is that one and there is no error, unfilled placeholder or missing metadata, and
+      records it in the build; any other warning still fails and now says what it was.
+  - **opnca-r 0.3.2 and quartifyr 0.3.4 pinned** (`runtime/pins.toml`, `renv.lock`, the
+    installer scripts and CI). opnca-r 0.3.2 leaves the flextable caption off the saved
+    formatted tables (opnca-r#59). quartifyr 0.3.4 fits wide tables to the page
+    (`fit_tables`, on by default) and adds `{{< landscape >}}` and `{{< portrait >}}`
+    (quartifyr#88); the guides say how to put a table on a landscape page. Hashes match
+    each release's `SHA256SUMS` and `verify_pins.py --network` passes for both. quartifyr
+    0.3.4 was pinned within its 24 hour refresh window: re-verify it after
+    2026-11-10T19:53Z.
+  - **Checked with the real tools** on a developer machine (macOS, R 4.6.1, Quarto
+    1.10.18; not the container image): a formatted table saved by opnca-r 0.3.2 has no
+    caption and fills its placeholder; the same table with a caption does not. An
+    11-column formatted table is fitted to 6.5 inches with a fixed layout, and a 2000 px
+    figure is no wider than 6.5 inches. New integration tests cover these. A table too
+    wide for a portrait page at 7 pt (14 columns with long header words) makes the strict
+    render fail with quartifyr's message; a landscape section for it was not rendered.
+  - **A publication of figures only now renders.** reportifyr's table step fails on a
+    missing `OUTPUTS/tables`, which the render's staging copy never had when no table was
+    published. The staging copy now always has `figures`, `tables` and `listings`.
+  - **Deck: formatted tables.** A formatted table (`.rds`) is a `reportifyr` element (a
+    picture), as deckifyr requires; as a `table` element it failed with a content error.
+    deckifyr's `E_INTERNAL` now reads as an unexpected error in the deck tool, with the
+    exception's name, instead of "deckifyr reported an error".
+  - **deckifyr 0.3.7 pinned** (`runtime/pins.toml`, the tools lock and `wheels.toml`): a
+    table with an empty header or data cell builds, and the cell stays empty (deckifyr#96,
+    the `IndexError` from the walkthrough). The wheel, sdist and R tarball match the release's
+    `SHA256SUMS`, and `verify_pins.py --network` passes for the section. Decks with
+    tables no longer need the figures-only workaround: the offline flow's deck holds tables
+    again (the `offline` CI job is the first run of that), and the guides' "known issue"
+    text and the walkthrough's figures-only publication are gone.
+  - **Revise a publication.** **Revise** on the Publications card ticks that publication's
+    files in the curator, so you can add or remove files and publish a new, separate
+    publication. It records `revises` (optional, additive in `publication-v1`; also accepted
+    by `POST /api/nca/publications`). The earlier publication, its files, and the reports and
+    decks bound to it stay as they were; a report or deck changes publication only when you
+    choose it there. Files whose run can no longer be published are left out, and the card
+    says how many.
 - Two offline bundles built from the same pins could differ: the SBOM recorded the
   build time to the second. It now records `SOURCE_DATE_EPOCH`, or the archive's fixed
   entry time (#36).

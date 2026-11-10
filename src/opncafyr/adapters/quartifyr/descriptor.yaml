@@ -12,8 +12,10 @@ health: {kind: r_package, executable: rscript, target: quartifyr}
 jobs:
   check_report: {input_schema: publication-v1, output_schema: preflight-v1, timeout_s: 300}
   render_report: {input_schema: publication-v1, output_schema: publish-build-v1, timeout_s: 1800}
-# The launcher's project-file editor opens the report's sources (#52, editor.py). The
-# profile and settings schema are bundled with this adapter.
+# The launcher's project-file editor opens the report's sources (#52, editor.py) and two
+# YAML files (#64): report/config.yaml (settings) and report/standard_footnotes.yaml
+# (footnotes). Those are the only editable files besides .qmd/.md. The profile and settings
+# schema are bundled with this adapter.
 project_editor:
   capability: edit_project_files
   project_root: report

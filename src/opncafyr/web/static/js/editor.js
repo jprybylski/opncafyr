@@ -499,6 +499,7 @@ function drawEditor() {
   const content = el("div", null, "files-content");
   const conflict = el("div", null, "files-conflict");
   conflict.setAttribute("role", "alert");
+  if (state.file.help) body.append(el("p", state.file.help, "files-help"));
   body.append(bar, conflict, content);
   ui = { save: save_, discard: discard_, conflict };
   if (state.mode === "visual") visualMode(content);

@@ -11,7 +11,7 @@
 - **Preview probe.** LibreOffice previews are offered only when a short conversion
   finishes in time (docs/spikes/libreoffice.md).
 
-deckifyr is pinned in ``runtime/pins.toml`` (0.3.6). Executables come from the installed
+deckifyr is pinned in ``runtime/pins.toml`` (0.3.7). Executables come from the installed
 runtime, never from workspace content. Deck logic stays in deckifyr. Deck projects are
 treated as trusted user-authored projects: Quarto fragments and ``.rds`` flextables may
 run R (docs/plan.md, risk table).
@@ -193,6 +193,10 @@ ERROR_CODES = {
     "E_UNTRUSTED_BINARY": "The deck names a program of its own; only the app's tools run.",
     "E_PATH_OUTSIDE_PROJECT": "The deck names a file outside its folder.",
     "E_IO": "deckifyr could not read or write a file.",
+    "E_INTERNAL": (
+        "deckifyr stopped on an unexpected error in the deck tool, not in your deck's "
+        "settings. A support bundle helps whoever fixes it."
+    ),
 }
 _ABSOLUTE = re.compile(r"(?<![\w.~])(?:[A-Za-z]:[\\/]|/)[^\s'\"]*")
 
@@ -213,7 +217,7 @@ def _doc(text: str) -> dict[str, Any] | None:
 
 
 def parse_cli(code: int, stdout: str, stderr: str, base: Path | None = None) -> CliResult:
-    """Decide a CLI run from its exit code and JSON (deckifyr 0.3.6 contract).
+    """Decide a CLI run from its exit code and JSON (deckifyr 0.3.7 contract).
 
     Success is exit 0 with ``{"status": "ok", "result_version": 1}`` on stdout. A deckifyr
     error is JSON on stderr. Usage errors (exit 2), signals and crashes print no JSON:
@@ -283,9 +287,13 @@ def nca_results_presentation(items: list[DeckItem], publication_id: str, label: 
     for n, item in enumerate(items, start=1):
         ref = f"{{rpfy}}:{item.file_name}"
         alt = f"{item.title} for {item.analyte}, run {item.run_id}."
+        # A CSV table is a native PowerPoint table. A formatted table (.rds, a flextable) is
+        # rendered to a picture, which deckifyr only does for a ``reportifyr`` element: under
+        # ``table`` it fails with E_CONTENT_VALIDATION (#62; deckifyr#57).
+        native = item.kind == "table" and not item.file_name.lower().endswith(".rds")
         content: dict[str, Any] = (
             {"type": "table", "source": ref, "alt_text": alt}
-            if item.kind == "table"
+            if native
             else {"type": "reportifyr", "value": ref, "fit": "contain", "alt_text": alt}
         )
         slides.append(

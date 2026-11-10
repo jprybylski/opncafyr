@@ -27,6 +27,12 @@ If the installer stops with an error, it has changed nothing: your previous inst
 > **Your computer can't reach the internet at all** — install from an offline bundle instead: see [Install offline from a bundle]({{ '/guides/offline-install/' | relative_url }}).
 
 {: .fix }
+> **The Linux installer says libraries are missing** — it found fewer system libraries than opncafyr needs, and it can't add them without administrator rights. It printed the library names and the Ubuntu packages to ask for. Send that list to your administrator, then run the installer again. It changed nothing. See [Install on Linux]({{ '/get-started/install-linux/' | relative_url }}).
+
+{: .fix }
+> **The Linux installer says Linux isn't released yet, or this isn't Ubuntu 24.04** — the native Linux install isn't available yet, and it supports Ubuntu 24.04 only. On other Linux computers with Docker or Podman, use the [container]({{ '/get-started/install-cloud-container/' | relative_url }}).
+
+{: .fix }
 > **The Windows installer window closed before you could read it** — run `install.bat` from Command Prompt so the messages stay on screen. See [Install on Windows]({{ '/get-started/install-windows/' | relative_url }}).
 
 ### If the install failed
@@ -109,7 +115,7 @@ If the analyte you want shows no rows, check its exact text. `"METAB"` and `"MET
 A failed build keeps nothing, so you can try again as often as you need.
 
 {: .fix }
-> **A deck build stops with "IndexError: tuple index out of range"** — this is a known issue in this version of the deck tool: it can't put a table with an empty cell on a slide. Build the deck from a publication with figures only. See [Build reports and decks]({{ '/guides/reports-and-decks/' | relative_url }}).
+> **A deck build stops with "unexpected error in the deck tool"** — the deck tool failed on something it didn't expect, not on your settings. Nothing is recorded for a failed build. Make a support bundle and include the message. Tables with empty cells build; they aren't the cause.
 
 ## Version history won't set up, save or send
 
