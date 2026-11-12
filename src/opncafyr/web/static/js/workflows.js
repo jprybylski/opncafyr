@@ -33,6 +33,7 @@ export async function initWorkflows() {
       const link = el("a", null, "nav-link");
       link.href = `#/${view.id}`;
       link.dataset.view = view.id;
+      link.dataset.target = `shell.nav.${view.id}`; // declared by core.guidance.build_catalog
       link.title = view.title;
       link.append(icon(view.icon), el("span", view.title, "nav-label"));
       const item = el("li");

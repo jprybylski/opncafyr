@@ -404,6 +404,43 @@ class WorkflowView:
             raise ValueError(f"Workflow view module must be a .js file name: {self.module!r}")
 
 
+GUIDE_ID_RE = re.compile(r"^[a-z][a-z0-9-]*(\.[a-z0-9-]+)+$")
+
+
+@dataclass(frozen=True)
+class GuideTarget:
+    """A control or card that guidance can point at (ADR 0010, #68, #69).
+
+    The page marks it with ``data-target="<id>"``. ``view`` is the view it lives in
+    (``None`` when it is not tied to one view, such as an embedded app's toolstrip).
+    Ids are dotted and start with the owner: ``shell.`` for core, the pack id for a pack.
+    """
+
+    id: str
+    title: str
+    view: str | None = None
+
+    def check(self, owner: str) -> None:
+        if not GUIDE_ID_RE.match(self.id) or not self.id.startswith(f"{owner}."):
+            raise ValueError(f"Invalid guidance target id {self.id!r} for {owner!r}.")
+
+
+@dataclass(frozen=True)
+class GuideCondition:
+    """A read-only milestone a page can report, such as "a run is completed".
+
+    The page registers a function that reads its own in-memory state; guidance only asks
+    whether the condition holds and never changes anything.
+    """
+
+    id: str
+    title: str
+
+    def check(self, owner: str) -> None:
+        if not GUIDE_ID_RE.match(self.id) or not self.id.startswith(f"{owner}."):
+            raise ValueError(f"Invalid guidance condition id {self.id!r} for {owner!r}.")
+
+
 @dataclass(frozen=True)
 class WorkflowPack:
     """What a workflow package adds to core.
@@ -416,6 +453,9 @@ class WorkflowPack:
     - ``sensitive_values(workspace)`` returns identifier values in a study folder (such
       as subject IDs) that must never reach a support bundle (#38). Core calls it only
       to redact them, and treats a failure as "no values".
+    - ``targets`` and ``conditions`` are what guidance (tutorials, study profiles) may
+      point at and wait for in the pack's views (ADR 0010). ``tutorials`` is
+      ``(package, folder)`` of the example tutorials the pack ships, read-only.
     """
 
     id: str
@@ -425,6 +465,9 @@ class WorkflowPack:
     static: tuple[str, str] | None = None
     views: tuple[WorkflowView, ...] = ()
     sensitive_values: Callable[[Path], Iterable[str]] | None = None
+    targets: tuple[GuideTarget, ...] = ()
+    conditions: tuple[GuideCondition, ...] = ()
+    tutorials: tuple[str, str] | None = None
 
 
 def load_workflows() -> list[WorkflowPack]:
@@ -447,5 +490,7 @@ def load_workflows() -> list[WorkflowPack]:
             raise ValueError(f"Workflow {info.name!r}: workflow() must return a WorkflowPack.")
         for view in pack.views:
             view.check()
+        for item in (*pack.targets, *pack.conditions):
+            item.check(pack.id)
         packs.append(pack)
     return packs

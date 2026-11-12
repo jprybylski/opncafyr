@@ -59,11 +59,11 @@
   <div class="shell">
     <nav class="sidenav" aria-label="Main">
       <ul>
-        <li><a class="nav-link" href="#/" data-view="home" title="Home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span class="nav-label">Home</span></a></li>
-        <li><a class="nav-link" href="#/data" data-view="data" title="Data"><svg class="icon" aria-hidden="true"><use href="#i-table"/></svg><span class="nav-label">Data</span></a></li>
-        <li><a class="nav-link" href="#/jobs" data-view="jobs" title="Jobs"><svg class="icon" aria-hidden="true"><use href="#i-jobs"/></svg><span class="nav-label">Jobs</span><span class="count" id="nav-jobs-count" hidden></span></a></li>
-        <li><a class="nav-link" href="#/settings" data-view="settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-label">Settings</span></a></li>
-        <li><a class="nav-link" href="#/guide" data-view="guide" title="Guide"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span class="nav-label">Guide</span></a></li>
+        <li><a class="nav-link" href="#/" data-view="home" data-target="shell.nav.home" title="Home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span class="nav-label">Home</span></a></li>
+        <li><a class="nav-link" href="#/data" data-view="data" data-target="shell.nav.data" title="Data"><svg class="icon" aria-hidden="true"><use href="#i-table"/></svg><span class="nav-label">Data</span></a></li>
+        <li><a class="nav-link" href="#/jobs" data-view="jobs" data-target="shell.nav.jobs" title="Jobs"><svg class="icon" aria-hidden="true"><use href="#i-jobs"/></svg><span class="nav-label">Jobs</span><span class="count" id="nav-jobs-count" hidden></span></a></li>
+        <li><a class="nav-link" href="#/settings" data-view="settings" data-target="shell.nav.settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-label">Settings</span></a></li>
+        <li><a class="nav-link" href="#/guide" data-view="guide" data-target="shell.nav.guide" title="Guide"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span class="nav-label">Guide</span></a></li>
       </ul>
       <p class="nav-heading" id="nav-apps-heading" hidden>Apps</p>
       <ul id="nav-apps" aria-labelledby="nav-apps-heading" hidden></ul>
@@ -74,7 +74,7 @@
       <div class="view" id="view-home" data-title="Home">
         <div class="page-head"><h1 id="home-heading" tabindex="-1">Home</h1><p>New here? <a href="#/guide">Read the guide</a>.</p></div>
 
-        <section id="workspace" class="card" aria-labelledby="ws-heading">
+        <section id="workspace" class="card" aria-labelledby="ws-heading" data-target="shell.workspace.card">
           <div class="study">
             <span class="study-icon"><svg class="icon icon-lg" aria-hidden="true"><use href="#i-folder"/></svg></span>
             <div class="study-main">
@@ -82,7 +82,7 @@
               <div id="ws-current"><span class="study-title">No study folder is open</span><span class="lede">Choose a folder to keep this study's data, runs and reports together.</span></div>
               <ul class="facts" id="ws-facts" hidden></ul>
             </div>
-            <button type="button" class="btn btn-primary" id="ws-pick">Choose study folder…</button>
+            <button type="button" class="btn btn-primary" id="ws-pick" data-target="shell.workspace.pick">Choose study folder…</button>
             <div class="study-extra">
               <div id="ws-folder" class="panel" hidden></div>
               <p id="ws-status" class="status" role="status" aria-live="polite"></p>
@@ -144,7 +144,7 @@
       <!-- Data: files in the study folder (#21). Previewing reads a file, never changes it. -->
       <div class="view" id="view-data" data-title="Data" hidden>
         <div class="page-head"><h1 id="data-heading" tabindex="-1">Data</h1><p>Data files in the study folder and its source-data folder. Previewing a file never changes it.</p></div>
-        <section class="card" aria-labelledby="datasets-heading">
+        <section class="card" aria-labelledby="datasets-heading" data-target="shell.data.datasets">
           <div class="card-head"><h2 id="datasets-heading">Datasets</h2><span class="aside"><button type="button" class="btn btn-ghost btn-sm" id="datasets-rescan">Scan again</button></span></div>
           <p id="datasets-note" class="card-note">Open a study folder to see its data files.</p>
           <div class="table-scroll">
@@ -160,7 +160,7 @@
         </section>
 
         <section class="card" id="preview-section" aria-labelledby="preview-heading" hidden>
-          <div class="card-head"><h2 id="preview-heading" tabindex="-1">Preview</h2><span class="aside"><button type="button" class="btn btn-primary btn-sm" id="preview-import">Import</button></span></div>
+          <div class="card-head"><h2 id="preview-heading" tabindex="-1">Preview</h2><span class="aside"><button type="button" class="btn btn-primary btn-sm" id="preview-import" data-target="shell.data.import">Import</button></span></div>
           <p id="preview-status" class="status card-status" role="status" aria-live="polite"></p>
           <div class="card-body preview" id="preview-body"></div>
         </section>
@@ -169,7 +169,7 @@
       <!-- Jobs -->
       <div class="view" id="view-jobs" data-title="Jobs" hidden>
         <div class="page-head"><h1 id="jobs-heading" tabindex="-1">Jobs</h1><p>Every job in this study folder, newest first.</p></div>
-        <section class="card" aria-labelledby="jobs-list-heading">
+        <section class="card" aria-labelledby="jobs-list-heading" data-target="shell.jobs.list">
           <div class="card-head"><h2 id="jobs-list-heading">All jobs</h2><span class="aside" id="jobs-summary"></span></div>
           <p id="jobs-note" class="card-note">Open a study folder to see its jobs.</p>
           <ul id="jobs-list" class="activity activity-full" hidden></ul>
@@ -179,14 +179,14 @@
       <!-- A tool's web app, embedded (#50): "#/apps/<id>". Frames stay loaded while
            other views are shown, so work in a tool survives a visit to Home. -->
       <div class="view view-tool" id="view-tool" data-title="App" hidden>
-        <div class="toolstrip">
+        <div class="toolstrip" data-target="shell.tool.toolstrip">
           <span class="monogram" id="tool-mono" aria-hidden="true"></span>
           <p class="crumb"><a href="#/">Home</a> <span aria-hidden="true">/</span></p>
           <h1 id="tool-heading" tabindex="-1">App</h1>
           <span id="tool-state"></span>
           <span class="spacer"></span>
           <button type="button" class="btn btn-ghost btn-sm" id="tool-reload">Reload</button>
-          <a class="btn btn-sm" id="tool-newtab" href="#/" target="_blank" rel="noopener">Open in new tab <span aria-hidden="true">↗</span></a>
+          <a class="btn btn-sm" id="tool-newtab" data-target="shell.tool.newtab" href="#/" target="_blank" rel="noopener">Open in new tab <span aria-hidden="true">↗</span></a>
         </div>
         <p id="tool-note" class="tool-note" role="status" hidden></p>
         <div id="tool-frames" class="tool-frames"></div>

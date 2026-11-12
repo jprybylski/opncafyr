@@ -1,7 +1,7 @@
 // The Publish page of the NCA pack: completed runs -> OUTPUTS/ -> report and deck.
 // Publishing is a separate, reviewable step; nothing here changes a run.
 
-import { el, on } from "./common.js";
+import { el, notifyGuidance, on, registerCondition } from "./common.js";
 import { initCurator, initPublications } from "./curator.js";
 import { initOutputs } from "./outputs.js";
 import { initReport } from "./report.js";
@@ -48,4 +48,7 @@ export function init(container) {
   on("view-changed", (route) => {
     if (route.name === "publish") state.changed("shown");
   });
+  // A read-only milestone for guidance (ADR 0010), declared in __init__.py.
+  registerCondition("nca.publication.recorded", () => (state.publications || []).length > 0);
+  state.onChange(() => notifyGuidance());
 }

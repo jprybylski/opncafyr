@@ -37,6 +37,7 @@ from opncafyr import __version__
 from opncafyr.core.bootstrap import OPEN_PATH, consume_open_token, tokens_dir
 from opncafyr.core.datasets import DatasetService
 from opncafyr.core.datasets_api import mount_datasets_api
+from opncafyr.core.guidance import build_catalog
 from opncafyr.core.guide import guide_root
 from opncafyr.core.health import ToolHealth
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
@@ -206,6 +207,8 @@ def create_app(
         check_project_editors(installed, editors)
     project_files = ProjectFiles(installed, editors)
     packs = workflows if workflows is not None else load_workflows()
+    # Targets, conditions and views guidance may name (ADR 0010); a clash stops the launch.
+    guidance = build_catalog(packs)
     datasets = DatasetService(
         importers=[i for p in packs for i in p.importers],
         annotators=[a for p in packs for a in p.annotators],
@@ -279,6 +282,7 @@ def create_app(
     # Set before the workflow packs mount, so they can take a project's lock (#52).
     app.state.project_files = project_files
     app.state.container_image = container_image
+    app.state.guidance = guidance
     set_container_image(container_image)
     app.add_middleware(LoopbackGuardMiddleware, config=security)
     if security.base_path != "/":
@@ -488,6 +492,11 @@ def create_app(
                 for pack in packs
             ]
         }
+
+    @app.get("/api/guidance")
+    def guidance_catalog() -> dict[str, Any]:
+        """What tutorials and study profiles may point at or wait for (ADR 0010)."""
+        return guidance.as_json()
 
     for pack in packs:
         if pack.mount is not None:

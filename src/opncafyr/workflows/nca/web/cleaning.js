@@ -3,7 +3,7 @@
 // out and rows rejected; rejected rows are listed with the step and reason.
 
 import {
-  button, cell, choice, el, field, getJSON, post, raw, section, send, setStatus, table,
+  button, cell, choice, el, field, getJSON, markTarget, post, raw, section, send, setStatus, table,
   waitForJob,
 } from "./common.js";
 import { eventsPanel } from "./events.js";
@@ -284,11 +284,11 @@ function stepForm(kind, columns, onAdd, onCancel, edit = null) {
 
 export function initCleaning(stack, state) {
   const pick = section(stack, "nca-recipe", "1. Source and recipe",
-    "Choose an imported file. Its recipe lists the cleaning steps in order.");
+    "Choose an imported file. Its recipe lists the cleaning steps in order.", "nca.recipe.card");
   const steps = section(stack, "nca-steps", "2. Cleaning steps",
-    "Steps run in this order. Nothing is removed unless a step says so, with a reason.");
+    "Steps run in this order. Nothing is removed unless a step says so, with a reason.", "nca.steps.card");
   const result = section(stack, "nca-clean-result", "3. Result",
-    "Preview runs the steps on the first 200 rows; Apply runs them on every row.");
+    "Preview runs the steps on the first 200 rows; Apply runs them on every row.", "nca.result.card");
   // The analyte checks' findings, pinned under the steps while you fix them (#63).
   initPinned(steps.card, steps.status, state);
 
@@ -304,6 +304,9 @@ export function initCleaning(stack, state) {
     } catch (e) { setStatus(pick.status, e.message, true); }
   });
   const row = el("div", null, "nca-row");
+  markTarget(sourceSel, "nca.recipe.source");
+  markTarget(recipeSel, "nca.recipe.recipe");
+  markTarget(newRecipe, "nca.recipe.new");
   row.append(sourceField, recipeField, newRecipe);
   pick.body.append(row);
 
@@ -426,6 +429,7 @@ export function initCleaning(stack, state) {
 
     const kind = choice(Object.entries(OPS).map(([k, v]) => [k, v.label]), "", "Add a step…");
     kind.setAttribute("aria-label", "Add a step");
+    markTarget(kind, "nca.steps.add");
     const slot = el("div");
     kind.addEventListener("change", () => {
       slot.replaceChildren();
@@ -439,8 +443,8 @@ export function initCleaning(stack, state) {
     const actions = el("div", null, "nca-row");
     actions.append(
       kind,
-      button("Preview", () => run("preview"), "btn btn-sm"),
-      button("Apply to all rows", () => run("full"), "btn btn-primary btn-sm"),
+      markTarget(button("Preview", () => run("preview"), "btn btn-sm"), "nca.steps.preview"),
+      markTarget(button("Apply to all rows", () => run("full"), "btn btn-primary btn-sm"), "nca.steps.apply"),
     );
     steps.body.append(actions, slot);
     if (focusEdit !== null) {

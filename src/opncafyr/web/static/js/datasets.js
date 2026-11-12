@@ -4,8 +4,10 @@
 
 import { getJSON, post } from "./api.js";
 import { $, el, on, setStatus, stateBadge, timeCell } from "./dom.js";
+import { notifyGuidance, registerCondition } from "./guidance.js";
 
 const PREVIEW_ROWS = 20;
+let anyImported = false; // for the guidance condition shell.dataset.imported
 
 const TYPES = {
   integer: "Whole number",
@@ -97,7 +99,9 @@ async function refreshDatasets() {
       table.hidden = true;
       $("preview-section").hidden = true;
       previewPath = null;
+      anyImported = false;
     } else {
+      anyImported = data.files.some((f) => f.imported);
       const kinds = data.formats.map((f) => f.extensions.join(", ")).join(", ");
       note.textContent = data.files.length
         ? ""
@@ -107,6 +111,7 @@ async function refreshDatasets() {
       table.hidden = !data.files.length;
     }
     listStatus("");
+    notifyGuidance();
   } catch (e) {
     listStatus(`Could not scan the study folder. ${e.message}`, true);
   } finally {
@@ -292,6 +297,7 @@ async function importCurrent() {
 }
 
 export function initDatasets() {
+  registerCondition("shell.dataset.imported", () => anyImported);
   $("datasets-rescan").addEventListener("click", refreshDatasets);
   $("preview-import").addEventListener("click", importCurrent);
   on("workspace-changed", () => {

@@ -3,7 +3,7 @@
 // recorded with the run. The BLQ rules and method have no default.
 
 import {
-  button, choice, el, field, getJSON, post, section, setStatus, waitForJob,
+  button, choice, el, field, getJSON, markTarget, post, section, setStatus, waitForJob,
 } from "./common.js";
 import { findingItem } from "./findings.js";
 
@@ -18,9 +18,9 @@ const RULE_NAMES = { blq_predose: "BLQ before the dose", blq_postdose: "BLQ afte
 
 export function initChecks(stack, state) {
   const pick = section(stack, "nca-analyte", "5. Analyte and checks",
-    "Choose exactly one analyte. Rows are matched on the exact text, so “METAB ” is not “METAB”.");
+    "Choose exactly one analyte. Rows are matched on the exact text, so “METAB ” is not “METAB”.", "nca.analyte.card");
   const start = section(stack, "nca-start", "6. Start analysis",
-    "Choose how BLQ samples are handled. There is no default: opnca-r uses exactly what you pick.");
+    "Choose how BLQ samples are handled. There is no default: opnca-r uses exactly what you pick.", "nca.start.card");
 
   let analytes = null;
   let result = null;
@@ -99,8 +99,9 @@ export function initChecks(stack, state) {
     specimenSel.addEventListener("change", clearFindings);
     const label = el("input");
     const row = el("div", null, "nca-row");
+    markTarget(analyteSel, "nca.analyte.value");
     row.append(field("Analyte (exact value)", analyteSel), specimenField,
-      button("Run checks", () => runChecks(analyteSel.value, analytes.specimen_column ? specimenSel.value : null), "btn btn-primary btn-sm"));
+      markTarget(button("Run checks", () => runChecks(analyteSel.value, analytes.specimen_column ? specimenSel.value : null), "btn btn-primary btn-sm"), "nca.analyte.check"));
     const findings = el("div", null, "nca-body");
     findings.id = "nca-findings";
     pick.body.append(row, findings);
@@ -176,7 +177,7 @@ export function initChecks(stack, state) {
     grid.append(field("BLQ method", method));
     start.body.append(field("Label for this analyte (shown in reports)", label), grid);
     blockedNote = el("p", null, "status");
-    startButton = button("Start analysis", startRun, "btn btn-primary");
+    startButton = markTarget(button("Start analysis", startRun, "btn btn-primary"), "nca.start.button");
     start.body.append(blockedNote, startButton);
     updateStart();
   }

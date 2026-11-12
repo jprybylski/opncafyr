@@ -2,6 +2,7 @@
 
 export { getJSON, post, send, ApiError } from "../../js/api.js";
 export { $, el, on, setStatus, stateBadge, formatTime } from "../../js/dom.js";
+export { markTarget, notifyGuidance, registerCondition } from "../../js/guidance.js";
 import { getJSON } from "../../js/api.js";
 import { el } from "../../js/dom.js";
 
@@ -89,9 +90,11 @@ export function choice(options, value, placeholder = "Choose…") {
   return s;
 }
 
-export function section(container, id, title, intro) {
+// A numbered card. `target` is its guidance target id (ADR 0010), declared in __init__.py.
+export function section(container, id, title, intro, target) {
   const card = el("section", null, "card");
   card.id = id;
+  if (target) card.dataset.target = target;
   const head = el("div", null, "card-head");
   const h = el("h2", title);
   h.id = `${id}-heading`;
