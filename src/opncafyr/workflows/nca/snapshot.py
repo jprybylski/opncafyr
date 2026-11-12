@@ -231,8 +231,13 @@ def create_run(
     blq: dict[str, Any] | None,
     blq_method: str | None,
     parent_run_id: str | None = None,
+    workflow_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Write the run folder for an already checked and gated selection. Returns its manifest."""
+    """Write the run folder for an already checked and gated selection. Returns its manifest.
+
+    ``workflow_context`` is the study profile step the user chose for this run (#68), if
+    any. It is recorded as provenance and changes nothing in the analysis.
+    """
     recipe = checked["recipe"]
     mapping = recipe.get("mapping") or {}
     blq_choice = _check_blq(blq, blq_method)
@@ -392,6 +397,8 @@ def create_run(
         "nca_settings": {"blq": blq_choice},
         "tools": base_tools(),
     }
+    if workflow_context is not None:
+        manifest["workflow_context"] = workflow_context
     atomic_write_json(staging / MANIFEST, manifest, "run-manifest-v1")
     for name in (INPUT, FINGERPRINT, PRESET, SETTINGS):
         read_only(staging / name)

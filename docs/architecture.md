@@ -32,6 +32,15 @@ new file format is a new importer in a pack. A pack can also add its own API rou
 `GET /api/workflows`). The shell adds a sidenav link and an empty view for each and calls
 the module's `init(container)`; core never knows what a view does.
 
+Guidance (ADR 0010, #68, #69) is a generic contract on top of views. A pack declares
+`targets` (controls and cards it marks with `data-target="<pack>.<…>"`) and `conditions`
+(read-only milestones its pages register with `web/static/js/guidance.js` from their own
+state), and may ship example `tutorials`. Core adds the shell's own (`shell.*`) and builds
+one catalog at start-up (`core.guidance.build_catalog`, `GET /api/guidance`), refusing
+duplicate or misplaced ids. User-written guidance files (tutorials, study profiles) are data
+read through `core.guidance.parse_guidance`: size-capped, no YAML aliases, a closed schema,
+and every name checked against the catalog. They can't name code, URLs, endpoints or paths.
+
 The registry (`core/registry.py`) reads descriptors only from the installed
 `opncafyr.adapters` package, never from a workspace or the working directory. A descriptor
 names its format (`schema_version: "1.0"`), the adapter's own `version`, its capabilities,
@@ -196,10 +205,14 @@ Study folder/
       logs/                     launcher logs, such as the replay report (#29)
       manifest.json             schemas/run-manifest-v1, sealed when completed
     publications/<id>.json      schemas/publication-v1: exact run IDs and every hash (#31)
+    study-profile.json          schemas/study-profile-state-v1: the followed study profile
+                                and its progress per profile file (#68)
     report.json  deck.json      schemas/publish-binding-v1: the project's publication (#32, #33)
     publish-checks/<id>/        preflight.json (schemas/preflight-v1) of a report check
     jobs/<job-id>/              schemas/job-v1 state.json, events.jsonl, stdout/stderr
                                 logs, diagnostic.json (core/jobmanager.py)
+  profiles/<name>.yaml          study profiles the team writes (schemas/study-profile-v1, #68)
+  tutorials/<name>.yaml         tutorials the team writes (schemas/tutorial-v1, #69)
   OUTPUTS/{figures,tables}/     published copies <analyte>_<run-id>_<artifact>.<ext> +
                                 <name>_<ext>_metadata.json sidecars (#30, #31)
   report/                       quartifyr project bound to one publication (#32):

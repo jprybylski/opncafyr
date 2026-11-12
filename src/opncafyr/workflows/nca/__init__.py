@@ -42,6 +42,8 @@ TARGETS = (
     GuideTarget("nca.outputs.card", "Publish: 3. Published files", "publish"),
     GuideTarget("nca.report.card", "Publish: 4. Report (DOCX)", "publish"),
     GuideTarget("nca.deck.card", "Publish: 5. Deck (PPTX)", "publish"),
+    GuideTarget("nca.profile.choose", "Study profile: Profile", "profile"),
+    GuideTarget("nca.profile.steps", "Study profile: Steps", "profile"),
 )
 
 CONDITIONS = (
@@ -72,6 +74,14 @@ def workflow() -> WorkflowPack:
         conditions=CONDITIONS,
         tutorials=("opncafyr.workflows.nca", "tutorials"),
         views=(
+            WorkflowView(
+                id="profile",
+                title="Study profile",
+                module="profile.js",
+                icon="jobs",
+                summary="Follow your team's steps for this kind of study (guidance only).",
+                requires_workspace=True,
+            ),
             WorkflowView(
                 id="analysis",
                 title="Analysis",

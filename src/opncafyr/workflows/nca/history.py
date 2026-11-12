@@ -89,8 +89,17 @@ def policy() -> dict[str, Any]:
             {
                 "id": "sources",
                 "label": "Editable sources",
-                "description": "Cleaning recipes and the report and deck projects you edit.",
-                "globs": [f"{RECIPES_DIR}/**", "report/**", "deck/**"],
+                "description": (
+                    "Cleaning recipes, study profiles, tutorials, and the report and deck "
+                    "projects you edit."
+                ),
+                "globs": [
+                    f"{RECIPES_DIR}/**",
+                    "profiles/**",
+                    "tutorials/**",
+                    "report/**",
+                    "deck/**",
+                ],
             },
             {
                 "id": "app",

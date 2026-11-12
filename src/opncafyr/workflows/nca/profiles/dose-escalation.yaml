@@ -1,0 +1,115 @@
+# Example study workflow profile: dose escalation.
+#
+# Copy it into your study (Study profile page, "Copy into this study"), then edit the
+# copy in profiles/ with any text editor. Add or remove cohort run steps so there is one
+# per cohort, and list the same slots in the publication step.
+#
+# A profile is guidance only. It never chooses an analyte, a dose, a unit, a BLQ rule,
+# an exclusion or a comparison; it never starts a run or does any calculation. opnca-r
+# does the NCA. Finishing a profile does not validate anything.
+
+schema_version: "1.0"
+id: dose-escalation
+version: "1"
+title: Dose escalation study (example)
+description: >-
+  An illustrative journey for a single-ascending-dose study with three cohorts: one run
+  per cohort, each a single analyte, then one publication with every cohort's run. Edit
+  the cohorts to match your protocol.
+
+steps:
+  - id: about
+    type: instruction
+    title: About this profile
+    text: >-
+      Each cohort is analysed as its own run with exactly one analyte. Dose
+      proportionality or any cross-cohort assessment is planned and reviewed by you; this
+      profile does not calculate or choose one.
+
+  - id: before-you-start
+    type: checklist
+    title: Before you start
+    items:
+      - id: plan
+        text: The protocol and analysis plan are at hand.
+      - id: imported
+        text: The concentration data file is imported on the Data page.
+      - id: cohort-column
+        text: I know which column and values identify each cohort.
+      - id: dose-units
+        text: I know the dose and concentration units as recorded in the data.
+
+  - id: recipe
+    type: action
+    title: Clean the data for one cohort
+    target: nca.recipe.card
+    hint_condition: nca.cleaned.ready
+    text: >-
+      Make one recipe per cohort. If the file holds every cohort, add a "Remove rows to
+      the rejected-row log" step that keeps only this cohort, with a reason. Apply the
+      recipe to all rows and review the row counts and the rejected rows.
+
+  - id: map
+    type: action
+    title: Map the columns
+    target: nca.mapping.card
+    hint_condition: nca.mapping.ready
+    text: >-
+      Choose the column for each role and declare the units. Units are never guessed:
+      confirm them against the data and the plan, then save the mapping.
+
+  - id: analyte
+    type: action
+    title: Choose one analyte and run the checks
+    target: nca.analyte.card
+    hint_condition: nca.checks.ready
+    text: >-
+      Choose exactly one analyte value and run the checks. Fix blocking findings and
+      acknowledge each warning only if it is right for this cohort.
+
+  - id: run-cohort-1
+    type: run
+    title: Cohort 1 run
+    slot: cohort-1
+    suggested_label: Cohort 1
+    text: Start, review, save, replay and complete the run, then choose it here.
+
+  - id: run-cohort-2
+    type: run
+    title: Cohort 2 run
+    slot: cohort-2
+    suggested_label: Cohort 2
+
+  - id: run-cohort-3
+    type: run
+    title: Cohort 3 run
+    slot: cohort-3
+    suggested_label: Cohort 3
+
+  - id: review-runs
+    type: checkpoint
+    title: Review the cohorts together
+    text: >-
+      Check that every cohort's run uses the same analyte value and the BLQ choices,
+      exclusions and units the plan asks for, and that any difference is intended.
+
+  - id: publish-choose
+    type: action
+    title: Choose the tables and figures
+    target: nca.curator.card
+    hint_condition: nca.publication.recorded
+    text: Tick the tables and figures from the cohort runs only, check and publish.
+
+  - id: publication
+    type: publication
+    title: Publication with every cohort
+    slots: [cohort-1, cohort-2, cohort-3]
+    text: Choose the publication you recorded. It must hold exactly the cohort runs.
+
+  - id: report
+    type: action
+    title: Build the report or deck
+    target: nca.report.card
+    text: >-
+      Set up the report or deck from that publication, check it and build it. A successful
+      build shows the files were assembled; it does not validate the analysis.

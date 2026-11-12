@@ -62,7 +62,11 @@ export async function goToTarget(id) {
   if (!known) return null;
   if (known.view && location.hash !== viewHash(known.view)) {
     location.hash = viewHash(known.view);
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // The router shows the view (and focuses its heading) on hashchange: wait for that, so
+    // the focus below is the last word.
+    const view = document.getElementById(`view-${known.view}`);
+    for (let i = 0; i < 60 && view && view.hidden; i++) await nextFrame();
+    await nextFrame();
   }
   const node = findTarget(id);
   if (!node) return null;
@@ -71,7 +75,9 @@ export async function goToTarget(id) {
   return node;
 }
 
-const FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]";
+const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
+
+const FOCUSABLE ="a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]";
 
 // Focus the target itself if it takes focus, else its heading or first control.
 export function focusInto(node) {

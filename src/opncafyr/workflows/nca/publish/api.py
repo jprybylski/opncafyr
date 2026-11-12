@@ -85,6 +85,8 @@ class PublishBody(BaseModel):
     label: str | None = Field(default=None, max_length=200)
     # The recorded publication this one revises (#62); the earlier one stays as it is.
     revises: str | None = Field(default=None, pattern=r"^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$")
+    # The study profile publication step this is for (#68), chosen by the user.
+    profile_step: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9-]{0,63}$")
 
 
 def mount(app: FastAPI, ctx: Context) -> None:
@@ -118,10 +120,13 @@ def mount(app: FastAPI, ctx: Context) -> None:
     def create_publication(body: PublishBody) -> Any:
         root = ctx.workspace().root
         picks = [curator.Pick(i.run_id, i.artifact) for i in body.items]
+        context = ctx.profile_context(body.profile_step, "publication")
         try:
             if body.dry_run:
                 return {"plan": curator.plan(root, picks, bundled_footnotes()).to_dict()}
-            doc = curator.publish(root, picks, bundled_footnotes(), body.label, body.revises)
+            doc = curator.publish(
+                root, picks, bundled_footnotes(), body.label, body.revises, context
+            )
         except curator.PublishError as exc:
             raise failure(exc) from None
         return JSONResponse({"publication": doc}, status_code=201)

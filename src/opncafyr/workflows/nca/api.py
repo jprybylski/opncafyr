@@ -185,6 +185,8 @@ class StartRun(SelectionBody):
     acknowledged: list[str] = Field(default_factory=list, max_length=1000)
     blq_rules: dict[str, str] | None = None
     blq_method: str | None = None
+    # The study profile step this run is for (#68), chosen by the user; None for none.
+    profile_step: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9-]{0,63}$")
 
 
 class Context:
@@ -576,6 +578,7 @@ def mount(app: FastAPI) -> Context:
             )
             raise error(verdict, message, findings=concerned)
         ws = ctx.workspace()
+        context = ctx.profile_context(body.profile_step, "run")
         try:
             with ctx.lock:
                 manifest = create_run(
@@ -588,6 +591,7 @@ def mount(app: FastAPI) -> Context:
                     blq=body.blq_rules,
                     blq_method=body.blq_method,
                     parent_run_id=parent_run_id,
+                    workflow_context=context,
                 )
         except SnapshotError as exc:
             raise error(exc.code, exc.message, **exc.extra) from None
@@ -769,6 +773,10 @@ def mount(app: FastAPI) -> Context:
             blq_method=settings["blq"]["method"],
         )
         return start_run(body, parent_run_id=run_id)
+
+    from opncafyr.workflows.nca import profile_api
+
+    profile_api.mount(app, ctx)  # study workflow profiles (#68); sets ctx.profile_context
 
     from opncafyr.workflows.nca.publish import api as publish_api
 

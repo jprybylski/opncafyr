@@ -373,8 +373,11 @@ def publish(
     footnotes: sidecars.Footnotes,
     label: str | None = None,
     revises: str | None = None,
+    workflow_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Copy ``picks`` into ``OUTPUTS/`` and record the publication. Returns its manifest.
+
+    ``workflow_context`` is the study profile step the user chose for it (#68), if any.
 
     ``revises`` names the recorded publication this one starts from (#62). The new
     publication is a separate record with its own id; the earlier one, and every report or
@@ -418,6 +421,8 @@ def publish(
                 report=sidecars.preflight(findings),
             )
         doc = _manifest(root, planned, label, revises)
+        if workflow_context is not None:
+            doc["workflow_context"] = workflow_context
         atomic_write_json(
             resolve_in_root(root, f"{PUBLICATIONS_DIR}/{doc['publication_id']}.json"), doc, SCHEMA
         )

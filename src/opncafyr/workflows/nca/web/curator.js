@@ -3,6 +3,7 @@
 // server enforces this too. Published files are copies; runs never change.
 
 import { button, el, field, formatTime, getJSON, markTarget, post, raw, section, setStatus, table } from "./common.js";
+import { profileStepField } from "./profilestep.js";
 
 const short = (sha) => (sha ? sha.slice(0, 12) : "");
 const statusWord = { new: "New copy", unchanged: "Already published (same bytes)", conflict: "Name taken by different content" };
@@ -21,7 +22,10 @@ export function initCurator(stack, state) {
   const revision = el("div", null, "card-note");
   revision.hidden = true;
   revision.tabIndex = -1;
-  sec.body.append(revision, picker, field("Label (optional)", label), actions, plan);
+  // The study profile's publication steps (#68), or hidden.
+  const profileStep = profileStepField("publication",
+    "Records which step of the study profile this publication is for.");
+  sec.body.append(revision, picker, field("Label (optional)", label), profileStep.node, actions, plan);
 
   let boxes = []; // [{input, run_id, artifact}]
   let checkedKey = null;
@@ -36,7 +40,7 @@ export function initCurator(stack, state) {
     check.disabled = true;
     setStatus(sec.status, "Checking…");
     try {
-      const out = await post("api/nca/publications", { items, dry_run: true });
+      const out = await post("api/nca/publications", { items, dry_run: true, profile_step: profileStep.value() });
       showPlan(out.plan);
       checkedKey = out.plan.blocking ? null : key();
       publish.disabled = checkedKey === null;
@@ -58,6 +62,7 @@ export function initCurator(stack, state) {
         items: selection(),
         label: label.value.trim() || null,
         revises: revising,
+        profile_step: profileStep.value(),
       });
       const pub = out.publication;
       const base = revising;

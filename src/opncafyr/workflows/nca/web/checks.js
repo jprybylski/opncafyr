@@ -6,6 +6,7 @@ import {
   button, choice, el, field, getJSON, markTarget, post, section, setStatus, waitForJob,
 } from "./common.js";
 import { findingItem } from "./findings.js";
+import { profileStepField } from "./profilestep.js";
 
 const BLQ_RULES = [
   ["exclude", "Exclude the sample"],
@@ -21,6 +22,10 @@ export function initChecks(stack, state) {
     "Choose exactly one analyte. Rows are matched on the exact text, so “METAB ” is not “METAB”.", "nca.analyte.card");
   const start = section(stack, "nca-start", "6. Start analysis",
     "Choose how BLQ samples are handled. There is no default: opnca-r uses exactly what you pick.", "nca.start.card");
+
+  // Created once; the study profile's run steps (#68), or hidden.
+  const profileStep = profileStepField("run",
+    "Records which step of the study profile this run is for. It does not change the analysis.");
 
   let analytes = null;
   let result = null;
@@ -175,7 +180,7 @@ export function initChecks(stack, state) {
     method = choice(BLQ_METHODS);
     method.addEventListener("change", updateStart);
     grid.append(field("BLQ method", method));
-    start.body.append(field("Label for this analyte (shown in reports)", label), grid);
+    start.body.append(field("Label for this analyte (shown in reports)", label), grid, profileStep.node);
     blockedNote = el("p", null, "status");
     startButton = markTarget(button("Start analysis", startRun, "btn btn-primary"), "nca.start.button");
     start.body.append(blockedNote, startButton);
@@ -207,6 +212,7 @@ export function initChecks(stack, state) {
         acknowledged: [...acked],
         blq_rules: { ...rules },
         blq_method: method.value,
+        profile_step: profileStep.value(),
       });
       setStatus(start.status, `Run ${run.run_id} created.`);
       state.changed("runs");
