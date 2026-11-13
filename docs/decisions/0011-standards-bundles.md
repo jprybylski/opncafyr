@@ -1,6 +1,6 @@
 # 0011. Standards bundles: imported, verified, pinned study standards
 
-- Status: proposed (2026-11-12). In planning the owner chose: Git authentication on the ADR
+- Status: accepted (owner, 2026-11-12, ADR review). In planning the owner chose: Git authentication on the ADR
   0008 model (the pinned Git only, HTTPS only, an optional token held for one fetch); and
   templates are never copied into every bundle: a bundle may reference a house-style bundle
   **and** a template source in the tool's own layout.
