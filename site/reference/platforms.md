@@ -37,7 +37,7 @@ The one exception is an unusual repair, `repair --build-from-source` on macOS, w
 
 ## Browser
 
-The app opens in your default web browser, at a private address on your own computer (`127.0.0.1`). Nothing you load into it leaves the computer, and it needs no internet connection while you use it.
+The app opens in your default web browser, at a private address (`127.0.0.1`) that only the computer running opncafyr can reach. Nothing you load into it is sent anywhere, and it needs no internet connection while you use it. On a cloud computer, the browser on your own computer reaches it through an SSH forward or your IDE's proxy; see [Run on a cloud computer]({{ '/get-started/install-cloud-container/' | relative_url }}).
 
 No list of supported browsers has been published yet.
 

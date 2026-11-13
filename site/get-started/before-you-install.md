@@ -16,7 +16,7 @@ Check what opncafyr needs, and get the installer, before you start.
 
 ## What opncafyr is for
 
-opncafyr is a workspace for non-compartmental analysis (NCA) of concentration data. It runs on your own computer and opens in your web browser. In it you:
+opncafyr is a workspace for non-compartmental analysis (NCA) of concentration data that comes with its own tools. The installer sets up pinned versions of opnca-r, R, Quarto and the reporting tools for your user account, without administrator rights, from verified downloads, an offline bundle or internal mirrors. You use it in your web browser, on your own computer or on a supported Linux cloud computer beside your data. In it you:
 
 1. choose a study folder that keeps one study's data, runs, reports and decks together;
 2. import a concentration file (CSV) and clean it, with every step recorded;
@@ -60,7 +60,7 @@ You can install opncafyr in two ways. The app works the same way after either on
 
 **Offline, from a bundle.** If your computer can't reach the internet, or your organisation blocks downloads (common on firewalled analysis systems), your IT team can prepare an offline bundle: one zip with every file the installer needs. The installer then never uses the network. See [Install offline from a bundle]({{ '/guides/offline-install/' | relative_url }}). Your IT team may instead set up internal mirrors; see [Internal mirrors and bundles]({{ '/guides/internal-mirrors/' | relative_url }}) (for administrators).
 
-Once installed, opncafyr does not need the network. Nothing you load into it leaves your computer.
+Once installed, opncafyr does not need the network. Your data stays on the computer that runs opncafyr. Nothing is sent anywhere unless you turn on sending in [version history]({{ '/guides/version-history/' | relative_url }}), or send a support bundle yourself.
 
 ## Where it installs
 

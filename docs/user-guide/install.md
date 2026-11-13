@@ -12,7 +12,7 @@ The installer downloads each part it needs and checks every file against a finge
 
 If your study data lives on a Linux cloud computer where you can run Docker or Podman, you can run opncafyr there instead: see [Running on a cloud computer (container mode)](cloud-container.md). Where you cannot run Docker, you can install natively on Ubuntu 24.04 from an offline bundle. It needs no administrator rights, but it does need some system libraries; the installer checks for them first and lists what an administrator must add. The developer documentation (`install.md`) has the steps.
 
-If your computer cannot reach the internet, or your organisation blocks downloads, ask your IT team; they can use the offline bundle described in the developer documentation. The app works the same way after an offline install.
+If your computer cannot reach the internet, or your organisation blocks downloads, ask the person who supports opncafyr at your site: your IT team can prepare an offline bundle, or set up internal mirrors, and the installer checks every file the same way. The app works the same way after an offline install.
 
 ## Install on macOS
 

@@ -979,6 +979,15 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- **The website and guides lead with what the workspace solves** (#72). The home page,
+  **Before you install** and the README now say what opncafyr brings: one version-pinned
+  workspace for NCA, reports and decks, installed per user without administrator rights
+  from verified downloads, an IT-prepared offline bundle or internal mirrors, or run on a
+  Linux cloud computer beside the data. Where data stays is stated the same way in both
+  guides for native and cloud use (the computer that runs opncafyr; nothing sent unless
+  version-history sending is turned on). The home page also links the cloud install and
+  mentions application controls. Steps that say which machine runs a command are
+  unchanged.
 - **After Quit, the tab says plainly that opncafyr has stopped** (#73). The working page
   is replaced by a full page headed **opncafyr has stopped**, with the next step (start it
   from the app shortcut). The old navigation, forms and tool links are made `inert` and

@@ -24,7 +24,7 @@ Start the app from its icon:
 {: .expect }
 > After a few seconds your web browser opens a new tab with the app's **Home** page.
 
-The app runs only on your computer. The browser connects to it at an address that starts `http://127.0.0.1`, which only your own computer can reach. Nothing you load into the app leaves the computer.
+The app runs on this computer. The browser connects to it at an address that starts `http://127.0.0.1`, which only this computer can reach, and nothing you load into the app is sent anywhere. (On a cloud computer, the browser on your own computer reaches the app through a forwarded or proxied link instead; see [Run on a cloud computer]({{ '/get-started/install-cloud-container/' | relative_url }}).)
 
 If the app is already running, starting it again opens the same app in a new tab. To come back to the app later, start it from its icon again rather than from a bookmark or the browser's history.
 
