@@ -54,6 +54,23 @@ export function buildsTable(builds, kind, link, stale = {}) {
   }), `${kind} builds`);
 }
 
+// Which template a project uses and which one new setups would use (#70). Text only.
+export function templateNote(template, what) {
+  if (!template) return null;
+  const name = (t) => (t ? `${t.component} from ${t.bundle_id ? `${t.bundle_id} ${t.version}` : `${t.tool} template`}` : "the bundled template");
+  const box = el("div");
+  if (template.problem) box.append(el("p", template.problem, "hint"));
+  if (template.differs === undefined) {
+    box.append(el("p", `New ${what} setup uses ${name(template.selected)}. Change it under Standards.`, "muted"));
+  } else {
+    box.append(el("p", `Set up from ${name(template.project)}.`, "muted"));
+    if (template.differs) {
+      box.append(el("p", `Standards now selects ${name(template.selected)}; it applies to a ${what} set up from scratch. This ${what} keeps its template.`, "hint"));
+    }
+  }
+  return box;
+}
+
 export function initReport(stack, state) {
   const sec = section(stack, "nca-report", "4. Report (DOCX)",
     "A quartifyr report project in report/, set up from the bundled template for one publication. " +
@@ -147,6 +164,8 @@ export function initReport(stack, state) {
       info.append(el("p", `report/ uses publication ${bound.publication_id}.`));
       if (status.edited.length) info.append(el("p", `Edited since it was set up: ${status.edited.join(", ")}.`, "hint"));
     }
+    const note = templateNote(status?.template, "report");
+    if (note) info.append(note);
     select = publicationChoice(state, bound?.publication_id);
     setUp.textContent = status?.project ? "Use this publication" : "Set up report";
     pick.replaceChildren(field("Publication", select), setUp);

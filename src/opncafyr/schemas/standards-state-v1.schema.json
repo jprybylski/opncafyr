@@ -55,7 +55,7 @@
   "$defs": {
     "key": {
       "type": "string",
-      "pattern": "^([a-z][a-z0-9-]{0,63}/[0-9A-Za-z][0-9A-Za-z.+-]{0,31}-[0-9a-f]{12}|template-(deckifyr|quartifyr)/[0-9a-f]{12})$"
+      "pattern": "^([a-z][a-z0-9-]{0,63}/[0-9A-Za-z][0-9A-Za-z.+-]{0,31}-[0-9a-f]{12}|template-[a-z][a-z0-9_-]{0,31}/[0-9a-f]{12})$"
     },
     "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
     "type": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,31}$" },
@@ -72,7 +72,7 @@
         "kind": { "enum": ["bundle", "template"] },
         "bundle_id": { "$ref": "#/$defs/name" },
         "version": { "type": "string", "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]{0,31}$" },
-        "tool": { "enum": ["deckifyr", "quartifyr"] },
+        "tool": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$" },
         "title": { "type": "string", "maxLength": 200 },
         "inventory_sha256": { "$ref": "#/$defs/sha256" },
         "imported_at": { "type": "string", "format": "date-time" },

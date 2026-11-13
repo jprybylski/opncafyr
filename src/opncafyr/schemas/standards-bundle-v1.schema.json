@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "opncafyr/standards-bundle-v1",
   "title": "Standards bundle (standards.yaml)",
-  "description": "A versioned set of study standards a team shares (#70, ADR 0011): study profiles, tutorials and report/deck templates, in any combination. Every file the bundle carries is listed with its SHA-256; nothing else is copied. A template component may instead reference template material the bundle doesn't carry: a template component in another standards bundle (a house style), or a template source in deckifyr's or quartifyr's own layout. Read with the guidance loader, so every value is text. Data only: no command, executable, endpoint or dataset.",
+  "description": "A versioned set of study standards a team shares (#70, ADR 0011): study profiles, tutorials and report/deck templates, in any combination. Every file the bundle carries is listed with its SHA-256; nothing else is copied. A template component may instead reference template material the bundle doesn't carry: a template component in another standards bundle (a house style), or a template source in a tool's own layout. Read with the guidance loader, so every value is text. Data only: no command, executable, endpoint or dataset.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "id", "version", "title", "components"],
@@ -123,7 +123,7 @@
       "required": ["tool", "repo"],
       "description": "A template source in the tool's own layout, imported as its own snapshot.",
       "properties": {
-        "tool": { "enum": ["deckifyr", "quartifyr"] },
+        "tool": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$", "description": "The tool whose template layout the source uses (a tool id, such as the one a report or deck template type names)." },
         "repo": {
           "type": "string",
           "maxLength": 300,

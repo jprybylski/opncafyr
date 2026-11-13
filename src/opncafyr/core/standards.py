@@ -11,7 +11,8 @@ may instead carry a ``ref``:
 - a **bundle reference** names a template component of another bundle (a house style) by id,
   version range and optional hash pin. It resolves only against bundles already imported into
   the study; nothing is fetched because of it;
-- a **tool-native reference** names a template source in deckifyr's or quartifyr's own layout
+- a **tool-native reference** names a template source in a tool's own layout (the tool a
+  component type declares, ``StandardsType.native``)
   (repository, ref, subfolder, optional commit and tree-hash pins). The user imports it as its
   own snapshot, from Git or a local copy, through the same verification.
 
@@ -55,7 +56,7 @@ from typing import Any
 from opncafyr import __version__
 from opncafyr.core.guidance import FILE_NAME_RE, parse_guidance
 from opncafyr.core.manifest import atomic_write_bytes, atomic_write_json, validate
-from opncafyr.core.registry import STANDARDS_TOOLS, StandardsCheck, StandardsType
+from opncafyr.core.registry import StandardsCheck, StandardsType
 from opncafyr.core.runs import now
 from opncafyr.core.workspace import WORKSPACE_META_DIR, WorkspaceAccessError, resolve_in_root
 
@@ -80,7 +81,7 @@ FETCHED_TTL_S = 24 * 3600
 SEGMENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 KEY_RE = re.compile(
     r"^([a-z][a-z0-9-]{0,63}/[0-9A-Za-z][0-9A-Za-z.+-]{0,31}-[0-9a-f]{12}"
-    r"|template-(deckifyr|quartifyr)/[0-9a-f]{12})$"
+    r"|template-[a-z][a-z0-9_-]{0,31}/[0-9a-f]{12})$"
 )
 NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 FETCH_ID_RE = re.compile(r"^[0-9a-f]{16}$")
@@ -938,8 +939,8 @@ class Standards:
                 if template is not None:
                     tool = template.get("tool")
                     native_type = template.get("type")
-                    if tool not in STANDARDS_TOOLS:
-                        raise StandardsError("bad_source", "Choose deckifyr or quartifyr.")
+                    if not any(t.native == tool for t in self.types.values()):
+                        raise StandardsError("bad_source", "This app takes no such template.")
                     if native_type is not None and not NAME_RE.match(str(native_type)):
                         raise StandardsError("bad_source", "A template type is a plain name.")
                     base = top_folder(folder, TEMPLATE_MARKERS) if archive else folder

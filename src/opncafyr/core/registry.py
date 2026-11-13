@@ -442,7 +442,7 @@ class GuideCondition:
 
 
 STANDARDS_TYPE_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
-STANDARDS_TOOLS = ("deckifyr", "quartifyr")
+STANDARDS_TOOL_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")  # a tool descriptor id
 
 
 @dataclass(frozen=True)
@@ -473,7 +473,7 @@ class StandardsType:
       under their own names, never over a local edit. Without it the component is used
       from the verified snapshot when the study selects it (a report or deck template).
     - ``native`` names the tool whose own template layout this type also accepts as a
-      referenced source (``deckifyr``, ``quartifyr``), or None.
+      referenced source (a tool descriptor id), or None.
     """
 
     id: str
@@ -489,7 +489,7 @@ class StandardsType:
             raise ValueError(f"Invalid standards type id {self.id!r}.")
         if self.install_to is not None and not _VIEW_ID_RE.match(self.install_to):
             raise ValueError(f"Standards type {self.id!r}: install_to must be one folder name.")
-        if self.native is not None and self.native not in STANDARDS_TOOLS:
+        if self.native is not None and not STANDARDS_TOOL_RE.match(self.native):
             raise ValueError(f"Standards type {self.id!r}: unknown native tool {self.native!r}.")
         if self.native is not None and self.install_to is not None:
             raise ValueError(f"Standards type {self.id!r}: a native template is never copied.")

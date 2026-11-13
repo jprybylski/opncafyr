@@ -74,6 +74,7 @@
         <li><a class="nav-link" href="#/settings" data-view="settings" data-target="shell.nav.settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-label">Settings</span></a></li>
         <li><a class="nav-link" href="#/guide" data-view="guide" data-target="shell.nav.guide" title="Guide"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span class="nav-label">Guide</span></a></li>
         <li><a class="nav-link" href="#/tutorials" data-view="tutorials" data-target="shell.nav.tutorials" title="Tutorials"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span class="nav-label">Tutorials</span></a></li>
+        <li><a class="nav-link" href="#/standards" data-view="standards" data-target="shell.nav.standards" title="Standards"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="nav-label">Standards</span></a></li>
       </ul>
       <p class="nav-heading" id="nav-apps-heading" hidden>Apps</p>
       <ul id="nav-apps" aria-labelledby="nav-apps-heading" hidden></ul>
@@ -250,6 +251,90 @@
           <p id="tutorials-status" class="status card-status" role="status" aria-live="polite"></p>
           <div class="card-body"><button type="button" class="btn btn-ghost btn-sm" id="tutorials-reset-all">Reset all tutorial progress</button></div>
         </section>
+      </div>
+
+      <!-- Standards (#70): import a team's versioned profiles, tutorials and templates. -->
+      <div class="view" id="view-standards" data-title="Standards" hidden>
+        <div class="page-head"><h1 id="standards-heading" tabindex="-1">Standards</h1><p>Import your team's study standards: study profiles, tutorials, and report and deck templates, from a folder, an archive or a Git repository. Every file is checked against its SHA-256 and you review what changes before anything is installed. Nothing is fetched unless you ask, and a standard never runs an analysis or validates one. <a href="#/guide/standards">About standards bundles</a>.</p></div>
+        <p id="standards-closed" class="notice muted">Open a study folder first: imported standards are kept in the study.</p>
+        <div id="standards-body" class="stack" hidden>
+          <section class="card" aria-labelledby="standards-import-heading" data-target="shell.standards.import">
+            <div class="card-head"><h2 id="standards-import-heading">Import</h2></div>
+            <form id="standards-form" class="card-body standards-form" novalidate>
+              <fieldset class="field">
+                <legend>What to import</legend>
+                <label><input type="radio" name="std-what" value="bundle" checked> A standards bundle (with <code>standards.yaml</code>)</label>
+                <div id="std-what-templates" class="standards-options"></div>
+              </fieldset>
+              <div class="field" id="std-type-field" hidden>
+                <label for="std-type">Template type (for a source with <code>templates/&lt;type&gt;/</code>; leave empty otherwise)</label>
+                <input id="std-type" autocomplete="off" spellcheck="false" pattern="[a-z][a-z0-9-]*">
+              </div>
+              <fieldset class="field">
+                <legend>Where from</legend>
+                <label><input type="radio" name="std-from" value="path" checked> A folder or archive on this computer</label>
+                <label><input type="radio" name="std-from" value="git" id="std-from-git"> A Git repository (GitHub or GitHub Enterprise)</label>
+                <p id="std-git-missing" class="muted" hidden>Git isn't installed with this opncafyr, so only local copies can be imported.</p>
+              </fieldset>
+              <div id="std-path-fields">
+                <div class="field">
+                  <label for="std-path">Folder or archive (.zip, .tar, .tar.gz): a full path, or a path inside the study folder</label>
+                  <input id="std-path" autocomplete="off" spellcheck="false">
+                </div>
+              </div>
+              <div id="std-git-fields" hidden>
+                <div class="field">
+                  <label for="std-repo">Repository: owner/repo, host/owner/repo, or an https:// address</label>
+                  <input id="std-repo" autocomplete="off" spellcheck="false" placeholder="ghe.example.org/team/study-standards">
+                </div>
+                <div class="field">
+                  <label for="std-ref">Branch, tag or commit (empty: the default branch)</label>
+                  <input id="std-ref" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="field">
+                  <label for="std-subdir">Subfolder (empty: the top of the repository)</label>
+                  <input id="std-subdir" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="field">
+                  <label for="std-token">Access token, for a private or Enterprise repository (optional)</label>
+                  <input id="std-token" type="password" autocomplete="off" spellcheck="false">
+                  <p class="muted">Used for this one fetch over HTTPS, then forgotten. It is never saved, logged or shown. The fetch records the exact commit.</p>
+                </div>
+              </div>
+              <details class="field" id="std-pins">
+                <summary>Expected commit or SHA-256 (optional)</summary>
+                <label for="std-expect-commit">Commit</label>
+                <input id="std-expect-commit" autocomplete="off" spellcheck="false" pattern="[0-9a-f]{40}">
+                <label for="std-expect-sha">SHA-256 of the template's files</label>
+                <input id="std-expect-sha" autocomplete="off" spellcheck="false" pattern="[0-9a-f]{64}">
+              </details>
+              <div class="actions"><button type="submit" class="btn btn-primary" id="std-inspect">Check and preview</button></div>
+            </form>
+            <p id="standards-import-status" class="status card-status" role="status" aria-live="polite"></p>
+          </section>
+
+          <section class="card" id="standards-review" aria-labelledby="standards-review-heading" data-target="shell.standards.review" hidden>
+            <div class="card-head"><h2 id="standards-review-heading">Review before installing</h2></div>
+            <div class="card-body" id="standards-review-body"></div>
+            <div class="card-body actions">
+              <button type="button" class="btn btn-primary" id="std-install">Install</button>
+              <button type="button" class="btn btn-ghost" id="std-cancel">Cancel</button>
+            </div>
+            <p id="standards-review-status" class="status card-status" role="status" aria-live="polite"></p>
+          </section>
+
+          <section class="card" aria-labelledby="standards-used-heading" data-target="shell.standards.templates">
+            <div class="card-head"><h2 id="standards-used-heading">Templates for new reports and decks</h2></div>
+            <div class="card-body" id="standards-used"></div>
+            <p class="card-note">A choice here applies when a report or deck is set up. A report or deck already set up keeps the template it started from.</p>
+          </section>
+
+          <section class="card" aria-labelledby="standards-list-heading">
+            <div class="card-head"><h2 id="standards-list-heading">Imported</h2><span class="aside"><button type="button" class="btn btn-ghost btn-sm" id="standards-refresh">Check again</button></span></div>
+            <div class="card-body" id="standards-list"></div>
+            <p id="standards-list-status" class="status card-status" role="status" aria-live="polite"></p>
+          </section>
+        </div>
       </div>
 
       <!-- Settings -->

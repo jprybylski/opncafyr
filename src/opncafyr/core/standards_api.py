@@ -60,7 +60,7 @@ class SourceBody(BaseModel):
 
 
 class TemplateBody(BaseModel):
-    tool: str = Field(pattern=r"^(deckifyr|quartifyr)$")
+    tool: str = Field(pattern=r"^[a-z][a-z0-9_-]{0,31}$")
     type: str | None = Field(default=None, pattern=NAME)
 
 
