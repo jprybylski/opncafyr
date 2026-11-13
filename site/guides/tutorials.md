@@ -22,6 +22,12 @@ A tutorial shows a small panel with directions. It puts a ring around the contro
 2. Do each step on the page, then select **Next**. Some steps wait until the page shows the step as done, such as a file being imported. **Skip** always moves on.
 3. Use **Back**, **Pause** or **Exit tutorial** at any time. **Escape** closes the panel too.
 
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/17-tutorial.png' | relative_url }}" width="1280" height="800" loading="lazy"
+       alt="The Analysis page with a ring around the Analyte (exact value) select. A tutorial panel in the corner shows step 7 of 11, Choose exactly one analyte, with Next greyed out, the line 'Next is enabled when: the checks ran for one analyte with nothing blocking', and Back, Skip, Pause and Exit tutorial.">
+  <figcaption>The ring marks the control to use. Next waits until the page shows the step as done; Skip always moves on.</figcaption>
+</figure>
+
 {: .expect }
 Your place is saved by the app, so a reload or the next launch brings the tutorial back where you left it. **Reset progress** forgets it.
 

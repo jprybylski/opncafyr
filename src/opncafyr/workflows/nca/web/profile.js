@@ -186,11 +186,11 @@ export function init(container) {
     const stepUrl = `api/nca/profiles/current/steps/${encodeURIComponent(step.id)}`;
 
     if (step.type === "checklist") {
-      const set = el("fieldset", null, "nca-pairs");
+      const set = el("fieldset", null, "profile-checklist");
       set.append(el("legend", "Items", "visually-hidden"));
       const ticked = new Set(status.items || []);
       for (const item of step.items) {
-        const label = el("label", null, "nca-row");
+        const label = el("label");
         const box = el("input");
         box.type = "checkbox";
         box.checked = ticked.has(item.id);

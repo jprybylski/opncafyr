@@ -24,6 +24,8 @@ The app comes with three examples: **Dose escalation study**, **Fed/fasted study
 
 Each step shows **To do** or **Completed**. The page counts how many steps are done.
 
+![The Steps card of a study profile part-way: 5 of 6 steps done, both run slots filled and the review still to do](images/16-study-profile.png)
+
 - **Instruction**: read it, then tick **Done**.
 - **Checklist**: tick each item. The step is done when every item is ticked.
 - **Action**: select **Go to …** to open the right card on the Analysis or Publish page. Some actions also show a hint, such as "The recipe is applied to all rows: not yet". A hint only reports what the page shows. It never ticks the step for you: tick **Done** yourself.

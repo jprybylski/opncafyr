@@ -9,6 +9,8 @@ A tutorial walks you through the app. A panel in the corner of the page says wha
 3. Read the step in the panel, then do it on the page. The highlighted control has a ring around it, and the page moves to the right screen for you.
 4. Select **Next** when you are done. Some steps wait until the page shows the step as done, such as "the study has an imported data file". Until then **Next** is greyed out and the panel says what it waits for. **Skip** always moves on.
 
+![The tutorial panel on the step Choose exactly one analyte, with a ring around the analyte select and Next waiting for the checks](images/17-tutorial.png)
+
 The panel also has **Back**, **Pause** and **Exit tutorial**. **Escape** closes the panel too.
 
 - **Pause** removes the highlight and shrinks the panel. **Resume** carries on from the same step.

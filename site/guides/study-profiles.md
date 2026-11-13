@@ -38,6 +38,12 @@ If the file has a mistake, the page lists each problem with the step and the fie
 
 Progress is saved in the study folder, so it is still there the next time you open the app.
 
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/16-study-profile.png' | relative_url }}" width="1016" height="1070" loading="lazy"
+       alt="The Steps card of a study profile with 5 of 6 steps done: a ticked checklist, a Clean and map the data step with a Go to button and the hint 'The saved column mapping blocks nothing: yes', a PARENT run slot and a METAB run slot each filled with a completed run, a Review both runs checkpoint still to do, and a publication holding both runs.">
+  <figcaption>Each run slot holds a completed run you chose; the publication step checks that it holds exactly those runs.</figcaption>
+</figure>
+
 While you follow a profile, **Start analysis** and **Choose tables and figures** offer **Study profile step (optional)**, set to **None**. Choosing a step records the profile's name, version, fingerprint and step with the new run or publication, as provenance. It does not change the analysis.
 
 ## When someone edits the profile
