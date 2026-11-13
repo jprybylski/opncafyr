@@ -12,7 +12,7 @@ import { anyUnsaved } from "../../js/unsaved.js";
 
 const EDITOR_TOOL = "deckifyr";
 const unsavedNote = "The fragment editor has unsaved changes. Save or discard them first.";
-import { buildsTable, findingsTable, publicationChoice } from "./report.js";
+import { buildsTable, findingsTable, publicationChoice, templateNote } from "./report.js";
 
 export function initDeck(stack, state) {
   const sec = section(stack, "nca-deck", "5. Deck (PPTX)",
@@ -107,6 +107,8 @@ export function initDeck(stack, state) {
       info.append(el("p", `deck/ uses publication ${bound.publication_id}.${editing ? " The editor is open." : ""}`));
       if (status.edited.length) info.append(el("p", `Edited since it was set up: ${status.edited.join(", ")}.`, "hint"));
     }
+    const note = templateNote(status?.template, "deck", Boolean(status?.project));
+    if (note) info.append(note);
     select = publicationChoice(state, bound?.publication_id);
     setUp.textContent = status?.project ? "Use this publication" : "Set up deck";
     pick.replaceChildren(field("Publication", select), setUp);

@@ -7,6 +7,30 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Standards bundles** (#70, ADR 0011). A study team can share one versioned set of
+  study profiles, tutorials, and report and deck templates, and import it into a study
+  from a folder, a `.zip`/`.tar.gz` archive, or a GitHub or GitHub Enterprise repository,
+  on a new **Standards** page.
+  - **Checked before anything is installed.** `standards.yaml` lists every file with its
+    SHA-256. Inspect verifies hashes, paths (no links, nothing outside the bundle), file
+    kinds, links between components and version ranges, then shows a preview. Install
+    applies that exact preview. A failed import changes nothing.
+  - **Local edits are kept.** Profiles and tutorials are copied into `profiles/` and
+    `tutorials/`. An edited or study-made file is never replaced: keep yours, or install the
+    new version beside it, with a diff.
+  - **Templates are not copied into every bundle.** A template can reference a house-style
+    bundle's template or a template kept in deckifyr's or quartifyr's own layout, imported
+    once. Partial templates keep the bundled defaults for what they lack.
+  - **Pinned and offline.** Each import is kept read-only in `.opncafyr/standards/`, with
+    its source and exact Git commit, and re-hashed at every use. A Git source is fetched
+    only on request, by the app's own Git (HTTPS only, no user Git configuration); a token
+    is used for that one fetch and never stored (offline touchpoint R20).
+  - **Reports and decks.** A selected template applies to new report and deck setups:
+    the reference DOCX, footnotes, settings and `style.yaml` (merged over quartifyr's default style), or
+    `deckifyr init --from-dir` with the template's design, layouts and images. Bindings and
+    build manifests record it in an optional `standards` object; builds still pin exact
+    runs and file hashes. Upstream: jprybylski/deckifyr#103.
+  - Credentials in URLs are now redacted from logs and support bundles.
 - **QC guide: how to review a completed run** (#71). A new website guide, **Reviewing a
   run (QC)**, and a matching in-app chapter, so offline users have it too. It separates
   what each check can show: data and choices, replay, source review, independent

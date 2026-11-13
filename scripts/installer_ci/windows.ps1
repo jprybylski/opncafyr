@@ -65,7 +65,7 @@ Copy-Item (Join-Path $PSScriptRoot 'windows_user.ps1') "$work\windows_user.ps1"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 New-Item -ItemType Directory -Force "$work\flow\scripts\offline", "$work\flow\tests\fixtures\opnca-r" | Out-Null
 Copy-Item "$repo\scripts\offline\flow_check.py" "$work\flow\scripts\offline\"
-Copy-Item "$repo\tests\nca_helpers.py", "$repo\tests\publish_helpers.py", "$repo\tests\artifact_docs.py", "$repo\tests\opnca_listing.py" "$work\flow\tests\"
+Copy-Item "$repo\tests\nca_helpers.py", "$repo\tests\publish_helpers.py", "$repo\tests\standards_helpers.py", "$repo\tests\artifact_docs.py", "$repo\tests\opnca_listing.py" "$work\flow\tests\"
 Copy-Item "$repo\tests\fixtures\two_analyte.csv", "$repo\tests\fixtures\two_analyte.expected.json" "$work\flow\tests\fixtures\"
 Copy-Item "$repo\tests\fixtures\opnca-r\opnca-artifacts-v2.schema.json" "$work\flow\tests\fixtures\opnca-r\"
 icacls $work /grant "${user}:(OI)(CI)M" /T /Q | Out-Null

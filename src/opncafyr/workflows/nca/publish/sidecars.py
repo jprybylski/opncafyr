@@ -76,6 +76,11 @@ def load_footnotes(path: Path | Any) -> Footnotes:
         raw = path.read_bytes()
     except OSError as exc:
         raise SidecarError(f"The footnotes file can't be read: {exc.strerror}.") from None
+    return parse_footnotes(raw)
+
+
+def parse_footnotes(raw: bytes) -> Footnotes:
+    """The keys of a ``standard_footnotes.yaml`` text."""
     if len(raw) > MAX_FOOTNOTES_BYTES:
         raise SidecarError("The footnotes file is too large.")
     try:

@@ -116,7 +116,12 @@ the run's frozen `analysis.csv` is still kept.
 
 ## Revisit
 - When an organisation needs its own report shell or deck template. Add a configurable
-  template path; core stays tool-agnostic.
+  template path; core stays tool-agnostic. **Done by ADR 0011 (#70):** a study may import a
+  standards bundle or a tool-native template, verified and kept as a snapshot in the study,
+  and select it for new report and deck setups. Tools still never fetch (`--from-repo` is
+  never passed): a Git source is fetched only on the user's request, by the launcher's
+  pinned Git, and handed to the tool as a local folder. Without an imported template, the
+  bundled ones are used as decided here.
 - When a sponsor's data policy forbids coded IDs in published outputs or copies of
   source data. The curator pre-selection and the retention default become per-workspace
   settings.

@@ -33,7 +33,7 @@ FILE_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}\.yaml$")
 SHELL = "shell"
 
 # The shell's own views, as the router names them (web/static/js/router.js).
-SHELL_VIEWS = ("home", "data", "jobs", "settings", "guide", "tutorials")
+SHELL_VIEWS = ("home", "data", "jobs", "settings", "guide", "tutorials", "standards")
 
 SHELL_TARGETS = (
     GuideTarget("shell.nav.home", "Home in the sidebar", None),
@@ -42,11 +42,15 @@ SHELL_TARGETS = (
     GuideTarget("shell.nav.settings", "Settings in the sidebar", None),
     GuideTarget("shell.nav.guide", "Guide in the sidebar", None),
     GuideTarget("shell.nav.tutorials", "Tutorials in the sidebar", None),
+    GuideTarget("shell.nav.standards", "Standards in the sidebar", None),
     GuideTarget("shell.workspace.card", "The study folder card", "home"),
     GuideTarget("shell.workspace.pick", "Choose study folder…", "home"),
     GuideTarget("shell.data.datasets", "The list of data files", "data"),
     GuideTarget("shell.data.import", "Import (after a preview)", "data"),
     GuideTarget("shell.jobs.list", "The list of jobs", "jobs"),
+    GuideTarget("shell.standards.import", "Standards: Import", "standards"),
+    GuideTarget("shell.standards.review", "Standards: Review before installing", "standards"),
+    GuideTarget("shell.standards.templates", "Standards: Templates for new reports", "standards"),
     GuideTarget("shell.tool.toolstrip", "The bar above an embedded app", None),
     GuideTarget("shell.tool.newtab", "Open in new tab (embedded app)", None),
 )

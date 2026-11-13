@@ -40,7 +40,7 @@ fail() { echo "::error::$*"; exit 1; }
 # The Gate 2 flow driver and the fixture helpers it imports, in the repository layout.
 mkdir -p "$WORK/flow/scripts/offline" "$WORK/flow/tests/fixtures/opnca-r"
 cp "$REPO/scripts/offline/flow_check.py" "$WORK/flow/scripts/offline/"
-cp "$REPO"/tests/{nca_helpers,publish_helpers,artifact_docs,opnca_listing}.py "$WORK/flow/tests/"
+cp "$REPO"/tests/{nca_helpers,publish_helpers,standards_helpers,artifact_docs,opnca_listing}.py "$WORK/flow/tests/"
 cp "$REPO"/tests/fixtures/two_analyte.{csv,expected.json} "$WORK/flow/tests/fixtures/"
 cp "$REPO"/tests/fixtures/opnca-r/* "$WORK/flow/tests/fixtures/opnca-r/"
 chmod -R a+rX "$WORK/flow"

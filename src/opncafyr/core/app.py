@@ -75,9 +75,12 @@ from opncafyr.core.security import (
     SecurityConfig,
     reopen_page_headers,
 )
+from opncafyr.core.standards import Standards
+from opncafyr.core.standards_api import mount_standards_api
 from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
 from opncafyr.core.support_api import mount_support_api
 from opncafyr.core.tutorials import PROGRESS_FILE as TUTORIAL_PROGRESS_FILE
+from opncafyr.core.tutorials import STANDARDS_TYPE as TUTORIAL_STANDARDS
 from opncafyr.core.tutorials import Tutorials
 from opncafyr.core.tutorials_api import mount_tutorials_api
 from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
@@ -482,6 +485,10 @@ def create_app(
             if tutorial_progress is not None
             else state_dir() / TUTORIAL_PROGRESS_FILE,
         ),
+    )
+    mount_standards_api(
+        app,
+        Standards([TUTORIAL_STANDARDS, *(t for pack in packs for t in pack.standards)], guidance),
     )
 
     @app.get("/api/workflows")

@@ -1,6 +1,6 @@
 # Word reports
 
-The **4. Report (DOCX)** card on the **Publish** page builds a Word report from one publication. The report is a project in the study folder's `report` folder, made from a template that comes with the app. The app uses quartifyr and reportifyr to build it.
+The **4. Report (DOCX)** card on the **Publish** page builds a Word report from one publication. The report is a project in the study folder's `report` folder, made from a template that comes with the app, or from your team's report template if the study selected one under **Standards** (see [Standards bundles](standards.md)). The card says which. The app uses quartifyr and reportifyr to build it.
 
 A report that builds without errors shows that the files were assembled as recorded. It does not show that the analysis is right.
 

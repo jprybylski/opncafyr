@@ -668,6 +668,26 @@ dialog.support-dialog { max-width: min(56rem, calc(100vw - 2rem)); width: 100%; 
 .segmented button + button { border-left: 1px solid var(--border-strong); }
 .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
 
+/* ---- Standards (#70) -------------------------------------------------------- */
+
+.standards-form { display: grid; gap: var(--space-3); }
+.standards-form fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.standards-form legend { font-weight: 600; margin-bottom: var(--space-1); }
+.standards-options { display: grid; gap: var(--space-1); }
+.standards-form fieldset label, .std-plan label, .std-component > label { font-weight: 400; }
+.std-plan fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.std-used { margin: 0 0 var(--space-2); }
+.std-keeps { display: block; max-width: 60rem; border-left: 3px solid var(--warn); padding-left: var(--space-2); }
+.std-component { border-top: 1px solid var(--border); padding-top: var(--space-3); display: grid; gap: var(--space-2); }
+.std-component:first-of-type { border-top: 0; padding-top: 0; }
+.std-component h3 { margin: 0; font-size: var(--text-base, 1rem); display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.std-list { margin: 0; padding-left: 1.2rem; display: grid; gap: var(--space-1); }
+.std-plan { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.std-plan li { display: grid; gap: var(--space-1); }
+.std-diff { max-height: 18rem; overflow: auto; font-family: var(--mono); font-size: var(--text-xs); white-space: pre; margin: 0; }
+.std-hash { font-family: var(--mono); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.std-problems { color: var(--danger); }
+
 /* ---- Responsive, motion, forced colours --------------------------------------- */
 
 @media (max-width: 64rem) {

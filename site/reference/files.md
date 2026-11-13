@@ -44,7 +44,9 @@ opncafyr keeps two kinds of files apart. Your **study folders** hold your data, 
 | `checks/` | results of opnca-r's own data check |
 | `runs/<run-id>/` | one run per folder (below) |
 | `publications/<publication-id>.json` | one record per publication: exact run IDs and every file fingerprint |
-| `report.json`, `deck.json` | which publication the report and the deck use |
+| `report.json`, `deck.json` | which publication the report and the deck use, and the imported template they were set up from |
+| `standards.json` | the imported [standards bundles]({{ '/guides/standards/' | relative_url }}): where each came from (with the Git commit), the files copied into `profiles/` and `tutorials/`, and the templates chosen for new reports and decks |
+| `standards/` | a read-only, checked copy of each imported bundle or template |
 | `publish-checks/` | results of report checks |
 | `jobs/<job-id>/` | each job's state, events, output logs and diagnostics |
 

@@ -54,9 +54,38 @@ export function buildsTable(builds, kind, link, stale = {}) {
   }), `${kind} builds`);
 }
 
+// Which template a project uses, said only when it matters (#70). Text only.
+// - No project yet: say which imported template the setup will use (nothing for the bundled one).
+// - A project: say which imported template it was set up from, and, when Standards now chooses
+//   another one, that this project keeps its own: a template can't be changed in place.
+export function templateNote(template, what, hasProject) {
+  if (!template) return null;
+  const name = (t) => (t ? `${t.component} from ${t.bundle_id ? `${t.bundle_id} ${t.version}` : `the ${t.tool} template`}` : "the bundled template");
+  const box = el("div", null, "template-note");
+  if (template.problem) box.append(el("p", template.problem, "hint"));
+  if (!hasProject) {
+    if (template.selected) box.append(el("p", `Set up ${what} will use ${name(template.selected)}, chosen under Standards.`, "muted"));
+  } else {
+    if (template.project) box.append(el("p", `This ${what} was set up from ${name(template.project)}.`, "muted"));
+    if (template.differs) {
+      box.append(
+        el(
+          "p",
+          `Standards now chooses ${name(template.selected)} for new ${what}s, but this ${what} keeps ` +
+            `${name(template.project)}: the template of a ${what} that is already set up can't be ` +
+            `changed, and Use this publication doesn't change it. To use the new template, rename or ` +
+            `move the ${what} folder, then select Set up ${what}.`,
+          "hint",
+        ),
+      );
+    }
+  }
+  return box.childElementCount ? box : null;
+}
+
 export function initReport(stack, state) {
   const sec = section(stack, "nca-report", "4. Report (DOCX)",
-    "A quartifyr report project in report/, set up from the bundled template for one publication. " +
+    "A quartifyr report project in report/, set up for one publication from the bundled template, or from the report template chosen under Standards. " +
       "Check finds missing or broken metadata before rendering; a render that is incomplete keeps nothing.", "nca.report.card");
   const info = el("div");
   const pick = el("div", null, "nca-row");
@@ -147,6 +176,8 @@ export function initReport(stack, state) {
       info.append(el("p", `report/ uses publication ${bound.publication_id}.`));
       if (status.edited.length) info.append(el("p", `Edited since it was set up: ${status.edited.join(", ")}.`, "hint"));
     }
+    const note = templateNote(status?.template, "report", Boolean(status?.project));
+    if (note) info.append(note);
     select = publicationChoice(state, bound?.publication_id);
     setUp.textContent = status?.project ? "Use this publication" : "Set up report";
     pick.replaceChildren(field("Publication", select), setUp);

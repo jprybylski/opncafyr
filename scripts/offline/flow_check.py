@@ -6,7 +6,8 @@ Runs the launcher's FastAPI app in-process (the same ``create_app`` that ``opnca
 launch`` serves, with its own supervisor and job manager) and drives it the way the home
 page does: import ``tests/fixtures/two_analyte.csv`` -> clean -> map -> for each analyte a
 one-analyte snapshot -> save in opnca-r (through ``/apps/opnca/``) -> replay -> complete
--> publish -> render the DOCX report -> build the PPTX deck. Nothing here calls a tool
+-> publish -> render the DOCX report -> import a standards bundle from an archive (#70)
+and build the PPTX deck from its deck template. Nothing here calls a tool
 directly: every R, Quarto, uv or deckifyr process is started by an adapter, which also
 applies the offline settings (docs/offline.md). Start it with a clean environment so that
 none of the caller's ``UV_*`` or ``R_*`` variables help.
@@ -42,6 +43,7 @@ sys.path.insert(0, str(REPO / "tests"))
 
 import nca_helpers as N  # noqa: E402
 import publish_helpers as P  # noqa: E402
+import standards_helpers as SH  # noqa: E402
 from opncafyr.core import runs as R  # noqa: E402
 from opncafyr.core.runtime import load_runtime  # noqa: E402
 from opncafyr.core.security import SecurityConfig  # noqa: E402
@@ -169,6 +171,33 @@ def no_errors(findings: list[dict[str, Any]], what: str) -> None:
     check(not errors, f"{what} check found errors: {errors}")
 
 
+def import_standards(api, work: Path) -> dict[str, Any]:
+    """A standards bundle from a .zip (no network): a deck template, selected for the deck."""
+    files = {
+        f"deck/{k}": (v.replace(b"  background_image: logo.png\n", b"") if "design" in k else v)
+        for k, v in SH.deck_files().items()
+        if k != "logo.png"
+    }
+    source = SH.write_bundle(
+        work / "house-standards",
+        [{"id": "house-deck", "type": "deck-template", "title": "House deck", "files": files}],
+    )
+    archive = work / "house-standards.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        for path in sorted(source.rglob("*")):
+            if path.is_file():
+                zf.write(path, path.relative_to(source).as_posix())
+    r = api.post("/api/standards/inspect", json={"source": {"kind": "path", "path": str(archive)}})
+    check(r.status_code == 200 and not r.json()["problems"], f"standards preview: {r.text}")
+    preview = r.json()
+    r = api.post(
+        "/api/standards/install",
+        json={"preview_id": preview["preview_id"], "select": ["house-deck"]},
+    )
+    check(r.status_code == 200, f"standards install: {r.text}")
+    return {"snapshot": r.json()["snapshot"], "sha256": preview["inventory_sha256"]}
+
+
 def flow(work: Path, results: Path) -> dict[str, Any]:
     steps = Steps(results)
     runtime = load_runtime()
@@ -239,6 +268,9 @@ def flow(work: Path, results: Path) -> dict[str, Any]:
             check(sorted(build["runs"]) == sorted([a, b]), "the report names other runs")
             summary["report"] = zip_output(study, "report", build, "draft", "word/document.xml")
 
+        with steps.step("standards"):
+            summary["standards"] = import_standards(api, work)
+
         with steps.step("deck"):
             r = api.post(
                 "/api/nca/publications",
@@ -257,6 +289,13 @@ def flow(work: Path, results: Path) -> dict[str, Any]:
             build = api.get("/api/nca/deck").json()["builds"][0]
             check(sorted(build["runs"]) == sorted([a, b]), "the deck names other runs")
             summary["deck"] = zip_output(study, "deck", build, "pptx", "ppt/presentation.xml")
+            record = json.loads(
+                (study / "deck/builds" / build["build_id"] / "build.json").read_text()
+            )
+            check(
+                record.get("standards", {}).get("component") == "house-deck",
+                "the deck build doesn't record the imported template",
+            )
     return summary
 
 

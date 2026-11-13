@@ -125,6 +125,7 @@ def policy() -> dict[str, Any]:
             f"{META}/workspace.json",
             f"{META}/jobs/**",
             f"{META}/backups/**",
+            f"{META}/standards/**",
         ],
         "review": [
             {
@@ -166,6 +167,10 @@ def policy() -> dict[str, Any]:
             {
                 "rule": f"{META}/{BACKUP_DIR}/",
                 "reason": "Copies of the folder's settings kept before an app upgrade.",
+            },
+            {
+                "rule": f"{META}/standards/.*",
+                "reason": "Standards being inspected or fetched; only installed ones are kept.",
             },
             {"rule": "report/.quarto/", "reason": "Quarto's render cache."},
             {"rule": "report/.rpfy-logs/", "reason": "Render logs from reportifyr."},

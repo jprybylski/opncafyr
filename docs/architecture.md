@@ -208,6 +208,11 @@ Study folder/
     study-profile.json          schemas/study-profile-state-v1: the followed study profile
                                 and its progress per profile file (#68)
     report.json  deck.json      schemas/publish-binding-v1: the project's publication (#32, #33)
+                                and, when set up from one, the imported template (#70)
+    standards.json              schemas/standards-state-v1: imported standards, files copied
+                                into the study, templates selected (#70, ADR 0011)
+    standards/<id>/<version>-<hash>/   a verified, read-only standards bundle snapshot
+    standards/template-<tool>/<hash>/  a verified tool-native template snapshot
     publish-checks/<id>/        preflight.json (schemas/preflight-v1) of a report check
     jobs/<job-id>/              schemas/job-v1 state.json, events.jsonl, stdout/stderr
                                 logs, diagnostic.json (core/jobmanager.py)
@@ -220,7 +225,8 @@ Study folder/
     builds/<build-id>/          report-<draft|final>.docx, render-result.json, build.json
                                 (schemas/publish-build-v1)
   deck/                         deckifyr project bound to one publication (#33):
-                                presentation.yaml, design.yaml, layouts.yaml,
+                                presentation.yaml, design.yaml, layouts.yaml (or an
+                                imported template's design and layouts and its assets),
                                 standard_footnotes.yaml, OUTPUTS/ copy; build/ (editor drafts)
     builds/<build-id>/          the PPTX, deck-manifest.json, previews/, build-result.json,
                                 build.json (schemas/publish-build-v1)
@@ -564,6 +570,38 @@ matches to 1e-10; since opnca-r 0.3.0 that API no longer rounds numbers.
     absolute paths. Exit 2, signals and non-JSON output are unknown failures.
 - **Shell**: `js/tools.js` refreshes the app list when a workflow emits `app-restarted`,
   so the embedded editor shows as soon as it is ready.
+
+## Standards bundles (#70, ADR 0011)
+
+`core/standards.py`, `core/standards_api.py` (routes under `/api/standards`) and the
+**Standards** page (`web/static/js/standards.js`). A bundle is a folder with `standards.yaml`
+(`standards-bundle-v1`); component types come from core (`tutorial`, `core/tutorials.py`) and
+packs (`WorkflowPack.standards`; the NCA pack's `profile`, `report-template` and
+`deck-template` in `workflows/nca/standards.py`). Core never names a tool: a type may say
+which tool's own template layout it accepts (`StandardsType.native`).
+
+- **Inspect** reads a local folder, a `.zip`/`.tar[.gz]` (regular files with plain names only)
+  or a fetched Git source into `.opncafyr/standards/.staging-<id>/` and verifies every file
+  (hash, regular file, no link, plain path, caps, suffixes, links, `requires`, the type's
+  content check). It returns a preview with a `preview_id`; nothing else is written.
+- **Install** re-checks under a lock, promotes the staging folder to a read-only snapshot,
+  copies profile and tutorial files into `profiles/` and `tutorials/` (never over a local
+  edit: keep or copy beside, chosen by the user) and records everything in
+  `.opncafyr/standards.json`.
+- **References.** A template component may carry a `ref` instead of files: another bundle's
+  template (version range, optional hash pin) or a tool-native source (repository, ref,
+  subfolder, type, optional commit and tree-hash pins). They resolve only against imported
+  snapshots.
+- **Use.** `core.standards.material(root, type)` re-hashes the selected template and returns
+  its files; `workflows/nca/publish/templates.py` uses it for report setup (reference DOCX,
+  footnotes, config, `style.yaml` → `--override` over quartifyr's default `--style`), deck setup (`deckifyr init --from-dir`
+  `[--type]`, then the template's other files) and the curator's footnote keys. Bindings and
+  build manifests record it as `standards`.
+- **Git** (`core/gitfetch.py`): a `standards.fetch` job with the pinned Git, ADR 0008's
+  lock-down, `git fetch --depth=1 <https url> <ref>` into a bare repository in the job's tmp;
+  the review resolves the commit and reads blobs with `cat-file` into
+  `.opncafyr/standards/.fetched/<id>/files/`. A token goes only into that process's
+  environment as an `http.<url>.extraHeader`.
 
 ## Project-file editor (#52)
 

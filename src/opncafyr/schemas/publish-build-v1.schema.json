@@ -53,6 +53,7 @@
     },
     "tools": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},
     "settings": {"type": "object"},
+    "standards": {"type": "object", "description": "The imported template this project was set up from (#70, ADR 0011): snapshot key, component and its SHA-256, the bundle or tool, and the source (including the exact Git commit). Absent for the bundled template.", "required": ["snapshot", "component", "component_sha256", "kind", "source"], "properties": {"snapshot": {"type": "string"}, "component": {"type": "string"}, "component_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "kind": {"enum": ["bundle", "template"]}, "bundle_id": {"type": "string"}, "version": {"type": "string"}, "tool": {"type": "string"}, "source": {"type": "object"}, "via": {"type": "object"}}},
     "outputs": {
       "type": "array",
       "minItems": 1,

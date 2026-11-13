@@ -28,7 +28,7 @@ from opncafyr.core.guidance import (
     shipped_files,
 )
 from opncafyr.core.manifest import atomic_write_bytes, atomic_write_json, validate
-from opncafyr.core.registry import WorkflowPack
+from opncafyr.core.registry import StandardsCheck, StandardsType, WorkflowPack
 from opncafyr.core.runs import now
 from opncafyr.core.workspace import resolve_in_root
 
@@ -77,6 +77,28 @@ def examine(data: bytes, label: str, catalog: Catalog) -> dict[str, Any]:
         out.update(audience=doc.get("audience"), prerequisites=doc.get("prerequisites", []))
         out.update(profile=doc.get("profile"), steps=len(doc["steps"]), tutorial=doc)
     return out
+
+
+def _labelled(name: str, problems: list[str]) -> list[str]:
+    return [p if p.startswith(name) else f"{name}: {p}" for p in problems]
+
+
+def check_standard(files: dict[str, bytes], ctx: StandardsCheck) -> tuple[list[str], list[str]]:
+    """A standards bundle's tutorials (#70): each file checked as the study's own would be."""
+    problems: list[str] = []
+    for name, data in sorted(files.items()):
+        problems.extend(_labelled(name, examine(data, name, ctx.catalog)["problems"]))
+    return problems, []
+
+
+STANDARDS_TYPE = StandardsType(
+    id="tutorial",
+    title="Tutorial",
+    format="1.0",
+    suffixes=(".yaml",),
+    check=check_standard,
+    install_to=STUDY_DIR,
+)
 
 
 class Tutorials:

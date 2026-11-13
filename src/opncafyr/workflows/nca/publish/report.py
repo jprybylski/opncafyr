@@ -4,14 +4,15 @@
 is a job, so it is tracked, can be cancelled, and has a time limit that kills the whole
 process tree:
 - **Setup** (``report.setup``). The adapter's fixed R program lays out the project
-  offline in the job's staging folder. The review then writes the bundled template
-  (ADR 0007), the publication's ``report.qmd`` and its ``OUTPUTS/`` copy, and binds it.
+  offline in the job's staging folder. The review then writes the template (the bundled
+  one, ADR 0007, or the imported one the study selected, #70), the publication's
+  ``report.qmd`` and its ``OUTPUTS/`` copy, and binds it.
   The folder appears only when all of that worked.
 - **Check** (``report.check``). The launcher's sidecar checks (#30) and quartifyr's
   ``check.R`` run on a staging copy assembled from the project plus the publication's
   files (checked against their hashes). Their findings are kept as ``preflight-v1``.
 - **Render** (``report.render``). The same staging copy, with every input hashed first,
-  is rendered with ``--strict --offline``. Only the DOCX that quartifyr's result lists
+  is rendered with ``--offline``. Only the DOCX that quartifyr's result lists
   is copied out, after re-hashing it, to ``report/builds/<build-id>/`` with a
   ``publish-build-v1`` manifest. A failed, partial, timed-out or cancelled render
   leaves no build.
@@ -57,8 +58,9 @@ from opncafyr.core.jobmanager import (
 from opncafyr.core.manifest import atomic_write_json, atomic_write_text
 from opncafyr.core.provenance import base_tools
 from opncafyr.core.runtime import RuntimeUnavailable
+from opncafyr.core.standards import Material
 from opncafyr.paths import WORKSPACE_META_DIR, app_root
-from opncafyr.workflows.nca.publish import projects, sidecars
+from opncafyr.workflows.nca.publish import projects, sidecars, templates
 from opncafyr.workflows.nca.publish.curator import PublishError
 from opncafyr.workflows.nca.publish.rds_check import rds_findings
 
@@ -114,16 +116,29 @@ def _prepare(exc: Exception) -> JobPrepareError:
 # --- the report source ---------------------------------------------------------------------
 
 
-def write_sources(runtime: Any, project: Path, publication: dict[str, Any]) -> dict[str, str]:
-    """Write the bundled template files and this publication's ``report.qmd``.
+def write_sources(
+    runtime: Any,
+    project: Path,
+    publication: dict[str, Any],
+    material: Material | None = None,
+) -> dict[str, str]:
+    """Write the template files and this publication's ``report.qmd``.
 
-    Returns the hashes of the generated, user-editable files (``GENERATED``).
+    The template is the bundled one (ADR 0007) or, file by file, the imported report template
+    the study selected (#70); a file the template lacks keeps the bundled default. Returns the
+    hashes of the generated, user-editable files (``GENERATED``).
     """
     for name in ("standard_footnotes.yaml", "config.yaml"):
         target = project / "report" / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(Q.template().joinpath(name).read_bytes())
-    shutil.copyfile(Q.reference_docx(runtime), project / Q.REFERENCE_DOCX)
+        chosen = templates.report_file(material, name)
+        source = chosen if chosen is not None else Q.template().joinpath(name)
+        target.write_bytes(source.read_bytes())
+    docx = templates.report_file(material, Q.REFERENCE_DOCX)
+    shutil.copyfile(docx or Q.reference_docx(runtime), project / Q.REFERENCE_DOCX)
+    style = templates.report_file(material, Q.STYLE)
+    if style is not None:
+        shutil.copyfile(style, project / Q.STYLE)
     write_report_qmd(project, publication)
     return {rel: runs_core.sha256_file(project / rel) for rel in GENERATED}
 
@@ -216,12 +231,18 @@ class ReportService(projects.ProjectJobs):
             if project.exists():
                 self.refuse_if_unsaved()
                 return {"binding": self._rebind(root, project, publication, sha, source)}
-            job_id = manager.submit(self._setup(root, publication, sha, timeout_s))
+            material = templates.report_material(root)
+            job_id = manager.submit(self._setup(root, publication, sha, timeout_s, material))
             self.jobs["setup"] = job_id
             return {"job_id": job_id}
 
     def _setup(
-        self, root: Path, publication: dict[str, Any], sha: str, timeout_s: float
+        self,
+        root: Path,
+        publication: dict[str, Any],
+        sha: str,
+        timeout_s: float,
+        material: Material | None = None,
     ) -> JobRequest:
         cache = self._cache()
 
@@ -243,11 +264,27 @@ class ReportService(projects.ProjectJobs):
             missing = [p for p in needed if not (project / p).exists()]
             if missing:
                 return ReviewResult(False, f"quartifyr did not create {', '.join(missing)}.")
-            generated = write_sources(ctx.runtime, project, publication)
+            try:
+                used = templates.report_material(root) if material is not None else None
+            except PublishError as exc:
+                return ReviewResult(False, exc.message)
+            if material is not None and (
+                used is None
+                or used.provenance["component_sha256"] != material.provenance["component_sha256"]
+            ):
+                return ReviewResult(False, "The selected report template changed. Set up again.")
+            generated = write_sources(ctx.runtime, project, publication, used)
             projects.sync_outputs(root, project, publication)
             projects.write_binding(
                 root,
-                projects.binding(TOOL, PROJECT, publication["publication_id"], sha, generated),
+                projects.binding(
+                    TOOL,
+                    PROJECT,
+                    publication["publication_id"],
+                    sha,
+                    generated,
+                    standards=used.provenance if used is not None else None,
+                ),
             )
             return ReviewResult(True)
 
@@ -287,7 +324,14 @@ class ReportService(projects.ProjectJobs):
                 write_report_qmd(project, publication)
             new_generated = {rel: runs_core.sha256_file(project / rel) for rel in GENERATED}
         projects.sync_outputs(root, project, publication)
-        doc = projects.binding(TOOL, PROJECT, publication["publication_id"], sha, new_generated)
+        doc = projects.binding(
+            TOOL,
+            PROJECT,
+            publication["publication_id"],
+            sha,
+            new_generated,
+            standards=(current or {}).get("standards"),
+        )
         projects.write_binding(root, doc)
         return doc
 
@@ -443,6 +487,7 @@ class ReportService(projects.ProjectJobs):
                     ("standard_footnotes", Q.FOOTNOTES),
                     ("config", Q.CONFIG),
                     ("init_marker", Q.INIT_MARKER),
+                    ("style", Q.STYLE),
                     ("settings", QE.SETTINGS_FILE),
                     ("extensions", Q.EXTENSIONS),
                     *projects.output_roles(publication),
@@ -510,6 +555,7 @@ class ReportService(projects.ProjectJobs):
                     "path": "render-result.json",
                     "sha256": runs_core.sha256_file(staging / "render-result.json"),
                 },
+                standards=(projects.read_binding(root, TOOL) or {}).get("standards"),
             )
             atomic_write_json(staging / "build.json", doc, projects.BUILD_SCHEMA)
             shutil.rmtree(ctx.cwd)  # the render copy; only the DOCX and records are kept
@@ -533,6 +579,7 @@ class ReportService(projects.ProjectJobs):
 
     def status(self, manager: JobManager | None, root: Path) -> dict[str, Any]:
         out = self.base_status(manager, root)
+        out["template"] = templates.summary(root, templates.REPORT_TEMPLATE, out["binding"])
         project = self.project(root)
         current: dict[str, str | None] = {}
 

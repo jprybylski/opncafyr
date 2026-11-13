@@ -33,6 +33,7 @@ on:
       - "scripts/offline/flow_check.py"
       - "tests/nca_helpers.py"
       - "tests/publish_helpers.py"
+      - "tests/standards_helpers.py"
       - "tests/artifact_docs.py"
       - "tests/opnca_listing.py"
       - "tests/fixtures/opnca-r/**"

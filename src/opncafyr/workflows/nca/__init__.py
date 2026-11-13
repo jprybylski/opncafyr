@@ -8,6 +8,8 @@ scan (``core.registry.load_workflows``) and calls ``workflow()``.
 - ``recipe.py``, ``clean_compile.py``, ``cleaning.py``: cleaning recipes, compiled to a
   fixed R program and run as jobs (#22).
 - ``api.py``: the pack's routes under ``/api/nca/``; ``web/``: the Analysis page.
+- ``standards.py``: what a standards bundle's profiles and report/deck templates must be
+  (#70, ADR 0011).
 - ``TARGETS`` and ``CONDITIONS``: what tutorials and study profiles may point at and wait
   for on the pack's pages (ADR 0010). Each target id is marked in ``web/`` as
   ``data-target``; each condition is registered there and reads page state only.
@@ -62,6 +64,7 @@ def workflow() -> WorkflowPack:
     from opncafyr.workflows.nca.analytes import AnalyteAnnotator
     from opncafyr.workflows.nca.importers.csv import CsvImporter
     from opncafyr.workflows.nca.sensitive import sensitive_values
+    from opncafyr.workflows.nca.standards import TYPES as STANDARDS_TYPES
 
     return WorkflowPack(
         id="nca",
@@ -73,6 +76,7 @@ def workflow() -> WorkflowPack:
         targets=TARGETS,
         conditions=CONDITIONS,
         tutorials=("opncafyr.workflows.nca", "tutorials"),
+        standards=STANDARDS_TYPES,
         views=(
             WorkflowView(
                 id="profile",

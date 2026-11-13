@@ -56,7 +56,9 @@ YAML_FILES = (
         "name followed by its indented text.",
     ),
 )
-REFERENCE_DOCS = (("bundled", "Installed with quartifyr"),)
+# "bundled" names the project's own org-reference.docx, which setup copies from quartifyr or
+# from the imported report template the study selected (#70); the Report card says which.
+REFERENCE_DOCS = (("bundled", "The project's org-reference.docx"),)
 
 
 @cache
@@ -149,7 +151,8 @@ class ReportEditor:
                 "reference_doc",
                 "Word styles",
                 REFERENCE_DOCS,
-                help="The reference DOCX that sets the report's styles.",
+                help="The reference DOCX that sets the report's styles: quartifyr's, or the "
+                "imported report template's the project was set up from (see the Report card).",
                 required=True,
             ),
         ]
