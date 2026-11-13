@@ -1,5 +1,6 @@
 """The home page in a real browser (#49, #50): rendering, origin, keyboard, axe, theme."""
 
+import time
 from pathlib import Path
 
 import pytest
@@ -266,6 +267,46 @@ def test_a_tool_opens_inside_the_launcher(page):
     assert page.locator("iframe.tool-frame").count() == 1
     assert page.evaluate("document.querySelector('iframe[title=toy]').contentWindow.kept") == 1
     _axe(page)
+    assert page.errors == []
+
+
+FRAME = "document.querySelector('iframe[title=toy]')"
+
+
+def test_a_tool_out_of_sight_says_it_is_hidden(page):
+    # #67: a kept frame tells its page it's hidden, as a background tab does, so a tool's
+    # polling (version history's Git status every 2 s) stops when another view is shown.
+    page.get_by_role("link", name="Open toy").click()
+    page.frame_locator('iframe[title="toy"]').get_by_text("toy", exact=True).wait_for()
+    assert page.evaluate(f"{FRAME}.contentDocument.visibilityState") == "visible"
+    page.evaluate(
+        f"""(() => {{
+          const doc = {FRAME}.contentDocument;
+          const seen = (doc.defaultView.seen = []);
+          doc.addEventListener("visibilitychange", () => seen.push(doc.visibilityState));
+        }})()"""
+    )
+    nav = page.get_by_role("navigation", name="Main")
+    nav.get_by_role("link", name="Home").click()
+    page.get_by_role("heading", level=1, name="Home").wait_for()
+    assert page.evaluate(f"{FRAME}.contentDocument.visibilityState") == "hidden"
+    assert page.evaluate(f"{FRAME}.contentDocument.hidden") is True
+    nav.locator('[data-app="toy"]').click()
+    page.get_by_role("heading", level=1, name="toy").wait_for()
+    assert page.evaluate(f"{FRAME}.contentDocument.visibilityState") == "visible"
+    assert page.evaluate(f"{FRAME}.contentWindow.seen") == ["hidden", "visible"]
+    # A reload while out of sight starts hidden too.
+    nav.get_by_role("link", name="Home").click()
+    page.get_by_role("heading", level=1, name="Home").wait_for()
+    page.evaluate(f"{FRAME}.contentWindow.location.reload()")
+    reloaded = (  # a new document (no "seen"), loaded, that says it is hidden
+        f"!{FRAME}.contentWindow.seen && {FRAME}.contentDocument.readyState === 'complete'"
+        f" && {FRAME}.contentDocument.visibilityState === 'hidden'"
+    )
+    deadline = time.monotonic() + 10
+    while not page.evaluate(reloaded):
+        assert time.monotonic() < deadline, "the reloaded frame never said it was hidden"
+        time.sleep(0.05)
     assert page.errors == []
 
 

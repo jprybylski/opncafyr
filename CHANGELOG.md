@@ -1148,6 +1148,23 @@ All notable changes to this project are documented here. The format follows
   `upstream-blocked` removed from #27.
 
 ### Fixed
+- **Slow use on Windows (#67).** On Windows every file open, folder walk and process start
+  costs far more than in a Linux container (endpoint security scans them), and two things
+  multiplied those costs during normal use:
+  - **Version history kept polling after you left it.** A tool's page stays loaded when
+    another view is shown, and the browser still called it visible, so once version
+    history was opened, Git ran every few seconds for the rest of the session (about a
+    second of Git and R work per check on a fast Windows PC). A tool page you can't see
+    now reports itself hidden, as a background browser tab does, and its polling stops.
+  - **Lists re-read every run.** The run, publication and publish lists (some polled
+    every few seconds) re-read and re-validated every manifest and re-hashed every file of
+    every completed run on each request. Unchanged documents are now read once
+    (`core.manifest.read_document`). The publish list reuses a run's last full hash check
+    while none of its files changed size or time. Publishing, report and deck builds,
+    sealing and **Check files** still hash every file. With 30 runs on Windows, the
+    publish list fell from 0.8 s to 0.08 s and the runs poll from 99 ms to 37 ms.
+  - `scripts/bench/interact.py` measures each operation's time and file and process
+    counts. Results and method: `docs/spikes/windows-runtime.md`.
 - Resolve local bundle and asset folders to absolute paths before staging, so a
   Windows offline install can launch the pinned R installer when given `--from-bundle .`.
   The offline guide also uses an absolute Windows bundle path for older installers.
