@@ -38,6 +38,7 @@ Deck (#33, ``deck.py``):
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, HTTPException
@@ -46,7 +47,7 @@ from pydantic import BaseModel, Field
 
 from opncafyr.adapters import quartifyr
 from opncafyr.core.artifacts import list_publications
-from opncafyr.workflows.nca.publish import curator, deck, report, sidecars
+from opncafyr.workflows.nca.publish import curator, deck, report, sidecars, templates
 
 if TYPE_CHECKING:
     from opncafyr.workflows.nca.api import Context
@@ -60,6 +61,7 @@ STATUS = {
     "publish_failed": 500,
     "bad_status": 422,
     "editor_failed": 503,
+    "standards_changed": 409,
 }
 
 
@@ -71,7 +73,13 @@ def failure(exc: curator.PublishError) -> HTTPException:
 
 
 def bundled_footnotes() -> sidecars.Footnotes:
+    """The footnote keys of the bundled template (ADR 0007)."""
     return sidecars.load_footnotes(quartifyr.standard_footnotes())
+
+
+def footnotes(root: Path) -> sidecars.Footnotes:
+    """The footnote keys for this study: the selected report template's, else bundled (#70)."""
+    return templates.footnotes_for(root)
 
 
 class PickBody(BaseModel):
@@ -93,7 +101,11 @@ def mount(app: FastAPI, ctx: Context) -> None:
     @app.get("/api/nca/outputs/check")
     def check_outputs() -> dict[str, Any]:
         root = ctx.workspace().root
-        files, findings = sidecars.check_outputs(root, bundled_footnotes())
+        try:
+            notes = footnotes(root)
+        except curator.PublishError as exc:
+            raise failure(exc) from None
+        files, findings = sidecars.check_outputs(root, notes)
         recorded = curator.recorded_paths(root)
         findings += [
             sidecars.Finding(
@@ -125,10 +137,8 @@ def mount(app: FastAPI, ctx: Context) -> None:
         )
         try:
             if body.dry_run:
-                return {"plan": curator.plan(root, picks, bundled_footnotes()).to_dict()}
-            doc = curator.publish(
-                root, picks, bundled_footnotes(), body.label, body.revises, context
-            )
+                return {"plan": curator.plan(root, picks, footnotes(root)).to_dict()}
+            doc = curator.publish(root, picks, footnotes(root), body.label, body.revises, context)
         except curator.PublishError as exc:
             raise failure(exc) from None
         return JSONResponse({"publication": doc}, status_code=201)

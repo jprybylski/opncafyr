@@ -1,9 +1,11 @@
 """The deck (PPTX) workflow: set up, edit, validate and build a deckifyr project (#33).
 
 ``deck/`` is a deckifyr project bound to one publication (``projects.py``):
-- **Setup** (``deck.init``). ``deckifyr init`` copies its bundled minimal deck into the
-  job's staging folder (never ``--from-repo``, ADR 0007). The review writes the "NCA
-  results" deck for the publication, the bundled ``standard_footnotes.yaml`` and the
+- **Setup** (``deck.init``). ``deckifyr init`` copies its bundled minimal deck, or the
+  imported deck template the study selected (``--from-dir`` on the verified snapshot, #70),
+  into the job's staging folder (never ``--from-repo``, ADR 0007). The review copies the
+  template's other files, writes the "NCA results" deck for the publication, the
+  ``standard_footnotes.yaml`` (the selected report template's, else the bundled one) and the
   ``OUTPUTS/`` copy, then binds it.
 - **Editor.** ``deckifyr serve`` on the project, under ``/apps/deckifyr/``. Quit, idle
   and stop save unsaved edits (``if_dirty: save``, #14). Builds started inside the editor
@@ -54,8 +56,9 @@ from opncafyr.core.jobmanager import (
 from opncafyr.core.manifest import atomic_write_json, atomic_write_text
 from opncafyr.core.provenance import base_tools
 from opncafyr.core.runtime import Runtime, RuntimeUnavailable
+from opncafyr.core.standards import Material
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
-from opncafyr.workflows.nca.publish import projects, sidecars
+from opncafyr.workflows.nca.publish import projects, sidecars, templates
 from opncafyr.workflows.nca.publish.curator import PublishError
 from opncafyr.workflows.nca.publish.report import CHECKS_DIR
 
@@ -105,11 +108,62 @@ def deck_items(publication: dict[str, Any]) -> list[D.DeckItem]:
     ]
 
 
-def write_presentation(project: Path, publication: dict[str, Any]) -> None:
+def write_presentation(
+    project: Path,
+    publication: dict[str, Any],
+    design: str | None = None,
+    layouts: str | None = None,
+) -> None:
+    """The NCA results deck. Without names, keep the design and layouts files the
+    project's current ``presentation.yaml`` names (the template it was set up from)."""
+    if design is None or layouts is None:
+        design, layouts = current_names(project)
     text = D.nca_results_presentation(
-        deck_items(publication), publication["publication_id"], publication.get("label")
+        deck_items(publication),
+        publication["publication_id"],
+        publication.get("label"),
+        design,
+        layouts,
     )
     atomic_write_text(project / D.PRESENTATION, text)
+
+
+def current_names(project: Path) -> tuple[str, str]:
+    """``(design, layouts)`` file names of the project's presentation, or the defaults."""
+    try:
+        doc = read_presentation(project)
+        design = doc["design"]["base"]
+        layouts = doc["layouts"]
+    except (PublishError, KeyError, TypeError):
+        return "design.yaml", "layouts.yaml"
+    names = (design, layouts)
+    if all(isinstance(n, str) and n and "/" not in n and (project / n).is_file() for n in names):
+        return design, layouts
+    return "design.yaml", "layouts.yaml"
+
+
+def apply_template(project: Path, material: Material | None) -> tuple[str, str]:
+    """After ``deckifyr init``: the design and layouts names, and the template's other files.
+
+    deckifyr copies only the design and layouts files of a template folder; the launcher
+    copies the template's other verified files (logos, images) beside them, never over a
+    file deckifyr wrote. Temporary until deckifyr's ``init --from-dir`` copies referenced
+    assets itself (see docs/upstream.md).
+    """
+    if material is None:
+        return "design.yaml", "layouts.yaml"
+    base, design, layouts = templates.deck_layout(material)
+    for rel, source in sorted(material.files.items()):
+        if not rel.startswith(base):
+            continue
+        name = rel[len(base) :]
+        if name in (D.PRESENTATION, design, layouts) or name.lower().endswith(".md"):
+            continue
+        target = project.joinpath(*name.split("/"))
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+    return design, layouts
 
 
 def read_presentation(project: Path) -> dict[str, Any]:
@@ -230,15 +284,28 @@ class DeckService(projects.ProjectJobs):
             if project.exists():
                 self.refuse_if_unsaved(supervisor)
                 return {"binding": self._rebind(root, project, publication, sha, source)}
-            job_id = manager.submit(self._setup(root, publication, sha))
+            material = templates.deck_material(root)
+            footnotes = templates.footnotes_bytes(root)
+            job_id = manager.submit(self._setup(root, publication, sha, material, footnotes))
             self.jobs["setup"] = job_id
             return {"job_id": job_id}
 
-    def _setup(self, root: Path, publication: dict[str, Any], sha: str) -> JobRequest:
+    def _setup(
+        self,
+        root: Path,
+        publication: dict[str, Any],
+        sha: str,
+        material: Material | None = None,
+        footnotes: bytes | None = None,
+    ) -> JobRequest:
         def build(ctx: JobContext):
             assert ctx.staging is not None  # noqa: S101
             try:
-                return D.init_command(ctx.runtime, ctx.staging)
+                if material is None:
+                    return D.init_command(ctx.runtime, ctx.staging)
+                return D.init_command(
+                    ctx.runtime, ctx.staging, material.folder, material.native_type
+                )
             except RuntimeUnavailable as exc:
                 raise _prepare(exc) from None
 
@@ -251,15 +318,34 @@ class DeckService(projects.ProjectJobs):
             result = D.parse_cli(0, _log(ctx, "stdout.log"), "")
             if not result.ok:
                 return ReviewResult(False, result.message)
-            missing = [n for n in ("design.yaml", "layouts.yaml") if not (project / n).is_file()]
+            try:
+                used = templates.deck_material(root) if material is not None else None
+            except PublishError as exc:
+                return ReviewResult(False, exc.message)
+            if material is not None and (
+                used is None
+                or used.provenance["component_sha256"] != material.provenance["component_sha256"]
+            ):
+                return ReviewResult(False, "The selected deck template changed. Set up again.")
+            design, layouts = apply_template(project, used)
+            missing = [n for n in (design, layouts) if not (project / n).is_file()]
             if missing:
                 return ReviewResult(False, f"deckifyr init did not create {', '.join(missing)}.")
-            write_presentation(project, publication)
-            (project / D.FOOTNOTES).write_bytes(Q.standard_footnotes().read_bytes())
+            write_presentation(project, publication, design, layouts)
+            notes = footnotes if footnotes is not None else Q.standard_footnotes().read_bytes()
+            (project / D.FOOTNOTES).write_bytes(notes)
             projects.sync_outputs(root, project, publication)
             generated = {rel: runs_core.sha256_file(project / rel) for rel in GENERATED}
             projects.write_binding(
-                root, projects.binding(TOOL, PROJECT, publication["publication_id"], sha, generated)
+                root,
+                projects.binding(
+                    TOOL,
+                    PROJECT,
+                    publication["publication_id"],
+                    sha,
+                    generated,
+                    standards=used.provenance if used is not None else None,
+                ),
             )
             return ReviewResult(True)
 
@@ -294,7 +380,14 @@ class DeckService(projects.ProjectJobs):
             write_presentation(project, publication)
             new_generated = {rel: runs_core.sha256_file(project / rel) for rel in GENERATED}
         projects.sync_outputs(root, project, publication)
-        doc = projects.binding(TOOL, PROJECT, publication["publication_id"], sha, new_generated)
+        doc = projects.binding(
+            TOOL,
+            PROJECT,
+            publication["publication_id"],
+            sha,
+            new_generated,
+            standards=(current or {}).get("standards"),
+        )
         projects.write_binding(root, doc)
         return doc
 
@@ -481,6 +574,7 @@ class DeckService(projects.ProjectJobs):
                     "path": "build-result.json",
                     "sha256": runs_core.sha256_file(staging / "build-result.json"),
                 },
+                standards=(projects.read_binding(root, TOOL) or {}).get("standards"),
             )
             atomic_write_json(staging / "build.json", doc, projects.BUILD_SCHEMA)
             shutil.rmtree(ctx.cwd)  # the build copy; only the outputs and records are kept
@@ -501,6 +595,7 @@ class DeckService(projects.ProjectJobs):
 
     def status(self, manager: JobManager | None, supervisor: Any, root: Path) -> dict[str, Any]:
         out = self.base_status(manager, root)
+        out["template"] = templates.summary(root, templates.DECK_TEMPLATE, out["binding"])
         out["editor"] = (
             str(supervisor.state(APP))
             if supervisor is not None and APP in supervisor.tools

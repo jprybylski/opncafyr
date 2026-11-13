@@ -98,3 +98,13 @@ def test_child_output_is_redacted_in_its_log(tmp_path, redactor):
     assert f"loaded subject {REDACTED}\n" in text
     assert f"{REDACTED},{REDACTED},12.5\n" in text
     assert not [i for i in ids if i in text]
+
+
+def test_credentials_in_urls_are_redacted():
+    from opncafyr.core.redaction import Redactor
+
+    text = "fetch https://user:ghp_secret123@ghe.example.org/org/r.git failed"
+    out = Redactor().redact(text)
+    assert "ghp_secret123" not in out and "user:" not in out
+    assert "https://‹redacted›@ghe.example.org/org/r.git" in out
+    assert Redactor().redact("see https://github.com/org/r") == "see https://github.com/org/r"

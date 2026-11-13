@@ -31,6 +31,8 @@ from typing import Any
 
 REDACTED = "‹redacted›"
 _SECRET_PARAMS = re.compile(r"(?i)\b((?:token|secret|session|api_token)=)[^&\s\"']+")
+# A user name or token in a URL (https://user:token@host/…), as a Git source could carry (#70).
+_URL_USERINFO = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/@\s\"']+@")
 
 
 class Redactor:
@@ -70,6 +72,7 @@ class Redactor:
 
     def redact(self, text: str) -> str:
         text = _SECRET_PARAMS.sub(lambda m: m.group(1) + REDACTED, text)
+        text = _URL_USERINFO.sub(lambda m: m.group(1) + REDACTED + "@", text)
         pattern = self._pattern
         if pattern is not None:
             text = pattern.sub(REDACTED, text)

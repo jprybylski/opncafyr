@@ -35,8 +35,22 @@ def mode(root: Path, name: str) -> str:
     return path.read_text("utf-8").strip() if path.exists() else "ok"
 
 
-def init(folder: Path) -> int:
+def init(root: Path, folder: Path, rest: list[str]) -> int:
     folder.mkdir(parents=True, exist_ok=True)
+    (root / "init-args.json").write_text(json.dumps(rest), "utf-8")
+    if "--from-dir" in rest:
+        # Like deckifyr: copy the design and layouts the template's presentation names.
+        import shutil
+
+        source = Path(rest[rest.index("--from-dir") + 1])
+        if "--type" in rest:
+            source = source / "templates" / rest[rest.index("--type") + 1]
+        doc = yaml.safe_load((source / "presentation.yaml").read_text("utf-8"))
+        names = [doc["design"]["base"], doc["layouts"]]
+        for name in names:
+            shutil.copyfile(source / name, folder / name)
+        (folder / "presentation.yaml").write_text("deckifyr: '0.1'\nslides: []\n", "utf-8")
+        return ok(directory=str(folder), created=[*names, "presentation.yaml"])
     (folder / "design.yaml").write_text("deckifyr: '0.1'\n", "utf-8")
     (folder / "layouts.yaml").write_text("deckifyr: '0.1'\nlayouts: {blank: {}}\n", "utf-8")
     (folder / "presentation.yaml").write_text("deckifyr: '0.1'\nslides: []\n", "utf-8")
@@ -129,7 +143,7 @@ def main() -> int:
     assert argv[:5] == ["-I", "-m", "deckifyr", "--json", argv[4]], argv
     command, rest = argv[4], argv[5:]
     if command == "init":
-        return init(Path(rest[0]))
+        return init(root, Path(rest[0]), rest[1:])
     if command == "validate":
         return validate(root, Path(rest[0]))
     if command == "build":

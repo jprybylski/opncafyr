@@ -145,8 +145,10 @@ def binding(
     publication_sha: str,
     generated: dict[str, str],
     settings: dict[str, Any] | None = None,
+    standards: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    """A binding. ``standards`` is the imported template the project was set up from (#70)."""
+    doc = {
         "schema_version": 1,
         "tool": tool,
         "project": project,
@@ -156,6 +158,9 @@ def binding(
         "settings": settings or {},
         "updated_at": now(),
     }
+    if standards is not None:
+        doc["standards"] = standards
+    return doc
 
 
 def write_binding(root: Path, doc: dict[str, Any]) -> None:
@@ -237,6 +242,7 @@ def build_manifest(
     outputs: list[dict[str, Any]],
     warnings: list[dict[str, Any]],
     tool_result: dict[str, str],
+    standards: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     doc = {
         "schema_version": 1,
@@ -262,6 +268,8 @@ def build_manifest(
         "warnings": warnings,
         "tool_result": tool_result,
     }
+    if standards is not None:
+        doc["standards"] = standards
     validate(doc, BUILD_SCHEMA)
     return doc
 

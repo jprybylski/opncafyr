@@ -157,10 +157,27 @@ def cli_command(runtime: Runtime, command: str, *args: str, trusted: bool = True
     return CommandSpec(argv, env, list(dict.fromkeys(path_dirs)))
 
 
-def init_command(runtime: Runtime, folder: Path) -> CommandSpec:
-    # The bundled minimal deck (never --from-repo, ADR 0007); --force because the job's
-    # staging folder already holds its owner marker.
-    return cli_command(runtime, "init", str(folder), "--force", trusted=False)
+def init_command(
+    runtime: Runtime,
+    folder: Path,
+    from_dir: Path | None = None,
+    template_type: str | None = None,
+) -> CommandSpec:
+    """``deckifyr init``: the bundled minimal deck, or a verified local template folder.
+
+    ``from_dir`` is an imported template snapshot (#70, ADR 0011), already verified by the
+    launcher; ``template_type`` picks ``templates/<type>/`` in a typed source. Never
+    ``--from-repo``: Git sources are fetched by the launcher's pinned Git, not by deckifyr.
+    ``--force`` because the job's staging folder already holds its owner marker.
+    """
+    args = [str(folder), "--force"]
+    if from_dir is not None:
+        args += ["--from-dir", str(from_dir)]
+        if template_type is not None:
+            args += ["--type", template_type]
+    elif template_type is not None:
+        raise ValueError("A template type needs a template folder.")
+    return cli_command(runtime, "init", *args, trusted=False)
 
 
 def validate_command(runtime: Runtime, presentation: Path) -> CommandSpec:
@@ -254,10 +271,17 @@ def _slide_id(n: int, item: DeckItem) -> str:
     return f"s{n:02d}-{'table' if item.kind == 'table' else 'figure'}"
 
 
-def nca_results_presentation(items: list[DeckItem], publication_id: str, label: str | None) -> str:
+def nca_results_presentation(
+    items: list[DeckItem],
+    publication_id: str,
+    label: str | None,
+    design: str = "design.yaml",
+    layouts: str = "layouts.yaml",
+) -> str:
     """``presentation.yaml`` of the "NCA results" deck: a title slide, one slide per item.
 
-    It uses the layouts of deckifyr's bundled minimal deck (``blank``, ``title-content``).
+    It uses the layouts ``blank`` and ``title-content`` of deckifyr's bundled minimal deck, or
+    of an imported deck template (#70), whose design and layouts files it names.
     Tables and figures are ``{rpfy}:`` references, so their footers come from the sidecars.
     A manifest is always written, because a build is judged by it.
     """
@@ -308,8 +332,8 @@ def nca_results_presentation(items: list[DeckItem], publication_id: str, label: 
         )
     doc = {
         "deckifyr": "0.1",
-        "design": {"base": "design.yaml"},
-        "layouts": "layouts.yaml",
+        "design": {"base": design},
+        "layouts": layouts,
         "metadata": {"title": title, "author": "opncafyr", "status": "draft"},
         "build": {
             "strict": True,
