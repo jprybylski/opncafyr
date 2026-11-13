@@ -10,14 +10,13 @@ returned to the page. Symlinked entries are skipped.
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 from typing import Any
 
 from jsonschema import ValidationError
 
-from opncafyr.core.manifest import validate
+from opncafyr.core.manifest import read_document
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
 from opncafyr.paths import WORKSPACE_META_DIR
 
@@ -51,16 +50,18 @@ def _entries(root: Path, relative: str) -> list[Path]:
 
 
 def _read(root: Path, relative: str, schema: str) -> dict[str, Any] | None:
-    """The validated document at ``relative``, or None if it is missing or invalid."""
+    """The validated document at ``relative``, or None if it is missing or invalid.
+
+    Read again only when the file changed (``core.manifest.read_document``): the pages
+    poll these lists, and re-reading every manifest each time was the cost (#67).
+    """
     try:
         path = resolve_in_root(root, relative)
-        if not path.is_file() or path.stat().st_size > MAX_DOCUMENT_BYTES:
+        if not path.is_file():
             return None
-        document = json.loads(path.read_text("utf-8"))
-        validate(document, schema)
+        return read_document(path, schema, max_bytes=MAX_DOCUMENT_BYTES)[0]
     except (WorkspaceAccessError, OSError, ValueError, ValidationError):
         return None
-    return document
 
 
 def list_runs(root: Path) -> list[dict[str, Any]]:

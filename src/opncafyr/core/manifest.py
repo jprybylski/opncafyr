@@ -1,10 +1,24 @@
-"""Schema-validated, atomically written JSON documents (manifests, workspace.json)."""
+"""Schema-validated, atomically written JSON documents (manifests, workspace.json).
+
+``read_document`` keeps each validated document in memory and reads the file again only
+when its size, modification time or file ID changes (#67). The home page lists runs and
+publications again and again, and on Windows every file open is far more expensive than
+in a Linux container (endpoint security scans files as they are opened), so re-reading
+unchanged manifests made each poll and view slower as a study grew. Every write here is a
+rename (``atomic_write_bytes``), which gives the file a new ID and time, and an ordinary
+edit changes the time, so a changed document is always read again. Integrity checks of a
+run's files still hash them (``core.runs.verify_run``).
+"""
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 import os
 import tempfile
+import threading
+from collections import OrderedDict
 from functools import cache
 from importlib import resources
 from pathlib import Path
@@ -24,11 +38,73 @@ def load_schema(name: str) -> dict[str, Any]:
     return schema
 
 
-def validate(document: Any, schema_name: str) -> None:
-    """Raise ``jsonschema.ValidationError`` if ``document`` does not match the schema."""
+@cache
+def _validator(schema_name: str) -> Any:
+    """One validator per schema: building one resolves every ``$ref`` again."""
     from jsonschema import Draft202012Validator
 
-    Draft202012Validator(load_schema(schema_name)).validate(document)
+    return Draft202012Validator(load_schema(schema_name))
+
+
+def validate(document: Any, schema_name: str) -> None:
+    """Raise ``jsonschema.ValidationError`` if ``document`` does not match the schema."""
+    _validator(schema_name).validate(document)
+
+
+# --- validated documents, read once while unchanged (#67) -------------------------------
+
+_DOC_CACHE_MAX = 4096
+_doc_cache: OrderedDict[tuple[str, str], tuple[tuple[int, ...], Any, str]] = OrderedDict()
+_doc_lock = threading.Lock()
+
+
+def file_signature(st: os.stat_result) -> tuple[int, ...]:
+    """What changes whenever a file's content does: size, mtime, and (POSIX) ID and ctime.
+
+    On Windows ``st_ctime`` is the creation time and ``os.scandir`` leaves ``st_ino`` at 0,
+    so only size and mtime are used there.
+    """
+    if os.name == "nt":
+        return (st.st_size, st.st_mtime_ns)
+    return (st.st_size, st.st_mtime_ns, st.st_ino, st.st_ctime_ns)
+
+
+def read_document(
+    path: str | Path, schema_name: str, *, max_bytes: int | None = None
+) -> tuple[Any, str]:
+    """The validated JSON document at ``path`` and the SHA-256 of its bytes.
+
+    Raises ``OSError`` (missing, unreadable), ``ValueError`` (not JSON, or larger than
+    ``max_bytes``) or ``jsonschema.ValidationError``. While the file is unchanged, a call
+    costs one ``stat`` and returns a copy of the document read before.
+    """
+    key = (os.fspath(path), schema_name)
+    signature = file_signature(os.stat(path))
+    with _doc_lock:
+        hit = _doc_cache.get(key)
+        if hit is not None and hit[0] == signature:
+            _doc_cache.move_to_end(key)
+            return copy.deepcopy(hit[1]), hit[2]
+    with open(path, "rb") as fh:
+        # The signature of what is read, so a change during the read is seen next time.
+        signature = file_signature(os.fstat(fh.fileno()))
+        if max_bytes is not None and signature[0] > max_bytes:
+            raise ValueError("document too large")
+        data = fh.read()
+    document = json.loads(data.decode("utf-8"))
+    validate(document, schema_name)
+    digest = hashlib.sha256(data).hexdigest()
+    with _doc_lock:
+        _doc_cache[key] = (signature, document, digest)
+        _doc_cache.move_to_end(key)
+        while len(_doc_cache) > _DOC_CACHE_MAX:
+            _doc_cache.popitem(last=False)
+    return copy.deepcopy(document), digest
+
+
+def clear_document_cache() -> None:
+    with _doc_lock:
+        _doc_cache.clear()
 
 
 def schema_problems(document: Any, schema: dict[str, Any], label: str) -> list[str]:

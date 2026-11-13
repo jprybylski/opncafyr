@@ -39,7 +39,7 @@ from opncafyr import __version__
 from opncafyr.core import runs as runs_core
 from opncafyr.core.artifacts import PUBLICATIONS_DIR, list_runs
 from opncafyr.core.jobs import JobState
-from opncafyr.core.manifest import atomic_write_json, validate
+from opncafyr.core.manifest import atomic_write_json, read_document
 from opncafyr.core.provenance import base_tools
 from opncafyr.core.workspace import resolve_in_root
 from opncafyr.workflows.nca.publish import sidecars
@@ -121,13 +121,17 @@ class Plan:
 # --- eligibility ---------------------------------------------------------------------------
 
 
-def eligibility(folder: Path, manifest: dict[str, Any]) -> str | None:
-    """Why a run can't be published, or None if it can."""
+def eligibility(folder: Path, manifest: dict[str, Any], *, reuse: bool = False) -> str | None:
+    """Why a run can't be published, or None if it can.
+
+    ``reuse`` is for the list of runs only: an unchanged sealed run isn't hashed again
+    (``verify_run``). Publishing itself always hashes every file.
+    """
     if manifest["state"] != JobState.COMPLETED:
         return f"Only completed runs can be published; this one is {manifest['state']}."
     if (manifest.get("replay") or {}).get("status") != "passed":
         return "The run's replay didn't pass."
-    report = runs_core.verify_run(folder)
+    report = runs_core.verify_run(folder, reuse=reuse)
     if not report["ok"]:
         return "The run's files no longer match their recorded hashes (Check files)."
     return None
@@ -157,12 +161,12 @@ def publishable_runs(root: Path) -> list[dict[str, Any]]:
         except runs_core.RunError as exc:
             out.append({**row, "publishable": False, "reason": exc.message, "artifacts": []})
             continue
-        why = eligibility(folder, manifest)
+        why = eligibility(folder, manifest, reuse=True)
         offered = catalog(manifest) if why is None else []
         if why is None and not offered:
             why = "The run saved no tables or figures to publish."
         row["replay"] = (manifest.get("replay") or {}).get("status")
-        row["manifest_sha256"] = runs_core.sha256_file(folder / runs_core.MANIFEST)
+        row["manifest_sha256"] = runs_core.manifest_sha256(folder)
         row["publishable"] = why is None
         row["reason"] = why
         row["artifacts"] = [e.to_dict() for e in offered]
@@ -489,8 +493,7 @@ def read_publication(root: Path, publication_id: str) -> dict[str, Any]:
     if path.is_symlink() or not path.is_file():
         raise PublishError("not_found", "There is no such publication.")
     try:
-        doc = json.loads(path.read_text("utf-8"))
-        validate(doc, SCHEMA)
+        doc = read_document(path, SCHEMA)[0]  # read again only if it changed (#67)
     except (OSError, ValueError, ValidationError):
         raise PublishError("invalid", f"Publication {publication_id} is not valid.") from None
     if doc["publication_id"] != publication_id:

@@ -3,6 +3,12 @@
 // same-origin iframe, created on first visit and kept while other views are shown, so
 // unsaved work in a tool survives a trip to Home. The sidebar lists every web app.
 // Nothing here names a tool: ids, names and routes come from /api/tools and /api/apps.
+//
+// A kept frame the user can't see reports itself hidden (#67), as a page in a background
+// browser tab does: tools pause their polling on "visibilitychange". The browser alone
+// says such a frame is visible, so a tool opened once kept polling for the rest of the
+// session; version history asks Git for the status every 2 s, which on Windows took about
+// a second of Git and R work each time.
 
 import { $, appBadge, appStateWord, el, on, relativeRoute } from "./dom.js";
 import { route } from "./router.js";
@@ -41,6 +47,29 @@ function renderNav() {
   $("nav-apps-heading").hidden = !list.length;
 }
 
+// Make a frame's document say it is hidden (or give it the browser's answer back) and tell
+// its scripts. Same-origin frames only; a page that can't be reached is left alone.
+function reportVisibility(frame) {
+  let doc;
+  try {
+    doc = frame.contentDocument;
+  } catch (e) {
+    return;
+  }
+  if (!doc) return;
+  const hidden = frame.hidden;
+  const overridden = Object.prototype.hasOwnProperty.call(doc, "visibilityState");
+  if (hidden === overridden) return; // already says so
+  if (hidden) {
+    Object.defineProperty(doc, "visibilityState", { configurable: true, get: () => "hidden" });
+    Object.defineProperty(doc, "hidden", { configurable: true, get: () => true });
+  } else {
+    delete doc.visibilityState;
+    delete doc.hidden;
+  }
+  doc.dispatchEvent(new Event("visibilitychange"));
+}
+
 function frameFor(app) {
   let frame = frames.get(app.id);
   if (!frame) {
@@ -48,6 +77,8 @@ function frameFor(app) {
     frame.title = app.name;
     frame.src = relativeRoute(app.route);
     frame.dataset.app = app.id;
+    // A reload brings a new document, which starts out "visible".
+    frame.addEventListener("load", () => reportVisibility(frame));
     frames.set(app.id, frame);
     $("tool-frames").append(frame);
   }
@@ -61,7 +92,14 @@ function note(text) {
 
 function renderView() {
   const id = currentId();
-  if (id === null) return;
+  if (id === null) {
+    // Another view: every kept frame is out of sight (and stays loaded).
+    for (const frame of frames.values()) {
+      frame.hidden = true;
+      reportVisibility(frame);
+    }
+    return;
+  }
   const app = apps ? apps.get(id) : undefined;
   const name = app ? app.name : id;
   $("tool-heading").textContent = name;
@@ -80,7 +118,10 @@ function renderView() {
     shown = frameFor(app);
   } else if (app.state === "starting") note(`${name} is starting. It opens here when it is ready.`);
   else note(`${name} is not running.`);
-  for (const frame of frames.values()) frame.hidden = frame !== shown;
+  for (const frame of frames.values()) {
+    frame.hidden = frame !== shown;
+    reportVisibility(frame);
+  }
   $("tool-reload").disabled = !shown;
 }
 
