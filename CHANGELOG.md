@@ -7,6 +7,24 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Tutorials: walkthroughs that point at the app while you work** (#69, ADR 0010). A new
+  **Tutorials** page lists the example **Your first analysis** (import, mapping, one exact
+  analyte, run review, publication) and the study's own `tutorials/*.yaml`. A docked,
+  non-modal panel gives each step's directions, rings the control to use (a guidance target)
+  and opens the step's page.
+  - **Controls.** Next waits for a read-only condition when a step names one, and Skip always
+    works. The panel also has Back, Pause/Resume and Exit tutorial (Escape).
+  - **A missing control** gets an explanation, **Look again** and **Continue without
+    highlight**.
+  - **The tutorial never acts.** The engine (`web/static/js/tutorial.js`) only reads tutorial
+    files and writes the user's own place. A test checks it calls nothing but `api/tutorials*`
+    and never clicks, submits or sets a value.
+  - **Progress** is per user in `<state>/tutorial-progress.json` (`tutorial-progress-v1`), with
+    the tutorial's hash and step id and no study path or data. It survives a reload or a new
+    launch.
+  - The format (`tutorial-v1`) allows plain text and a view, target and condition from the
+    catalog, nothing else. Examples are copied into the study to edit and never overwrite a
+    file.
 - **Study profiles: follow a team's steps for a kind of study** (#68, ADR 0010). A new
   **Study profile** page follows a YAML file in the study's `profiles/` folder. It lists
   instructions, checklists, **Go to …** actions with hints, review checkpoints, run slots and a

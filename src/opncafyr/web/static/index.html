@@ -64,6 +64,7 @@
         <li><a class="nav-link" href="#/jobs" data-view="jobs" data-target="shell.nav.jobs" title="Jobs"><svg class="icon" aria-hidden="true"><use href="#i-jobs"/></svg><span class="nav-label">Jobs</span><span class="count" id="nav-jobs-count" hidden></span></a></li>
         <li><a class="nav-link" href="#/settings" data-view="settings" data-target="shell.nav.settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-label">Settings</span></a></li>
         <li><a class="nav-link" href="#/guide" data-view="guide" data-target="shell.nav.guide" title="Guide"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span class="nav-label">Guide</span></a></li>
+        <li><a class="nav-link" href="#/tutorials" data-view="tutorials" data-target="shell.nav.tutorials" title="Tutorials"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span class="nav-label">Tutorials</span></a></li>
       </ul>
       <p class="nav-heading" id="nav-apps-heading" hidden>Apps</p>
       <ul id="nav-apps" aria-labelledby="nav-apps-heading" hidden></ul>
@@ -231,6 +232,17 @@
         </div>
       </div>
 
+      <!-- Tutorials (#69): walkthroughs that point at controls; the user does every step. -->
+      <div class="view" id="view-tutorials" data-title="Tutorials" hidden>
+        <div class="page-head"><h1 id="tutorials-heading" tabindex="-1">Tutorials</h1><p>A tutorial points at each part of the app and tells you what to do there. You do every step yourself: a tutorial never clicks, chooses, runs or publishes anything, and finishing one does not validate an analysis. <a href="#/guide/tutorials">How to write a tutorial</a>.</p></div>
+        <section class="card" aria-labelledby="tutorials-list-heading">
+          <div class="card-head"><h2 id="tutorials-list-heading">Available tutorials</h2><span class="aside"><button type="button" class="btn btn-ghost btn-sm" id="tutorials-refresh">Check again</button></span></div>
+          <div id="tutorials-list" class="card-body tutorial-list"></div>
+          <p id="tutorials-status" class="status card-status" role="status" aria-live="polite"></p>
+          <div class="card-body"><button type="button" class="btn btn-ghost btn-sm" id="tutorials-reset-all">Reset all tutorial progress</button></div>
+        </section>
+      </div>
+
       <!-- Settings -->
       <div class="view" id="view-settings" data-title="Settings" hidden>
         <div class="page-head"><h1 id="settings-heading" tabindex="-1">Settings</h1></div>
@@ -269,6 +281,28 @@
       </div>
     </main>
   </div>
+
+  <!-- The current tutorial step (#69). Not modal: the page stays usable around it. -->
+  <aside id="tutorial-panel" class="tutorial-panel" aria-labelledby="tutorial-step-title" hidden>
+    <p class="eyebrow" id="tutorial-name"></p>
+    <h2 id="tutorial-step-title" tabindex="-1" aria-describedby="tutorial-text tutorial-note"></h2>
+    <p id="tutorial-count" class="muted"></p>
+    <p id="tutorial-text"></p>
+    <p id="tutorial-note" class="tutorial-note" role="status" aria-live="polite"></p>
+    <div class="actions" id="tutorial-recover" hidden>
+      <button type="button" class="btn btn-sm" id="tutorial-retry">Look again</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="tutorial-nohighlight">Continue without highlight</button>
+    </div>
+    <div class="actions" id="tutorial-steps">
+      <button type="button" class="btn btn-sm" id="tutorial-back">Back</button>
+      <button type="button" class="btn btn-primary btn-sm" id="tutorial-next">Next</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="tutorial-skip">Skip</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="tutorial-pause">Pause</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="tutorial-exit">Exit tutorial</button>
+    </div>
+  </aside>
 
   <dialog id="jobs-dialog" aria-labelledby="jobs-title">
     <h2 id="jobs-title">Jobs are still running</h2>

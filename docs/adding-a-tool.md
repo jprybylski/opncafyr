@@ -410,6 +410,21 @@ view's `icon` must be one of the symbols the home page already has: `home`, `job
 `settings`, `folder`, `info`, `sun`, `doc` or `table`. A view with
 `requires_workspace=True` shows its link only while a study folder is open.
 
+Guidance (ADR 0010): tutorials and study profiles can point at a pack's controls and wait
+for its milestones only through ids the pack declares.
+
+- **Targets.** Mark each control or card with `data-target="<pack>.<area>.<name>"`, using
+  `markTarget(node, id)` or `section(..., target)` in the NCA helpers. Declare it in
+  `WorkflowPack.targets` as a `GuideTarget(id, title, view)`.
+- **Conditions.** Declare each milestone in `WorkflowPack.conditions` as a `GuideCondition`.
+  Register it in the page with `registerCondition(id, () => …)` from `../../js/guidance.js`.
+  The function reads the page's own state only: no fetch, no post, no event. Call
+  `notifyGuidance()` when that state changes.
+- **Example tutorials.** A pack may ship examples in `tutorials = (package, folder)`.
+
+`tests/test_guidance.py` fails if a declared id is not marked on the page, and a removed
+id fails users' files with a clear problem rather than silently.
+
 Where outputs go: a tool's own results go in a top-level study folder the workflow names
 (like `report/` and `deck/`) or in a run under `.opncafyr/`. `OUTPUTS/` is reserved for
 published files (docs/publishing.md). New folders need no workspace schema change; a

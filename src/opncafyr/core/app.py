@@ -77,6 +77,9 @@ from opncafyr.core.security import (
 )
 from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
 from opncafyr.core.support_api import mount_support_api
+from opncafyr.core.tutorials import PROGRESS_FILE as TUTORIAL_PROGRESS_FILE
+from opncafyr.core.tutorials import Tutorials
+from opncafyr.core.tutorials_api import mount_tutorials_api
 from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
 from opncafyr.core.workspace_api import Picker, mount_workspace_api
 from opncafyr.core.workspace_lease import WorkspaceLease
@@ -187,6 +190,7 @@ def create_app(
     editors: dict[str, Any] | None = None,
     workspace: Path | None = None,
     container_image: str | None = None,
+    tutorial_progress: Path | None = None,
 ) -> FastAPI:
     """Build the controller app.
 
@@ -469,6 +473,16 @@ def create_app(
     mount_runs_api(app)
     mount_project_files_api(app, project_files)
     mount_support_api(app, packs)
+    mount_tutorials_api(
+        app,
+        Tutorials(
+            packs,
+            guidance,
+            tutorial_progress
+            if tutorial_progress is not None
+            else state_dir() / TUTORIAL_PROGRESS_FILE,
+        ),
+    )
 
     @app.get("/api/workflows")
     def workflow_views() -> dict[str, Any]:

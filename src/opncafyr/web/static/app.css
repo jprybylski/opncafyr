@@ -722,3 +722,22 @@ dialog.support-dialog { max-width: min(56rem, calc(100vw - 2rem)); width: 100%; 
 .files-new-form input, .files-new-form select { font: inherit; padding: var(--space-1) var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); min-width: 0; width: 100%; }
 .files-new-form .btn { justify-self: start; margin-top: var(--space-1); }
 .files-new-form .files-meta { padding: 0; }
+
+/* Tutorials (#69): a docked, non-modal panel and a ring on the control it points at. */
+.tutorial-panel { position: fixed; right: var(--space-4); bottom: var(--space-4); z-index: 30; width: min(24rem, calc(100vw - 2 * var(--space-4))); max-height: 60vh; overflow: auto; display: grid; gap: var(--space-2); padding: var(--space-4); background: var(--surface); color: var(--fg); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: var(--shadow-lg); }
+.tutorial-panel[hidden] { display: none; }
+.tutorial-panel h2 { margin: 0; font-size: var(--text-lg); }
+.tutorial-panel p { margin: 0; }
+.tutorial-panel .tutorial-note:empty { display: none; }
+.tutorial-panel .tutorial-note { font-size: var(--text-sm); color: var(--warn); }
+.tutorial-panel.paused h2, .tutorial-panel.paused #tutorial-text, .tutorial-panel.paused #tutorial-steps, .tutorial-panel.paused #tutorial-recover { display: none; }
+.tutorial-target { outline: 3px solid var(--accent); outline-offset: 3px; }
+.tutorial-list { display: grid; gap: var(--space-3); }
+.tutorial-list ul { margin: 0; padding-left: 1.2em; font-size: var(--text-sm); }
+@media (max-width: 40rem) {
+  .tutorial-panel { left: var(--space-2); right: var(--space-2); bottom: var(--space-2); width: auto; max-height: 45vh; }
+}
+@media (forced-colors: active) {
+  .tutorial-target { outline-color: Highlight; }
+  .tutorial-panel { border: 2px solid CanvasText; }
+}

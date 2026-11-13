@@ -98,8 +98,6 @@ def test_unknown_references_are_named_by_place_not_value():
 def test_every_declared_target_and_condition_is_marked_in_the_page():
     core = _texts(CORE_STATIC)
     for target in SHELL_TARGETS:
-        if target.id == "shell.nav.tutorials":
-            continue  # the tutorials link is added with the tutorial view (#69)
         assert f'"{target.id}"' in core, f"{target.id} is not marked in web/static"
     for condition in SHELL_CONDITIONS:
         assert f'registerCondition("{condition.id}"' in core, condition.id

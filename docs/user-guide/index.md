@@ -18,16 +18,17 @@ This guide shows how to install opncafyr, set up a study folder, clean and map a
 9. [PowerPoint decks](decks.md)
 10. [Version history (optional)](version-history.md)
 11. [Study profiles (optional)](study-profiles.md)
-12. [Two-analyte walkthrough](walkthrough.md)
-13. [Troubleshooting and getting help](troubleshooting.md)
-14. [Uninstalling](uninstall.md)
+12. [Tutorials](tutorials.md)
+13. [Two-analyte walkthrough](walkthrough.md)
+14. [Troubleshooting and getting help](troubleshooting.md)
+15. [Uninstalling](uninstall.md)
 
 ## How the app is laid out
 
 The app opens in your web browser, but it runs only on your computer. Nothing you load into it leaves the computer.
 
-- The left side has **Home**, **Data**, **Jobs**, **Analysis**, **Publish**, **Settings** and **Guide**, and **Study profile** and **Version history** while a study folder is open. Under **Apps** it lists the tools that have their own screens, such as opnca-r and deckifyr.
+- The left side has **Home**, **Data**, **Jobs**, **Analysis**, **Publish**, **Settings**, **Guide** and **Tutorials**, and **Study profile** and **Version history** while a study folder is open. Under **Apps** it lists the tools that have their own screens, such as opnca-r and deckifyr.
 - The top bar shows the open study folder, how many jobs are running, a **Theme** button and **Quit**.
 - Every page carries the research-use notice.
 
-If you are new to the app, start with the [Two-analyte walkthrough](walkthrough.md). It uses a small practice file and takes you from an empty folder to a report and a deck.
+If you are new to the app, take the **Your first analysis** tutorial (see [Tutorials](tutorials.md)), or start with the [Two-analyte walkthrough](walkthrough.md). It uses a small practice file and takes you from an empty folder to a report and a deck.

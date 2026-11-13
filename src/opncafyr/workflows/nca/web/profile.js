@@ -118,7 +118,7 @@ export function init(container) {
         }
       }, "btn btn-sm");
       copy.disabled = have.has(ex.name);
-      copy.setAttribute("aria-label", `Copy the example ${ex.title || ex.name} into this study`);
+      if (!have.has(ex.name)) copy.setAttribute("aria-label", `Copy the example ${ex.title || ex.name} into this study`);
       item.append(copy);
       examples.append(item);
     }

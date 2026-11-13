@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/tutorial-progress-v1",
+  "title": "Tutorial progress",
+  "description": "Where the user is in each tutorial (#69), in the app's per-user state folder. Browser storage would be lost every launch (ADR 0006 amendment). Holds tutorial keys, hashes and step ids only: no study path, file content or data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "active", "tutorials"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "active": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/key" }],
+      "description": "The tutorial open now (shown or paused), or null."
+    },
+    "tutorials": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/key" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version", "sha256", "step", "paused", "updated_at"],
+        "properties": {
+          "id": { "$ref": "#/$defs/name" },
+          "version": { "type": "string", "maxLength": 32 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "step": { "$ref": "#/$defs/name" },
+          "paused": { "type": "boolean" },
+          "finished": { "type": "boolean" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "key": {
+      "type": "string",
+      "pattern": "^(example/[a-z][a-z0-9_-]{0,31}|study)/[a-z][a-z0-9-]{0,63}\\.yaml$",
+      "description": "example/<pack>/<file> for a shipped tutorial, study/<file> for one in the study's tutorials/ folder."
+    }
+  }
+}
