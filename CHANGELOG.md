@@ -21,10 +21,11 @@ All notable changes to this project are documented here. The format follows
     settings and compares each parameter against a stated tolerance. There are two worked
     examples on the practice file, using numbers from real runs (R 4.6.2, opnca-r 0.3.3,
     PKNCA 0.12.1).
-  - **Investigating differences.** The guide shows how settings that weren't aligned
-    explained some differences, which then went away. It records the rest as open
-    discrepancies with their evidence: where AUC starts with a pre-dose sample, a measured
-    0 as Clast, and terminal points before Tmax. A test keeps the in-app and website
+  - **Investigating differences.** Every difference traced to a setting or definition
+    that can be aligned (the Tmax rule, where AUC starts with a pre-dose sample, a
+    measured 0, and terminal samples before Tmax under opnca-r's unticked **Exclude Tmax
+    and earlier**). The guide shows each alignment, checked by re-running, and the script
+    reads the run's Tmax setting from `manifest.json`. A test keeps the in-app and website
     scripts identical.
   - Dark-mode code comments on the website now meet 4.5:1 contrast.
 - **Tutorials: walkthroughs that point at the app while you work** (#69, ADR 0010). A new

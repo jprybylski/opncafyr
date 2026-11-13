@@ -176,9 +176,11 @@ Save this as `compare-pknca.R` and run it with the working directory set to the 
 # Run it with the working directory set to a review copy of the run folder, which holds
 #   input/analysis.csv                 the rows the run analysed
 #   results/opnca-parameters-long.csv  the run's saved parameters
+#   manifest.json                      the run's record, with its settings
 library(PKNCA)
 
 rows <- read.csv("input/analysis.csv", stringsAsFactors = FALSE)
+settings <- jsonlite::fromJSON("manifest.json")$nca_settings$effective_settings
 
 # 1. The same reviewed rows: leave out what the run excluded or recorded as missing.
 rows <- rows[!rows$NCA_EXCLUDED & !rows$NCA_MISSING, ]
@@ -200,7 +202,9 @@ intervals <- data.frame(
 options <- list(
   auc.method = "lin up/log down",  # integration: linear up, log down
   conc.blq = list(first = "keep", middle = "drop", last = "drop"),
-  allow.tmax.in.half.life = TRUE   # the run's terminal rule may use the Tmax sample
+  # opnca-r's "Exclude Tmax and earlier": unticked lets the Tmax sample (and earlier
+  # ones) into the terminal phase. PKNCA can allow Tmax, never earlier samples.
+  allow.tmax.in.half.life = !isTRUE(settings$terminal$exclude_tmax)
 )
 res <- as.data.frame(pk.nca(PKNCAdata(conc, dose, intervals = intervals,
                                       options = options)))
@@ -237,13 +241,13 @@ cat("\nTo investigate:\n")
 print(both[grepl("^differs", both$result), ], row.names = FALSE, digits = 7)
 ```
 
-The script follows the practice runs' settings. Before you use it on another run, check each numbered step against that run's `manifest.json` (`nca_settings`, `analysis_units`, the route) and change what differs. Parameters the run saved that PKNCA doesn't name here are listed as "not compared", never forced into a match.
+The script follows the practice runs' settings, and reads the terminal-phase setting from the run's `manifest.json` (`nca_settings.effective_settings`). Before you use it on another run, check each numbered step against that run's `manifest.json` (`nca_settings`, `analysis_units`, the route) and change what differs. Parameters the run saved that PKNCA doesn't name here are listed as "not compared", never forced into a match.
 
 The tolerance, a relative difference of `1e-6`, is a choice: two programs that apply the same formulas in double precision usually agree to about `1e-12`, so `1e-6` leaves room for rounding but not for a different method. State the tolerance you use in your record.
 
 ### Example A: a straightforward profile (PARENT)
 
-**First attempt, PKNCA's default terminal rule.** Without the line `allow.tmax.in.half.life = TRUE`, subject `TA-001` gives:
+**First attempt, PKNCA's default terminal rule.** With `allow.tmax.in.half.life` left at PKNCA's default (`FALSE`), subject `TA-001` gives:
 
 | Parameter | opnca-r | PKNCA | Relative difference |
 |---|---|---|---|
@@ -251,9 +255,9 @@ The tolerance, a relative difference of `1e-6`, is a choice: two programs that a
 | t½ (h) | 7.04744 | 7.08766 | 5.7e-3 |
 | AUCinf (ng·h/mL) | 2601.23 | 2602.79 | 6.0e-4 |
 
-Cmax, Tmax, Clast, Tlast and AUClast agreed. Only the terminal phase differs, so look at which samples each program used. PKNCA, by default, never uses the Tmax sample for λz: here it used 3 samples from 3.93 h. The run's terminal rule may include the Tmax sample, and the best fit used 4 samples from 2.05 h, the Tmax. That is a setting that wasn't aligned, not a defect.
+Cmax, Tmax, Clast, Tlast and AUClast agreed. Only the terminal phase differs, so look at which samples each program used. PKNCA, by default, never uses the Tmax sample for λz: here it used 3 samples from 3.93 h. The run was made with opnca-r's **Exclude Tmax and earlier** unticked (`exclude_tmax: false` in `manifest.json`), so its terminal phase may include the Tmax sample, and the best fit used 4 samples from 2.05 h, the Tmax. That is a setting that wasn't aligned, not a defect.
 
-**Aligned.** With the line in place, every parameter of `TA-001` agrees:
+**Aligned.** With `allow.tmax.in.half.life` set from the run's setting, as in the script, every parameter of `TA-001` agrees:
 
 | Parameter | opnca-r | PKNCA | Relative difference |
 |---|---|---|---|
@@ -293,7 +297,7 @@ METAB has the practice file's harder profiles: results reported as `<LLOQ`, a co
 
 The 13 rows to investigate fall into three groups.
 
-**Subject `TA-003`: BLQ after the first samples.** Its results from 1.93 h on are `<LLOQ`. Under the run's rules both programs leave them out, so both use the two measurable samples. AUClast still differs: 3.740978 (opnca-r) against 3.439728 (PKNCA). The cause is the same as PARENT `TA-003`, below.
+**Subject `TA-003`: BLQ after the first samples.** Its results from 1.93 h on are `<LLOQ`. Under the run's rules both programs leave them out, so both use the two measurable samples. AUClast still differs: 3.740978 (opnca-r) against 3.439728 (PKNCA). The cause is the same as PARENT `TA-003`, below, and so is the way to align it.
 
 **Subject `TA-005`: a measured 0.** Its 24.05 h result is `0` with no BLQ flag; the checks raised this as a warning ("conc zero not blq"), and the walkthrough acknowledges it.
 
@@ -303,9 +307,11 @@ The 13 rows to investigate fall into three groups.
 | Tlast (h) | 24.05 | 11.9333 |
 | AUClast (ng·h/mL) | 800.377 | 529.315 |
 
-PKNCA takes Clast as the last concentration above zero; opnca-r took the measured 0 as the last concentration. The AUClast difference, 271.06, is exactly the area of the straight line from 44.742 at 11.93 h down to 0 at 24.05 h. Whether that 0 is a real measurement or an unflagged BLQ result is a question about the data. If it is BLQ, fix the mapping or cleaning and make a new run; the BLQ rules then apply to it.
+PKNCA takes Clast as the last concentration above zero; opnca-r took the measured 0 as the last concentration. The AUClast difference, 271.06, is exactly the area of the straight line from 44.742 at 11.93 h down to 0 at 24.05 h. Whether that 0 is a real measurement or an unflagged BLQ result is a question about the data. If it is BLQ, flag it as BLQ in the mapping or cleaning and make a new run: the run's BLQ rules then leave it out, and opnca-r gives the same Clast, Tlast and AUClast as PKNCA. We checked this by running the same analysis with that one sample flagged.
 
-**Subjects `TA-002`, `TA-004` and `TA-007`: two samples after Tmax.** For each, PKNCA reports no λz, t½ or AUCinf ("Too few points for half-life calculation"): from Tmax on there are only 2 samples, and it needs 3. opnca-r reports a λz for each. Fitting the candidate samples by hand shows which it used: for `TA-002`, λz = 0.101924 1/h is the fit to the last 3 samples, from 3.98 h, while Tmax is at 7.92 h. So the fit includes a sample before Tmax. `TA-004` and `TA-007` show the same pattern. Conventional terminal-phase rules, including PKNCA's, use only samples from Tmax on.
+**Subjects `TA-002`, `TA-004` and `TA-007`: two samples after Tmax.** For each, PKNCA reports no λz, t½ or AUCinf ("Too few points for half-life calculation"): from Tmax on there are only 2 samples, and it needs 3. opnca-r reports a λz for each. Fitting the candidate samples by hand shows which it used: for `TA-002`, λz = 0.101924 1/h is the fit to the last 3 samples, from 3.98 h, while Tmax is at 7.92 h. So the fit includes a sample before Tmax. `TA-004` and `TA-007` show the same pattern.
+
+That is the run's setting at work: with **Exclude Tmax and earlier** unticked, opnca-r may use Tmax and earlier samples. PKNCA's nearest option, `allow.tmax.in.half.life = TRUE`, admits the Tmax sample but never an earlier one, so for these three profiles no PKNCA setting reproduces this run. To compare the terminal phase like for like, compare a run made with **Exclude Tmax and earlier** ticked (in opnca-r's terminal-phase settings) against PKNCA's default: the script then sets `allow.tmax.in.half.life = FALSE` by itself. We checked that pairing by running the same analysis with that setting: every λz and t½ then agreed, for both analytes, and so did every AUCinf except PARENT `TA-003`'s, which differs only by its AUC start (below).
 
 ### Investigating a difference
 
@@ -319,9 +325,9 @@ Work through these in order, and stop at the first that explains it. Only call a
 6. **Units.** The same units for concentration, time and dose, and the same units in the output.
 7. **Versions.** The R, opnca-r and PKNCA versions, and the run's own settings in `manifest.json`.
 
-For PARENT `TA-003`, step 3 explains it. Its pre-dose sample is at −0.25 h (the checks raised this as a warning, "time negative", which the walkthrough acknowledges) and its first measurable sample (99.313 ng/mL) at 0.4833 h. Integrating by hand gives AUClast = 1809.804250 from −0.25 h, which is opnca-r's value, and 1797.390125 from 0 h, which is PKNCA's. Both programs used the same samples; they start the area at different times.
+For PARENT `TA-003`, step 3 explains it. Its pre-dose sample is at −0.25 h (the checks raised this as a warning, "time negative", which the walkthrough acknowledges) and its first measurable sample (99.313 ng/mL) at 0.4833 h. Integrating by hand gives AUClast = 1809.804250 from −0.25 h, which is opnca-r's value, and 1797.390125 from 0 h, which is PKNCA's. Both programs used the same samples; they start the area at different times. To align them, start PKNCA's interval at each subject's first sample time when that is before the dose (an `intervals` table with a `USUBJID` column and `start = pmin(first sample time, 0)`): AUClast and AUCinf then agree. PKNCA then reports Tmax and Tlast from the interval start, so they read 0.25 h later than opnca-r's, which count from the dose.
 
-Of all the differences above, two came from settings that weren't aligned (the Tmax rule and the start imputation) and disappeared once they were. Three remain, each traced to a definition the two programs apply differently: where AUC starts when the pre-dose sample is before the dose, whether a measured 0 is Clast, and whether a sample before Tmax may enter the terminal phase. Record each one as an open discrepancy, with the evidence above, and decide with the analysis plan which definition the study needs. A comparison like this one never shows that two programs are equivalent in general: only that, for these rows and settings, they agree where the table says so.
+Every difference above came from a setting or a definition that can be aligned: the Tmax rule, where the profile starts, how a pre-dose sample before the dose counts, whether a measured 0 is BLQ, and whether samples before Tmax may enter the terminal phase. With all of them aligned, every compared value agreed, apart from the 0.25 h by which PKNCA's Tmax and Tlast for `TA-003` are counted from the earlier interval start. Record in your review which settings you aligned and how, and which definition the analysis plan calls for. A difference you can't align with any setting is an open discrepancy: record it with its evidence and raise it. A comparison like this one never shows that two programs are equivalent in general: only that, for these rows and settings, they agree where the table says so.
 
 ## 7. Record the review
 

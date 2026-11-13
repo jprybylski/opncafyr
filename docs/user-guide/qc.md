@@ -98,9 +98,11 @@ PKNCA is an independent R package for NCA, available from CRAN. A comparison mea
 # Run it with the working directory set to a review copy of the run folder, which holds
 #   input/analysis.csv                 the rows the run analysed
 #   results/opnca-parameters-long.csv  the run's saved parameters
+#   manifest.json                      the run's record, with its settings
 library(PKNCA)
 
 rows <- read.csv("input/analysis.csv", stringsAsFactors = FALSE)
+settings <- jsonlite::fromJSON("manifest.json")$nca_settings$effective_settings
 
 # 1. The same reviewed rows: leave out what the run excluded or recorded as missing.
 rows <- rows[!rows$NCA_EXCLUDED & !rows$NCA_MISSING, ]
@@ -122,7 +124,9 @@ intervals <- data.frame(
 options <- list(
   auc.method = "lin up/log down",  # integration: linear up, log down
   conc.blq = list(first = "keep", middle = "drop", last = "drop"),
-  allow.tmax.in.half.life = TRUE   # the run's terminal rule may use the Tmax sample
+  # opnca-r's "Exclude Tmax and earlier": unticked lets the Tmax sample (and earlier
+  # ones) into the terminal phase. PKNCA can allow Tmax, never earlier samples.
+  allow.tmax.in.half.life = !isTRUE(settings$terminal$exclude_tmax)
 )
 res <- as.data.frame(pk.nca(PKNCAdata(conc, dose, intervals = intervals,
                                       options = options)))
@@ -161,7 +165,13 @@ print(both[grepl("^differs", both$result), ], row.names = FALSE, digits = 7)
 
 The script follows the practice file's runs. Check each numbered step against your run's `manifest.json` and change what differs. Parameters PKNCA doesn't name here are "not compared", never forced into a match.
 
-On the practice file's PARENT run (R 4.6.2, opnca-r 0.3.3, PKNCA 0.12.1), 70 values agreed to about `1e-15`. Without `allow.tmax.in.half.life = TRUE`, λz differed for several subjects by up to 0.6%: a setting that wasn't aligned, not a defect. Some differences remain, each traced to a definition the two programs apply differently: where AUC starts when the pre-dose sample is before the dose (subject `TA-003`), whether a measured 0 with no BLQ flag is Clast (METAB `TA-005`), and whether a sample before Tmax may enter the terminal phase (METAB `TA-002`, `TA-004`, `TA-007`). The website's QC guide works through each.
+On the practice file's PARENT run (R 4.6.2, opnca-r 0.3.3, PKNCA 0.12.1), 70 values agreed to about `1e-15`. With PKNCA's default terminal rule, λz differed for several subjects by up to 0.6%: the run had opnca-r's **Exclude Tmax and earlier** unticked, so its terminal phase may use the Tmax sample. The script sets PKNCA's rule from the run's `manifest.json`. The other differences also came from settings or definitions that can be aligned, and agreed once they were:
+
+- **AUC start** (subject `TA-003`): its pre-dose sample is before the dose; start PKNCA's interval at that sample's time. PKNCA then reports Tmax and Tlast from the interval start.
+- **A measured 0 with no BLQ flag** (METAB `TA-005`): if it is BLQ, flag it in the mapping or cleaning and make a new run.
+- **Samples before Tmax** (METAB `TA-002`, `TA-004`, `TA-007`): with **Exclude Tmax and earlier** unticked, opnca-r may also use samples before Tmax, which no PKNCA setting does. Compare a run made with the box ticked against PKNCA's default.
+
+The website's QC guide works through each.
 
 ## Investigating a difference
 
@@ -175,7 +185,7 @@ Stop at the first step that explains it, and only call a result a defect once th
 6. **Units:** for concentration, time, dose and the output.
 7. **Versions:** R, opnca-r and PKNCA, and the run's settings.
 
-Record what remains as an open discrepancy, and decide with the analysis plan which definition the study needs. A comparison never shows that two programs are equivalent in general.
+Record the settings you aligned and the definition the analysis plan calls for. A difference no setting aligns is an open discrepancy: record it with its evidence and raise it. A comparison never shows that two programs are equivalent in general.
 
 ## Record the review
 
