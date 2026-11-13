@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **QC guide: how to review a completed run** (#71). A new website guide, **Reviewing a
+  run (QC)**, and a matching in-app chapter, so offline users have it too. It separates
+  what each check can show: data and choices, replay, source review, independent
+  comparison, and report assembly.
+  - **Procedure.** Start from one exact run ID and **Check files**; what to record from
+    `manifest.json`; how to read `replay.json` (`passed`/`failed`, `rtol`,
+    `not_reproduced`). It also covers traceable source (a clone at a commit, or a copied
+    folder with fingerprints), a conventional code review with a sample record, and
+    running `analysis.R` on a review copy in RStudio. The guide ends with a QC record
+    template.
+  - **PKNCA comparison.** A runnable script that gives PKNCA the run's own rows and
+    settings and compares each parameter against a stated tolerance. There are two worked
+    examples on the practice file, using numbers from real runs (R 4.6.2, opnca-r 0.3.3,
+    PKNCA 0.12.1).
+  - **Investigating differences.** The guide shows how settings that weren't aligned
+    explained some differences, which then went away. It records the rest as open
+    discrepancies with their evidence: where AUC starts with a pre-dose sample, a measured
+    0 as Clast, and terminal points before Tmax. A test keeps the in-app and website
+    scripts identical.
+  - Dark-mode code comments on the website now meet 4.5:1 contrast.
 - **Tutorials: walkthroughs that point at the app while you work** (#69, ADR 0010). A new
   **Tutorials** page lists the example **Your first analysis** (import, mapping, one exact
   analyte, run review, publication) and the study's own `tutorials/*.yaml`. A docked,

@@ -13,6 +13,7 @@ This guide shows how to install opncafyr, set up a study folder, clean and map a
 4. [Event records and files without an analyte](event-records.md)
 5. [Mapping columns and running checks](mapping-and-checks.md)
 6. [Analyte runs in opnca-r](analyte-runs.md)
+   - [Reviewing a run (QC)](qc.md)
 7. [Publishing tables and figures](publishing.md)
 8. [Word reports](reports.md)
 9. [PowerPoint decks](decks.md)

@@ -61,7 +61,7 @@ Run IDs look like `20261107T220451Z-1106`: the date and time the run was made (U
 | `analysis.R` | the script that reproduces the results; its header says "Research use only" | opnca-r, when you save |
 | `analysis-record.json`, `artifacts.json`, `COMPLETE` | opnca-r's record of the analysis (with the unit labels it used), its list of saved files with a description of each, and its "save finished" marker | opnca-r |
 | `results/` | the result tables (CSV), their formatted copies in `results/tables/` (`.rds`), and `results/figures/` | opnca-r |
-| `logs/replay-<n>/` | each replay's report and replayed tables; the report lists any table opnca-r says its script doesn't reproduce, which isn't compared | the app |
+| `logs/replay-<n>/` | each replay's report and replayed tables; the report lists any table opnca-r says its script doesn't reproduce, which isn't compared (see [Reviewing a run]({{ '/guides/qc/' | relative_url }}#2-read-the-replay-correctly)) | the app |
 | `manifest.json` | the run's record: state, inputs, choices (with the units and `analysis_units`), tool versions, replay and, once completed, the fingerprint of every file | the app |
 
 The input files and `settings.json` are read-only from the start. When you select **Confirm and complete**, every file in the run is recorded with its fingerprint and made read-only. **Check files** on the **Analysis** page compares them with the record.

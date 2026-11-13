@@ -86,7 +86,7 @@ A run whose records are damaged shows as **Incomplete** on **Home**, and never a
 When opnca-r saves a run, the app checks the saved files, then *replays* the run: it runs the saved analysis script again, on its own copy of the frozen data, and compares every result table with the saved one. If they match, you select **Confirm and complete**. If they do not, the app lists the differences, and the run cannot be completed or published.
 
 {: .note }
-> A matching replay shows that the saved script reproduces the saved numbers. It does not show that the analysis choices were right.
+> A matching replay shows that the saved script reproduces the saved numbers. It does not show that the analysis choices were right. [Reviewing a run (QC)]({{ '/guides/qc/' | relative_url }}) covers the other checks.
 
 ### Sealing
 
@@ -130,6 +130,7 @@ Cleaning, checks, replays, report renders and deck builds run as jobs. A job tha
 
 ## Related pages
 
+- [Reviewing a run (QC)]({{ '/guides/qc/' | relative_url }}): how a reviewer checks a completed run and records the evidence.
 - [Cleaning, BLQ and units]({{ '/guides/cleaning/' | relative_url }})
 - [Publish tables and figures]({{ '/guides/publishing/' | relative_url }})
 - [Build reports and decks]({{ '/guides/reports-and-decks/' | relative_url }})

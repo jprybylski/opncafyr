@@ -331,4 +331,9 @@ details {
     .m, .mi, .mf, .mh, .mo, .il { color: $ocf-warn; }
     .o, .p, .err { color: $ocf-fg; }
   }
+} @else {
+  // OneDark's comment grey is 2.8:1 on the dark code background; use the muted text colour.
+  .highlight {
+    .c, .c1, .cm, .cs, .cp { color: $ocf-muted; }
+  }
 }

@@ -90,7 +90,7 @@ Rejected-row log
 : The list of rows that a **Remove rows** step took out of the cleaned data, each with its source line number, the step and the reason. No row leaves the data without a line in this log.
 
 Replay
-: After opnca-r saves a run, the app runs the run's saved script (`analysis.R`) again on its own copy of the frozen rows and compares every result table with the saved one, except tables opnca-r says the script doesn't reproduce (such as bioequivalence tables), which the replay report lists. A matching replay shows the script reproduces the saved numbers; it does not show the analysis choices were right.
+: After opnca-r saves a run, the app runs the run's saved script (`analysis.R`) again on its own copy of the frozen rows and compares every result table with the saved one, except tables opnca-r says the script doesn't reproduce (such as bioequivalence tables), which the replay report lists. A matching replay shows the script reproduces the saved numbers; it does not show the analysis choices were right. See [Reviewing a run (QC)]({{ '/guides/qc/' | relative_url }}).
 
 Run
 : One analyte's analysis: a frozen copy of that analyte's rows, your mapping and BLQ choices, the warnings you acknowledged, and later opnca-r's script and results. Its state is **Preparing**, **Running**, **Reviewing**, **Completed** or **Failed**. A run whose records are damaged shows as **Incomplete**.

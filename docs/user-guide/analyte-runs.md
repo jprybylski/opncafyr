@@ -59,7 +59,7 @@ When the save is complete, opnca-r closes and the app checks the saved files. Go
 
 If the replay does not match, the app lists the differences. You can select **Replay again**. A run whose replay does not match cannot be completed or published.
 
-A matching replay shows that the saved script reproduces the saved numbers. It does not show that the analysis choices were right.
+A matching replay shows that the saved script reproduces the saved numbers. It does not show that the analysis choices were right. [Reviewing a run (QC)](qc.md) covers the other checks a reviewer can make.
 
 ![The Runs card with two completed runs, one for each analyte](images/07-runs.png)
 
