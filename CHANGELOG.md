@@ -979,6 +979,21 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- **After Quit, the tab says plainly that opncafyr has stopped** (#73). The working page
+  is replaced by a full page headed **opncafyr has stopped**, with the next step (start it
+  from the app shortcut). The old navigation, forms and tool links are made `inert` and
+  hidden, the title changes, focus moves to the heading, and no further request leaves the
+  tab, so no stale "Could not load…" errors appear. The page states only what the server
+  confirmed (jobs cancelled, this tab's editors saved, changes discarded).
+  - **Finishing work before quitting.** "Keep running and quit when finished" shows a band
+    under the top bar with the number of running jobs and each job's progress text, and
+    **Keep the app open** until the stop has started. A quit cancelled from another tab
+    clears the band; an abort that comes too late shows the stopped page.
+  - **Connection lost.** A request that gets no response, with no confirmed Quit, leads to
+    a separate **Connection to opncafyr was lost** page with **Check again**, never to
+    "has stopped". This also covers tabs that didn't press Quit.
+  - Cancelling a Quit dialog, going back to save, or a failed Quit request keeps the page
+    and says so. Both user guides describe the new pages.
 - Clarified how to build the installer payload from a source checkout before testing
   offline bundle creation, and distinguished the installer zip from a platform bundle.
 - opnca-r is pinned at 0.3.1, which releases opnca-r#32, #53 and #54 (0.3.0) and #56–#58

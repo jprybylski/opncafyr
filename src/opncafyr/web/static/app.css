@@ -546,6 +546,45 @@ td time { color: var(--muted); }
 @keyframes bar-slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
 .activity-full .job { grid-template-columns: minmax(0, 1fr); }
 
+/* ---- Quitting (#73) ----------------------------------------------------------- */
+
+/* Quit is accepted and waits for running work: a calm band under the header. */
+.quit-pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  border-left: 4px solid var(--info);
+}
+.quit-pending-text { flex: 1 1 20rem; min-width: 0; }
+.quit-pending h2 { margin: 0; font-size: var(--text-md); }
+.quit-pending p { margin: var(--space-1) 0 0; }
+.quit-pending-jobs { margin: var(--space-1) 0 0; padding-left: 1.2rem; color: var(--muted); font-size: var(--text-sm); }
+.quit-pending-jobs:empty { display: none; }
+.quit-pending-jobs li { overflow-wrap: anywhere; }
+
+/* The app has stopped or can't be reached: this replaces the whole working surface. */
+body.app-ended > :not(#end-view):not(.sprite) { display: none !important; }
+.end-view { flex: 1; display: grid; place-items: start center; padding: var(--space-6) var(--space-4); }
+.end-card {
+  width: 100%;
+  max-width: 36rem;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.end-card h1, .end-card h3 { margin: 0; font-size: var(--text-xl); }
+.end-card p { margin: 0; }
+.end-card .lede { font-size: var(--text-lg); }
+.end-notice { padding-top: var(--space-3); border-top: 1px solid var(--border); color: var(--muted); font-size: var(--text-sm); }
+
 /* ---- Empty state ----------------------------------------------------------- */
 
 .empty { display: grid; justify-items: center; gap: var(--space-2); text-align: center; padding: var(--space-6) var(--space-4); }

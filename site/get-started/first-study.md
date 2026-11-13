@@ -136,6 +136,11 @@ Uninstalling opncafyr never removes a study folder. A later install can open it 
 
 Select **Quit** in the top bar. If jobs are still running, the app asks whether to **Keep running and quit when finished**, **Cancel jobs and quit**, or **Don't quit**. If an editor has unsaved changes, it asks you to save or discard them.
 
+If you keep the jobs running, a band under the top bar says **Finishing work before quitting** and lists them. Select **Keep the app open** there if you change your mind.
+
+{: .expect }
+> When the app has stopped, the tab shows a page headed **opncafyr has stopped**. Nothing on the old page works any more. Close the tab, and start the app from its icon when you need it again.
+
 The app also closes itself after 30 minutes with no open page (you can change this on **Settings**). It never does so while a job is running or an editor has unsaved changes. Your work is in the study folder, so nothing is lost.
 
 ## Next step

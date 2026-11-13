@@ -128,13 +128,36 @@ def test_quit_saves_editor_text_first(editor, home):
     dialog = page.get_by_role("dialog", name="Unsaved changes")
     dialog.wait_for()
     dialog.get_by_role("button", name="Save and quit").click()
-    page.get_by_text("opncafyr has stopped").wait_for()
+    page.get_by_role("heading", level=1, name="opncafyr has stopped").wait_for()
     assert path.read_text("utf-8").endswith("Saved on quit.\n")
+    # The save is stated because this tab's editor confirmed it (#73).
+    assert page.locator("#end-detail").inner_text() == (
+        "Changes in this tab's editors were saved before quitting."
+    )
     for _ in range(100):
         if home.quits:
             break
         page.wait_for_timeout(100)
     assert home.quits == ["quit"]
+
+
+def test_going_back_to_save_keeps_the_page_and_the_text(editor, home):
+    page, path = editor
+    home.jobs.cancel(home.job_id)
+    area = page.get_by_role("textbox", name="Source of Report")
+    area.press("ControlOrMeta+End")
+    area.type("Not yet.\n")
+    page.get_by_role("button", name="Quit").click()
+    dialog = page.get_by_role("dialog", name="Unsaved changes")
+    dialog.get_by_role("button", name="Go back and save").click()
+    note = "Quit was cancelled. Your changes are still open."
+    page.locator("#app-status", has_text=note).wait_for()
+    assert page.locator("#end-view").is_hidden()
+    assert area.input_value().endswith("Not yet.\n")
+    assert path.read_text("utf-8") == report_text()
+    assert home.quits == []
+    # The only console error is the refused Quit (409) the browser logs.
+    assert [e for e in page.errors if "409" not in e] == []
 
 
 def test_editor_page_has_no_axe_violations(editor, request):

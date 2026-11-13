@@ -51,10 +51,19 @@
     <div class="statusline">
       <p id="jobs-live" class="status" role="status" aria-live="polite">Open a study folder to see its jobs.</p>
       <p id="app-status" class="status" role="status" aria-live="polite"></p>
-      <button type="button" class="btn btn-sm" id="keep-open" hidden>Keep the app open</button>
     </div>
   </div>
   </header>
+
+  <!-- Quit was accepted and waits for running work (#73). Abort works until the stop starts. -->
+  <section id="quit-pending" class="quit-pending" aria-labelledby="quit-pending-title" hidden>
+    <div class="quit-pending-text">
+      <h2 id="quit-pending-title">Finishing work before quitting</h2>
+      <p id="quit-pending-status" role="status" aria-live="polite"></p>
+      <ul id="quit-pending-jobs" class="quit-pending-jobs"></ul>
+    </div>
+    <button type="button" class="btn" id="keep-open">Keep the app open</button>
+  </section>
 
   <div class="shell">
     <nav class="sidenav" aria-label="Main">
@@ -303,6 +312,23 @@
       <button type="button" class="btn btn-ghost btn-sm" id="tutorial-exit">Exit tutorial</button>
     </div>
   </aside>
+
+  <!-- Replaces everything above once the app has stopped or can't be reached (#73). It is
+       in the page from the start, so showing it needs no request. -->
+  <main id="end-view" class="end-view" aria-labelledby="end-title" hidden>
+    <div class="end-card">
+      <p class="eyebrow">opncafyr Workspace</p>
+      <h1 id="end-title" tabindex="-1"></h1>
+      <p id="end-body" class="lede"></p>
+      <p id="end-next"></p>
+      <p id="end-detail" class="muted" hidden></p>
+      <p id="end-retry-status" class="status muted" role="status" aria-live="polite"></p>
+      <div class="actions" id="end-actions" hidden>
+        <button type="button" class="btn" id="end-retry">Check again</button>
+      </div>
+      <p class="end-notice" id="end-notice"></p>
+    </div>
+  </main>
 
   <dialog id="jobs-dialog" aria-labelledby="jobs-title">
     <h2 id="jobs-title">Jobs are still running</h2>

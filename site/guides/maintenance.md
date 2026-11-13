@@ -146,7 +146,7 @@ This removes `%LOCALAPPDATA%\opncafyr` and the Desktop and Start Menu shortcuts.
 > To see what would be removed without removing anything, add `--dry-run` to the command.
 
 {: .fix }
-> **"opncafyr is running. Quit it from its page first"** — select **Quit** in the app, wait for the page to say opncafyr has stopped, then run the command again.
+> **"opncafyr is running. Quit it from its page first"** — select **Quit** in the app, wait for the tab to show **opncafyr has stopped**, then run the command again.
 
 {: .fix }
 > **"A workspace is inside the app folder"** — a study folder you used is inside the app folder, which uninstalling would delete. Move that study folder somewhere else first.

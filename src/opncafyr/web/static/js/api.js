@@ -16,6 +16,47 @@ export class ApiError extends Error {
   }
 }
 
+// Thrown for any request after the app has stopped (#73): the tab shows the stopped page,
+// so callers have nothing to report.
+export class AppStoppedError extends Error {
+  constructor() {
+    super("opncafyr has stopped.");
+    this.stopped = true;
+  }
+}
+
+let stopped = false;
+let onNetworkFailure = null;
+
+// After this no request leaves the page.
+export function markStopped() {
+  stopped = true;
+}
+
+// `fn` hears every request that failed without a response (the launcher is gone or
+// unreachable), as opposed to an HTTP error.
+export function onConnectionFailure(fn) {
+  onNetworkFailure = fn;
+}
+
+async function request(url, init) {
+  if (stopped) throw new AppStoppedError();
+  try {
+    return await fetch(url, init);
+  } catch (e) {
+    if (stopped) throw new AppStoppedError();
+    onNetworkFailure?.(e);
+    throw e;
+  }
+}
+
+// One request that bypasses the hooks above: the lifecycle uses it to confirm a lost
+// connection, and the stopped page uses it for "Check again".
+export async function probe(url) {
+  const response = await fetch(url, { headers: { accept: "application/json" }, cache: "no-store" });
+  return parse(response);
+}
+
 async function parse(response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -29,12 +70,12 @@ async function parse(response) {
 }
 
 export async function getJSON(url) {
-  const response = await fetch(url, { headers: { accept: "application/json" }, cache: "no-store" });
+  const response = await request(url, { headers: { accept: "application/json" }, cache: "no-store" });
   return parse(response);
 }
 
 export async function send(method, url, body) {
-  const response = await fetch(url, {
+  const response = await request(url, {
     method,
     headers: { "content-type": "application/json", [SESSION_HEADER]: SESSION },
     body: JSON.stringify(body || {}),
@@ -48,6 +89,7 @@ export function post(url, body) {
 
 // For page unload: the request may outlive the page, and its result is ignored.
 export function postAndForget(url, body) {
+  if (stopped) return;
   try {
     fetch(url, {
       method: "POST",

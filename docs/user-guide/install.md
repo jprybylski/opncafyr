@@ -54,6 +54,7 @@ install.bat install --assets "<folder with the opnca-r files>"
 - Starting the app opens a new tab in your web browser with the **Home** page.
 - If the app is already running, starting it again opens the same app in a new tab.
 - To stop the app, select **Quit** in the top bar. If jobs are still running, the app asks whether to keep them running and quit when they finish, cancel them and quit, or not quit. If an editor has unsaved changes, it asks you to save or discard them.
+- Once the app has stopped, its tab shows **opncafyr has stopped** and nothing on it works any more. Close the tab; start the app from its icon to use it again.
 - The app also closes itself after a time with no open page. You can change this on the **Settings** page; see [The app closed by itself](troubleshooting.md#the-app-closed-by-itself).
 
 ## Updating
