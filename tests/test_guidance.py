@@ -143,7 +143,7 @@ def test_parse_accepts_a_valid_document():
         (b"\xff\xfe" + SECRET.encode("utf-16-le"), "not UTF-8"),
         (f"- {SECRET}\n".encode(), "YAML mapping"),
         (b'schema_version: "1.0"\ntheme: [unclosed\n', "line"),
-        (f'a: &x "{SECRET}"\nb: *x\n'.encode(), "aliases are not allowed"),
+        (f'a: &x "{SECRET}"\nb: *x\n'.encode(), "aliases (* and &) are not allowed"),
         (f'schema_version: "1.0"\ntheme: {SECRET}\n'.encode(), "/theme fails 'enum'"),
         (f'schema_version: "1.0"\n{SECRET}: 1\n'.encode(), "additionalProperties"),
     ],
@@ -203,3 +203,28 @@ def test_guidance_catalog_route(security, tmp_path):
     assert {"shell.workspace.pick", "nca.start.button", "shell.nav.publish"} <= ids
     assert {"nca.mapping.ready", "shell.workspace.open"} <= {c["id"] for c in body["conditions"]}
     assert "analysis" in body["views"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "version: 2026-11-31\n",  # a date that doesn't exist
+        "version: " + "9" * 5000 + "\n",  # beyond Python's int limit
+        "a: !!int abc\n",
+        "a: !!float abc\n",
+        "a: !!timestamp abc\n",
+        "a: " + "[" * 2000 + "\n",  # deep nesting
+        f"a: !foo!bar {SECRET}\n",  # an undefined tag handle
+        f'a: "\\q{SECRET}"\n',  # an unknown escape
+    ],
+)
+def test_odd_yaml_is_a_problem_never_a_crash(text):
+    doc, problems = parse_guidance(text.encode(), "settings-v1", "f.yaml")
+    assert doc is None and problems
+    assert not any(SECRET in p or "9999" in p or "abc" in p for p in problems), problems
+
+
+def test_values_are_read_as_text():
+    # A version label like 1.0 or 2026-11-12 stays text, so the schema decides.
+    doc, problems = parse_guidance(b"schema_version: 1.0\ntheme: dark\n", "settings-v1", "f.yaml")
+    assert problems == [] and doc["schema_version"] == "1.0"

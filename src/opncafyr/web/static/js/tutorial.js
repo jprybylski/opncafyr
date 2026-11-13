@@ -89,7 +89,7 @@ function refreshState() {
   if ($("tutorial-note").textContent !== note) $("tutorial-note").textContent = note;
 }
 
-function showStep(moveFocus = true) {
+function showStep(moveFocus = true, save = true) {
   const s = step();
   run.paused = false;
   panel().classList.remove("paused");
@@ -109,7 +109,7 @@ function showStep(moveFocus = true) {
   $("tutorial-skip").textContent = last ? "Skip and finish" : "Skip";
   panel().hidden = false;
   refreshState();
-  saveProgress();
+  if (save) saveProgress();
   // The router focuses a new view's heading when it shows it (view-changed); the step
   // heading takes focus after that, so keyboard and screen-reader users stay in the panel.
   if (moveFocus && navigating) run.focusAfterView = true;
@@ -164,17 +164,21 @@ function close(message) {
   back.focus();
 }
 
-// Open a tutorial at a step: its saved step if `resume`, else the first.
-async function start(key, { resume = false, paused = false } = {}) {
-  catalog = await guidanceCatalog();
+// Open a tutorial at a step: its saved step if `resume`, else the first. With
+// `onlyIfSame`, do nothing if the file is not the one the progress was saved for (a study
+// tutorial's key is its file name, which another study folder may also have).
+async function start(key, { resume = false, paused = false, onlyIfSame = false } = {}) {
   let found;
+  let saved;
   try {
+    catalog = await guidanceCatalog();
     found = await getJSON(`api/tutorials/file?key=${encodeURIComponent(key)}`);
+    saved = (await getJSON("api/tutorials")).progress.tutorials[key];
   } catch (e) {
     return listStatus(e.message, true);
   }
   if (found.problems.length) return listStatus(`This tutorial can't be used: ${found.problems.join("; ")}`, true);
-  const saved = (await getJSON("api/tutorials")).progress.tutorials[key];
+  if (onlyIfSame && (!saved || saved.sha256 !== found.sha256)) return;
   const ids = found.tutorial.steps.map((s) => s.id);
   let index = 0;
   let changed = false;
@@ -188,7 +192,7 @@ async function start(key, { resume = false, paused = false } = {}) {
   clearInterval(timer);
   timer = setInterval(refreshState, TICK_MS);
   if (paused) {
-    showStep(false);
+    showStep(false, false); // pause() saves; one save, so the order can't flip
     pause();
   } else {
     showStep();
@@ -274,6 +278,9 @@ async function refreshList() {
   } catch (e) {
     return listStatus(e.message, true);
   }
+  if (listing.progress.unreadable) {
+    listStatus("The saved tutorial progress can't be read. Reset all tutorial progress to start again.", true);
+  }
   const studyNames = new Set(listing.study.map((t) => t.key.split("/").pop()));
   list.replaceChildren();
   list.append(el("h3", "Examples"));
@@ -297,7 +304,11 @@ async function resumeActive() {
   if (!key) return;
   if (key.startsWith("study/") && !data.workspace_open) return; // wait for the folder
   const saved = data.progress.tutorials[key];
-  await start(key, { resume: true, paused: Boolean(saved && saved.paused) });
+  await start(key, {
+    resume: true,
+    paused: Boolean(saved && saved.paused),
+    onlyIfSame: key.startsWith("study/"),
+  });
 }
 
 export function initTutorials() {
@@ -335,7 +346,12 @@ export function initTutorials() {
       setTimeout(() => $("tutorial-step-title").focus(), 0); // after the router's own focus
     }
   });
-  on("workspace-changed", () => { refreshList(); resumeActive(); });
+  on("workspace-changed", () => {
+    // A study tutorial belongs to the folder it came from: close it, keeping its place.
+    if (run && run.key.startsWith("study/")) close("The study folder changed, so its tutorial was closed.");
+    refreshList();
+    resumeActive();
+  });
   refreshList();
   resumeActive();
 }

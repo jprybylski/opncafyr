@@ -50,7 +50,8 @@ nothing from elsewhere (ADR 0006). Workspace files hold data and options only.
    (`study-profile-v1`) are YAML that the user writes. They are read through
    `core.guidance.parse_guidance`, which:
    - caps the size at 256 kB;
-   - uses a `SafeLoader` with aliases refused;
+   - reads every value as text (a `BaseLoader`: no dates, numbers or tagged objects), with
+     aliases refused;
    - validates against a closed schema;
    - names problems by place and rule, never by value.
 

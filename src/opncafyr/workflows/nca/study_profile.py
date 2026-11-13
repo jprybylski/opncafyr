@@ -192,6 +192,8 @@ def read_state(root: Path) -> dict[str, Any]:
     try:
         doc = json.loads(path.read_text("utf-8"))
         validate(doc, STATE_SCHEMA)
+        if doc["selected"] is not None and doc["selected"] not in doc["profiles"]:
+            raise ValueError("the followed profile has no progress entry")
     except (OSError, ValueError, ValidationError) as exc:
         raise ProfileError(
             "state_invalid",
@@ -442,7 +444,13 @@ def status(root: Path, catalog: Catalog) -> dict[str, Any]:
     try:
         found, _ = _study_profile(root, name, catalog)
     except ProfileError as exc:
-        return {"selected": name, "missing": True, "message": exc.message, "progress": progress}
+        return {
+            "selected": name,
+            "unreadable": True,
+            "code": exc.code,
+            "message": exc.message,
+            "progress": progress,
+        }
     out: dict[str, Any] = {
         "selected": name,
         "path": f"{PROFILES_DIR}/{name}",
@@ -530,12 +538,39 @@ def candidates(root: Path, catalog: Catalog) -> dict[str, Any]:
     return {"runs": runs, "publications": pubs}
 
 
-def context_for(root: Path, catalog: Catalog, step_id: str, kind: str) -> dict[str, Any]:
+def context_for(
+    root: Path,
+    catalog: Catalog,
+    step_id: str,
+    kind: str,
+    run_ids: set[str] | None = None,
+) -> dict[str, Any]:
     """The ``workflow_context`` for a new run (``kind="run"``) or publication made for a
-    step of the followed profile, as adopted. The profile must be unchanged."""
+    step of the followed profile, as adopted. The profile must be unchanged.
+
+    A publication is recorded for a step only if its runs (``run_ids``) are exactly the
+    runs in the step's slots, every slot filled: a sealed record must not claim a step it
+    doesn't match.
+    """
     state, name, found, progress = _current(root, catalog)
     profile = _require_unchanged(found, progress)
-    _step(profile, step_id, kind)
+    step = _step(profile, step_id, kind)
+    if kind == "publication":
+        empty = [s for s in step["slots"] if s not in progress["slots"]]
+        if empty:
+            raise ProfileError(
+                "slots_empty", f"Fill these slots first: {', '.join(empty)}.", slots=empty
+            )
+        wanted = {progress["slots"][s]["run_id"] for s in step["slots"]}
+        if run_ids is None or set(run_ids) != wanted:
+            got = set(run_ids or ())
+            raise ProfileError(
+                "runs_differ",
+                "Choose files from exactly the runs in this step's slots to record it with "
+                "the publication, or choose None.",
+                missing=sorted(wanted - got),
+                extra=sorted(got - wanted),
+            )
     return {
         "profile_id": profile["id"],
         "profile_version": profile["version"],

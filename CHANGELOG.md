@@ -47,7 +47,8 @@ All notable changes to this project are documented here. The format follows
   cards carry `data-target` ids that core (`shell.*`) and the NCA pack (`nca.*`) declare.
   Pages register read-only milestone conditions, such as `nca.run.completed`.
   `GET /api/guidance` lists them, and a test checks that every declared id is on the page.
-  `core.guidance` reads user-written guidance files: a 256 kB cap, no YAML aliases, a closed
+  `core.guidance` reads user-written guidance files: a 256 kB cap, values read as text only
+  (no dates, numbers or tags), no YAML aliases, a closed
   schema, and problems named by place and rule, never by value.
 - **Native Linux install: Ubuntu 24.04, x86_64 and aarch64, no root, apt, compiler or
   container** (#65, ADR 0003 amended). It uses opnca-r 0.3.3, which publishes the Linux

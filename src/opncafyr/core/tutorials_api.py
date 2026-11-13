@@ -20,7 +20,13 @@ from pydantic import BaseModel, Field
 
 from opncafyr.core.tutorials import KEY_RE, TutorialError, Tutorials
 
-STATUS = {"not_found": 404, "no_workspace": 409, "invalid": 422, "exists": 409}
+STATUS = {
+    "not_found": 404,
+    "no_workspace": 409,
+    "invalid": 422,
+    "exists": 409,
+    "progress_invalid": 409,
+}
 KEY = KEY_RE.pattern
 
 
@@ -89,4 +95,4 @@ def mount_tutorials_api(app: FastAPI, tutorials: Tutorials) -> None:
 
     @app.delete("/api/tutorials/progress")
     def reset(key: str | None = Query(default=None, pattern=KEY)) -> dict[str, Any]:
-        return tutorials.reset(key)
+        return call(tutorials.reset, key)

@@ -310,9 +310,23 @@ def test_publication_records_the_profile_step_only_when_chosen(api, study):
         json={"items": picks(run_id, ["listing"]), "profile_step": "run-a"},
     )
     assert r.status_code == 422 and r.json()["detail"]["code"] == "bad_step"
+    # A publication step is recorded only for exactly the runs in the step's slots.
     r = api.post(
         "/api/nca/publications", json={"items": picks(run_id, ["listing"]), "profile_step": "pub"}
     )
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "slots_empty"
+    other, _ = completed_run(study, "Drug A", label="Period B")
+    api.put("/api/nca/profiles/current/slots/a", json={"run_id": run_id})
+    api.put("/api/nca/profiles/current/slots/b", json={"run_id": other})
+    r = api.post(
+        "/api/nca/publications", json={"items": picks(run_id, ["listing"]), "profile_step": "pub"}
+    )
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "runs_differ"
+    assert r.json()["detail"]["missing"] == [other]
+    pubs = api.get("/api/nca/publications").json()["publications"]
+    assert len(pubs) == 1  # only the plain one: the refused requests recorded nothing
+    items = picks(run_id, ["listing"]) + picks(other, ["summary"])
+    r = api.post("/api/nca/publications", json={"items": items, "profile_step": "pub"})
     assert r.status_code == 201, r.text
     doc = r.json()["publication"]
     sha = api.get("/api/nca/profiles").json()["current"]["sha256"]
@@ -381,7 +395,8 @@ def test_a_missing_profile_file_is_reported(api, study):
     api.post("/api/nca/profiles/select", json={"name": name})
     (study / "profiles" / name).unlink()
     current = api.get("/api/nca/profiles").json()["current"]
-    assert current["missing"] is True and current["selected"] == name
+    assert current["unreadable"] is True and current["code"] == "not_found"
+    assert current["selected"] == name
     r = api.put("/api/nca/profiles/current/steps/about", json={"done": True})
     assert r.status_code == 404
 
@@ -430,3 +445,13 @@ def test_start_run_passes_the_chosen_step_to_the_run(api, study, monkeypatch):
     assert seen[0] is None
     assert seen[1]["step_id"] == "run-a" and seen[1]["profile_path"] == "profiles/two-period.yaml"
     assert len(seen) == 2
+
+
+def test_a_progress_file_that_disagrees_with_itself_is_reported(api, study):
+    path = study / ".opncafyr" / "study-profile.json"
+    path.write_text(json.dumps({"schema_version": "1.0", "selected": "x.yaml", "profiles": {}}))
+    listed = api.get("/api/nca/profiles")
+    assert listed.status_code == 200  # the page still lists profiles and examples
+    assert listed.json()["current"]["error"]["code"] == "state_invalid"
+    r = api.put("/api/nca/profiles/current/steps/about", json={"done": True})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "state_invalid"

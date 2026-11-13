@@ -120,7 +120,9 @@ def mount(app: FastAPI, ctx: Context) -> None:
     def create_publication(body: PublishBody) -> Any:
         root = ctx.workspace().root
         picks = [curator.Pick(i.run_id, i.artifact) for i in body.items]
-        context = ctx.profile_context(body.profile_step, "publication")
+        context = ctx.profile_context(
+            body.profile_step, "publication", {i.run_id for i in body.items}
+        )
         try:
             if body.dry_run:
                 return {"plan": curator.plan(root, picks, bundled_footnotes()).to_dict()}

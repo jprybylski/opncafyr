@@ -28,6 +28,7 @@ from opncafyr.core.registry import GuideCondition, GuideTarget, WorkflowPack
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
 
 MAX_GUIDANCE_BYTES = 256_000
+MAX_GUIDANCE_FILES = 100  # per folder; more are not listed
 FILE_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}\.yaml$")
 SHELL = "shell"
 
@@ -139,29 +140,32 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+ALIAS_PROBLEM = "aliases (* and &) are not allowed"
+
+
 def _loader() -> type:
     import yaml
 
-    class NoAliasLoader(yaml.SafeLoader):
-        """``safe_load`` without anchors and aliases: a small file can't expand into a
-        huge document, and a guidance file has no use for them."""
+    class TextLoader(yaml.BaseLoader):
+        """YAML as plain text: every value is a string, list or mapping, never a date,
+        number or tagged object (guidance files hold text only, and a value such as
+        ``2026-11-31`` must not fail to convert). Anchors and aliases are refused, so a small
+        file can't expand into a huge document."""
 
         def compose_node(self, parent: Any, index: Any) -> Any:
             if self.check_event(yaml.AliasEvent):
                 event = self.peek_event()
-                raise yaml.composer.ComposerError(
-                    None, None, "aliases are not allowed", event.start_mark
-                )
+                raise yaml.composer.ComposerError(None, None, ALIAS_PROBLEM, event.start_mark)
             return super().compose_node(parent, index)
 
-    return NoAliasLoader
+    return TextLoader
 
 
 def parse_guidance(data: bytes, schema_name: str, label: str) -> tuple[Any, list[str]]:
     """Parse and validate one guidance file. Returns ``(document or None, problems)``.
 
-    Problems name the line or the place in the document and the rule broken. They never
-    quote the file's text: a user may have typed anything into it.
+    Problems name the line or the place in the document and the rule broken, in fixed
+    words. They never quote the file's text: a user may have typed anything into it.
     """
     import yaml
 
@@ -172,12 +176,18 @@ def parse_guidance(data: bytes, schema_name: str, label: str) -> tuple[Any, list
     except UnicodeDecodeError:
         return None, [f"{label} is not UTF-8 text"]
     try:
-        doc = yaml.load(text, Loader=_loader())  # noqa: S506 - SafeLoader subclass
+        doc = yaml.load(text, Loader=_loader())  # noqa: S506 - BaseLoader: text only
     except yaml.YAMLError as exc:
         mark = getattr(exc, "problem_mark", None)
         where = f" on line {mark.line + 1}" if mark is not None else ""
-        problem = getattr(exc, "problem", None) or "it is not valid YAML"
+        problem = (
+            ALIAS_PROBLEM
+            if getattr(exc, "problem", None) == ALIAS_PROBLEM
+            else ("it is not valid YAML")
+        )
         return None, [f"{label}{where}: {problem}"]
+    except Exception:  # noqa: BLE001 - e.g. RecursionError from deep nesting; never 500
+        return None, [f"{label}: it can't be read (too deeply nested or not valid YAML)"]
     if not isinstance(doc, dict):
         return None, [f"{label} must be a YAML mapping (key: value lines)"]
     problems = schema_problems(doc, load_schema(schema_name), label)
@@ -197,7 +207,8 @@ def list_study_files(root: Path, folder: str) -> list[str]:
         return []
     if not where.is_dir():
         return []
-    return sorted(p.name for p in where.iterdir() if FILE_NAME_RE.match(p.name) and p.is_file())
+    names = sorted(p.name for p in where.iterdir() if FILE_NAME_RE.match(p.name) and p.is_file())
+    return names[:MAX_GUIDANCE_FILES]
 
 
 def read_study_file(root: Path, folder: str, name: str) -> bytes:

@@ -130,12 +130,17 @@ export function init(container) {
     body.replaceChildren();
     hints.length = 0;
     const current = data.current;
+    if (current && current.error) {
+      body.append(el("p", current.error.message, "nca-finding blocking"));
+      return;
+    }
     if (!current || !current.selected) {
       body.append(el("p", data.workspace_open ? "Choose a profile to follow." : "", "muted"));
       return;
     }
-    if (current.missing) {
-      body.append(el("p", `profiles/${current.selected} is missing. Restore it, or choose another profile. Its progress is kept.`, "nca-finding blocking"));
+    if (current.unreadable) {
+      body.append(el("p", `profiles/${current.selected} can't be read: ${current.message} ` +
+        "Restore or fix it, or choose another profile. Its progress is kept.", "nca-finding blocking"));
       return;
     }
     if (current.problems.length) {

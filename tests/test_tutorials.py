@@ -234,3 +234,20 @@ def test_the_engine_calls_only_the_tutorial_endpoints():
         "selectedIndex",
     ):
         assert forbidden not in text, forbidden
+
+
+def test_one_save_never_wipes_unreadable_progress(api):
+    api.progress_file.parent.mkdir(parents=True, exist_ok=True)
+    api.progress_file.write_text("{oops", "utf-8")
+    assert api.get("/api/tutorials").json()["progress"]["unreadable"] is True
+    r = api.put("/api/tutorials/progress", json={"key": EXAMPLE, "step": "welcome"})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "progress_invalid"
+    r = api.delete("/api/tutorials/progress", params={"key": EXAMPLE})
+    assert r.status_code == 409
+    assert api.progress_file.read_text("utf-8") == "{oops"
+    # Reset all is the explicit way out.
+    assert api.delete("/api/tutorials/progress").status_code == 200
+    assert (
+        api.put("/api/tutorials/progress", json={"key": EXAMPLE, "step": "welcome"}).status_code
+        == 200
+    )

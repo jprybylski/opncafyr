@@ -151,15 +151,25 @@ class Tutorials:
 
     # --- progress -----------------------------------------------------------------------
 
-    def progress(self) -> dict[str, Any]:
+    def progress(self, *, for_write: bool = False) -> dict[str, Any]:
+        """The saved progress. An unreadable file reads as none, with ``unreadable`` set;
+        writing over it is refused (``for_write``), so one save can't wipe every
+        tutorial's place. Reset all replaces it."""
+        empty = {"schema_version": "1.0", "active": None, "tutorials": {}}
         try:
             doc = json.loads(self.progress_path.read_text("utf-8"))
             validate(doc, PROGRESS_SCHEMA)
         except FileNotFoundError:
-            return {"schema_version": "1.0", "active": None, "tutorials": {}}
+            return empty
         except Exception:  # noqa: BLE001 - an unreadable file means "no progress"
+            if for_write:
+                raise TutorialError(
+                    "progress_invalid",
+                    "The saved tutorial progress can't be read, so it wasn't changed. "
+                    "Reset all tutorial progress to start again.",
+                ) from None
             log.warning("Ignoring an unreadable tutorial progress file")
-            return {"schema_version": "1.0", "active": None, "tutorials": {}}
+            return {**empty, "unreadable": True}
         return doc
 
     def save(
@@ -179,7 +189,7 @@ class Tutorials:
         if step not in {s["id"] for s in found["tutorial"]["steps"]}:
             raise TutorialError("not_found", "The tutorial has no such step.")
         with self._lock:
-            doc = self.progress()
+            doc = self.progress(for_write=True)
             doc["tutorials"][key] = {
                 "id": found["id"],
                 "version": found["version"],
@@ -199,10 +209,10 @@ class Tutorials:
     def reset(self, key: str | None) -> dict[str, Any]:
         """Forget the progress of one tutorial, or of every tutorial."""
         with self._lock:
-            doc = self.progress()
             if key is None:
                 doc = {"schema_version": "1.0", "active": None, "tutorials": {}}
             else:
+                doc = self.progress(for_write=True)
                 doc["tutorials"].pop(key, None)
                 if doc["active"] == key:
                     doc["active"] = None

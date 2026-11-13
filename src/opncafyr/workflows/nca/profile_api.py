@@ -97,7 +97,16 @@ def mount(app: FastAPI, ctx: Any) -> None:
         where = ws.root if ws is not None else None
         out = call(sp.listing, where, catalog())
         out["workspace_open"] = ws is not None
-        out["current"] = call(sp.status, where, catalog()) if where is not None else None
+        if where is None:
+            out["current"] = None
+        else:
+            try:
+                out["current"] = sp.status(where, catalog())
+            except sp.ProfileError as exc:  # show the list; say what is wrong with progress
+                out["current"] = {
+                    "selected": None,
+                    "error": {"code": exc.code, "message": exc.message},
+                }
         return out
 
     @app.post("/api/nca/profiles/copy")
@@ -135,10 +144,12 @@ def mount(app: FastAPI, ctx: Any) -> None:
     def candidates() -> dict[str, Any]:
         return call(sp.candidates, root(), catalog())
 
-    def context_for(step_id: str | None, kind: str) -> dict[str, Any] | None:
+    def context_for(
+        step_id: str | None, kind: str, run_ids: set[str] | None = None
+    ) -> dict[str, Any] | None:
         """The workflow_context for a run or publication the user makes for a step."""
         if step_id is None:
             return None
-        return call(sp.context_for, root(), catalog(), step_id, kind)
+        return call(sp.context_for, root(), catalog(), step_id, kind, run_ids)
 
     ctx.profile_context = context_for
