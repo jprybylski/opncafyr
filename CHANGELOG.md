@@ -26,7 +26,7 @@ All notable changes to this project are documented here. The format follows
     only on request, by the app's own Git (HTTPS only, no user Git configuration); a token
     is used for that one fetch and never stored (offline touchpoint R20).
   - **Reports and decks.** A selected template applies to new report and deck setups:
-    the reference DOCX, footnotes, settings and `style.yaml` (`--style`), or
+    the reference DOCX, footnotes, settings and `style.yaml` (merged over quartifyr's default style), or
     `deckifyr init --from-dir` with the template's design, layouts and images. Bindings and
     build manifests record it in an optional `standards` object; builds still pin exact
     runs and file hashes. Upstream: jprybylski/deckifyr#103.

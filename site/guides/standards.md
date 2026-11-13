@@ -42,7 +42,7 @@ Templates stay in the bundle's fixed copy until you choose one for **new** repor
 
 A report or deck already set up keeps the template it started from, and its card on **Publish** says so. Each build records which template it used, with its fingerprint and source commit, next to the exact runs and files it was built from.
 
-- A **report template** may hold `org-reference.docx`, `standard_footnotes.yaml`, `config.yaml` and quartifyr's `style.yaml`; anything it lacks keeps the bundled file.
+- A **report template** may hold `org-reference.docx`, `standard_footnotes.yaml`, `config.yaml` and quartifyr's `style.yaml` (it may hold only what differs: it is merged over quartifyr's default style); anything it lacks keeps the bundled file.
 - A **deck template** is a deckifyr template (`presentation.yaml` naming its design and layouts files, plus images). The layouts must include `blank` and `title-content`, which the "NCA results" deck uses.
 
 ## One house style for every bundle

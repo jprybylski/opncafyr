@@ -137,7 +137,16 @@ def test_a_style_file_is_passed_to_render(tmp_path):
     assert "--style" not in spec.argv
     (project / Q.STYLE).write_text("equation: {font: Cambria Math}\n")
     spec = Q.render_command(rt, project, "draft", 60, tmp_path / "h", tmp_path / "c")
+    # No default style in the package: the project's file is the style.
     assert spec.argv[spec.argv.index("--style") + 1] == str(project / Q.STYLE)
+    assert "--override" not in spec.argv
+    # With quartifyr's default style: the project's file is merged over it.
+    default = Q.package_dir(rt) / "python" / "styles" / "default.yaml"
+    default.parent.mkdir(parents=True)
+    default.write_text("fonts: {body: Times}\n")
+    spec = Q.render_command(rt, project, "draft", 60, tmp_path / "h", tmp_path / "c")
+    assert spec.argv[spec.argv.index("--style") + 1] == str(default)
+    assert spec.argv[spec.argv.index("--override") + 1] == str(project / Q.STYLE)
 
 
 def test_deck_setup_uses_the_selected_template(api, tmp_path):

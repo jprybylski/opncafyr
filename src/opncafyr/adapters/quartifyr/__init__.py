@@ -171,7 +171,14 @@ def render_command(
         str(int(quarto_timeout_s)),
     ]
     if (project / STYLE).is_file():  # an imported template's style (#70, ADR 0011)
-        args += ["--style", str(project / STYLE)]
+        # quartifyr deep-merges --override over --style, and needs the merged style to be
+        # complete; a team's style.yaml is usually a partial org look. So the base is
+        # quartifyr's own default style and the project's file is the override.
+        default = package_dir(runtime) / "python" / "styles" / "default.yaml"
+        if default.is_file():
+            args += ["--style", str(default), "--override", str(project / STYLE)]
+        else:
+            args += ["--style", str(project / STYLE)]
     return _command(runtime, script, args, home, cache)
 
 

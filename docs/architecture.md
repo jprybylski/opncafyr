@@ -594,7 +594,7 @@ which tool's own template layout it accepts (`StandardsType.native`).
   snapshots.
 - **Use.** `core.standards.material(root, type)` re-hashes the selected template and returns
   its files; `workflows/nca/publish/templates.py` uses it for report setup (reference DOCX,
-  footnotes, config, `style.yaml` → `--style`), deck setup (`deckifyr init --from-dir`
+  footnotes, config, `style.yaml` → `--override` over quartifyr's default `--style`), deck setup (`deckifyr init --from-dir`
   `[--type]`, then the template's other files) and the curator's footnote keys. Bindings and
   build manifests record it as `standards`.
 - **Git** (`core/gitfetch.py`): a `standards.fetch` job with the pinned Git, ADR 0008's

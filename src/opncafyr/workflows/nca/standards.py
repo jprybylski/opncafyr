@@ -5,7 +5,8 @@ Core verifies, stores and copies a standards bundle; these say what the files mu
 - **Study profile** (``profile``): copied into ``profiles/``, checked exactly like the
   study's own profile files (``study_profile.examine``).
 - **Report template** (``report-template``): any of ``org-reference.docx``,
-  ``standard_footnotes.yaml``, ``config.yaml`` and quartifyr's ``style.yaml``; whatever is
+  ``standard_footnotes.yaml``, ``config.yaml`` and quartifyr's ``style.yaml`` (partial: rendered
+  as an override of quartifyr's default style); whatever is
   missing keeps the bundled default. Also accepted as a quartifyr template source in its own
   layout (``templates/<type>/`` when typed); there its ``_quarto.yml`` and shell ``.qmd`` are
   not used, because the launcher writes the publication's own.
