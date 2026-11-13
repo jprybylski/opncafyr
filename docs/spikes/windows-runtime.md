@@ -79,7 +79,8 @@ R's own startup is not slower on Windows. File and Git process costs are.
 | report render (job) | click | 12.7 s | 12.7 s | 9.2 s |
 | open run in opnca-r | click | 2.6 s | 2.6 s | 1.5 s |
 
-¹ Upstream (gitneighbr): fewer Git processes per poll would help while History is shown.
+¹ Upstream: [gitneighbr#50](https://github.com/jprybylski/gitneighbr/issues/50), fewer Git
+processes per poll while History is shown (tracked in #82).
 
 The first look at the publish list in a session still hashes each completed run once
 (589 ms for 32 runs here). After that, a run is hashed again only when one of its
@@ -123,7 +124,8 @@ never the study folder or broad patterns. opncafyr doesn't change security setti
 
 ## Still open
 
-- Installer reports still don't keep per-step durations (acceptance criterion of #67).
-- Upstream issue for gitneighbr to cut the Git processes per status poll (not filed yet).
+- Upstream issue for gitneighbr to cut the Git processes per status poll:
+  [gitneighbr#50](https://github.com/jprybylski/gitneighbr/issues/50), tracked in #82.
 - `POST` publication hashes the same outputs several times in one request (124 ms here).
   A smaller gain, left as is.
+- Dropped from #67 by the owner: keeping per-step durations in installer reports.

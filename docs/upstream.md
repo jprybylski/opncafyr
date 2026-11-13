@@ -113,6 +113,7 @@ unchanged. The adapter needs 0.2.0 or later.
 | [#43](https://github.com/jprybylski/gitneighbr/issues/43) | Send/Update with a full, preview-bound history check; HTTPS token via env only | Done (v0.2.0); tested against a real HTTPS `git http-backend` | #56 remote |
 | [#44](https://github.com/jprybylski/gitneighbr/issues/44) | `SHA256SUMS` on releases; `clone --`; sanitised PR stderr | Done (v0.2.0) | pins |
 | [#48](https://github.com/jprybylski/gitneighbr/issues/48) | Say when Git refuses the folder because another user owns it (`OWNERSHIP`), instead of `GIT_DIR_INVALID` | Open (filed 2026-11-09). Temporary workaround here: the launcher writes one `safe.directory` entry for the exact study folder into its own `git_config` file (`trust_study_folder`, #62); the container start also warns when the owner differs | #62 |
+| [#50](https://github.com/jprybylski/gitneighbr/issues/50) | Cheaper 2-second status poll: one Git process for status and changes, cache session facts, find in-progress operations from files, skip unchanged polls | Open (filed 2026-11-13). Measured in #67: 916 ms per `status` on Windows vs 220 ms in the Linux container on the same machine. Here, hidden tool frames now report themselves hidden (#81), so the poll runs only while History is shown. Tracked in #82 | #67, #82 |
 
 Pinned as a cellar package (`[packages.gitneighbr]`, 0.2.1: PR #47 removed GitHub wording
 from the managed status summary, found while making the guide's screenshots). Testing on Windows CI also
