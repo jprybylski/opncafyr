@@ -2,6 +2,7 @@
 
 import { getJSON, post } from "./api.js";
 import { $, el, emit, setStatus } from "./dom.js";
+import { notifyGuidance, registerCondition } from "./guidance.js";
 
 const ACTIONS = {
   new: "Create workspace here",
@@ -100,15 +101,20 @@ function recentItem(entry) {
   return li;
 }
 
+let isOpen = false; // for the guidance condition shell.workspace.open
+
 async function refresh() {
   const d = await getJSON("api/workspace");
   showCurrent(d.workspace);
+  isOpen = Boolean(d.workspace);
+  notifyGuidance();
   const ul = $("ws-recent");
   if (!d.recent.length) ul.replaceChildren(el("li", "None yet.", "muted"));
   else ul.replaceChildren(...d.recent.map(recentItem));
 }
 
 export function initWorkspace() {
+  registerCondition("shell.workspace.open", () => isOpen);
   $("ws-pick").addEventListener("click", async () => {
     const button = $("ws-pick");
     button.disabled = true;

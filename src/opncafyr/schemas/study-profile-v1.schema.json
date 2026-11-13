@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/study-profile-v1",
+  "title": "Study workflow profile",
+  "description": "A study team's journey through the existing NCA steps (#68, ADR 0010): instructions, checklists, pointers to controls, run slots, review checkpoints and a publication of explicit runs. Data only: no code, URL, endpoint, path, command, or scientific choice (analyte value, dose, unit, BLQ rule, exclusion, comparison). Per-type rules are checked by workflows/nca/study_profile.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "title", "steps"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "id": { "$ref": "#/$defs/name" },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]{0,31}$",
+      "description": "The author's version label, such as 1 or 2026.1. The file's SHA-256 identifies the exact text."
+    },
+    "title": { "$ref": "#/$defs/line" },
+    "description": { "$ref": "#/$defs/text" },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/step" }
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "line": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\r\\n]*$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "guide_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)+$" },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/name" },
+        "type": {
+          "enum": ["instruction", "checklist", "action", "run", "checkpoint", "publication"]
+        },
+        "title": { "$ref": "#/$defs/line" },
+        "text": { "$ref": "#/$defs/text" },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "text"],
+            "properties": {
+              "id": { "$ref": "#/$defs/name" },
+              "text": { "$ref": "#/$defs/line" }
+            }
+          }
+        },
+        "target": { "$ref": "#/$defs/guide_id" },
+        "hint_condition": { "$ref": "#/$defs/guide_id" },
+        "slot": { "$ref": "#/$defs/name" },
+        "suggested_label": { "$ref": "#/$defs/line" },
+        "slots": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/name" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "instruction" } } },
+          "then": { "required": ["text"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "checklist" } } },
+          "then": { "required": ["items"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "action" } } },
+          "then": { "required": ["text", "target"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "run" } } },
+          "then": { "required": ["slot"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "checkpoint" } } },
+          "then": { "required": ["text"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "publication" } } },
+          "then": { "required": ["slots"] }
+        }
+      ]
+    }
+  }
+}

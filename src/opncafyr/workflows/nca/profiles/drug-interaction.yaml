@@ -1,0 +1,109 @@
+# Example study workflow profile: drug-drug interaction (DDI).
+#
+# Copy it into your study (Study profile page, "Copy into this study"), then edit the
+# copy in profiles/ with any text editor. Rename the slots and steps to the treatments in
+# your protocol; add slots for more treatments or analytes.
+#
+# A profile is guidance only. It never chooses an analyte, a dose, a unit, a BLQ rule,
+# an exclusion or a comparison; it never starts a run or does any calculation. opnca-r
+# does the NCA. Finishing a profile does not validate anything.
+
+schema_version: "1.0"
+id: drug-interaction
+version: "1"
+title: Drug-drug interaction study (example)
+description: >-
+  An illustrative journey for a fixed-sequence DDI study: the object drug given alone
+  and with the interacting drug, one run for each, then one publication with both runs.
+  If you also analyse the interacting drug or a metabolite, each is its own run.
+
+steps:
+  - id: about
+    type: instruction
+    title: About this profile
+    text: >-
+      Each treatment and each analyte is its own run. If a metabolite or the interacting
+      drug is analysed too, add a run step and slot for each one. Any ratio or comparison
+      between treatments is planned and reviewed by you; this profile does not calculate
+      or choose one.
+
+  - id: before-you-start
+    type: checklist
+    title: Before you start
+    items:
+      - id: plan
+        text: The protocol and analysis plan are at hand.
+      - id: imported
+        text: The concentration data file is imported on the Data page.
+      - id: treatment-column
+        text: I know which column and values identify each treatment period.
+      - id: analytes
+        text: I know the exact analyte values to analyse (one run each).
+
+  - id: recipe
+    type: action
+    title: Clean the data for one treatment
+    target: nca.recipe.card
+    hint_condition: nca.cleaned.ready
+    text: >-
+      Make a recipe per treatment. If the file holds both treatments, add a "Remove rows
+      to the rejected-row log" step that keeps only this treatment, with a reason. Apply it
+      to all rows and review the row counts.
+
+  - id: map
+    type: action
+    title: Map the columns
+    target: nca.mapping.card
+    hint_condition: nca.mapping.ready
+    text: Choose the column for each role and the units, then save the mapping.
+
+  - id: analyte
+    type: action
+    title: Choose one analyte and run the checks
+    target: nca.analyte.card
+    hint_condition: nca.checks.ready
+    text: >-
+      Choose exactly one analyte value: the object drug for these two runs. Fix blocking
+      findings; acknowledge each warning only if it is right for this study.
+
+  - id: run-alone
+    type: run
+    title: Object drug given alone
+    slot: alone
+    suggested_label: Alone
+    text: Start, review, save, replay and complete the run, then choose it here.
+
+  - id: run-combined
+    type: run
+    title: Object drug with the interacting drug
+    slot: combined
+    suggested_label: With interacting drug
+    text: Use the same analyte value, BLQ choices and units as the first run.
+
+  - id: review-runs
+    type: checkpoint
+    title: Review both treatments
+    text: >-
+      Check that both runs use the same analyte value, units, BLQ choices and exclusion
+      rules, and that any difference is intended and recorded.
+
+  - id: publish-choose
+    type: action
+    title: Choose the tables and figures
+    target: nca.curator.card
+    hint_condition: nca.publication.recorded
+    text: Tick the tables and figures from these two runs only, check and publish.
+
+  - id: publication
+    type: publication
+    title: Publication with both treatments
+    slots: [alone, combined]
+    text: Choose the publication you recorded. It must hold exactly these two runs.
+
+  - id: report
+    type: action
+    title: Build the report or deck
+    target: nca.report.card
+    text: >-
+      Set up the report or deck from that publication, check it and build it. A successful
+      build shows the files were assembled; it does not validate the analysis.

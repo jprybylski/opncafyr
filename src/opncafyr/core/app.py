@@ -37,6 +37,7 @@ from opncafyr import __version__
 from opncafyr.core.bootstrap import OPEN_PATH, consume_open_token, tokens_dir
 from opncafyr.core.datasets import DatasetService
 from opncafyr.core.datasets_api import mount_datasets_api
+from opncafyr.core.guidance import build_catalog
 from opncafyr.core.guide import guide_root
 from opncafyr.core.health import ToolHealth
 from opncafyr.core.jobmanager import JOB_ID_RE, JobManager
@@ -76,6 +77,9 @@ from opncafyr.core.security import (
 )
 from opncafyr.core.supervisor import DEFAULT_MAX_BODY_BYTES, Supervisor, WebAppConfig
 from opncafyr.core.support_api import mount_support_api
+from opncafyr.core.tutorials import PROGRESS_FILE as TUTORIAL_PROGRESS_FILE
+from opncafyr.core.tutorials import Tutorials
+from opncafyr.core.tutorials_api import mount_tutorials_api
 from opncafyr.core.workspace import RECENT_FILE, RecentWorkspaces
 from opncafyr.core.workspace_api import Picker, mount_workspace_api
 from opncafyr.core.workspace_lease import WorkspaceLease
@@ -186,6 +190,7 @@ def create_app(
     editors: dict[str, Any] | None = None,
     workspace: Path | None = None,
     container_image: str | None = None,
+    tutorial_progress: Path | None = None,
 ) -> FastAPI:
     """Build the controller app.
 
@@ -206,6 +211,8 @@ def create_app(
         check_project_editors(installed, editors)
     project_files = ProjectFiles(installed, editors)
     packs = workflows if workflows is not None else load_workflows()
+    # Targets, conditions and views guidance may name (ADR 0010); a clash stops the launch.
+    guidance = build_catalog(packs)
     datasets = DatasetService(
         importers=[i for p in packs for i in p.importers],
         annotators=[a for p in packs for a in p.annotators],
@@ -279,6 +286,7 @@ def create_app(
     # Set before the workflow packs mount, so they can take a project's lock (#52).
     app.state.project_files = project_files
     app.state.container_image = container_image
+    app.state.guidance = guidance
     set_container_image(container_image)
     app.add_middleware(LoopbackGuardMiddleware, config=security)
     if security.base_path != "/":
@@ -465,6 +473,16 @@ def create_app(
     mount_runs_api(app)
     mount_project_files_api(app, project_files)
     mount_support_api(app, packs)
+    mount_tutorials_api(
+        app,
+        Tutorials(
+            packs,
+            guidance,
+            tutorial_progress
+            if tutorial_progress is not None
+            else state_dir() / TUTORIAL_PROGRESS_FILE,
+        ),
+    )
 
     @app.get("/api/workflows")
     def workflow_views() -> dict[str, Any]:
@@ -488,6 +506,11 @@ def create_app(
                 for pack in packs
             ]
         }
+
+    @app.get("/api/guidance")
+    def guidance_catalog() -> dict[str, Any]:
+        """What tutorials and study profiles may point at or wait for (ADR 0010)."""
+        return guidance.as_json()
 
     for pack in packs:
         if pack.mount is not None:

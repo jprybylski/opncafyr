@@ -1,0 +1,115 @@
+# Example tutorial: your first analysis, from a data file to a publication.
+#
+# Copy it into your study (Tutorials page, "Copy into this study") and edit the copy in
+# tutorials/ to fit your team: change the words, add or remove steps.
+#
+# A tutorial only shows where things are. You do every step yourself: it never clicks,
+# chooses, runs or publishes anything. Finishing it does not validate anything.
+
+schema_version: "1.0"
+id: first-analysis
+version: "1"
+title: Your first analysis
+audience: New users of the app
+prerequisites:
+  - A concentration data file (CSV) in the study folder or its source-data folder.
+steps:
+  - id: welcome
+    title: Open a study folder
+    view: home
+    target: shell.workspace.pick
+    wait_for: shell.workspace.open
+    text: >-
+      This tutorial points at each part of the app. You do every step yourself; it never
+      clicks, chooses or runs anything. Choose a study folder to keep this study's data,
+      runs and reports together. Next is enabled once a folder is open.
+
+  - id: data
+    title: Find your data file
+    view: data
+    target: shell.data.datasets
+    text: >-
+      The Data page lists the data files in the study folder and its source-data folder.
+      Select Preview beside your file to see its first rows. Previewing never changes the
+      file.
+
+  - id: import
+    title: Import it
+    view: data
+    target: shell.data.import
+    wait_for: shell.dataset.imported
+    text: >-
+      Select Import above the preview. The app records the file's size and fingerprint;
+      the file itself is never changed.
+
+  - id: recipe
+    title: Make a cleaning recipe
+    view: analysis
+    target: nca.recipe.card
+    wait_for: nca.recipe.chosen
+    text: >-
+      On the Analysis page, choose the imported file and select New recipe. A recipe lists
+      cleaning steps in order and never changes the source file.
+
+  - id: apply
+    title: Apply the recipe
+    view: analysis
+    target: nca.steps.apply
+    wait_for: nca.cleaned.ready
+    text: >-
+      Add the cleaning steps your data needs, then select Apply to all rows. The Result
+      card shows the rows in and out of every step and every rejected row with its reason.
+
+  - id: mapping
+    title: Map the columns
+    view: analysis
+    target: nca.mapping.card
+    wait_for: nca.mapping.ready
+    text: >-
+      Choose the column for each role. Suggestions are only suggestions. Declare the units
+      yourself: they are never guessed. Save the mapping when nothing blocks.
+
+  - id: analyte
+    title: Choose exactly one analyte
+    view: analysis
+    target: nca.analyte.value
+    wait_for: nca.checks.ready
+    text: >-
+      Pick one analyte value. Rows are matched on the exact text, so a trailing space makes
+      a different value. Select Run checks and read every finding.
+
+  - id: start
+    title: Start the analysis
+    view: analysis
+    target: nca.start.card
+    wait_for: nca.run.created
+    text: >-
+      Acknowledge each warning only if it is right for your study, and choose the BLQ rules
+      and method: there is no default. Start analysis makes a run with this one analyte.
+
+  - id: review
+    title: Review, save and complete the run
+    view: analysis
+    target: nca.runs.card
+    wait_for: nca.run.completed
+    text: >-
+      Open the run in opnca-r, which does the NCA. Review it there and save from its Export
+      view; this tutorial can't point inside opnca-r. Back here, the run is replayed, and
+      Confirm and complete seals it. A completed run never changes.
+
+  - id: publish
+    title: Publish tables and figures
+    view: publish
+    target: nca.curator.card
+    wait_for: nca.publication.recorded
+    text: >-
+      On the Publish page, tick the tables and figures to publish, select Check, then
+      Publish. The publication records the exact runs and file fingerprints.
+
+  - id: report
+    title: Build a report or deck
+    view: publish
+    target: nca.report.card
+    text: >-
+      Set up a report or deck from one publication, check it and build it. A successful
+      build shows the files were assembled as recorded; it does not validate the analysis.

@@ -3,7 +3,7 @@
 // until the user picks it. Units are never guessed.
 
 import {
-  button, cell, choice, el, field, getJSON, raw, section, send, setStatus, table,
+  button, cell, choice, el, field, getJSON, markTarget, notifyGuidance, raw, section, send, setStatus, table,
 } from "./common.js";
 
 const NONE = "__none__";
@@ -12,17 +12,24 @@ const FLAG_ROLES = ["BLQ", "MISSING", "EXCLUDED"];
 
 export function initMapping(stack, state) {
   const sec = section(stack, "nca-mapping", "4. Column mapping",
-    "Choose the column for each role. Suggestions are only suggestions: use one, or pick another column.");
+    "Choose the column for each role. Suggestions are only suggestions: use one, or pick another column.", "nca.mapping.card");
   let help = null;
   let draft = null; // the mapping being edited
 
   let generation = 0;
+
+  // For the guidance condition nca.mapping.ready: the saved mapping blocks nothing.
+  function ready(value) {
+    state.mappingReady = value;
+    notifyGuidance();
+  }
 
   async function load() {
     const mine = ++generation; // a later load wins
     if (!state.recipe) {
       sec.body.replaceChildren();
       help = null;
+      ready(false);
       return setStatus(sec.status, "");
     }
     let fresh;
@@ -32,10 +39,12 @@ export function initMapping(stack, state) {
       if (mine !== generation) return;
       sec.body.replaceChildren();
       help = null;
+      ready(false);
       return setStatus(sec.status, e.status === 404 ? "Apply the recipe to all rows to map its columns." : e.message, e.status !== 404);
     }
     if (mine !== generation) return;
     help = fresh;
+    ready(!help.problems.length); // the saved mapping, as the server checked it
     draft = structuredClone(help.mapping);
     draft.roles ||= {};
     draft.units ||= {};
@@ -197,7 +206,7 @@ export function initMapping(stack, state) {
     if (help.problems.length) sec.body.append(el("h3", "Still to do"), problems);
 
     const actions = el("div", null, "nca-row");
-    actions.append(button("Save mapping", save, "btn btn-primary btn-sm"));
+    actions.append(markTarget(button("Save mapping", save, "btn btn-primary btn-sm"), "nca.mapping.save"));
     sec.body.append(actions);
   }
 

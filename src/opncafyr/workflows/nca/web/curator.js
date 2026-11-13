@@ -2,7 +2,8 @@
 // Only completed runs whose replay passed and whose files still match can be chosen; the
 // server enforces this too. Published files are copies; runs never change.
 
-import { button, el, field, formatTime, getJSON, post, raw, section, setStatus, table } from "./common.js";
+import { button, el, field, formatTime, getJSON, markTarget, post, raw, section, setStatus, table } from "./common.js";
+import { profileStepField } from "./profilestep.js";
 
 const short = (sha) => (sha ? sha.slice(0, 12) : "");
 const statusWord = { new: "New copy", unchanged: "Already published (same bytes)", conflict: "Name taken by different content" };
@@ -10,7 +11,7 @@ const statusWord = { new: "New copy", unchanged: "Already published (same bytes)
 export function initCurator(stack, state) {
   const sec = section(stack, "nca-curator", "1. Choose tables and figures",
     "Pick from completed runs. You can combine analytes in one publication. Each file is copied into " +
-      "OUTPUTS/ with a metadata sidecar, and the publication records the exact runs and hashes.");
+      "OUTPUTS/ with a metadata sidecar, and the publication records the exact runs and hashes.", "nca.curator.card");
   const picker = el("div", null, "nca-body");
   const label = el("input");
   label.maxLength = 200;
@@ -21,7 +22,10 @@ export function initCurator(stack, state) {
   const revision = el("div", null, "card-note");
   revision.hidden = true;
   revision.tabIndex = -1;
-  sec.body.append(revision, picker, field("Label (optional)", label), actions, plan);
+  // The study profile's publication steps (#68), or hidden.
+  const profileStep = profileStepField("publication",
+    "Records which step of the study profile this publication is for.");
+  sec.body.append(revision, picker, field("Label (optional)", label), profileStep.node, actions, plan);
 
   let boxes = []; // [{input, run_id, artifact}]
   let checkedKey = null;
@@ -36,7 +40,7 @@ export function initCurator(stack, state) {
     check.disabled = true;
     setStatus(sec.status, "Checking…");
     try {
-      const out = await post("api/nca/publications", { items, dry_run: true });
+      const out = await post("api/nca/publications", { items, dry_run: true, profile_step: profileStep.value() });
       showPlan(out.plan);
       checkedKey = out.plan.blocking ? null : key();
       publish.disabled = checkedKey === null;
@@ -58,6 +62,7 @@ export function initCurator(stack, state) {
         items: selection(),
         label: label.value.trim() || null,
         revises: revising,
+        profile_step: profileStep.value(),
       });
       const pub = out.publication;
       const base = revising;
@@ -72,6 +77,8 @@ export function initCurator(stack, state) {
     }
   }, "btn btn-primary btn-sm");
   publish.disabled = true;
+  markTarget(check, "nca.curator.check");
+  markTarget(publish, "nca.curator.publish");
   actions.append(check, publish);
 
   function showPlan(p) {
@@ -211,7 +218,7 @@ export function initCurator(stack, state) {
 
 export function initPublications(stack, state) {
   const sec = section(stack, "nca-publications", "2. Publications",
-    "Each publication is a fixed set of files from exact runs. Reports and decks are built from one publication.");
+    "Each publication is a fixed set of files from exact runs. Reports and decks are built from one publication.", "nca.publications.card");
 
   // The first refresh can run before a study folder is open. Its error must not outlive a
   // later successful refresh, and a slow earlier request must not overwrite a later one (#62).

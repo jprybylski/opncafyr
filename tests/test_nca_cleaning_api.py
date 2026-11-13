@@ -20,7 +20,7 @@ def api(security, tmp_path):
 def test_workflow_view_is_listed_and_served(api):
     packs = api.get("/api/workflows").json()["workflows"]
     nca = next(p for p in packs if p["id"] == "nca")
-    view = nca["views"][0]
+    view = next(v for v in nca["views"] if v["id"] == "analysis")
     assert view["id"] == "analysis" and view["module"] == "static/workflows/nca/analysis.js"
     r = api.get("/" + view["module"])
     assert r.status_code == 200 and "export function init" in r.text

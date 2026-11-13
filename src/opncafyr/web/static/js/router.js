@@ -7,7 +7,7 @@
 
 import { emit } from "./dom.js";
 
-const VIEWS = { "": "home", data: "data", jobs: "jobs", settings: "settings" };
+const VIEWS = { "": "home", data: "data", jobs: "jobs", settings: "settings", tutorials: "tutorials" };
 
 let current = null; // "home", "data", "jobs", "settings" or "tool:<id>"
 let currentRoute = { name: "home" };

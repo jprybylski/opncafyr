@@ -45,3 +45,8 @@
   .nca-pinned { position: sticky; bottom: var(--space-2); z-index: 1; }
   .nca-pinned-body { max-height: 40vh; }
 }
+/* Study profile page (#68): pickers shrink to fit beside their buttons; a plain checklist. */
+#view-profile .nca-row .field { min-width: 0; flex: 1 1 20rem; }
+#view-profile .nca-row select { width: 100%; max-width: 100%; text-overflow: ellipsis; }
+.profile-checklist { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.profile-checklist label { display: flex; gap: var(--space-2); align-items: center; }

@@ -18,7 +18,7 @@ export function initDeck(stack, state) {
   const sec = section(stack, "nca-deck", "5. Deck (PPTX)",
     "A deck project in deck/ with an NCA results slide for each published file. Edit it in the deck " +
       "editor, then check and build it here. Builds started inside the editor are drafts in deck/build/ " +
-      "and are not recorded.");
+      "and are not recorded.", "nca.deck.card");
   const info = el("div");
   const pick = el("div", null, "nca-row");
   const run = el("div", null, "nca-row");

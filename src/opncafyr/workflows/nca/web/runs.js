@@ -1,14 +1,14 @@
 // Runs of this study (#25-#29): one analyte each, with their state. Actions on a run are
 // added by the later steps of the path (session, save, replay, completion).
 
-import { button, cell, el, formatTime, getJSON, post, raw, section, setStatus, stateBadge, table } from "./common.js";
+import { button, cell, el, formatTime, getJSON, notifyGuidance, post, raw, section, setStatus, stateBadge, table } from "./common.js";
 import { emit, pollWhileVisible } from "../../js/dom.js";
 
 export const runActions = []; // (run, refresh) => [Node], filled by other modules
 
 export function initRuns(stack, state) {
   const sec = section(stack, "nca-runs", "7. Runs",
-    "Each run holds one analyte's frozen input. A run never changes once it is completed: a change makes a new run.");
+    "Each run holds one analyte's frozen input. A run never changes once it is completed: a change makes a new run.", "nca.runs.card");
 
   async function refresh() {
     let data;
@@ -17,6 +17,9 @@ export function initRuns(stack, state) {
     } catch (e) {
       return setStatus(sec.status, e.message, true);
     }
+    // The runs as last listed, for guidance conditions (nca.run.created, nca.run.completed).
+    state.runs = data.runs;
+    notifyGuidance();
     sec.body.replaceChildren();
     if (!data.runs.length) {
       sec.body.append(el("p", "No runs yet.", "muted"));

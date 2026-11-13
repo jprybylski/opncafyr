@@ -29,6 +29,19 @@
         "sidecar_format": {"type": "string", "description": "The reportifyr version whose sidecar format was written, e.g. 'reportifyr-0.4.0'."}
       }
     },
+    "workflow_context": {
+      "type": "object",
+      "description": "The study workflow profile step this record was made for (#68, ADR 0010). Present only when the user chose a profile step when creating it. Guidance only: it never changes what was calculated.",
+      "additionalProperties": false,
+      "required": ["profile_id", "profile_version", "profile_sha256", "profile_path", "step_id"],
+      "properties": {
+        "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "profile_version": {"type": "string", "maxLength": 32},
+        "profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "profile_path": {"type": "string", "pattern": "^profiles/[a-z][a-z0-9-]{0,63}\\.yaml$"},
+        "step_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"}
+      }
+    },
     "runs": {
       "type": "array",
       "minItems": 1,

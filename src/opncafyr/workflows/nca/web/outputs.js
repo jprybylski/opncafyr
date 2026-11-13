@@ -8,7 +8,7 @@ const severityWord = { error: "Blocks", warning: "Warning" };
 export function initOutputs(stack, state) {
   const sec = section(stack, "nca-outputs", "3. Published files",
     "Each file in OUTPUTS/ needs a metadata sidecar that matches it: the right path and " +
-      "hash, and only abbreviations and footnote types that the standard footnotes define.");
+      "hash, and only abbreviations and footnote types that the standard footnotes define.", "nca.outputs.card");
   const run = button("Check published files", check, "btn btn-sm");
   sec.head.append(run);
 

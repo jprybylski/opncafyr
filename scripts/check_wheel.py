@@ -25,6 +25,8 @@ REQUIRED = (
     "opncafyr/adapters/gitneighbr/descriptor.yaml",
     "opncafyr/web/static/index.html",
     "opncafyr/web/guide/index.md",  # the user guide (#40)
+    "opncafyr/workflows/nca/profiles/fed-fasted.yaml",  # study profile examples (#68)
+    "opncafyr/workflows/nca/tutorials/first-analysis.yaml",  # tutorial example (#69)
     "opncafyr/installer/assets/opncafyr.icns",  # the app icons (#54)
     "opncafyr/installer/assets/opncafyr.ico",
 )

@@ -1,0 +1,120 @@
+# Example study workflow profile: fed/fasted (food effect).
+#
+# Copy it into your study (Study profile page, "Copy into this study"), then edit the
+# copy in profiles/ with any text editor. Keep the step types; change the words, add or
+# remove steps and slots to match your protocol and analysis plan.
+#
+# A profile is guidance only. It never chooses an analyte, a dose, a unit, a BLQ rule,
+# an exclusion or a comparison; it never starts a run or does any calculation. opnca-r
+# does the NCA. Finishing a profile does not validate anything.
+
+schema_version: "1.0"
+id: fed-fasted
+version: "1"
+title: Fed/fasted study (example)
+description: >-
+  An illustrative journey for a two-period food-effect study: one run for the fasted
+  period and one for the fed period, each a single analyte, then one publication with
+  both runs. Edit it to match your protocol; it does not cover every design.
+
+steps:
+  - id: about
+    type: instruction
+    title: About this profile
+    text: >-
+      Each period is analysed as its own run, so each run has exactly one analyte and the
+      rows of one period. Comparing the periods is a separate, explicit step that you
+      plan and review; this profile does not calculate or choose a comparison.
+
+  - id: before-you-start
+    type: checklist
+    title: Before you start
+    items:
+      - id: plan
+        text: The protocol and analysis plan are at hand.
+      - id: imported
+        text: The concentration data file is imported on the Data page.
+      - id: period-column
+        text: I know which column and values identify the fasted and fed periods.
+
+  - id: recipe-fasted
+    type: action
+    title: Clean the data for the fasted period
+    target: nca.recipe.card
+    hint_condition: nca.cleaned.ready
+    text: >-
+      Choose the imported file and make a recipe. If the file holds both periods, add a
+      "Remove rows to the rejected-row log" step that keeps only the fasted period, with
+      a reason. Apply the recipe to all rows and review the row counts.
+
+  - id: map-fasted
+    type: action
+    title: Map the columns
+    target: nca.mapping.card
+    hint_condition: nca.mapping.ready
+    text: Choose the column for each role and the units, then save the mapping.
+
+  - id: analyte-fasted
+    type: action
+    title: Choose one analyte and run the checks
+    target: nca.analyte.card
+    hint_condition: nca.checks.ready
+    text: >-
+      Choose exactly one analyte value. Read every finding; fix blocking ones in the
+      recipe or mapping and acknowledge each warning only if it is right for this study.
+
+  - id: blq-review
+    type: checkpoint
+    title: Review the BLQ choices
+    text: >-
+      Confirm the BLQ rules and method you will choose on the Start analysis card match
+      the analysis plan. There is no default; the same choices should be used for both
+      periods unless the plan says otherwise.
+
+  - id: run-fasted
+    type: run
+    title: Fasted run
+    slot: fasted
+    suggested_label: Fasted
+    text: >-
+      Start the analysis, review it in opnca-r, save, replay and complete it. Then choose
+      the completed run for this slot.
+
+  - id: run-fed
+    type: run
+    title: Fed run
+    slot: fed
+    suggested_label: Fed
+    text: >-
+      Make a recipe for the fed period the same way (a new recipe keeps the fasted run
+      unchanged), map it, choose the same analyte value, and complete the run.
+
+  - id: review-runs
+    type: checkpoint
+    title: Review both runs side by side
+    text: >-
+      Check that both runs use the same analyte value, units, BLQ choices and exclusion
+      rules, and that any difference is intended and recorded.
+
+  - id: publish-choose
+    type: action
+    title: Choose the tables and figures
+    target: nca.curator.card
+    hint_condition: nca.publication.recorded
+    text: >-
+      On the Publish page, tick the tables and figures from the fasted and fed runs only,
+      check the selection and publish it.
+
+  - id: publication
+    type: publication
+    title: Publication with both periods
+    slots: [fasted, fed]
+    text: Choose the publication you just recorded. It must hold exactly these two runs.
+
+  - id: report
+    type: action
+    title: Build the report or deck
+    target: nca.report.card
+    text: >-
+      Set up the report (or the deck) from that publication, check it and render it. A
+      successful build shows the files were assembled; it does not validate the analysis.

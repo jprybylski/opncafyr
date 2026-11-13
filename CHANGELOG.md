@@ -7,6 +7,49 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Tutorials: walkthroughs that point at the app while you work** (#69, ADR 0010). A new
+  **Tutorials** page lists the example **Your first analysis** (import, mapping, one exact
+  analyte, run review, publication) and the study's own `tutorials/*.yaml`. A docked,
+  non-modal panel gives each step's directions, rings the control to use (a guidance target)
+  and opens the step's page.
+  - **Controls.** Next waits for a read-only condition when a step names one, and Skip always
+    works. The panel also has Back, Pause/Resume and Exit tutorial (Escape).
+  - **A missing control** gets an explanation, **Look again** and **Continue without
+    highlight**.
+  - **The tutorial never acts.** The engine (`web/static/js/tutorial.js`) only reads tutorial
+    files and writes the user's own place. A test checks it calls nothing but `api/tutorials*`
+    and never clicks, submits or sets a value.
+  - **Progress** is per user in `<state>/tutorial-progress.json` (`tutorial-progress-v1`), with
+    the tutorial's hash and step id and no study path or data. It survives a reload or a new
+    launch.
+  - The format (`tutorial-v1`) allows plain text and a view, target and condition from the
+    catalog, nothing else. Examples are copied into the study to edit and never overwrite a
+    file.
+- **Study profiles: follow a team's steps for a kind of study** (#68, ADR 0010). A new
+  **Study profile** page follows a YAML file in the study's `profiles/` folder. It lists
+  instructions, checklists, **Go to …** actions with hints, review checkpoints, run slots and a
+  publication step. Three examples ship read-only: dose escalation, fed/fasted and
+  drug-drug interaction. Copying one never overwrites a file.
+  - **Guidance only.** The schema (`study-profile-v1`) has no field for an analyte, dose, unit,
+    BLQ rule, exclusion or comparison, and nothing is chosen for the user. A slot takes only a
+    completed run the user picks, each run fills one slot, and a publication step accepts only
+    a publication whose runs are exactly the slots' runs.
+  - **Progress** is in `.opncafyr/study-profile.json` (`study-profile-state-v1`), per profile
+    file, with the SHA-256 of the text followed. An edited file blocks progress until
+    **Adopt edited profile**, which keeps the progress of steps that still exist and the
+    earlier hashes.
+  - **Provenance.** **Start analysis** and **Choose tables and figures** offer **Study profile
+    step (optional)**, set to **None**. A chosen step is recorded as `workflow_context`
+    (profile id, version, SHA-256, `profiles/` path and step id): optional and additive in
+    `run-manifest-v1` and `publication-v1`. A sealed record is never changed.
+  - Version history lists `profiles/` and `tutorials/` with the editable sources.
+- **Guidance contracts for tutorials and study profiles** (#68, #69, ADR 0010). Controls and
+  cards carry `data-target` ids that core (`shell.*`) and the NCA pack (`nca.*`) declare.
+  Pages register read-only milestone conditions, such as `nca.run.completed`.
+  `GET /api/guidance` lists them, and a test checks that every declared id is on the page.
+  `core.guidance` reads user-written guidance files: a 256 kB cap, values read as text only
+  (no dates, numbers or tags), no YAML aliases, a closed
+  schema, and problems named by place and rule, never by value.
 - **Native Linux install: Ubuntu 24.04, x86_64 and aarch64, no root, apt, compiler or
   container** (#65, ADR 0003 amended). It uses opnca-r 0.3.3, which publishes the Linux
   binaries (opnca-r#61); opnca-r is pinned at 0.3.3 for every platform. opnca-r's manifest

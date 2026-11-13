@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/study-profile-state-v1",
+  "title": "Study profile progress",
+  "description": "The study's chosen workflow profile and its progress (#68), in .opncafyr/study-profile.json. Per profile file: the exact text adopted (SHA-256), ticked steps, the completed run chosen for each slot and the publication chosen for each publication step. Every choice here was made by the user; nothing is filled in automatically.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "selected", "profiles"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "selected": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/file" }],
+      "description": "The profile file in profiles/ this study follows now, or null."
+    },
+    "profiles": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/file" },
+      "additionalProperties": { "$ref": "#/$defs/progress" }
+    }
+  },
+  "$defs": {
+    "file": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}\\.yaml$" },
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "time": { "type": "string", "format": "date-time" },
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "sha256", "step_ids", "selected_at", "history", "steps", "slots", "publications"],
+      "properties": {
+        "id": { "$ref": "#/$defs/name" },
+        "version": { "type": "string", "maxLength": 32 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "step_ids": {
+          "type": "array",
+          "description": "The step ids of the adopted text, to show what an edit added or removed.",
+          "items": { "$ref": "#/$defs/name" }
+        },
+        "selected_at": { "$ref": "#/$defs/time" },
+        "history": {
+          "type": "array",
+          "description": "Earlier texts of this profile file that were followed, oldest first.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sha256", "version", "until"],
+            "properties": {
+              "sha256": { "$ref": "#/$defs/sha256" },
+              "version": { "type": "string", "maxLength": 32 },
+              "until": { "$ref": "#/$defs/time" }
+            }
+          }
+        },
+        "steps": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["done", "at"],
+            "properties": {
+              "done": { "type": "boolean" },
+              "at": { "$ref": "#/$defs/time" },
+              "items": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/name" } }
+            }
+          }
+        },
+        "slots": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["run_id", "at"],
+            "properties": {
+              "run_id": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4,}$" },
+              "at": { "$ref": "#/$defs/time" }
+            }
+          }
+        },
+        "publications": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["publication_id", "at"],
+            "properties": {
+              "publication_id": { "type": "string", "pattern": "^pub-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4,}$" },
+              "at": { "$ref": "#/$defs/time" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

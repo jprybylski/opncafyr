@@ -194,6 +194,7 @@ scheduled first.
 | LibreOffice: optional verified per-user download for deckifyr previews (optional in offline bundles); quartifyr field recalculation off until quartifyr#84/#86 | From spike #8 (2026-11-06) | [spikes/libreoffice.md](spikes/libreoffice.md), #8 |
 | Home UI: static HTML + vanilla JS ES modules, no build step, no third-party runtime JS; axe check in CI | **Accepted** (owner, 2026-11-05) | [ADR 0006](decisions/0006-home-ui-stack.md), #18; shell build #49 |
 | Optional Git version history: gitneighbr managed mode as an adapter; pinned dugite-native Git, locked down; local snapshots by default, sending per session with a full preview; `guard_mutations` workspace lease in core | **Accepted** (owner, 2026-11-08); default ignore suggestions and review labels proposed | [ADR 0008](decisions/0008-git-version-history.md), #56 |
+| Guidance contracts: `data-target` ids and read-only page conditions in a core catalog; tutorials as a core capability; study profiles as NCA-pack data in visible `profiles/` and `tutorials/` folders; YAML with in-app check, no in-app editor yet | **Accepted** (owner, 2026-11-12) | [ADR 0010](decisions/0010-guidance-contracts.md), #68, #69 |
 | Cloud container mode in v1: SSH forward, VS Code Server/code-server, Posit Workbench and jupyter-server-proxy; Docker and Podman; local disk and NFS/SMB (object-storage FUSE refused); private GHCR image only, amd64 + arm64, slim + full | **Accepted** (owner, 2026-11-08), including one user per VM | [ADR 0009](decisions/0009-cloud-container-mode.md), #42, #1 |
 | Redistributing image archives: audience, opncafyr license, GPL source obligations, PPM binaries | Open (needs legal) | #43 |
 
@@ -285,3 +286,5 @@ under `core/`, and left out of release wheels.
 | #41 | "Adding a tool" guide plus a toy second adapter that proves the core is tool-agnostic | #13, #15, #12 | — |
 | #43 | Attach offline Docker image archives to each release (pending a redistribution/licensing review) | #42 | [opnca-r#23](https://github.com/mantra-opnca/opnca-r/issues/23) |
 | #56 | Optional Git version history through a managed gitneighbr adapter (post-core convenience; never blocks analysis or publishing) | #13–#17, #36, #44 | [gitneighbr#35–#44](upstream.md#jprybylskigitneighbr-public) |
+| #68 | Editable study workflow profiles: a team's steps for a kind of study, run slots and an explicit publication of their runs (guidance only; post-core convenience) | #25, #31, #69 | — |
+| #69 | Editable tutorial walkthroughs: a panel with directions and highlights over guidance targets; never acts for the user (post-core convenience) | #49, #50 | — |

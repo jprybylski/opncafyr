@@ -69,12 +69,58 @@ NAMES = (
     "13-history-setup",
     "14-history-changes",
     "15-history-save",
+    "16-study-profile",
+    "17-tutorial",
 )
 VIEWPORT = {"width": 1280, "height": 800}
 MAX_BYTES = 400 * 1024
 # Cards taller than this are cropped to their top part.
 MAX_CROP_HEIGHT = 1100
 REFERENCE = re.compile(r"\]\(images/([A-Za-z0-9_.-]+)\.png\)")
+
+# A made-up study profile for the practice file (16-study-profile): one run per analyte,
+# published together. Written into the temporary study only; it is not a shipped example.
+PRACTICE_PROFILE_NAME = "two-analyte-practice.yaml"
+PRACTICE_PROFILE = """\
+schema_version: "1.0"
+id: two-analyte-practice
+version: "1"
+title: Two-analyte practice study
+description: A made-up profile for the practice file. One run per analyte, published together.
+steps:
+  - id: ready
+    type: checklist
+    title: Before you start
+    items:
+      - id: plan
+        text: The analysis plan is at hand.
+      - id: imported
+        text: two_analyte.csv is imported on the Data page.
+  - id: map
+    type: action
+    title: Clean and map the data
+    target: nca.mapping.card
+    hint_condition: nca.mapping.ready
+    text: Apply the recipe to all rows, then map the columns and save the mapping.
+  - id: run-parent
+    type: run
+    title: PARENT run
+    slot: parent
+    suggested_label: Parent
+  - id: run-metab
+    type: run
+    title: METAB run
+    slot: metab
+    suggested_label: Metabolite
+  - id: review
+    type: checkpoint
+    title: Review both runs
+    text: Check that both runs use the same units, BLQ choices and exclusion rules.
+  - id: publication
+    type: publication
+    title: Publication with both analytes
+    slots: [parent, metab]
+"""
 
 
 # --- --check ------------------------------------------------------------------------
@@ -153,6 +199,7 @@ class Controller:
             tools=tools,
             runtime=self.runtime,
             open_tokens=self.tokens,
+            tutorial_progress=tmp / "state" / "tutorial-progress.json",
         )
         self.server = uvicorn.Server(
             uvicorn.Config(
@@ -380,6 +427,13 @@ def run(tmp: Path, runtime_file: Path, out: Path, only: set[str]) -> Shots:
 
             # 03-05: the Analysis page on a recipe with the resolving steps and mapping.
             recipe_id = ready_recipe(c.client)
+            # The practice study profile (16), followed before the runs are made so each
+            # run records its profile step, as a user choosing it on Start analysis would.
+            (c.study / "profiles").mkdir()
+            (c.study / "profiles" / PRACTICE_PROFILE_NAME).write_text(PRACTICE_PROFILE, "utf-8")
+            c.client.post(
+                "/api/nca/profiles/select", json={"name": PRACTICE_PROFILE_NAME}
+            ).raise_for_status()
             go(page, base, "analysis", reload=True)
             # One selection at a time: the card reloads the recipe list after a source is
             # chosen, and two overlapping loads would draw the result twice.
@@ -426,8 +480,9 @@ def run(tmp: Path, runtime_file: Path, out: Path, only: set[str]) -> Shots:
             # 06: opnca-r inside the app on the PARENT run. Each run is opened from the
             # Runs card, analysed and saved in opnca-r's own page (so the figures are
             # opnca-r's), then replayed and confirmed through the API.
-            def analyse(analyte: str, shot: str | None) -> None:
-                run_id = start_run(c.client, recipe_id, analyte)["run_id"]
+            def analyse(analyte: str, shot: str | None) -> str:
+                step = f"run-{analyte.lower()}"
+                run_id = start_run(c.client, recipe_id, analyte, profile_step=step)["run_id"]
                 frame = open_in_opnca(page, base, run_id, analyte)
                 try:
                     analyze_in_opnca(frame)
@@ -442,9 +497,12 @@ def run(tmp: Path, runtime_file: Path, out: Path, only: set[str]) -> Shots:
                         shots.take(shot, lambda path: page.screenshot(path=str(path)))
                     save_in_opnca(c.client, c.study, run_id, reopen=False)
                 wait_for_replay(c, run_id)
+                return run_id
 
-            analyse("PARENT", "06-opnca")
-            analyse("METAB", None)
+            run_ids = {"parent": analyse("PARENT", "06-opnca"), "metab": analyse("METAB", None)}
+            # Stop following the profile until 16, so the walkthrough's screens (07-15) show
+            # no profile step; its progress is kept.
+            c.client.post("/api/nca/profiles/clear").raise_for_status()
 
             # 07: both runs completed.
             def runs(path: Path) -> None:
@@ -494,6 +552,61 @@ def run(tmp: Path, runtime_file: Path, out: Path, only: set[str]) -> Shots:
                 "09-report", set_up("nca-report", "Set up report", "Setting up the report finished")
             )
             shots.take("10-deck", set_up("nca-deck", "Set up deck", "Setting up the deck finished"))
+
+            # 16: the Study profile part-way: checklist and mapping done, both slots filled
+            # with the runs made for them, the publication chosen, the review still to do.
+            # The analysis page has the recipe chosen, so the mapping hint can say "yes".
+            def study_profile(path: Path) -> None:
+                c.client.post(
+                    "/api/nca/profiles/select", json={"name": PRACTICE_PROFILE_NAME}
+                ).raise_for_status()
+                api = "/api/nca/profiles/current"
+                c.client.put(f"{api}/steps/ready", json={"items": ["plan", "imported"]})
+                c.client.put(f"{api}/steps/map", json={"done": True}).raise_for_status()
+                for slot, run_id in run_ids.items():
+                    c.client.put(f"{api}/slots/{slot}", json={"run_id": run_id}).raise_for_status()
+                pubs = c.client.get("/api/nca/publications").json()["publications"]
+                pub = next(p["publication_id"] for p in pubs if p.get("state") == "recorded")
+                c.client.put(
+                    f"{api}/publications/publication", json={"publication_id": pub}
+                ).raise_for_status()
+                show_recipe()
+                go(page, base, "profile")
+                steps = page.locator("#nca-profile-steps")
+                expect(steps).to_contain_text("5 of 6 steps done")
+                expect(steps).to_contain_text("Hint: The saved column mapping blocks nothing: yes.")
+                clip(page, path, "#nca-profile-steps", max_height=1600)
+
+            def show_recipe() -> None:
+                go(page, base, "analysis", reload=True)
+                with page.expect_response(lambda r: r.url.endswith("/api/nca/recipes")):
+                    choose_option(page.locator("#nca-recipe select").nth(0), SOURCE_PATH)
+                choose_option(page.locator("#nca-recipe select").nth(1), recipe_id)
+                page.locator("#nca-mapping").get_by_role("button", name="Save mapping").wait_for()
+                page.locator("#nca-analyte select").first.wait_for()
+
+            shots.take("16-study-profile", study_profile)
+            # The walkthrough's screens show no profile step (17 shows Start analysis).
+            c.client.post("/api/nca/profiles/clear").raise_for_status()
+
+            # 17: the tutorial on "Choose exactly one analyte": the ring on the analyte
+            # select and Next waiting for the checks. Skip moves through the earlier steps.
+            def tutorial(path: Path) -> None:
+                show_recipe()
+                go(page, base, "tutorials")
+                page.get_by_role("button", name="Start Your first analysis").click()
+                panel = page.locator("#tutorial-panel")
+                expect(panel).to_contain_text("Step 1 of 11")
+                for n in range(2, 8):
+                    panel.get_by_role("button", name="Skip", exact=True).click()
+                    expect(panel).to_contain_text(f"Step {n} of 11")
+                expect(panel).to_contain_text("Next is enabled when")
+                expect(page.locator(".tutorial-target")).to_have_count(1)
+                page.wait_for_timeout(500)  # the target scrolls into view
+                page.screenshot(path=str(path))
+                panel.get_by_role("button", name="Exit tutorial").click()
+
+            shots.take("17-tutorial", tutorial)
 
             # 01: Home with recent runs and publications filled in.
             def home(path: Path) -> None:

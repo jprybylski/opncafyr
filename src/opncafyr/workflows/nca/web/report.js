@@ -57,7 +57,7 @@ export function buildsTable(builds, kind, link, stale = {}) {
 export function initReport(stack, state) {
   const sec = section(stack, "nca-report", "4. Report (DOCX)",
     "A quartifyr report project in report/, set up from the bundled template for one publication. " +
-      "Check finds missing or broken metadata before rendering; a render that is incomplete keeps nothing.");
+      "Check finds missing or broken metadata before rendering; a render that is incomplete keeps nothing.", "nca.report.card");
   const info = el("div");
   const pick = el("div", null, "nca-row");
   const run = el("div", null, "nca-row");
