@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/standards-bundle-v1",
+  "title": "Standards bundle (standards.yaml)",
+  "description": "A versioned set of study standards a team shares (#70, ADR 0011): study profiles, tutorials and report/deck templates, in any combination. Every file the bundle carries is listed with its SHA-256; nothing else is copied. A template component may instead reference template material the bundle doesn't carry: a template component in another standards bundle (a house style), or a template source in deckifyr's or quartifyr's own layout. Read with the guidance loader, so every value is text. Data only: no command, executable, endpoint or dataset.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "title", "components"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "id": { "$ref": "#/$defs/name" },
+    "version": { "$ref": "#/$defs/version" },
+    "title": { "$ref": "#/$defs/line" },
+    "description": { "type": "string", "maxLength": 2000 },
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "opncafyr": { "$ref": "#/$defs/range" },
+        "types": {
+          "type": "object",
+          "description": "Per component type, the range of its format version this bundle needs.",
+          "propertyNames": { "$ref": "#/$defs/type" },
+          "additionalProperties": { "$ref": "#/$defs/range" }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "title"],
+        "properties": {
+          "id": { "$ref": "#/$defs/name" },
+          "type": { "$ref": "#/$defs/type" },
+          "title": { "$ref": "#/$defs/line" },
+          "description": { "type": "string", "maxLength": 2000 },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "sha256"],
+              "properties": {
+                "path": { "$ref": "#/$defs/path" },
+                "sha256": { "$ref": "#/$defs/sha256" }
+              }
+            }
+          },
+          "ref": {
+            "oneOf": [{ "$ref": "#/$defs/bundle_ref" }, { "$ref": "#/$defs/native_ref" }]
+          },
+          "links": {
+            "type": "array",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "description": "Other components of this bundle that go with this one (a tutorial with its profile, templates offered with a profile).",
+            "items": { "$ref": "#/$defs/name" }
+          }
+        },
+        "oneOf": [{ "required": ["files"] }, { "required": ["ref"] }]
+      }
+    },
+    "variants": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "components"],
+        "properties": {
+          "id": { "$ref": "#/$defs/name" },
+          "title": { "$ref": "#/$defs/line" },
+          "description": { "type": "string", "maxLength": 2000 },
+          "components": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/name" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "type": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,31}$" },
+    "version": { "type": "string", "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]{0,31}$" },
+    "line": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\r\\n]*$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "range": {
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^ *(>=|<=|==|!=|>|<) *[0-9]+(\\.[0-9]+){0,3}( *, *(>=|<=|==|!=|>|<) *[0-9]+(\\.[0-9]+){0,3})* *$"
+    },
+    "path": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "A file inside the bundle: '/'-separated names of letters, digits, '.', '_' and '-', none hidden, at most 8 deep.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}(/[A-Za-z0-9][A-Za-z0-9._-]{0,127}){0,7}$"
+    },
+    "bundle_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundle", "version", "component"],
+      "description": "A template component of another standards bundle, such as a house style. Resolved only against bundles already imported into the study.",
+      "properties": {
+        "bundle": { "$ref": "#/$defs/name" },
+        "version": { "$ref": "#/$defs/range" },
+        "component": { "$ref": "#/$defs/name" },
+        "inventory_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "native_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "repo"],
+      "description": "A template source in the tool's own layout, imported as its own snapshot.",
+      "properties": {
+        "tool": { "enum": ["deckifyr", "quartifyr"] },
+        "repo": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "[host/]owner/repo, or an https:// URL without a user name or password.",
+          "pattern": "^(https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~-]+)+/?|([A-Za-z0-9.-]+(:[0-9]{1,5})?/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)$"
+        },
+        "ref": { "$ref": "#/$defs/gitref" },
+        "subdir": { "$ref": "#/$defs/path" },
+        "type": { "$ref": "#/$defs/name" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "gitref": {
+      "type": "string",
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$",
+      "not": { "pattern": "(\\.\\.|//|\\.lock$|/$|\\.$)" }
+    }
+  }
+}

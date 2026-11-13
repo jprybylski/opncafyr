@@ -22,7 +22,7 @@ import importlib
 import json
 import pkgutil
 import re
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -441,6 +441,64 @@ class GuideCondition:
             raise ValueError(f"Invalid guidance condition id {self.id!r} for {owner!r}.")
 
 
+STANDARDS_TYPE_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
+STANDARDS_TOOLS = ("deckifyr", "quartifyr")
+
+
+@dataclass(frozen=True)
+class StandardsCheck:
+    """What a standards type's ``check`` gets besides the files (#70, ADR 0011).
+
+    ``catalog`` is the guidance catalog (``core.guidance.Catalog``). ``native_type`` is the
+    ``templates/<type>/`` a tool-native template source was imported with, else None.
+    """
+
+    catalog: Any
+    native: bool = False
+    native_type: str | None = None
+
+
+@dataclass(frozen=True)
+class StandardsType:
+    """A kind of component a standards bundle may carry (#70, ADR 0011).
+
+    Core verifies, stores and copies a bundle's files; it never knows what they mean.
+    - ``format`` is the version of this type's file format, which a bundle's
+      ``requires.types`` range is checked against.
+    - ``suffixes`` are the file suffixes a component of this type may hold.
+    - ``check(files, ctx)`` returns ``(problems, notes)`` for one component's files,
+      ``{path relative to the component's folder: bytes}``. A problem blocks the import; a
+      note is shown (a file that isn't used, a default kept). It never runs anything.
+    - ``install_to`` is a visible study folder (``profiles``) the files are copied into
+      under their own names, never over a local edit. Without it the component is used
+      from the verified snapshot when the study selects it (a report or deck template).
+    - ``native`` names the tool whose own template layout this type also accepts as a
+      referenced source (``deckifyr``, ``quartifyr``), or None.
+    """
+
+    id: str
+    title: str
+    format: str
+    suffixes: tuple[str, ...]
+    check: Callable[[Mapping[str, bytes], StandardsCheck], tuple[list[str], list[str]]]
+    install_to: str | None = None
+    native: str | None = None
+
+    def validate(self) -> None:
+        if not STANDARDS_TYPE_RE.match(self.id):
+            raise ValueError(f"Invalid standards type id {self.id!r}.")
+        if self.install_to is not None and not _VIEW_ID_RE.match(self.install_to):
+            raise ValueError(f"Standards type {self.id!r}: install_to must be one folder name.")
+        if self.native is not None and self.native not in STANDARDS_TOOLS:
+            raise ValueError(f"Standards type {self.id!r}: unknown native tool {self.native!r}.")
+        if self.native is not None and self.install_to is not None:
+            raise ValueError(f"Standards type {self.id!r}: a native template is never copied.")
+        if not self.suffixes or not all(
+            s.startswith(".") and s == s.lower() for s in self.suffixes
+        ):
+            raise ValueError(f"Standards type {self.id!r}: suffixes are lower-case '.ext'.")
+
+
 @dataclass(frozen=True)
 class WorkflowPack:
     """What a workflow package adds to core.
@@ -456,6 +514,8 @@ class WorkflowPack:
     - ``targets`` and ``conditions`` are what guidance (tutorials, study profiles) may
       point at and wait for in the pack's views (ADR 0010). ``tutorials`` is
       ``(package, folder)`` of the example tutorials the pack ships, read-only.
+    - ``standards`` are the component types a standards bundle may carry for this pack
+      (#70, ADR 0011), such as study profiles and report or deck templates.
     """
 
     id: str
@@ -468,6 +528,7 @@ class WorkflowPack:
     targets: tuple[GuideTarget, ...] = ()
     conditions: tuple[GuideCondition, ...] = ()
     tutorials: tuple[str, str] | None = None
+    standards: tuple[StandardsType, ...] = ()
 
 
 def load_workflows() -> list[WorkflowPack]:
@@ -492,5 +553,7 @@ def load_workflows() -> list[WorkflowPack]:
             view.check()
         for item in (*pack.targets, *pack.conditions):
             item.check(pack.id)
+        for kind in pack.standards:
+            kind.validate()
         packs.append(pack)
     return packs

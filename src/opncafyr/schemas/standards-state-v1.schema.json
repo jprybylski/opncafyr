@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "opncafyr/standards-state-v1",
+  "title": "Imported standards (.opncafyr/standards.json)",
+  "description": "The standards a study imported (#70, ADR 0011). 'snapshots' are verified, read-only copies under .opncafyr/standards/<key>/, each with its source (local folder, archive or Git, with the exact commit) and the SHA-256 of every file. 'installed' records the files copied into the study's visible folders (profiles/, tutorials/) with the hash written, so a later import can tell a local edit from an unedited copy. 'selected' is the template the study's report or deck setup uses, per component type. No credentials, dataset values or absolute paths.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "snapshots", "installed", "selected"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "snapshots": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/key" },
+      "additionalProperties": { "$ref": "#/$defs/snapshot" }
+    },
+    "installed": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/relpath" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sha256", "snapshot", "component"],
+        "properties": {
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "snapshot": { "$ref": "#/$defs/key" },
+          "component": { "$ref": "#/$defs/name" }
+        }
+      }
+    },
+    "selected": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/type" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["snapshot", "component", "selected_at"],
+        "properties": {
+          "snapshot": { "$ref": "#/$defs/key" },
+          "component": { "$ref": "#/$defs/name" },
+          "selected_at": { "type": "string", "format": "date-time" },
+          "via": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["snapshot", "component"],
+            "description": "The bundle component that referenced this template, when it was chosen through a reference.",
+            "properties": {
+              "snapshot": { "$ref": "#/$defs/key" },
+              "component": { "$ref": "#/$defs/name" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^([a-z][a-z0-9-]{0,63}/[0-9A-Za-z][0-9A-Za-z.+-]{0,31}-[0-9a-f]{12}|template-(deckifyr|quartifyr)/[0-9a-f]{12})$"
+    },
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "type": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,31}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "relpath": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}(/[A-Za-z0-9][A-Za-z0-9._-]{0,127}){0,7}$"
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "inventory_sha256", "source", "imported_at", "components"],
+      "properties": {
+        "kind": { "enum": ["bundle", "template"] },
+        "bundle_id": { "$ref": "#/$defs/name" },
+        "version": { "type": "string", "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]{0,31}$" },
+        "tool": { "enum": ["deckifyr", "quartifyr"] },
+        "title": { "type": "string", "maxLength": 200 },
+        "inventory_sha256": { "$ref": "#/$defs/sha256" },
+        "imported_at": { "type": "string", "format": "date-time" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "display"],
+          "properties": {
+            "kind": { "enum": ["dir", "archive", "git"] },
+            "display": { "type": "string", "maxLength": 400 },
+            "repo": { "type": "string", "maxLength": 300 },
+            "ref": { "type": "string", "maxLength": 200 },
+            "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "subdir": { "$ref": "#/$defs/relpath" },
+            "type": { "$ref": "#/$defs/name" }
+          }
+        },
+        "components": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "title", "sha256", "files", "links"],
+            "properties": {
+              "type": { "$ref": "#/$defs/type" },
+              "title": { "type": "string", "maxLength": 200 },
+              "sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha256" }] },
+              "files": { "type": "array", "items": { "$ref": "#/$defs/relpath" } },
+              "ref": { "type": "object" },
+              "links": { "type": "array", "items": { "$ref": "#/$defs/name" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

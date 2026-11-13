@@ -56,13 +56,14 @@ QUARTO_YML = "_quarto.yml"
 REFERENCE_DOCX = "org-reference.docx"
 FOOTNOTES = "report/standard_footnotes.yaml"
 CONFIG = "report/config.yaml"
+STYLE = "style.yaml"  # optional, from an imported report template (#70)
 INIT_MARKER = ".report_init.json"
 EXTENSIONS = "_extensions"
 OUTPUTS = "OUTPUTS"
 STATUSES = ("draft", "final")
 # The source files of a report project the launcher writes and hashes. ``_extensions``
 # is hashed as a tree; quartifyr's own output folders are not inputs.
-SOURCES = (REPORT_QMD, QUARTO_YML, REFERENCE_DOCX, FOOTNOTES, CONFIG, INIT_MARKER)
+SOURCES = (REPORT_QMD, QUARTO_YML, REFERENCE_DOCX, FOOTNOTES, CONFIG, INIT_MARKER, STYLE)
 GIT_IDENTITY = "[user]\n\tname = opncafyr\n\temail = opncafyr@localhost.invalid\n"
 
 
@@ -169,6 +170,8 @@ def render_command(
         "--quarto-timeout",
         str(int(quarto_timeout_s)),
     ]
+    if (project / STYLE).is_file():  # an imported template's style (#70, ADR 0011)
+        args += ["--style", str(project / STYLE)]
     return _command(runtime, script, args, home, cache)
 
 
