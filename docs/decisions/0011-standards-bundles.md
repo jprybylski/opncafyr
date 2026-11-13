@@ -58,19 +58,27 @@ Two constraints shaped the design:
    or one the study made itself, is a conflict the user resolves by keeping theirs or
    installing the new version beside it, with a diff. Nothing is chosen for them.
 6. **Templates through the adapters.** A study *selects* a report or deck template. New
-   setups use it: report files are copied from the snapshot; `deckifyr init --from-dir`
-   runs on the snapshot (never `--from-repo`). An existing project keeps its template.
-   Bindings and build manifests record the template (snapshot, component and its hash, the
-   bundle or tool, the source and commit) as an optional, additive `standards` object.
-   Builds still pin exact run IDs and file hashes.
-7. **Git on the ADR 0008 model.** A Git source is fetched as a job, only when the user asks,
+   setups use it: report files are copied from the snapshot (a `style.yaml` may be partial:
+   it is rendered as `--override` over quartifyr's default `--style`); `deckifyr init
+   --from-dir` runs on the snapshot (never `--from-repo`). Bindings and build manifests
+   record the template (snapshot, component and its hash, the bundle or tool, the source and
+   commit) as an optional, additive `standards` object. Builds still pin exact run IDs and
+   file hashes.
+7. **An existing project keeps its template.** A selection never changes a report or deck
+   already set up, and re-binding it to another publication doesn't either; to use a new
+   template, the user sets up a new project. The UI says so where it applies, and only then:
+   on the Standards page beside each choice when the study has such a project (a type's
+   optional `existing(root)` hook tells core, without core knowing what the project is), and
+   on the Report and Deck cards, which template the project uses and when Standards now
+   chooses another.
+8. **Git on the ADR 0008 model.** A Git source is fetched as a job, only when the user asks,
    with the pinned Git and no user or system configuration, credential helpers, askpass, SSH
    or redirects (`core/gitfetch.py`). A token, if given, reaches Git as an HTTP header in the
    environment of the one `git fetch` process and is forgotten when the job ends: it is never
    in a command line, URL, record, log or bundle. Blobs are read from the fetched commit byte
    for byte (no checkout, filters or links). Without the pinned Git, only local copies can
    be imported.
-8. **Tool-agnostic core.** Core verifies, stores and copies; component types come from core
+9. **Tool-agnostic core.** Core verifies, stores and copies; component types come from core
    (tutorials) and packs (`WorkflowPack.standards`, `StandardsType`). A type declares its
    suffixes, a content check, an optional study folder to copy into, and an optional tool
    whose own template layout it accepts. Core names no tool.
