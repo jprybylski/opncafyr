@@ -215,3 +215,32 @@ def test_init_command_never_fetches(tmp_path):
     assert spec.env["DECKIFYR_OFFLINE"] == "1"
     with pytest.raises(ValueError):
         D.init_command(rt, tmp_path / "d", None, "nca")
+
+
+def test_the_standards_page_learns_of_existing_projects_only_when_there_are_some(api, tmp_path):
+    install(api, tmp_path, ["house-report"])
+    assert api.get("/api/standards").json()["projects"] == {}
+    setup(api, "report", publication(api))
+    projects = api.get("/api/standards").json()["projects"]
+    assert list(projects) == ["report-template"]
+    assert projects["report-template"]["folder"] == "report/"
+    assert projects["report-template"]["template"]["component"] == "house-report"
+
+
+def test_the_report_card_says_when_a_new_selection_does_not_apply(api, tmp_path):
+    pub = publication(api)
+    setup(api, "report", pub)  # bundled template
+    template = api.get("/api/nca/report").json()["template"]
+    assert template["project"] is None and template["differs"] is False
+    done = install(api, tmp_path, ["house-report"])
+    template = api.get("/api/nca/report").json()["template"]
+    assert template["differs"] is True and template["selected"]["component"] == "house-report"
+    # Re-binding to a publication doesn't apply the template either.
+    api.post("/api/nca/report", json={"publication_id": pub["publication_id"]})
+    assert api.get("/api/nca/report").json()["template"]["project"] is None
+    # A changed selected template is a problem, not a difference.
+    target = api.study / ".opncafyr/standards" / done["snapshot"] / "report/config.yaml"
+    target.chmod(0o644)
+    target.write_bytes(b"figure_width: 1\n")
+    template = api.get("/api/nca/report").json()["template"]
+    assert template["problem"] and template["differs"] is False

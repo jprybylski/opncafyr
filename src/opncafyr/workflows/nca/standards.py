@@ -23,6 +23,7 @@ from __future__ import annotations
 import io
 import zipfile
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -121,6 +122,22 @@ def check_report(files: Mapping[str, bytes], ctx: StandardsCheck) -> tuple[list[
     return problems, notes
 
 
+def _existing(tool: str, noun: str):
+    def existing(root: Path) -> dict[str, Any] | None:
+        from opncafyr.workflows.nca.publish import projects
+
+        if not (root / tool).is_dir():
+            return None
+        binding = projects.read_binding(root, tool)
+        return {
+            "folder": f"{tool}/",
+            "noun": noun,
+            "template": (binding or {}).get("standards"),
+        }
+
+    return existing
+
+
 REPORT_TYPE = StandardsType(
     id=REPORT_TEMPLATE,
     title="Report template",
@@ -128,6 +145,7 @@ REPORT_TYPE = StandardsType(
     suffixes=(".docx", ".yaml", ".yml", ".qmd", ".md"),
     check=check_report,
     native="quartifyr",
+    existing=_existing("report", "report"),
 )
 
 
@@ -199,6 +217,7 @@ DECK_TYPE = StandardsType(
     suffixes=(".yaml", ".yml", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".emf", ".md"),
     check=check_deck,
     native="deckifyr",
+    existing=_existing("deck", "deck"),
 )
 
 PROFILE_TYPE = StandardsType(

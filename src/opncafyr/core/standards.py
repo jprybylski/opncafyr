@@ -844,10 +844,20 @@ class Standards:
                 selected[type_id] = {**chosen, "ok": found is not None, "problem": None}
             except StandardsError as exc:
                 selected[type_id] = {**chosen, "ok": False, "problem": exc.message}
+        projects = {}
+        for kind in self.types.values():
+            if kind.install_to is None and kind.existing is not None:
+                try:
+                    found = kind.existing(root)
+                except Exception:  # noqa: BLE001 - a broken record means "can't tell"
+                    found = None
+                if found is not None:
+                    projects[kind.id] = found
         return {
             "snapshots": list(reversed(snapshots)),
             "installed": state["installed"],
             "selected": selected,
+            "projects": projects,
         }
 
     # --- inspect ----------------------------------------------------------------------------

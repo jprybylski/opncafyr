@@ -79,5 +79,8 @@ def summary(root: Path, type_id: str, binding: dict[str, Any] | None) -> dict[st
     if binding is not None:
         now = found.provenance if found is not None else None
         same = (now or {}).get("component_sha256") == (used or {}).get("component_sha256")
-        out["differs"] = not same and (now is not None or used is not None)
+        # A selection that can't be read is reported as a problem, not as a difference.
+        out["differs"] = (
+            out["problem"] is None and not same and (now is not None or used is not None)
+        )
     return out

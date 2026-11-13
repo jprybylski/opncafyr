@@ -39,7 +39,7 @@ Templates are not copied into `profiles/` or anywhere you edit. They stay in the
 
 **Templates for new reports and decks** shows what the next setup will use. **Use the bundled one** goes back to the templates that come with the app.
 
-The choice applies when a report or deck is **set up**. A report or deck already set up keeps the template it started from, and its card on the **Publish** page says so. See [Word reports](reports.md) and [PowerPoint decks](decks.md).
+The choice applies when a report or deck is **set up**. The template of a report or deck that is already set up can't be changed: it keeps the template it started from, and **Use this publication** doesn't change that either. When the study already has one, the **Standards** page says so beside each choice, and the card on the **Publish** page says which template the project uses and when Standards now chooses another. To use the new template, rename or move the `report` (or `deck`) folder, then select **Set up report** (or **Set up deck**). See [Word reports](reports.md) and [PowerPoint decks](decks.md).
 
 - A **report template** can hold `org-reference.docx` (the Word styles), `standard_footnotes.yaml`, `config.yaml` and quartifyr's `style.yaml`, which may hold only what differs from quartifyr's default style. Anything it doesn't hold keeps the bundled file. The publication's tables and figures are checked against the template's footnotes.
 - A **deck template** is a deckifyr template: its `presentation.yaml` names a design file and a layouts file, and it can hold logos and images. The app writes its own "NCA results" deck with the template's design and layouts, so the layouts must include `blank` and `title-content`.

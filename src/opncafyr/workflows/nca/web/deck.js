@@ -107,7 +107,7 @@ export function initDeck(stack, state) {
       info.append(el("p", `deck/ uses publication ${bound.publication_id}.${editing ? " The editor is open." : ""}`));
       if (status.edited.length) info.append(el("p", `Edited since it was set up: ${status.edited.join(", ")}.`, "hint"));
     }
-    const note = templateNote(status?.template, "deck");
+    const note = templateNote(status?.template, "deck", Boolean(status?.project));
     if (note) info.append(note);
     select = publicationChoice(state, bound?.publication_id);
     setUp.textContent = status?.project ? "Use this publication" : "Set up deck";

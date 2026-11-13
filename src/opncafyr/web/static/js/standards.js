@@ -20,6 +20,22 @@ const radio = (name) => document.querySelector(`input[name="${name}"]:checked`)?
 const short = (sha) => (sha ? sha.slice(0, 12) : "");
 const TYPE_WORDS = { "report-template": "reports", "deck-template": "decks" };
 
+function templateName(t) {
+  if (!t) return "the bundled template";
+  return `${t.component} from ${t.bundle_id ? `${t.bundle_id} ${t.version}` : `the ${t.tool} template`}`;
+}
+
+// Only when the study already has a project of this type: a template choice never changes it.
+function keepsNote(typeId) {
+  const p = info?.projects?.[typeId];
+  if (!p) return null;
+  return (
+    `This study's ${p.noun} (${p.folder}) was set up from ${templateName(p.template)} and keeps it: ` +
+    `the template of a ${p.noun} that is already set up can't be changed. A choice here applies ` +
+    `only to a ${p.noun} set up from scratch.`
+  );
+}
+
 function sourceWords(source) {
   if (!source) return "";
   const parts = [source.display];
@@ -201,6 +217,13 @@ function componentBlock(c, selectable) {
     use.dataset.select = c.id;
     label.append(use, ` Use it for new ${TYPE_WORDS[c.type] || "projects"}`);
     box.append(label);
+    const note = keepsNote(c.type);
+    if (note) {
+      const p = el("p", note, "notice std-keeps");
+      p.id = `std-keeps-review-${c.id}`;
+      use.setAttribute("aria-describedby", p.id);
+      box.append(p);
+    }
   }
   return box;
 }
@@ -288,7 +311,8 @@ async function onInstall() {
     });
     hideReview();
     const files = done.files.length ? ` ${done.files.map((f) => `${f.path} (${f.action})`).join(", ")}.` : "";
-    importStatus(`Installed ${done.snapshot}.${files}`);
+    const kept = done.selected.map(keepsNote).filter(Boolean).join(" ");
+    importStatus(`Installed ${done.snapshot}.${files}${kept ? ` ${kept}` : ""}`);
     refresh();
   } catch (e) {
     reviewStatus(e.message, true);
@@ -301,7 +325,10 @@ async function onInstall() {
 async function choose(type, snapshot, component) {
   try {
     await send("PUT", "api/standards/selected", { type, snapshot, component });
-    refresh();
+    const title = info.types.find((t) => t.id === type)?.title || type;
+    const kept = keepsNote(type);
+    listStatus(`${title}: ${snapshot ? "chosen" : "back to the bundled one"} for new ${TYPE_WORDS[type] || "projects"}.${kept ? ` ${kept}` : ""}`);
+    refresh(false);
   } catch (e) {
     listStatus(e.message, true);
   }
@@ -326,6 +353,8 @@ function renderUsed() {
       row.append(" ", back);
     }
     box.append(row);
+    const note = keepsNote(type.id);
+    if (note) box.append(el("p", note, "notice std-keeps"));
   }
 }
 
@@ -381,7 +410,7 @@ function renderWhat() {
   }
 }
 
-async function refresh() {
+async function refresh(clearStatus = true) {
   try {
     info = await getJSON("api/standards");
   } catch (e) {
@@ -389,7 +418,7 @@ async function refresh() {
     return;
   }
   renderWhat();
-  listStatus("");
+  if (clearStatus) listStatus("");
   $("standards-closed").hidden = info.workspace_open;
   $("standards-body").hidden = !info.workspace_open;
   $("std-from-git").disabled = !info.git_available;
@@ -411,7 +440,7 @@ export function initStandards() {
   $("standards-form").addEventListener("submit", onInspect);
   $("std-install").addEventListener("click", onInstall);
   $("std-cancel").addEventListener("click", hideReview);
-  $("standards-refresh").addEventListener("click", refresh);
+  $("standards-refresh").addEventListener("click", () => refresh());
   on("view-changed", (route) => {
     if (route.name === "standards") refresh();
   });

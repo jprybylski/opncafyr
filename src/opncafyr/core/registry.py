@@ -474,6 +474,10 @@ class StandardsType:
       from the verified snapshot when the study selects it (a report or deck template).
     - ``native`` names the tool whose own template layout this type also accepts as a
       referenced source (a tool descriptor id), or None.
+    - ``existing(root)`` says, for a selected type, whether the study already has a project
+      set up from one: ``{"folder", "noun", "template"}`` (``template`` is the recorded
+      provenance, or None for the bundled one), else None. A selection never changes such a
+      project, and the Standards page says so only when there is one.
     """
 
     id: str
@@ -483,6 +487,7 @@ class StandardsType:
     check: Callable[[Mapping[str, bytes], StandardsCheck], tuple[list[str], list[str]]]
     install_to: str | None = None
     native: str | None = None
+    existing: Callable[[Path], dict[str, Any] | None] | None = None
 
     def validate(self) -> None:
         if not STANDARDS_TYPE_RE.match(self.id):
