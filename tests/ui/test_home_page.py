@@ -179,6 +179,19 @@ def test_guide_renders_with_the_notice_and_chapters(page):
         img.scroll_into_view_if_needed()
         assert page.evaluate("(i) => i.complete && i.naturalWidth > 0", img.element_handle())
     _axe(page)
+
+
+def test_qc_chapter_renders_its_tables_and_scripts(page):
+    """#71: the review chapter is usable offline, with its record template and scripts."""
+    page.goto(page.url.split("#")[0] + "#/guide/qc")
+    page.locator("#guide-heading", has_text="Reviewing a run (QC)").wait_for()
+    article = page.locator("#guide-article")
+    assert article.locator("table").count() == 2
+    code = article.locator("pre code")
+    assert code.count() == 2
+    assert "library(PKNCA)" in code.nth(1).inner_text()
+    assert article.locator("blockquote").first.inner_text().startswith("Research use only.")
+    _axe(page)
     assert page.errors == []
 
 

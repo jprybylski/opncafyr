@@ -2,7 +2,7 @@
 title: Guides
 nav_order: 3
 has_children: true
-description: Task guides for installing offline, keeping opncafyr up to date, cleaning data, understanding run provenance, publishing, reports and decks, optional version history, and troubleshooting.
+description: Task guides for installing offline, keeping opncafyr up to date, cleaning data, understanding run provenance, reviewing a run (QC), publishing, reports and decks, optional version history, and troubleshooting.
 permalink: /guides/
 ---
 
@@ -20,6 +20,7 @@ Task-by-task help once you know the basics.
 **Working with data and runs**
 
 - [Workspace and run provenance]({{ '/guides/provenance/' | relative_url }}): what is recorded, and why a completed run never changes.
+- [Reviewing a run (QC)]({{ '/guides/qc/' | relative_url }}): check a completed run, its replay and its code, compare its numbers with PKNCA, and record the evidence.
 - [Cleaning, BLQ and units]({{ '/guides/cleaning/' | relative_url }}): cleaning steps, results below the limit of quantification, units, exclusions, and the choices the app asks you to make.
 
 **Publishing**

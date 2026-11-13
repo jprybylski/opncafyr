@@ -147,6 +147,23 @@ for i in itertools.count():
 """
 
 
+def _read_settled(path: Path) -> str:
+    """Read ``path``, retrying while Windows refuses the open.
+
+    Windows denies opening a file for a moment while ``os.replace`` swaps it in, or while a
+    scanner holds the new file; that says nothing about its contents. Other platforms read
+    on the first try.
+    """
+    deadline = time.monotonic() + 2
+    while True:
+        try:
+            return path.read_text("utf-8")
+        except PermissionError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.01)
+
+
 def test_a_killed_writer_never_leaves_a_partial_manifest(tmp_path):
     path = tmp_path / "manifest.json"
     code = WRITER.format(tests=str(Path(__file__).parent), path=str(path))
@@ -158,7 +175,7 @@ def test_a_killed_writer_never_leaves_a_partial_manifest(tmp_path):
         time.sleep(delay / 4)
         proc.kill()
         proc.wait()
-        validate(json.loads(path.read_text("utf-8")), "run-manifest-v1")
+        validate(json.loads(_read_settled(path)), "run-manifest-v1")
 
 
 def test_publish_refuses_a_folder_without_a_valid_manifest(workspace):

@@ -12,7 +12,7 @@ The installer downloads each part it needs and checks every file against a finge
 
 If your study data lives on a Linux cloud computer where you can run Docker or Podman, you can run opncafyr there instead: see [Running on a cloud computer (container mode)](cloud-container.md). Where you cannot run Docker, you can install natively on Ubuntu 24.04 from an offline bundle. It needs no administrator rights, but it does need some system libraries; the installer checks for them first and lists what an administrator must add. The developer documentation (`install.md`) has the steps.
 
-If your computer cannot reach the internet, or your organisation blocks downloads, ask your IT team; they can use the offline bundle described in the developer documentation. The app works the same way after an offline install.
+If your computer cannot reach the internet, or your organisation blocks downloads, ask the person who supports opncafyr at your site: your IT team can prepare an offline bundle, or set up internal mirrors, and the installer checks every file the same way. The app works the same way after an offline install.
 
 ## Install on macOS
 
@@ -54,6 +54,7 @@ install.bat install --assets "<folder with the opnca-r files>"
 - Starting the app opens a new tab in your web browser with the **Home** page.
 - If the app is already running, starting it again opens the same app in a new tab.
 - To stop the app, select **Quit** in the top bar. If jobs are still running, the app asks whether to keep them running and quit when they finish, cancel them and quit, or not quit. If an editor has unsaved changes, it asks you to save or discard them.
+- Once the app has stopped, its tab shows **opncafyr has stopped** and nothing on it works any more. Close the tab; start the app from its icon to use it again.
 - The app also closes itself after a time with no open page. You can change this on the **Settings** page; see [The app closed by itself](troubleshooting.md#the-app-closed-by-itself).
 
 ## Updating

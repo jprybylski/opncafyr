@@ -1,15 +1,15 @@
 ---
 title: Home
 nav_order: 1
-description: opncafyr is a local, per-user workspace for noncompartmental analysis. Clean a concentration file, run one analyte at a time in opnca-r, and publish completed runs to a Word report or a PowerPoint deck.
+description: opncafyr is a version-pinned workspace for noncompartmental analysis and reporting that installs for your user account without administrator rights. Prepare a concentration file, run one analyte at a time in opnca-r, and publish completed runs to a Word report or a PowerPoint deck.
 permalink: /
 ---
 
 <div class="hero">
   <img class="hero-mark" src="{{ '/assets/images/logo-mark.svg' | relative_url }}" width="112" height="112" alt="" aria-hidden="true">
   <div class="hero-text">
-    <h1>Noncompartmental analysis, one analyte at a time, on your own computer</h1>
-    <p>opncafyr is a workspace that runs on your own computer. It takes a concentration file through cleaning, mapping and checks, runs one analyte at a time in opnca-r, and turns completed runs into a Word report or a PowerPoint deck. Every step is recorded so it can be replayed.</p>
+    <h1>One workspace for NCA, reports and decks, without assembling the tools yourself</h1>
+    <p>opncafyr brings the analysis and reporting tools together in one version-pinned workspace. On supported systems you install it for your own user account, without administrator rights, from verified downloads or from an offline bundle your IT team prepares; internal mirrors work too. It can also run on a supported Linux cloud computer, beside your data. Prepare a CSV, run one analyte at a time in opnca-r, and build a Word report or PowerPoint deck from recorded, replayable runs.</p>
     <a class="btn btn-hero" href="{{ '/get-started/' | relative_url }}">Get started</a>
     <a class="btn btn-ghost" href="{{ '/get-started/walkthrough/' | relative_url }}">Try the walkthrough</a>
   </div>
@@ -18,21 +18,22 @@ permalink: /
 {: .research }
 > **Research use only.** This workspace has not been validated for clinical or regulatory decisions. When a report or deck builds without errors, that shows the files were assembled as recorded. It does not show that the analysis is right.
 
-## Install on your computer
+## Set up without administrator rights
 
-opncafyr installs for your user account only, with no administrator rights. Pick your system:
+The installer sets opncafyr up for your user account only. It brings its own pinned copies of Python, R, Quarto and the tools, checks every file against a fingerprint built into the installer, and leaves the rest of the computer alone. The files can come from the internet, from an offline bundle, or from your organisation's internal mirrors. Pick your system:
 
 <ul class="cards">
   <li><a href="{{ '/get-started/install-macos/' | relative_url }}"><strong>macOS</strong>Install from Terminal; the app appears in your Applications folder.</a></li>
   <li><a href="{{ '/get-started/install-windows/' | relative_url }}"><strong>Windows</strong>Run the installer; shortcuts appear on the Desktop and in the Start Menu.</a></li>
-  <li><a href="{{ '/guides/offline-install/' | relative_url }}"><strong>No internet access?</strong>Install from a verified offline bundle on a firewalled machine.</a></li>
+  <li><a href="{{ '/get-started/install-cloud-container/' | relative_url }}"><strong>Linux cloud computer</strong>Run it beside your data, in a container or installed on Ubuntu 24.04.</a></li>
+  <li><a href="{{ '/guides/offline-install/' | relative_url }}"><strong>No internet access?</strong>Install from a verified offline bundle your IT team prepares.</a></li>
 </ul>
 
-Check [Before you install]({{ '/get-started/before-you-install/' | relative_url }}) first: opncafyr is not publicly released yet, and the installer needs access to the opnca-r release.
+Check [Before you install]({{ '/get-started/before-you-install/' | relative_url }}) first: opncafyr is not publicly released yet, the installer needs access to the opnca-r release, and some organisations' application controls block programs in user folders until IT allows them.
 
 ## How the work flows
 
-Each step happens in the app, in your web browser, and nothing leaves your computer.
+Each step happens in the app, in your web browser. Your data and the tools stay on the computer that runs opncafyr: your own computer for a normal install, or the cloud computer when it runs there. Nothing is sent anywhere by default.
 
 <ol class="steps">
   <li>
@@ -67,7 +68,7 @@ Each step happens in the app, in your web browser, and nothing leaves your compu
   </li>
 </ol>
 
-Optionally, [version history]({{ '/guides/version-history/' | relative_url }}) keeps Git snapshots of the files you choose. It is off until you open it, stays on your computer unless you turn sending on, and never changes a run, a publication or a build.
+Optionally, [version history]({{ '/guides/version-history/' | relative_url }}) keeps Git snapshots of the files you choose. It is off until you open it, stays on the computer that runs opncafyr unless you turn sending on, and never changes a run, a publication or a build.
 
 ## Two guides, one set of instructions
 

@@ -115,4 +115,6 @@ Each run has an ID made of the date and time it was created plus a short code. O
 - **Check files** checks that every file still matches the fingerprint recorded when the run was sealed. The app says "every file matches its recorded hash", or lists what changed, went missing or was added.
 - **New run from this** makes a new run with the same analyte and choices, on the recipe as it is now. A completed run never changes: to change a cleaning step, the mapping, an exclusion or a BLQ rule, you make a new run. See [Workspace and run provenance]({{ '/guides/provenance/' | relative_url }}).
 
+To review these runs as a second person would, including a comparison of their numbers with PKNCA, see [Reviewing a run (QC)]({{ '/guides/qc/' | relative_url }}).
+
 **Next:** [4. Publish, report and deck]({{ '/get-started/walkthrough-publish/' | relative_url }})

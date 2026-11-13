@@ -5,7 +5,7 @@
 // packs add their own views at start-up (workflows.js, registerView). Other hashes, such as the skip link's "#main", leave the
 // current view alone.
 
-import { emit } from "./dom.js";
+import { emit, on } from "./dom.js";
 
 const VIEWS = { "": "home", data: "data", jobs: "jobs", settings: "settings", tutorials: "tutorials" };
 
@@ -63,8 +63,12 @@ function show(route, moveFocus) {
 }
 
 export function initRouter() {
+  let stopped = false;
+  // Once the app has stopped, the stopped page owns the title and focus (#73).
+  on("app-stopped", () => { stopped = true; });
   show(routeFromHash() || { name: "home" }, false);
   window.addEventListener("hashchange", () => {
+    if (stopped) return;
     const route = routeFromHash();
     if (route) show(route, true);
   });

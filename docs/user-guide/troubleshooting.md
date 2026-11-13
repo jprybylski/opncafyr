@@ -85,7 +85,9 @@ The app closes itself after a time with no open page, to free the computer's mem
 
 To change the time, go to **Settings** and choose **Close automatically when unused for**: from 5 minutes to 2 hours, or **Never**. The default is 30 minutes.
 
-When the app has stopped, the page says "opncafyr has stopped. You can close this tab." Start the app again from its icon. Your work is in the study folder, so nothing is lost.
+When the app has stopped, its tab shows a page headed **opncafyr has stopped**. Nothing on the old page works any more. Start the app again from its icon, and close the old tab. Your work is in the study folder, so nothing is lost.
+
+If the tab shows **Connection to opncafyr was lost** instead, the page couldn't reach the app and nothing confirmed that it was quit. It may have been quit from another tab, closed itself after a time with no open page, or stopped unexpectedly. Start it from its icon if it isn't running. If it is still running, select **Check again** and the page reloads.
 
 ## Getting help
 

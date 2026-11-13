@@ -2,9 +2,10 @@
 # .github/workflows/docs.yml. Local preview: ./preview.sh (see README.md in this folder).
 title: opncafyr
 description: >-
-  A local, per-user workspace for noncompartmental analysis: clean a concentration file,
-  run one analyte at a time in opnca-r, and publish completed runs to a Word report or a
-  PowerPoint deck. Research use only.
+  A version-pinned workspace for noncompartmental analysis and reporting that installs per
+  user without administrator rights: prepare a concentration file, run one analyte at a time
+  in opnca-r, and publish completed runs to a Word report or a PowerPoint deck. Research use
+  only.
 url: https://jprybylski.github.io
 # The project-site path. The Pages workflow passes the real one with --baseurl.
 baseurl: /opncafyr

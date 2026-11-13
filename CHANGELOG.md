@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **QC guide: how to review a completed run** (#71). A new website guide, **Reviewing a
+  run (QC)**, and a matching in-app chapter, so offline users have it too. It separates
+  what each check can show: data and choices, replay, source review, independent
+  comparison, and report assembly.
+  - **Procedure.** Start from one exact run ID and **Check files**; what to record from
+    `manifest.json`; how to read `replay.json` (`passed`/`failed`, `rtol`,
+    `not_reproduced`). It also covers traceable source (a clone at a commit, or a copied
+    folder with fingerprints), a conventional code review with a sample record, and
+    running `analysis.R` on a review copy in RStudio. The guide ends with a QC record
+    template.
+  - **PKNCA comparison.** A runnable script that gives PKNCA the run's own rows and
+    settings and compares each parameter against a stated tolerance. There are two worked
+    examples on the practice file, using numbers from real runs (R 4.6.2, opnca-r 0.3.3,
+    PKNCA 0.12.1).
+  - **Investigating differences.** The guide shows how settings that weren't aligned
+    explained some differences, which then went away. It records the rest as open
+    discrepancies with their evidence: where AUC starts with a pre-dose sample, a measured
+    0 as Clast, and terminal points before Tmax. A test keeps the in-app and website
+    scripts identical.
+  - Dark-mode code comments on the website now meet 4.5:1 contrast.
 - **Tutorials: walkthroughs that point at the app while you work** (#69, ADR 0010). A new
   **Tutorials** page lists the example **Your first analysis** (import, mapping, one exact
   analyte, run review, publication) and the study's own `tutorials/*.yaml`. A docked,
@@ -979,6 +999,30 @@ All notable changes to this project are documented here. The format follows
   CI, and the plan of action.
 
 ### Changed
+- **The website and guides lead with what the workspace solves** (#72). The home page,
+  **Before you install** and the README now say what opncafyr brings: one version-pinned
+  workspace for NCA, reports and decks, installed per user without administrator rights
+  from verified downloads, an IT-prepared offline bundle or internal mirrors, or run on a
+  Linux cloud computer beside the data. Where data stays is stated the same way in both
+  guides for native and cloud use (the computer that runs opncafyr; nothing sent unless
+  version-history sending is turned on). The home page also links the cloud install and
+  mentions application controls. Steps that say which machine runs a command are
+  unchanged.
+- **After Quit, the tab says plainly that opncafyr has stopped** (#73). The working page
+  is replaced by a full page headed **opncafyr has stopped**, with the next step (start it
+  from the app shortcut). The old navigation, forms and tool links are made `inert` and
+  hidden, the title changes, focus moves to the heading, and no further request leaves the
+  tab, so no stale "Could not load…" errors appear. The page states only what the server
+  confirmed (jobs cancelled, this tab's editors saved, changes discarded).
+  - **Finishing work before quitting.** "Keep running and quit when finished" shows a band
+    under the top bar with the number of running jobs and each job's progress text, and
+    **Keep the app open** until the stop has started. A quit cancelled from another tab
+    clears the band; an abort that comes too late shows the stopped page.
+  - **Connection lost.** A request that gets no response, with no confirmed Quit, leads to
+    a separate **Connection to opncafyr was lost** page with **Check again**, never to
+    "has stopped". This also covers tabs that didn't press Quit.
+  - Cancelling a Quit dialog, going back to save, or a failed Quit request keeps the page
+    and says so. Both user guides describe the new pages.
 - Clarified how to build the installer payload from a source checkout before testing
   offline bundle creation, and distinguished the installer zip from a platform bundle.
 - opnca-r is pinned at 0.3.1, which releases opnca-r#32, #53 and #54 (0.3.0) and #56–#58

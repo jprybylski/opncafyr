@@ -53,7 +53,10 @@ Many install problems are fixed by a repair: see [Repair, update and uninstall](
 > **Nothing opens, or no browser tab appears** — wait a few seconds and start the app from its icon again. If the app is already running, this opens it in a new tab. If it still doesn't open, run `doctor` (see [Check paths and tools with doctor]({{ '/guides/maintenance/' | relative_url }}#check-paths-and-tools-with-doctor)), then make a support bundle [from the command line](#from-the-command-line).
 
 {: .fix }
-> **The page says "opncafyr has stopped. You can close this tab."** — the app was quit, or closed itself after a time with no open page. Start it again from its icon. See [The app closed by itself](#the-app-closed-by-itself).
+> **The tab shows "opncafyr has stopped"** — the app was quit, or closed itself after a time with no open page. Start it again from its icon. See [The app closed by itself](#the-app-closed-by-itself).
+
+{: .fix }
+> **The tab shows "Connection to opncafyr was lost"** — the page can't reach the app, and nothing confirmed that it was quit. Start the app from its icon if it isn't running. If it is, select **Check again**. See [The app closed by itself](#the-app-closed-by-itself).
 
 ## A tool shows Unavailable
 
@@ -133,7 +136,9 @@ The app closes itself after a time with no open page, to free the computer's mem
 
 To change the time, go to **Settings** and choose **Close automatically when unused for**: from 5 minutes to 2 hours, or **Never**. The default is 30 minutes.
 
-When the app has stopped, the page says "opncafyr has stopped. You can close this tab." Start the app again from its icon. Your work is in the study folder, so nothing is lost.
+When the app has stopped, its tab shows a page headed **opncafyr has stopped**. Nothing on the old page works any more. Start the app again from its icon, and close the old tab. Your work is in the study folder, so nothing is lost.
+
+If the tab shows **Connection to opncafyr was lost** instead, the page couldn't reach the app and nothing confirmed that it was quit. It may have been quit from another tab, closed itself after a time with no open page, or stopped unexpectedly. Start it from its icon if it isn't running. If it is still running, select **Check again** and the page reloads.
 
 ## Make a support bundle
 

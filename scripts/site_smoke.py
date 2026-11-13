@@ -32,6 +32,7 @@ ROUTES = (
     "get-started/walkthrough/",
     "get-started/walkthrough-map/",
     "guides/troubleshooting/",
+    "guides/qc/",
 )
 VIEWPORTS = {"desktop": (1280, 800), "mobile": (390, 844)}
 SCHEMES = ("light", "dark")

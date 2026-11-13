@@ -91,6 +91,16 @@ def test_the_example_data_is_the_fixture():
     assert example.read_bytes() == (ROOT / "tests" / "fixtures" / "two_analyte.csv").read_bytes()
 
 
+def test_the_qc_scripts_are_the_same_in_both_guides():
+    """#71: the review and PKNCA scripts were run as printed on the website; the in-app
+    copy must not drift from them."""
+    fence = re.compile(r"```r\n(.*?)```", re.S)
+    in_app = fence.findall((GUIDE / "qc.md").read_text("utf-8"))
+    website = fence.findall((ROOT / "site" / "guides" / "qc.md").read_text("utf-8"))
+    assert len(website) == 2
+    assert in_app == website
+
+
 def test_no_validation_claims():
     for name, text in pages().items():
         lowered = text.lower()

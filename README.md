@@ -13,7 +13,8 @@
 > **Under development.** opncafyr and opnca are not yet released. Public installation is
 > not supported.
 
-A local, per-user workspace for noncompartmental analysis and reporting. You click an
+A version-pinned workspace for noncompartmental analysis and reporting that installs per
+user, without administrator rights, online or from a verified offline bundle. You click an
 icon, pick a study folder, prepare a CSV, choose **one analyte**, and run it in
 [opnca-r](https://github.com/mantra-opnca/opnca-r). Each run produces a replayable bundle:
 input snapshot, R script, settings, results and a hashed manifest. Completed runs can then

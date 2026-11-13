@@ -24,7 +24,7 @@ Start the app from its icon:
 {: .expect }
 > After a few seconds your web browser opens a new tab with the app's **Home** page.
 
-The app runs only on your computer. The browser connects to it at an address that starts `http://127.0.0.1`, which only your own computer can reach. Nothing you load into the app leaves the computer.
+The app runs on this computer. The browser connects to it at an address that starts `http://127.0.0.1`, which only this computer can reach, and nothing you load into the app is sent anywhere. (On a cloud computer, the browser on your own computer reaches the app through a forwarded or proxied link instead; see [Run on a cloud computer]({{ '/get-started/install-cloud-container/' | relative_url }}).)
 
 If the app is already running, starting it again opens the same app in a new tab. To come back to the app later, start it from its icon again rather than from a bookmark or the browser's history.
 
@@ -135,6 +135,11 @@ Uninstalling opncafyr never removes a study folder. A later install can open it 
 ## Quitting
 
 Select **Quit** in the top bar. If jobs are still running, the app asks whether to **Keep running and quit when finished**, **Cancel jobs and quit**, or **Don't quit**. If an editor has unsaved changes, it asks you to save or discard them.
+
+If you keep the jobs running, a band under the top bar says **Finishing work before quitting** and lists them. Select **Keep the app open** there if you change your mind.
+
+{: .expect }
+> When the app has stopped, the tab shows a page headed **opncafyr has stopped**. Nothing on the old page works any more. Close the tab, and start the app from its icon when you need it again.
 
 The app also closes itself after 30 minutes with no open page (you can change this on **Settings**). It never does so while a job is running or an editor has unsaved changes. Your work is in the study folder, so nothing is lost.
 

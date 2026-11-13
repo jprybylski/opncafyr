@@ -62,6 +62,6 @@ A job that has not finished has a **Cancel** button. A cancelled or failed job k
 
 If you select **Quit** while jobs are running, the app asks what to do:
 
-- **Keep running and quit when finished** lets the jobs finish, then stops the app. A **Keep the app open** button appears in case you change your mind.
+- **Keep running and quit when finished** lets the jobs finish, then stops the app. Until then a band under the top bar says **Finishing work before quitting**, with the jobs still running and what each is doing. New jobs can't be started. Select **Keep the app open** in that band if you change your mind.
 - **Cancel jobs and quit** stops the jobs now.
 - **Don't quit** goes back.

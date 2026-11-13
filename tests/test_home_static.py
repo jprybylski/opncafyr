@@ -107,6 +107,11 @@ def test_shell_structure():
     for view in ("home", "jobs", "settings"):
         assert f'id="view-{view}"' in html
         assert f'href="#/{"" if view == "home" else view}"' in html
+    # The quit states (#73) are in the page from the start, so showing them needs no
+    # request after the launcher has gone; the final page starts hidden.
+    assert re.search(r'<section id="quit-pending"[^>]*hidden', html)
+    assert re.search(r'<main id="end-view"[^>]*hidden', html)
+    assert re.search(r'<h1 id="end-title" tabindex="-1"', html)
 
 
 @pytest.mark.parametrize("theme", [None, "system", "light", "dark"])

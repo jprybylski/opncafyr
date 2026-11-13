@@ -13,6 +13,7 @@ This guide shows how to install opncafyr, set up a study folder, clean and map a
 4. [Event records and files without an analyte](event-records.md)
 5. [Mapping columns and running checks](mapping-and-checks.md)
 6. [Analyte runs in opnca-r](analyte-runs.md)
+   - [Reviewing a run (QC)](qc.md)
 7. [Publishing tables and figures](publishing.md)
 8. [Word reports](reports.md)
 9. [PowerPoint decks](decks.md)
@@ -25,7 +26,7 @@ This guide shows how to install opncafyr, set up a study folder, clean and map a
 
 ## How the app is laid out
 
-The app opens in your web browser, but it runs only on your computer. Nothing you load into it leaves the computer.
+The app opens in your web browser. It and your data stay on the computer that runs it: your own computer, or the cloud computer in [container mode](cloud-container.md). Nothing you load into it is sent anywhere unless you turn on sending in [version history](version-history.md).
 
 - The left side has **Home**, **Data**, **Jobs**, **Analysis**, **Publish**, **Settings**, **Guide** and **Tutorials**, and **Study profile** and **Version history** while a study folder is open. Under **Apps** it lists the tools that have their own screens, such as opnca-r and deckifyr.
 - The top bar shows the open study folder, how many jobs are running, a **Theme** button and **Quit**.
