@@ -148,7 +148,7 @@ def apply_template(project: Path, material: Material | None) -> tuple[str, str]:
     deckifyr copies only the design and layouts files of a template folder; the launcher
     copies the template's other verified files (logos, images) beside them, never over a
     file deckifyr wrote. Temporary until deckifyr's ``init --from-dir`` copies referenced
-    assets itself (see docs/upstream.md).
+    assets itself (jprybylski/deckifyr#103, docs/upstream.md).
     """
     if material is None:
         return "design.yaml", "layouts.yaml"

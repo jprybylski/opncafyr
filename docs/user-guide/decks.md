@@ -11,7 +11,7 @@ A deck that builds without errors shows that the files were assembled as recorde
 1. Under **Publication**, choose a publication.
 2. Select **Set up deck**. This runs as a job.
 
-The new deck is an "NCA results" deck: a title slide, then one slide for each published table or figure. The footers come from the files' descriptions.
+The new deck is an "NCA results" deck: a title slide, then one slide for each published table or figure. The footers come from the files' descriptions. If the study selected a deck template under **Standards**, the deck uses that template's design, layouts and images (see [Standards bundles](standards.md)); otherwise it uses the one that comes with the app.
 
 To use a different publication later, close the deck editor first, then choose the publication and select **Use this publication**. If you have edited the deck, the app asks first: **Replace presentation.yaml** starts again, **Keep my presentation.yaml** keeps your version.
 

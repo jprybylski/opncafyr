@@ -24,6 +24,7 @@ TUTORIAL = shipped_files(("opncafyr.workflows.nca", "tutorials"))["first-analysi
 FOOTNOTES = Q.standard_footnotes().read_bytes()
 CONFIG = Q.template().joinpath("config.yaml").read_bytes()
 
+# A valid deckifyr design (deckifyr validates it at Check and Build), in a house colour.
 DESIGN = b"""\
 deckifyr: "0.1"
 slide:
@@ -31,20 +32,34 @@ slide:
   height: 7.5in
   background: "#FFFFFF"
   background_image: logo.png
+  safe_area: 0.35in
 fonts:
   body: Arial
   heading: Arial
+  monospace: Consolas
+colors:
+  text: "#202124"
+  muted: "#5F6368"
+  primary: "#7A1F5C"
+  accent: "#D14D32"
 text_styles:
   title:
     font: heading
     size: 30pt
     bold: true
+    color: primary
   body:
     font: body
     size: 16pt
+    color: text
   footnote:
     font: body
     size: 8pt
+    color: muted
+defaults:
+  overflow: error
+  image_fit: contain
+  rotation: 0
 """
 
 LAYOUTS = b"""\
