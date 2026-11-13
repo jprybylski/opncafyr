@@ -26,6 +26,7 @@ on:
       - "scripts/installer_ci/linux*.sh"
       - "scripts/offline/check_trace.py"
       - "scripts/offline/flow_check.py"
+      - "tests/standards_helpers.py"
       - "scripts/offline/allowed_attempts.toml"
       - ".github/workflows/installer-linux.yml"
   push:
