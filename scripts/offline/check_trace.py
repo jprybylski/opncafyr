@@ -97,9 +97,16 @@ def scan_file(path: Path) -> list[Attempt]:
 
     The program of each attempt is the last successful ``execve`` of that process, or of
     its parent when it forked without exec (trace ``%process`` to see forks).
+
+    With ``-f`` into one file, a new child or thread can run, and its syscalls be printed,
+    before the parent's ``<... clone3 resumed> = <child>`` line. Such an attempt waits in
+    ``pending`` until that line names its parent; it was made before the child's own
+    ``execve``, so it is the parent's program. An attempt whose process never turns up
+    keeps no program, and no allow rule matches it.
     """
     attempts: list[Attempt] = []
     programs: dict[str | None, tuple[str, str]] = {}
+    pending: dict[str, list[int]] = {}
     pid_from_name = path.suffix[1:] if path.suffix[1:].isdigit() else None
     for line in path.read_text("utf-8", errors="replace").splitlines():
         pid_match = _PID.match(line)
@@ -111,7 +118,11 @@ def scan_file(path: Path) -> list[Attempt]:
             continue
         spawn = _SPAWN.search(body)
         if spawn and pid in programs:
-            programs.setdefault(spawn.group("child"), programs[pid])
+            child = spawn.group("child")
+            programs.setdefault(child, programs[pid])
+            program, command = programs[pid]
+            for i in pending.pop(child, []):
+                attempts[i] = replace(attempts[i], program=program, command=command)
             continue
         found = classify(body)
         if found is None:
@@ -124,6 +135,8 @@ def scan_file(path: Path) -> list[Attempt]:
         else:
             continue
         program, command = programs.get(pid, (None, None))
+        if program is None and pid is not None:
+            pending.setdefault(pid, []).append(len(attempts))
         attempts.append(
             Attempt(str(path), pid, syscall, family, address, port, program, command, reason)
         )

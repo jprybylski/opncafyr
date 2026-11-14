@@ -1148,6 +1148,16 @@ All notable changes to this project are documented here. The format follows
   `upstream-blocked` removed from #27.
 
 ### Fixed
+- **A quick Next then Pause in a tutorial could lose the pause.** Progress saves were sent
+  without waiting, so the controller could receive them out of order. They now go one at
+  a time, in the order they were made.
+- **Offline CI check: two false alarms** (#44).
+  - The trace check credited a network attempt to no program when strace printed a new
+    process's first call before its parent's `clone` returned. It now credits it to the
+    parent, as for any fork without `exec`.
+  - renv's `curl --version` probe makes DNS lookups on the newer GitHub runner image. It
+    can't be switched off and transfers nothing, so it is allowed on that exact argv
+    (offline touchpoint I21).
 - **Slow use on Windows (#67).** On Windows every file open, folder walk and process start
   costs far more than in a Linux container (endpoint security scans them), and two things
   multiplied those costs during normal use:

@@ -179,3 +179,61 @@ def test_bad_allow_file_is_a_usage_error(tmp_path):
 def test_shipped_allow_file_is_valid():
     rules = check_trace.load_rules(_PATH.parent / "allowed_attempts.toml")
     assert rules and all(r["issue"].startswith("#") for r in rules)
+
+
+@pytest.mark.parametrize(
+    "resumed",
+    [
+        "<... clone3 resumed> => {parent_tid=[21]}, 88) = 21",
+        "<... clone resumed>, child_tidptr=0x7f) = 21",
+        "<... vfork resumed>) = 21",
+    ],
+)
+def test_child_printed_before_the_parent_clone_returns(tmp_path, resumed):
+    # strace -f into one file: the child's first syscalls can come before the parent's
+    # "resumed ... = <child>" line (seen in CI with R's libcurl lookups).
+    trace = tmp_path / "trace.txt"
+    trace.write_text(
+        '20 execve("/opt/R/bin/exec/R", ["R", "--file=tools/cacert.R"], 0x0) = 0\n'
+        "20 clone3({flags=CLONE_VM|CLONE_THREAD, exit_signal=0}, 88 <unfinished ...>\n"
+        "21 " + _v4("127.0.0.53", 53) + "\n"
+        "20 " + resumed + "\n"
+        "21 " + _v4("127.0.0.53", 53) + "\n"
+    )
+    attempts = check_trace.scan_file(trace)
+    assert [a.program for a in attempts] == ["/opt/R/bin/exec/R"] * 2
+    rules = [{"command_contains": "--file=tools/cacert.R", "reason": "r", "issue": "#44"}]
+    assert all(a.allowed_by for a in check_trace.apply_rules(attempts, rules))
+
+
+def test_an_attempt_from_an_unknown_process_stays_blocked(tmp_path):
+    trace = tmp_path / "trace.txt"
+    trace.write_text(
+        '20 execve("/opt/R/bin/exec/R", ["R", "--file=tools/cacert.R"], 0x0) = 0\n'
+        "33 " + _v4("127.0.0.53", 53) + "\n"
+        "20 clone(child_stack=NULL, flags=SIGCHLD) = 34\n"
+    )
+    [attempt] = check_trace.scan_file(trace)
+    assert attempt.program is None and attempt.command is None
+    rules = check_trace.load_rules(_PATH.parent / "allowed_attempts.toml")
+    assert check_trace.apply_rules([attempt], rules)[0].allowed_by is None
+
+
+@pytest.mark.parametrize(
+    ("argv", "allowed"),
+    [
+        ('["/usr/bin/curl", "--version"]', True),
+        ('["/usr/bin/curl", "https://cloud.r-project.org"]', False),
+        ('["/usr/bin/curl", "--version", "--url", "https://example.org"]', False),
+        ('["curl", "--version"]', False),
+    ],
+)
+def test_shipped_rules_allow_only_renvs_curl_version_probe(tmp_path, argv, allowed):
+    trace = tmp_path / "trace.txt"
+    trace.write_text(
+        f'9 execve("/usr/bin/curl", {argv}, 0x0 /* 3 vars */) = 0\n'
+        "9 " + _v4("127.0.0.53", 53) + "\n"
+    )
+    rules = check_trace.load_rules(_PATH.parent / "allowed_attempts.toml")
+    [attempt] = check_trace.apply_rules(check_trace.scan_file(trace), rules)
+    assert (attempt.allowed_by is not None) is allowed
