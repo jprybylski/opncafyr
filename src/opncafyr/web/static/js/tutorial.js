@@ -4,9 +4,10 @@
 // writes the user's own progress (api/tutorials/progress). It never submits a form,
 // clicks a control, calls a workflow endpoint or picks an option. Text is set with
 // textContent; a step can name only a target, a view or a condition from the catalog.
+// Edit buttons only announce "tutorial-edit"; the editor is tutorial-editor.js (#76).
 
 import { getJSON, send } from "./api.js";
-import { $, el, on, setStatus } from "./dom.js";
+import { $, el, emit, on, setStatus } from "./dom.js";
 import { checkCondition, findTarget, guidanceCatalog, viewHash } from "./guidance.js";
 
 const TICK_MS = 400;
@@ -216,13 +217,27 @@ function progressText(p) {
   return `Stopped at step “${p.step}”${p.paused ? " (paused)" : ""}.`;
 }
 
+const editButton = (text, open, label) => {
+  const b = el("button", text, "btn btn-ghost btn-sm");
+  b.type = "button";
+  if (label) b.setAttribute("aria-label", label);
+  b.addEventListener("click", () => emit("tutorial-edit", open));
+  return b;
+};
+
 function tutorialItem(t, progress, workspaceOpen, studyNames) {
   const box = el("div", null, "panel");
+  const name = t.key.split("/").pop();
   if (t.problems.length) {
     box.append(el("strong", `${t.key.replace(/^study\//, "tutorials/")} can't be used`));
     const list = el("ul");
     for (const p of t.problems) list.append(el("li", p));
     box.append(list);
+    if (t.key.startsWith("study/")) {
+      const actions = el("div", null, "actions");
+      actions.append(editButton("Edit to fix", { name }, `Edit tutorials/${name} to fix it`));
+      box.append(actions);
+    }
     return box;
   }
   box.append(el("strong", t.title));
@@ -262,16 +277,20 @@ function tutorialItem(t, progress, workspaceOpen, studyNames) {
     }, "btn btn-ghost btn-sm", `Reset progress of ${t.title}`);
   }
   if (t.key.startsWith("example/") && workspaceOpen) {
-    const name = t.key.split("/").pop();
     const have = studyNames.has(name);
     const copy = button(have ? `tutorials/${name} exists` : "Copy into this study", async () => {
       try {
         const out = await send("POST", "api/tutorials/copy", { key: t.key });
-        listStatus(`Copied to ${out.path}. Edit it in any text editor, then choose Check again.`);
+        listStatus(`Copied to ${out.path}. Choose Edit beside it to change it.`);
         refreshList();
       } catch (e) { listStatus(e.message, true); }
     }, "btn btn-ghost btn-sm", have ? undefined : `Copy ${t.title} into this study`);
     copy.disabled = have;
+    actions.append(editButton("New from example", { example: t.key.replace(/^example\//, "") },
+      `New tutorial from the example ${t.title}`));
+  }
+  if (t.key.startsWith("study/")) {
+    actions.append(editButton("Edit", { name }, `Edit ${t.title}`));
   }
   box.append(actions);
   return box;
@@ -342,6 +361,7 @@ export function initTutorials() {
     } catch (e) { listStatus(e.message, true); }
   });
   on("guidance-changed", refreshState);
+  on("tutorials-changed", refreshList);
   on("view-changed", (route) => {
     if (route.name === "tutorials") refreshList();
     if (!run) return;

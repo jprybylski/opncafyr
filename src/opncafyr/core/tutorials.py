@@ -27,6 +27,8 @@ from opncafyr.core.guidance import (
     sha256_bytes,
     shipped_files,
 )
+from opncafyr.core.guidance_edit import field as form_field
+from opncafyr.core.guidance_edit import form_spec
 from opncafyr.core.manifest import atomic_write_bytes, atomic_write_json, validate
 from opncafyr.core.registry import StandardsCheck, StandardsType, WorkflowPack
 from opncafyr.core.runs import now
@@ -39,6 +41,31 @@ PROGRESS_SCHEMA = "tutorial-progress-v1"
 PROGRESS_FILE = "tutorial-progress.json"
 STUDY_DIR = "tutorials"
 KEY_RE = re.compile(r"^(example/([a-z][a-z0-9_-]{0,31})|study)/([a-z][a-z0-9-]{0,63}\.yaml)$")
+
+
+# The in-app editor's form (#76, core.guidance_edit). tests/test_tutorials.py keeps it in
+# step with the schema.
+FORM = form_spec(
+    noun="tutorial",
+    document=[
+        form_field("id", "name", "Tutorial id", required=True),
+        form_field("version", "version", "Version", required=True, help="Your own label."),
+        form_field("title", "line", "Title", required=True),
+        form_field("audience", "line", "Who it is for"),
+        form_field("prerequisites", "lines", "Before you start", max=20),
+        form_field("profile", "name", "Goes with the study profile (its id)", help="Shown only."),
+    ],
+    step=[
+        form_field("id", "name", "Step id", required=True),
+        form_field("title", "line", "Title", required=True),
+        form_field("text", "text", "What to do", required=True, max=2000),
+        form_field("view", "view", "Show this view"),
+        form_field("target", "target", "Point at"),
+        form_field(
+            "wait_for", "condition", "Wait until", help="Next waits for it; Skip always works."
+        ),
+    ],
+)
 
 
 class TutorialError(Exception):

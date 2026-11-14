@@ -245,7 +245,8 @@
       <!-- Tutorials (#69): walkthroughs that point at controls; the user does every step. -->
       <div class="view" id="view-tutorials" data-title="Tutorials" hidden>
         <div class="page-head"><h1 id="tutorials-heading" tabindex="-1">Tutorials</h1><p>A tutorial points at each part of the app and tells you what to do there. You do every step yourself: a tutorial never clicks, chooses, runs or publishes anything, and finishing one does not validate an analysis. <a href="#/guide/tutorials">How to write a tutorial</a>.</p></div>
-        <section class="card" aria-labelledby="tutorials-list-heading">
+        <div id="tutorials-editor" hidden></div>
+        <section class="card" id="tutorials-card" aria-labelledby="tutorials-list-heading">
           <div class="card-head"><h2 id="tutorials-list-heading">Available tutorials</h2><span class="aside"><button type="button" class="btn btn-ghost btn-sm" id="tutorials-refresh">Check again</button></span></div>
           <div id="tutorials-list" class="card-body tutorial-list"></div>
           <p id="tutorials-status" class="status card-status" role="status" aria-live="polite"></p>

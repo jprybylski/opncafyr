@@ -1,8 +1,8 @@
 # 0010. Guidance contracts: targets, conditions, tutorials and study profiles
 
 - Status: accepted (owner, 2026-11-12, ADR review). In planning the owner chose: shared
-  contracts first; user-authored YAML with in-app validate and preview (no in-app editor
-  yet); the tutorial engine as a generic core capability; study profiles in the NCA pack;
+  contracts first; user-authored YAML with in-app validate and preview (an in-app
+  structured form editor followed in #76); the tutorial engine as a generic core capability; study profiles in the NCA pack;
   study copies in visible `tutorials/` and `profiles/` folders.
 - Date: 2026-11-12
 - Issues: #68 (study workflow profiles), #69 (tutorial walkthroughs)

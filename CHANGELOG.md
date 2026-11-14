@@ -7,6 +7,22 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Edit study profiles and tutorials in the app** (#76, ADR 0010). A structured form
+  replaces "edit the copy in any text editor": **New from example**, **Edit** and **Edit to
+  fix** on the Study profile and Tutorials pages.
+  - **Steps as a form.** Add, move (keyboard-operable buttons) and remove steps; a profile
+    step's fields follow its type. Controls, views and conditions are chosen from the
+    catalog by name, so a file can't name one the app doesn't have, and a publication
+    offers only the slots of run steps above it.
+  - **Checked by the server, written by the server.** The page sends the document; the
+    server writes the YAML, checks those exact bytes like any listing (problems name the
+    step and field, never the value) and saves only when nothing is wrong. A new file
+    never replaces one, an edit never replaces a file that changed on disk, and nothing
+    outside `profiles/` and `tutorials/` is written. Comments are not kept, and the form
+    says so first.
+  - **Nothing else changes.** No run, publication or progress is touched. Editing the
+    followed profile still needs **Adopt edited profile**; a tutorial in progress says it
+    changed. Unsaved edits are covered by Quit's unsaved-changes prompt.
 - **Standards bundles** (#70, ADR 0011). A study team can share one versioned set of
   study profiles, tutorials, and report and deck templates, and import it into a study
   from a folder, a `.zip`/`.tar.gz` archive, or a GitHub or GitHub Enterprise repository,

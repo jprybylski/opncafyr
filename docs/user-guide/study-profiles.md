@@ -15,10 +15,31 @@ Each run still has exactly one analyte, and a change to cleaning, mapping or BLQ
 The app comes with three examples: **Dose escalation study**, **Fed/fasted study** and **Drug-drug interaction study**. They are illustrations, not templates for every protocol.
 
 1. Open a study folder, then select **Study profile** on the left.
-2. Under **Examples**, select **Copy into this study** for the one closest to your study. The copy is saved as `profiles/<name>.yaml` in the study folder. Copying never replaces a file that is already there.
-3. Open the copy in any text editor and change it to match your protocol and analysis plan: the words, the number of cohorts or periods, the checklist items.
-4. Back in the app, select **Check again**. If the file has a mistake, the page lists each problem with the step and field it is in.
-5. Choose the profile under **Profile in profiles/** and select **Follow this profile**.
+2. Under **Examples**, select **New from example** for the one closest to your study. The editor opens with a copy of it (see [Edit a profile in the app](#edit-a-profile-in-the-app)).
+3. Give the file a name, change the profile to match your protocol and analysis plan (the words, the number of cohorts or periods, the checklist items), and select **Save as new study profile**. It is saved as `profiles/<name>.yaml` in the study folder. Saving never replaces a file that is already there.
+4. Choose the profile under **Profile in profiles/** and select **Follow this profile**.
+
+**Copy into this study** copies an example unchanged, comments included, if you would rather edit the file in a text editor. After editing a file outside the app, select **Check again**. If the file has a mistake, the page lists each problem with the step and field it is in.
+
+## Edit a profile in the app
+
+Choose a profile under **Profile in profiles/** and select **Edit**, or select **Edit to fix** beside a profile that can't be used. The editor replaces the page until you close it.
+
+- **About this study profile**: the id, your version label, the title and an optional description.
+- **Steps**: each step has a type, a title and a step id. A new step's id follows its title until you change it. The other fields depend on the type: text, checklist items, the control an action points at, a run slot, or the slots a publication holds.
+- **Move up**, **Move down** and **Remove** change the order. They are ordinary buttons, so the keyboard works as well as the mouse.
+- **Controls and hints** are chosen from lists, by name. You can't type an id, so the profile can't name a control the app doesn't have.
+- **Runs in slots** for a publication lists only the slots of run steps above it.
+
+The editor checks the profile as you type. **Check** lists each problem with the step it is in; **Go to step** takes you there. **Save** writes the file only when nothing is wrong. **Preview the steps** shows them as a list.
+
+Good to know:
+
+- Saving rewrites the file from the form. Comments (lines starting with `#`) are not kept, and the editor says so before you save a file that has them.
+- Saving writes only that file. It never changes a run, a publication or your progress. If you edit the profile you follow, the page then asks you to adopt it (see below).
+- If the file changed on disk after you opened it, nothing is saved. You can save your version as a new file, or open the file on disk instead.
+- Unsaved edits count as unsaved changes: **Quit** asks you to save or discard them.
+- The editor opens a file only when it is well formed. A file with a YAML mistake or an unknown field shows its problems instead: fix those in a text editor first.
 
 ## Follow the steps
 
@@ -41,7 +62,7 @@ While you follow a profile, **Start analysis** and **Choose tables and figures**
 
 ## When the profile file changes
 
-If someone edits the profile file, the page says so. It lists the steps the edit added and removed, and nothing can be ticked until you select **Adopt edited profile**. Adopting keeps the progress of steps that still exist and drops the rest. The earlier version's fingerprint is kept in the progress file. Runs and publications made earlier keep the version they recorded.
+If someone edits the profile file, in the app or outside it, the page says so. It lists the steps the edit added and removed, and nothing can be ticked until you select **Adopt edited profile**. Adopting keeps the progress of steps that still exist and drops the rest. The earlier version's fingerprint is kept in the progress file. Runs and publications made earlier keep the version they recorded.
 
 ## Write a profile
 
