@@ -40,6 +40,8 @@ from opncafyr.core.guidance import (
     sha256_bytes,
     shipped_files,
 )
+from opncafyr.core.guidance_edit import field as form_field
+from opncafyr.core.guidance_edit import form_spec
 from opncafyr.core.manifest import atomic_write_bytes, atomic_write_json, validate
 from opncafyr.core.workspace import WORKSPACE_META_DIR, resolve_in_root
 
@@ -61,6 +63,58 @@ FIELDS = {
     "publication": {"text", "slots"},
 }
 COMMON = {"id", "type", "title"}
+
+# The in-app editor's form (#76, core.guidance_edit). tests/test_study_profiles.py keeps it
+# in step with FIELDS and the schema.
+_TEXT = form_field("text", "text", "Text", max=4000)
+FORM = form_spec(
+    noun="study profile",
+    document=[
+        form_field("id", "name", "Profile id", required=True),
+        form_field("version", "version", "Version", required=True, help="Your own label."),
+        form_field("title", "line", "Title", required=True),
+        form_field("description", "text", "Description", max=4000),
+    ],
+    step=[
+        form_field("id", "name", "Step id", required=True),
+        form_field("type", "line", "Type", required=True),
+        form_field("title", "line", "Title", required=True),
+    ],
+    step_types=[
+        {"id": "instruction", "title": "Instruction", "fields": [{**_TEXT, "required": True}]},
+        {
+            "id": "checklist",
+            "title": "Checklist",
+            "fields": [_TEXT, form_field("items", "items", "Items", required=True, max=50)],
+        },
+        {
+            "id": "action",
+            "title": "Action (points at a control)",
+            "fields": [
+                {**_TEXT, "required": True},
+                form_field("target", "target", "Control", required=True),
+                form_field("hint_condition", "condition", "Hint: show whether this holds"),
+            ],
+        },
+        {
+            "id": "run",
+            "title": "Run (a slot for one completed run)",
+            "fields": [
+                _TEXT,
+                form_field(
+                    "slot", "name", "Slot", required=True, help="Publication steps name it."
+                ),
+                form_field("suggested_label", "line", "Suggested analyte label"),
+            ],
+        },
+        {"id": "checkpoint", "title": "Review checkpoint", "fields": [{**_TEXT, "required": True}]},
+        {
+            "id": "publication",
+            "title": "Publication (of the runs in earlier slots)",
+            "fields": [_TEXT, form_field("slots", "slots", "Runs in slots", required=True, max=50)],
+        },
+    ],
+)
 
 _lock = threading.Lock()
 

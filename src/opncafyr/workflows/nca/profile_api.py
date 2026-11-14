@@ -11,6 +11,10 @@
 - ``POST /api/nca/profiles/current/adopt {sha256}``: follow the file's new text.
 - ``GET /api/nca/profiles/candidates``: completed runs and recorded publications to choose
   from, with nothing chosen.
+- ``GET /api/nca/profiles/form``, ``GET /api/nca/profiles/edit?name=|example=``,
+  ``POST /api/nca/profiles/check {doc}``, ``PUT /api/nca/profiles/edit {name, doc,
+  expected_sha256}``: the in-app editor (#76, ``core.guidance_edit``). A save writes one
+  file in ``profiles/``; following its new text still takes **Adopt edited profile**.
 
 Every write is a choice the user makes on the Study profile page. None starts, changes or
 publishes a run.
@@ -24,7 +28,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi import Path as PathParam
 from pydantic import BaseModel, Field
 
-from opncafyr.core.guidance import Catalog
+from opncafyr.core.guidance import Catalog, shipped_files
+from opncafyr.core.guidance_edit import GuidanceKind, mount_guidance_editor
 from opncafyr.workflows.nca import study_profile as sp
 
 NAME = r"^[a-z][a-z0-9-]{0,63}$"
@@ -153,3 +158,23 @@ def mount(app: FastAPI, ctx: Any) -> None:
         return call(sp.context_for, root(), catalog(), step_id, kind, run_ids)
 
     ctx.profile_context = context_for
+
+    def study_root():
+        ws = app.state.workspace
+        return ws.root if ws is not None else None
+
+    # The in-app editor (#76): /api/nca/profiles/form, /edit, /check.
+    mount_guidance_editor(
+        app,
+        "/api/nca/profiles",
+        GuidanceKind(
+            folder=sp.PROFILES_DIR,
+            spec=sp.FORM,
+            label="This profile",
+            doc_key="profile",
+            examine=lambda data, label: sp.examine(data, label, catalog()),
+            examples=lambda: shipped_files(sp.EXAMPLES),
+            lock=sp._lock,
+        ),
+        study_root,
+    )

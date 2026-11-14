@@ -6,6 +6,7 @@
 import { button, choice, el, field, getJSON, post, section, send, setStatus, stateBadge } from "./common.js";
 import { emit, on } from "../../js/dom.js";
 import { checkCondition, goToTarget, guidanceCatalog } from "../../js/guidance.js";
+import { openGuidanceForm } from "../../js/guidance-form.js";
 
 let catalog = { targets: [], conditions: [] };
 
@@ -27,14 +28,39 @@ export function init(container) {
       "does not validate the analysis."),
   );
   const stack = el("div", null, "stack");
-  container.append(head, stack);
+  const editorHost = el("div");
+  editorHost.hidden = true;
+  container.append(head, editorHost, stack);
 
   const chooser = section(stack, "nca-profile-choose", "Profile",
-    "Profiles are YAML files in the study's profiles/ folder. Copy an example to start, " +
-      "edit the copy in any text editor, then choose Check again.", "nca.profile.choose");
+    "Profiles are files in the study's profiles/ folder. Start a new one from an example, " +
+      "or edit one here with Edit. A profile you follow changes only when you adopt its new text.",
+    "nca.profile.choose");
   const steps = section(stack, "nca-profile-steps", "Steps",
     "Tick a step when it is done. Run and publication steps are done when you choose a " +
       "completed run or a matching publication.", "nca.profile.steps");
+
+  // The editor (#76) replaces the page while it is open. It saves one file in profiles/;
+  // nothing else changes until the user adopts the edited profile.
+  async function edit(open) {
+    stack.hidden = true;
+    try {
+      await openGuidanceForm(editorHost, {
+        api: "api/nca/profiles",
+        open,
+        unsavedKey: "study-profile",
+        onClose: () => {
+          stack.hidden = false;
+          refresh();
+          h1.focus();
+        },
+      });
+    } catch (e) {
+      editorHost.hidden = true;
+      stack.hidden = false;
+      setStatus(chooser.status, `The editor could not open: ${e.message}`, true);
+    }
+  }
 
   let data = null;
   let candidates = { runs: [], publications: [] };
@@ -87,17 +113,24 @@ export function init(container) {
     const stop = button("Stop following", () => act(() => post("api/nca/profiles/clear"), "follow"), "btn btn-ghost btn-sm");
     stop.disabled = !data.current?.selected;
     const again = button("Check again", () => refresh(), "btn btn-ghost btn-sm");
+    const editIt = button("Edit", () => {
+      if (!sel.value) return setStatus(chooser.status, "Choose a profile to edit.", true);
+      edit({ name: sel.value });
+    }, "btn btn-sm");
+    editIt.setAttribute("aria-label", "Edit the chosen profile");
     const row = el("div", null, "nca-row");
-    row.append(field("Profile in profiles/", sel), follow, stop, again);
+    row.append(field("Profile in profiles/", sel), follow, stop, editIt, again);
     body.append(row);
     if (!data.study.length) body.append(el("p", "This study has no profiles yet. Copy an example below.", "muted"));
 
     for (const p of data.study.filter((x) => x.problems.length)) {
       const box = el("div", null, "nca-finding blocking");
-      box.append(el("strong", `profiles/${p.name} can't be used: `), "fix these problems in the file, then choose Check again.");
+      box.append(el("strong", `profiles/${p.name} can't be used: `), "fix these problems, then choose Check again.");
       const list = el("ul");
       for (const problem of p.problems) list.append(el("li", problem));
-      box.append(list);
+      const fix = button("Edit to fix", () => edit({ name: p.name }), "btn btn-sm");
+      fix.setAttribute("aria-label", `Edit profiles/${p.name} to fix it`);
+      box.append(list, fix);
       body.append(box);
     }
 
@@ -111,7 +144,7 @@ export function init(container) {
       const copy = button(have.has(ex.name) ? `profiles/${ex.name} exists` : "Copy into this study", async () => {
         try {
           const out = await post("api/nca/profiles/copy", { name: ex.name });
-          setStatus(chooser.status, `Copied to ${out.path}. Edit it to match your protocol, then follow it.`);
+          setStatus(chooser.status, `Copied to ${out.path}. Choose it and Edit to match your protocol, then follow it.`);
           await refresh();
         } catch (e) {
           setStatus(chooser.status, e.message, true);
@@ -119,7 +152,11 @@ export function init(container) {
       }, "btn btn-sm");
       copy.disabled = have.has(ex.name);
       if (!have.has(ex.name)) copy.setAttribute("aria-label", `Copy the example ${ex.title || ex.name} into this study`);
-      item.append(copy);
+      const fresh = button("New from example", () => edit({ example: ex.name }), "btn btn-ghost btn-sm");
+      fresh.setAttribute("aria-label", `New profile from the example ${ex.title || ex.name}`);
+      const actions = el("div", null, "nca-row");
+      actions.append(copy, fresh);
+      item.append(actions);
       examples.append(item);
     }
     body.append(examples);

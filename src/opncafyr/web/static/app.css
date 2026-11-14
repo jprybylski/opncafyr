@@ -605,6 +605,42 @@ body.app-ended > :not(#end-view):not(.sprite) { display: none !important; }
 }
 .field .hint { font-size: var(--text-xs); color: var(--muted); margin: 0; }
 
+/* ---- Guidance editor (#76): study profiles and tutorials as a form ----------- */
+
+.guidance-form .card-body { display: grid; gap: var(--space-3); }
+.guidance-form fieldset { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-3); margin: 0; display: grid; gap: var(--space-3); min-width: 0; }
+.guidance-form legend { font-weight: 600; padding: 0 var(--space-1); }
+.guidance-form h3 { margin: var(--space-2) 0 0; font-size: var(--text-md); }
+.guidance-form .field { max-width: 40rem; }
+.guidance-form .field textarea {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--fg);
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+.guidance-form .field input[type="text"] { width: 100%; box-sizing: border-box; }
+.guidance-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.guidance-step > fieldset { background: var(--surface-2); }
+.guidance-step-head { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: start; }
+.guidance-step-head .field { flex: 1 1 14rem; }
+.guidance-rows { display: grid; gap: var(--space-2); justify-items: start; }
+.guidance-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: end; width: 100%; }
+.guidance-row .field { flex: 1 1 12rem; }
+.guidance-slots label { display: flex; gap: var(--space-2); align-items: center; }
+.guidance-step-problems { margin: 0; padding-left: 1.2rem; color: var(--danger); font-size: var(--text-sm); }
+.guidance-step-problems:empty { display: none; }
+.guidance-problems ul { margin: 0; padding-left: 1.2rem; }
+.guidance-problems li { margin-bottom: var(--space-1); }
+.guidance-notice, .guidance-conflict { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--warn); background: var(--warn-soft); color: var(--fg); font-size: var(--text-sm); }
+.guidance-conflict p { margin: 0 0 var(--space-2); }
+.guidance-preview { margin: var(--space-2) 0 0; padding-left: 1.4rem; }
+.guidance-preview p { margin: var(--space-1) 0; }
+.guidance-bar { border-top: 1px solid var(--border); padding-top: var(--space-3); }
+
 .status-box { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); border: 1px solid var(--border); background: var(--surface); margin: 0; }
 .status-box.ok { border-color: var(--ok); }
 .status-box.ok .icon { color: var(--ok); }

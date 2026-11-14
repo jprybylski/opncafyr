@@ -28,8 +28,17 @@ Inside an app with its own screens, such as opnca-r, the tutorial can't point at
 
 ## Write your own
 
-1. Under **Examples**, select **Copy into this study**. The copy is saved as `tutorials/<name>.yaml` in the study folder. Copying never replaces a file.
-2. Edit it in any text editor, then select **Check again** on the Tutorials page. If the file has a mistake, the page lists each problem with the step and field it is in.
+1. Under **Examples**, select **New from example**. The editor opens with a copy of it in place of the list.
+2. Give the file a name and change the tutorial, then select **Save as new tutorial**. It is saved as `tutorials/<name>.yaml` in the study folder. Saving never replaces a file.
+
+Select **Edit** beside one of the study's tutorials to change it, or **Edit to fix** beside one that can't be used. The editor works like the [study profile editor](study-profiles.md#edit-a-profile-in-the-app):
+
+- Each step has a title, a step id and the text to show. **Show this view**, **Point at** and **Wait until** are chosen from lists by name, so a tutorial can't name a page, control or condition the app doesn't have. When a step shows a view, **Point at** lists the controls on that view and in the sidebar.
+- **Move up**, **Move down** and **Remove** change the order. The editor checks the tutorial as you type, and **Save** writes the file only when nothing is wrong.
+- Saving rewrites the file from the form, without comments. It never changes anyone's progress. If you change a tutorial you are part-way through, the panel says it changed when you resume.
+- **Quit** asks first while there are unsaved edits.
+
+**Copy into this study** copies an example unchanged, if you would rather edit the file in a text editor. Then select **Check again**. If the file has a mistake, the page lists each problem with the step and field it is in. The editor opens only a well-formed file; a file with a YAML mistake shows its problems instead.
 
 ```yaml
 schema_version: "1.0"

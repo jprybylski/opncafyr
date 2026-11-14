@@ -98,13 +98,37 @@ def test_walk_highlight_recover_and_navigate(tour):
     assert page.errors == []
 
 
+def is_pause_save(response):
+    req = response.request
+    return (
+        req.method == "PUT"
+        and urlparse(req.url).path == "/api/tutorials/progress"
+        and (req.post_data_json or {}).get("paused") is True
+    )
+
+
+def test_next_then_pause_saves_in_order(tour, home):
+    page = tour
+    page.get_by_role("button", name="Start Your first analysis").click()
+    box = panel(page)
+    box.get_by_text("Step 1 of 11").wait_for()
+    with page.expect_response(is_pause_save):
+        box.get_by_role("button", name="Next").click()
+        box.get_by_role("button", name="Pause").click()
+    # The pause save was sent after the Next save finished, so it is the one kept.
+    saved = page.request.get(page.url.split("#")[0] + "api/tutorials").json()
+    [progress] = saved["progress"]["tutorials"].values()
+    assert progress["paused"] is True and progress["step"] == "data"
+
+
 def test_pause_resume_after_reload_and_exit(tour, home):
     page = tour
     page.get_by_role("button", name="Start Your first analysis").click()
     box = panel(page)
     box.get_by_role("button", name="Next").click()
     box.get_by_text("Step 2 of 11").wait_for()
-    box.get_by_role("button", name="Pause").click()
+    with page.expect_response(is_pause_save):
+        box.get_by_role("button", name="Pause").click()
     box.get_by_text("Paused. Resume to carry on from this step.").wait_for()
     assert highlighted(page, []) == []
 

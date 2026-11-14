@@ -5,9 +5,13 @@
 - ``POST /api/tutorials/copy {key}``: copy an example into the study's ``tutorials/``.
 - ``PUT /api/tutorials/progress {key, step, paused, active, finished}``.
 - ``DELETE /api/tutorials/progress?key=``: reset one tutorial's progress (all without key).
+- ``GET /api/tutorials/form``, ``GET /api/tutorials/edit?name=|example=``,
+  ``POST /api/tutorials/check {doc}``, ``PUT /api/tutorials/edit {name, doc,
+  expected_sha256}``: the in-app editor (#76, ``core.guidance_edit``).
 
-The only state these write is the user's own progress file (and a copied example). No route
-here starts a job, changes a workspace record or calls a workflow.
+The only state these write is the user's own progress file, a copied example and a file
+the user saves from the editor. No route here starts a job, changes a workspace record or
+calls a workflow.
 """
 
 from __future__ import annotations
@@ -18,7 +22,9 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from opncafyr.core.tutorials import KEY_RE, TutorialError, Tutorials
+from opncafyr.core.guidance import shipped_files
+from opncafyr.core.guidance_edit import GuidanceKind, mount_guidance_editor
+from opncafyr.core.tutorials import FORM, KEY_RE, STUDY_DIR, TutorialError, Tutorials, examine
 
 STATUS = {
     "not_found": 404,
@@ -92,6 +98,29 @@ def mount_tutorials_api(app: FastAPI, tutorials: Tutorials) -> None:
             active=body.active,
             finished=body.finished,
         )
+
+    def examples() -> dict[str, bytes]:
+        return {
+            f"{pack}/{name}": data
+            for pack, source in sorted(tutorials.sources.items())
+            for name, data in shipped_files(source).items()
+        }
+
+    # The in-app editor (#76): /api/tutorials/form, /edit, /check.
+    mount_guidance_editor(
+        app,
+        "/api/tutorials",
+        GuidanceKind(
+            folder=STUDY_DIR,
+            spec=FORM,
+            label="This tutorial",
+            doc_key="tutorial",
+            examine=lambda data, label: examine(data, label, tutorials.catalog),
+            examples=examples,
+            lock=tutorials._lock,
+        ),
+        root,
+    )
 
     @app.delete("/api/tutorials/progress")
     def reset(key: str | None = Query(default=None, pattern=KEY)) -> dict[str, Any]:

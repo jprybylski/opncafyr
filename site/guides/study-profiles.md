@@ -21,12 +21,25 @@ A profile never chooses an analyte, a dose, a unit, a BLQ rule, an exclusion or 
 ## Start from an example
 
 1. Open a study folder, then select **Study profile** on the left.
-2. Under **Examples**, select **Copy into this study** for the closest example: **Dose escalation study**, **Fed/fasted study** or **Drug-drug interaction study**. The copy is saved as `profiles/<name>.yaml`; an existing file is never replaced.
-3. Edit the copy in any text editor so it matches your protocol and analysis plan, then select **Check again**.
+2. Under **Examples**, select **New from example** for the closest example: **Dose escalation study**, **Fed/fasted study** or **Drug-drug interaction study**. The profile editor opens with a copy of it.
+3. Name the file, change the steps to match your protocol and analysis plan, and select **Save as new study profile**. It is saved as `profiles/<name>.yaml`; an existing file is never replaced.
 4. Choose it under **Profile in profiles/** and select **Follow this profile**.
 
 {: .expect }
-If the file has a mistake, the page lists each problem with the step and the field it is in, and the profile can't be followed until it is fixed.
+The editor checks the profile as you type and lists each problem with the step it is in. **Save** writes the file only when nothing is wrong.
+
+## Edit a profile in the app
+
+Select **Edit** for the chosen profile, or **Edit to fix** beside one that can't be used. Add, move and remove steps with buttons, and choose the card an action points at from a list, by name. Saving writes only that file, without its comments, and never changes a run, a publication or your progress. If the file changed on disk since you opened it, nothing is saved. **Quit** asks first while there are unsaved edits.
+
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/18-profile-editor.png' | relative_url }}" width="982" height="468" loading="lazy"
+       alt="A step in the profile editor: type Publication, its title and step id, a Runs in slots group whose parent and metab checkboxes both say no run step above has this slot, two problems under the step saying each slot comes after this step, and Move up, Move down and Remove buttons.">
+  <figcaption>The publication step was moved above its run steps. The editor names the problem on the step itself; moving it back clears it.</figcaption>
+</figure>
+
+{: .fix }
+The editor opens only a well-formed file. A file with a YAML mistake shows its problems instead: fix them in a text editor, then select **Check again**. **Copy into this study** copies an example unchanged for editing outside the app.
 
 ## Follow the steps
 
@@ -48,7 +61,7 @@ While you follow a profile, **Start analysis** and **Choose tables and figures**
 
 ## When someone edits the profile
 
-The page lists the steps an edit added and removed. Nothing can be ticked until you select **Adopt edited profile**. Adopting keeps the progress of steps that still exist. Runs and publications made earlier keep the version they recorded.
+Whether the edit was made in the app or outside it, the page lists the steps an edit added and removed. Nothing can be ticked until you select **Adopt edited profile**. Adopting keeps the progress of steps that still exist. Runs and publications made earlier keep the version they recorded.
 
 ## Write your own
 

@@ -71,6 +71,7 @@ NAMES = (
     "15-history-save",
     "16-study-profile",
     "17-tutorial",
+    "18-profile-editor",
 )
 VIEWPORT = {"width": 1280, "height": 800}
 MAX_BYTES = 400 * 1024
@@ -434,6 +435,26 @@ def run(tmp: Path, runtime_file: Path, out: Path, only: set[str]) -> Shots:
             c.client.post(
                 "/api/nca/profiles/select", json={"name": PRACTICE_PROFILE_NAME}
             ).raise_for_status()
+
+            # 18: the profile editor (#76) with the publication step moved above both run
+            # steps: its slots say so and the check names the step. Discarded afterwards.
+            def profile_editor(path: Path) -> None:
+                go(page, base, "profile", reload=True)
+                page.get_by_role("button", name="Edit the chosen profile").click()
+                editor = page.locator(".guidance-form")
+                editor.get_by_text("No problems found.").wait_for()
+                publication = editor.locator(".guidance-step").filter(
+                    has_text="Publication with both analytes"
+                )
+                for _ in range(3):
+                    publication.locator('[data-action="up"]').click()
+                expect(publication.locator(".guidance-step-problems li")).to_have_count(2)
+                publication.scroll_into_view_if_needed()
+                clip(page, path, '.guidance-step[data-step="2"]')
+                editor.get_by_role("button", name="Discard changes").click()
+                editor.get_by_role("button", name="Close").click()
+
+            shots.take("18-profile-editor", profile_editor)
             go(page, base, "analysis", reload=True)
             # One selection at a time: the card reloads the recipe list after a source is
             # chosen, and two overlapping loads would draw the result twice.

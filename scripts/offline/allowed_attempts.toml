@@ -10,3 +10,14 @@
 command_contains = "--file=tools/cacert.R"
 reason = "openssl source build: optional CA bundle download, falls back to the system bundle"
 issue = "#44"
+
+[[allow]]
+# renv 1.3's installer (renv_graph_install -> renv_download_parallel ->
+# renv_download_parallel_supported_curl) runs `curl --version` to see whether curl can
+# download in parallel. It does so whatever the download method, so it can't be switched
+# off, and with a file:// repository nothing is downloaded. On runner image ubuntu-24.04
+# 20261111 that curl makes 2 DNS lookups while starting up. Only this exact argv matches:
+# a version print transfers nothing.
+command_contains = '"/usr/bin/curl", "--version"]'
+reason = "renv's curl capability probe; curl's own start-up lookup on some runner images"
+issue = "#44"
