@@ -22,14 +22,20 @@ const panel = () => $("tutorial-panel");
 const step = () => run.doc.steps[run.index];
 const listStatus = (text, isError) => setStatus($("tutorials-status"), text, isError);
 
-async function saveProgress({ active = true, finished = false } = {}) {
-  try {
-    await send("PUT", "api/tutorials/progress", {
-      key: run.key, step: step().id, paused: run.paused, active, finished,
-    });
-  } catch (e) {
-    $("tutorial-note").textContent = `Progress could not be saved: ${e.message}`;
-  }
+// Saves go one at a time, in the order they were made: a quick Next then Pause must not
+// reach the controller as Pause then Next, or the pause is lost.
+let saving = Promise.resolve();
+
+function saveProgress({ active = true, finished = false } = {}) {
+  const body = { key: run.key, step: step().id, paused: run.paused, active, finished };
+  saving = saving.then(async () => {
+    try {
+      await send("PUT", "api/tutorials/progress", body);
+    } catch (e) {
+      $("tutorial-note").textContent = `Progress could not be saved: ${e.message}`;
+    }
+  });
+  return saving;
 }
 
 function clearHighlight() {
@@ -140,8 +146,8 @@ function pause() {
   panel().classList.add("paused");
   $("tutorial-pause").textContent = "Resume";
   $("tutorial-note").textContent = "Paused. Resume to carry on from this step.";
-  saveProgress();
   $("tutorial-pause").focus();
+  return saveProgress();
 }
 
 async function exit() {
