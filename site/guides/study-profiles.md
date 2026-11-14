@@ -32,6 +32,12 @@ The editor checks the profile as you type and lists each problem with the step i
 
 Select **Edit** for the chosen profile, or **Edit to fix** beside one that can't be used. Add, move and remove steps with buttons, and choose the card an action points at from a list, by name. Saving writes only that file, without its comments, and never changes a run, a publication or your progress. If the file changed on disk since you opened it, nothing is saved. **Quit** asks first while there are unsaved edits.
 
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/18-profile-editor.png' | relative_url }}" width="982" height="468" loading="lazy"
+       alt="A step in the profile editor: type Publication, its title and step id, a Runs in slots group whose parent and metab checkboxes both say no run step above has this slot, two problems under the step saying each slot comes after this step, and Move up, Move down and Remove buttons.">
+  <figcaption>The publication step was moved above its run steps. The editor names the problem on the step itself; moving it back clears it.</figcaption>
+</figure>
+
 {: .fix }
 The editor opens only a well-formed file. A file with a YAML mistake shows its problems instead: fix them in a text editor, then select **Check again**. **Copy into this study** copies an example unchanged for editing outside the app.
 

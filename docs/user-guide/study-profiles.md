@@ -31,6 +31,8 @@ Choose a profile under **Profile in profiles/** and select **Edit**, or select *
 - **Controls and hints** are chosen from lists, by name. You can't type an id, so the profile can't name a control the app doesn't have.
 - **Runs in slots** for a publication lists only the slots of run steps above it.
 
+![A publication step moved above both run steps in the profile editor: its slot checkboxes say no run step above has the slot, and two problems under the step say each slot comes after this step](images/18-profile-editor.png)
+
 The editor checks the profile as you type. **Check** lists each problem with the step it is in; **Go to step** takes you there. **Save** writes the file only when nothing is wrong. **Preview the steps** shows them as a list.
 
 Good to know:
