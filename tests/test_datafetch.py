@@ -685,3 +685,30 @@ def test_delete_keeps_a_copy_and_undelete_and_forget_edit_the_lock(client):
     assert "deleted" not in yaml.safe_load((study / ".data.lock.yaml").read_text())["items"]["pk"]
     client.post("/api/datafetch/datasets/pk/forget").raise_for_status()
     assert "pk" not in yaml.safe_load((study / ".data.lock.yaml").read_text())["items"]
+
+
+def test_one_datasets_credentials_never_block_or_reach_another(client):
+    # datum substitutes every ${NAME} in the config it loads, so the snapshot holds only
+    # the datasets a command is about (found with the real binary, #83).
+    study = client.study
+    (study / "upstream").mkdir()
+    (study / "upstream" / "pk.csv").write_bytes(CSV)
+    portal = {
+        "id": "portal",
+        "desc": "",
+        "source": {"type": "http", "url": "https://data.example.org/a.csv?k=${TOKEN}"},
+        "target": "source-data/portal.csv",
+    }
+    write_config(study, [file_dataset(), portal])
+    status = client.get("/api/datafetch/status").json()
+    assert "audit_error" not in status, status.get("audit_error")
+    assert status["datasets"][1]["audit"]["status"] == "pending"
+    # The page sends every credential it holds; only the chosen datasets' reach datum.
+    review = fetch_and_review(client, ids=["pk"], credentials={"TOKEN": TOKEN})
+    assert [d["id"] for d in review["datasets"]] == ["pk"]
+    [call] = calls(client.base, "fetch")
+    assert "TOKEN" not in call["env"]
+    client.post(f"/api/datafetch/reviews/{review['review_id']}/apply").raise_for_status()
+    assert client.post("/api/datafetch/datasets/pk/delete").status_code == 200
+    # A check covers every dataset, so it needs every credential.
+    assert client.post("/api/datafetch/check", json={}).status_code == 400

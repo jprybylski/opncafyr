@@ -167,11 +167,19 @@ def make_snapshot(
     *,
     seed: bool = True,
     targets_in: Path | None = None,
+    neutral: bool = False,
 ) -> Snapshot:
     """Write the managed copy of the config and lock into ``folder``.
 
+    Only the datasets in ``ids`` (all when None) are in the copy: datum substitutes every
+    ``${NAME}`` in the config it loads, so a fetch of one dataset must not need another's
+    credentials. The lockfile keeps the other datasets' entries as they are.
+
     ``targets_in`` is where targets point (default ``folder/files``). With ``seed``, the
-    current target files of the datasets in ``ids`` (all when None) are copied there.
+    current target files of those datasets are copied there. With ``neutral``, every
+    source is replaced by a missing local file: for commands that read only ids, policies
+    and targets (``audit``, ``delete``, ``undelete``, ``unlock``), so they need no
+    credentials and can reach nothing.
     """
     study = study.resolve()
     folder.mkdir(parents=True, exist_ok=True)
@@ -179,7 +187,14 @@ def make_snapshot(
     data = cfg.managed_copy(loaded.data)
     lock_items = read_lock(study / LOCK_FILE)
     targets: dict[str, str] = {}
+    if ids is not None:
+        data["datasets"] = [
+            d for d in data.get("datasets") or [] if isinstance(d, dict) and d.get("id") in ids
+        ]
     for ds in data.get("datasets") or []:
+        if neutral:
+            ds.pop("sources", None)
+            ds["source"] = {"type": "file", "path": str(folder / "no-source")}
         did, target = str(ds.get("id")), ds.get("target")
         if cfg._target_problem(study, target) is not None:
             # Only an audit sees a config with problems; point it somewhere harmless.
@@ -192,7 +207,7 @@ def make_snapshot(
                 path = str(source["path"])
                 if not Path(path).is_absolute():
                     source["path"] = str(study / path)
-        if seed and (ids is None or did in ids):
+        if seed:
             _seed(study, target, lock_items.get(did), files)
     snapshot_config = folder / SNAPSHOT_CONFIG
     snapshot_config.write_text(cfg.dump(data), "utf-8")
@@ -463,6 +478,10 @@ def build_review(
             continue
         result = by_id.get(did, {"id": did, "status": "missing"})
         entry: dict[str, Any] = {**result, "target": target, "files": []}
+        # datum's fetch output has no previous fingerprint: take it from the old lock.
+        previous = (old_items.get(did) or {}).get("remote_fingerprint")
+        if "lock_fingerprint" not in entry and isinstance(previous, str) and previous:
+            entry["lock_fingerprint"] = previous
         if result["status"] in ("fetched", "updated", "ok"):
             entry["files"] = _file_actions(
                 study, staging, target, old_items.get(did), new_items.get(did)
@@ -534,7 +553,7 @@ def _file_actions(
 def audit(study: Path, loaded: cfg.Loaded, runtime: Any, scratch: Path) -> list[dict[str, Any]]:
     """``datum --json audit`` on a snapshot: config and lock only, offline, no writes."""
     check_cwd(scratch)
-    snap = make_snapshot(study, loaded, scratch / "snapshot", seed=False)
+    snap = make_snapshot(study, loaded, scratch / "snapshot", seed=False, neutral=True)
     result = quick(runtime, argv(runtime, snap.config, snap.lock, "audit"), scratch / "cwd")
     doc = parse_json(result.stdout)
     if result.code != 0 or not isinstance(doc, dict):
@@ -580,7 +599,13 @@ def lock_edit(
         raise ValueError(command)
     check_cwd(scratch)
     snap = make_snapshot(
-        study, loaded, scratch / "snapshot", seed=False, targets_in=scratch / "empty"
+        study,
+        loaded,
+        scratch / "snapshot",
+        [dataset],
+        seed=False,
+        targets_in=scratch / "empty",
+        neutral=True,
     )
     if not snap.lock.is_file():
         raise DatumError("no_lock", "Nothing has been fetched for this dataset yet.")

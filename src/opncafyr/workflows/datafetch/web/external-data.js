@@ -104,6 +104,11 @@ function bytes(n) {
 }
 
 const shortSha = (sha) => (sha ? sha.slice(0, 12) : "");
+// A datum fingerprint ("sha256:…", "etag:…", "dirsha256:…") with its value shortened.
+function shortFingerprint(fp) {
+  const i = fp.indexOf(":");
+  return i < 0 ? fp.slice(0, 16) : `${fp.slice(0, i + 1)}${fp.slice(i + 1, i + 13)}`;
+}
 
 function problemList(problems) {
   const ul = el("ul", null, "df-problems");
@@ -354,7 +359,7 @@ export function init(container) {
     }
     tr.append(src);
 
-    tr.append(el("td", d.target, "path"));
+    tr.append(el("td", d.target, "path df-target"));
     tr.append(el("td", d.policy));
 
     const st = el("td");
@@ -616,15 +621,14 @@ export function init(container) {
       line.append(pill(ds.status === "fetched" ? ["✓", "Fetched", "ok"] : st));
       if (ds.message) line.append(" ", el("span", ds.message, "muted"));
       body.append(line);
-      if (ds.lock_fingerprint || ds.remote_fingerprint) {
-        body.append(
-          el(
-            "p",
-            `Fingerprint: ${ds.lock_fingerprint ? shortSha(ds.lock_fingerprint) : "none"} → ` +
-              `${ds.remote_fingerprint ? shortSha(ds.remote_fingerprint) : "unknown"}`,
-            "muted df-mono",
-          ),
-        );
+      if (ds.remote_fingerprint) {
+        const now = shortFingerprint(ds.remote_fingerprint);
+        const text = !ds.lock_fingerprint
+          ? `Source fingerprint: ${now} (first fetch)`
+          : ds.lock_fingerprint === ds.remote_fingerprint
+            ? `Source fingerprint: ${now} (unchanged)`
+            : `Source fingerprint: ${shortFingerprint(ds.lock_fingerprint)} → ${now}`;
+        body.append(el("p", text, "muted df-mono"));
       }
       for (const w of ds.warnings || []) body.append(el("p", `Warning: ${w}`, "df-warn"));
       if (!ds.files.length) {

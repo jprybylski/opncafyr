@@ -434,9 +434,12 @@ def mount(app: FastAPI) -> None:
                     "datasets": waiting,
                 },
             )
+        # Only the chosen datasets' credentials reach datum (the snapshot holds only
+        # them); others the page holds for this session are dropped here, and a name the
+        # settings never declare is refused.
         needed = set(_names(loaded, root, ids))
         given = body.credentials
-        extra = sorted(set(given) - needed)
+        extra = sorted(set(given) - set(result.credentials))
         missing = sorted(n for n in needed if not given.get(n))
         if extra or missing:
             raise HTTPException(

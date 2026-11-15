@@ -18,7 +18,12 @@ Quarto, uv and deckifyr), as the integration tests do::
     uv run python scripts/guide_screenshots.py --check
 
 ``--only`` still runs the whole flow (later pages need the earlier steps) but writes only
-the named images. ``--check`` lists the images that ``docs/user-guide/*.md`` references
+the named images. The External data images (19-21) need only datum: ``--only`` with just
+those skips the NCA flow, so a runtime record naming only ``datum`` is enough::
+
+    uv run --group integration python scripts/guide_screenshots.py --runtime runtime.json \\
+        --only 19-external-data 20-external-data-form 21-external-data-review
+ ``--check`` lists the images that ``docs/user-guide/*.md`` references
 and exits 1 if any of them is missing. A state that can't be reached with the given
 runtime is reported and its image skipped; the script then exits 1.
 
@@ -72,7 +77,13 @@ NAMES = (
     "16-study-profile",
     "17-tutorial",
     "18-profile-editor",
+    "19-external-data",
+    "20-external-data-form",
+    "21-external-data-review",
 )
+# The External data page (#83) needs only datum: with ``--only`` naming just these, the
+# NCA flow (and opnca-r, R, Quarto) is skipped.
+EXTERNAL_DATA = ("19-external-data", "20-external-data-form", "21-external-data-review")
 VIEWPORT = {"width": 1280, "height": 800}
 MAX_BYTES = 400 * 1024
 # Cards taller than this are cropped to their top part.
@@ -390,6 +401,111 @@ def choose_option(select, starts_with: str) -> None:
     select.select_option(label=label)
 
 
+# --- External data (#83) -----------------------------------------------------------
+
+# Made-up dosing records on a made-up share outside the study, and a made-up portal.
+DOSING = (
+    "USUBJID,DOSE,DOSEU,ADTM\n"
+    "PK101-001,100,mg,2026-03-02T08:00\n"
+    "PK101-002,100,mg,2026-03-02T08:05\n"
+)
+DOSING_LATER = DOSING + "PK101-003,100,mg,2026-03-03T08:02\n"
+PORTAL_URL = "https://data.example.org/studies/pk-101/pk-concentrations.csv"
+
+
+def external_data(page, c, shots: Shots) -> None:
+    """19-21: the External data page with a fetched share file and a portal dataset."""
+    from playwright.sync_api import expect
+
+    if not c.runtime.has("datum"):
+        for name in EXTERNAL_DATA:
+            shots.skip(name, "the runtime has no datum")
+        return
+    api = c.client
+    deadline = time.monotonic() + 60
+    while not api.get("/api/datafetch/status").json()["available"]:
+        if time.monotonic() > deadline:
+            raise RuntimeError("datum never became available")
+        time.sleep(0.2)
+    api.post("/api/datafetch/setup", json={}).raise_for_status()
+    share = c.tmp / "study share"
+    share.mkdir()
+    (share / "dosing.csv").write_text(DOSING, "utf-8")
+    datasets = [
+        {
+            "id": "dosing",
+            "desc": "Dosing records from the study share",
+            "target": "source-data/dosing.csv",
+            "source": {"type": "file", "path": str(share / "dosing.csv")},
+        },
+        {
+            "id": "pk-portal",
+            "desc": "Concentrations from the data portal",
+            "target": "source-data/pk-portal.csv",
+            "source": {
+                "type": "http",
+                "url": PORTAL_URL,
+                "headers": {"Authorization": "Bearer ${PORTAL_TOKEN}"},
+            },
+        },
+    ]
+    for dataset in datasets:
+        sha = api.get("/api/datafetch/status").json()["sha256"]
+        api.post(
+            "/api/datafetch/datasets", json={"dataset": dataset, "expected_sha256": sha}
+        ).raise_for_status()
+    api.post(
+        "/api/datafetch/datasets/dosing/approve", json={"path": str(share / "dosing.csv")}
+    ).raise_for_status()
+
+    def fetch_dosing() -> str:
+        r = api.post("/api/datafetch/fetch", json={"ids": ["dosing"]})
+        r.raise_for_status()
+        job = wait_job(c, r.json()["job_id"])
+        if job["state"] != "completed":
+            raise RuntimeError(f"fetch: {job['message']}")
+        return r.json()["review_id"]
+
+    first = fetch_dosing()
+    api.post(f"/api/datafetch/reviews/{first}/apply").raise_for_status()
+    (share / "dosing.csv").write_text(DOSING_LATER, "utf-8")
+    fetch_dosing()  # waits for review: 19 shows it, 21 opens it
+
+    go(page, c.base, "external-data", reload=True)
+    table = page.get_by_role("table", name="Datasets in the external data settings")
+    table.wait_for()
+    page.get_by_role("heading", level=1, name="External data").scroll_into_view_if_needed()
+    shots.take("19-external-data", lambda path: page.screenshot(path=str(path)))
+
+    def review(path: Path) -> None:
+        page.get_by_role("button", name="Open review").click()
+        card = page.locator("#df-review")
+        expect(card.get_by_text("Will replace")).to_be_visible()
+        clip(page, path, "#df-review")
+
+    shots.take("21-external-data-review", review)
+
+    def form(path: Path) -> None:
+        page.get_by_role("button", name="Edit pk-portal").click()
+        card = page.locator("#df-form")
+        card.get_by_role("heading", name="Edit pk-portal").wait_for()
+        expect(card.locator(".df-live")).to_be_empty()
+        clip(page, path, "#df-form")
+        card.get_by_role("button", name="Cancel").click()
+
+    shots.take("20-external-data-form", form)
+
+
+def wait_job(c, job_id: str, timeout: float = 300.0) -> dict:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        job = c.client.get(f"/api/jobs/{job_id}").json()["job"]
+        if job["state"] in ("completed", "failed", "cancelled"):
+            return job
+        time.sleep(0.2)
+    raise TimeoutError(job_id)
+
+
 # --- the run ------------------------------------------------------------------------
 
 
@@ -414,6 +530,11 @@ def run(tmp: Path, runtime_file: Path, out: Path, only: set[str]) -> Shots:
             page = context.new_page()
             page.goto(c.open_url())
             page.locator("#ws-current").get_by_text(STUDY_NAME).first.wait_for()
+            if only and only <= set(EXTERNAL_DATA):
+                external_data(page, c, shots)
+                context.close()
+                browser.close()
+                return shots
 
             # 02: the Data page previewing the source file.
             def data_preview(path: Path) -> None:
@@ -681,6 +802,8 @@ def run(tmp: Path, runtime_file: Path, out: Path, only: set[str]) -> Shots:
             form = git.get_by_role("region", name="Save a snapshot")
             form.locator("#commit-summary").fill("Cleaning recipe for the PK analysis")
             shots.take("15-history-save", lambda path: form.screenshot(path=str(path)))
+            # 19-21 last: they add files to source-data/, which earlier images must not show.
+            external_data(page, c, shots)
             context.close()
             browser.close()
     finally:

@@ -23,6 +23,12 @@ Nothing happens until you ask. Opening the page only reads the study's settings.
 1. Open a study folder. **External data** appears in the left side once a folder is open.
 2. If the page says it is unavailable, datum is not installed. Everything else in the app keeps working. See [A tool shows Unavailable]({{ '/guides/troubleshooting/' | relative_url }}).
 
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/19-external-data.png' | relative_url }}" width="1280" height="800" loading="lazy"
+       alt="The External data page: a notice that a fetch is waiting for review with an Open review button, and a table of two datasets. dosing is a file source on a study share, approved on this computer, fetched and applied; pk-portal is an https source from a data portal, not fetched yet. Each row has Fetch, Edit and Remove buttons, and dosing also Delete files. Below, the Credentials for this session card.">
+  <figcaption>A share file that was fetched and applied, a portal dataset not fetched yet, and a newer fetch waiting for review.</figcaption>
+</figure>
+
 ## Set it up
 
 The first time, the page says the study has no `.data.yaml` yet. Select **Set up** to create an empty one at the top of the study folder. Setting up never replaces a file that is already there.
@@ -51,6 +57,12 @@ The form checks what you type as you go and names the field to fix. It refuses:
 
 If `.data.yaml` has comments, the form tells you before it saves: the app rewrites the file, so its comments are lost. Edit it in a text editor instead if you want to keep them.
 
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/20-external-data-form.png' | relative_url }}" width="1016" height="948" loading="lazy"
+       alt="The form for editing the pk-portal dataset: Id, Description, Source type http, its https URL, an Authorization header that uses ${PORTAL_TOKEN}, an empty request body, the target source-data/pk-portal.csv and the policy, with Save and Cancel.">
+  <figcaption>The token is a ${NAME} reference in a header, never part of the address.</figcaption>
+</figure>
+
 ### Files outside the study
 
 A **file** source outside the study folder needs your approval first. The page shows **Approval needed** and, when you select **Review…**, the full path. Approve it only if you expect that path: a settings file you got from someone else must not copy something private into the study.
@@ -78,6 +90,12 @@ The review gives each file's size and fingerprint (SHA-256). It shows no data va
 
 - **Apply** puts the files in place. Each replaced or removed file is kept first, under `.opncafyr/datafetch/previous/`.
 - **Discard** throws the fetch away. Nothing in the study changed.
+
+<figure class="shot">
+  <img src="{{ '/assets/screenshots/21-external-data-review.png' | relative_url }}" width="1016" height="438" loading="lazy"
+       alt="The Review card for dosing: a note that applying replaces files in source-data/, keeps replaced files and leaves existing runs alone; the source fingerprint before and after; and one file, source-data/dosing.csv, marked Will replace with its current and new size and fingerprint, above Apply 1 change and Discard.">
+  <figcaption>Nothing in source-data/ changes until you apply.</figcaption>
+</figure>
 
 Apply refuses, and says why, when a file, `.data.yaml` or `.data.lock.yaml` changed after the fetch. Discard the review and fetch again.
 
