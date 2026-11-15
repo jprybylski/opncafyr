@@ -23,6 +23,9 @@ REQUIRED = (
     "opncafyr/adapters/deckifyr/descriptor.yaml",
     "opncafyr/adapters/quartifyr/descriptor.yaml",
     "opncafyr/adapters/gitneighbr/descriptor.yaml",
+    # External data (#83): optional at install time, shipped in every release wheel.
+    "opncafyr/adapters/datum/descriptor.yaml",
+    "opncafyr/workflows/datafetch/web/external-data.js",
     "opncafyr/web/static/index.html",
     "opncafyr/web/guide/index.md",  # the user guide (#40)
     "opncafyr/workflows/nca/profiles/fed-fasted.yaml",  # study profile examples (#68)

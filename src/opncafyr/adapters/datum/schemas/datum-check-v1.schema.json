@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "datum-check-v1",
+  "title": "datum check review",
+  "description": "Written by the datum adapter's data_check job (#83) from datum's --json check output, after redaction. A check never changes study files; this is a report. Ids, statuses, fingerprints and messages only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "at", "exit_code", "results"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "kind": {"const": "check"},
+    "at": {"type": "string"},
+    "exit_code": {"type": "integer"},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status"],
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"enum": ["ok", "updated", "fetched", "stale", "fail", "warn", "error", "deleted"]},
+          "message": {"type": "string"},
+          "lock_fingerprint": {"type": "string"},
+          "remote_fingerprint": {"type": "string"},
+          "warnings": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

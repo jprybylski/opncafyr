@@ -141,3 +141,38 @@ def test_installer_imports_cleanly_without_third_party_packages(tmp_path):
     )
     # Every installer module imported; jsonschema (third party) did not.
     assert "No module named 'jsonschema'" in done.stderr, done.stderr
+
+
+# --- External data (#83): one adapter plus one pack, removable together ------------------
+
+
+def _python_files(*parts: str) -> list[Path]:
+    folder = SRC.joinpath(*parts)
+    return sorted(folder.rglob("*.py")) if folder.is_dir() else []
+
+
+def test_only_the_datafetch_pack_imports_the_datum_adapter():
+    datum_dir = SRC / "adapters" / "datum"
+    pack_dir = SRC / "workflows" / "datafetch"
+    for path in SRC.rglob("*.py"):
+        if path.is_relative_to(datum_dir) or path.is_relative_to(pack_dir):
+            continue
+        for name in _imports(path):
+            assert not name.startswith("opncafyr.adapters.datum"), f"{path} imports {name}"
+            assert not name.startswith("opncafyr.workflows.datafetch"), f"{path} imports {name}"
+    if not (datum_dir / "__init__.py").is_file():
+        return
+    seen = [n for p in _python_files("workflows", "datafetch") for n in _imports(p)]
+    assert any(n.startswith("opncafyr.adapters.datum") for n in seen)
+
+
+def test_the_datum_adapter_imports_no_workflow():
+    for path in _python_files("adapters", "datum"):
+        for name in _imports(path):
+            assert not name.startswith("opncafyr.workflows"), f"{path.name} imports {name}"
+
+
+def test_the_nca_pack_names_neither_datum_nor_datafetch():
+    for path in _python_files("workflows", "nca"):
+        text = path.read_text("utf-8")
+        assert "adapters.datum" not in text and "workflows.datafetch" not in text, path
