@@ -24,13 +24,14 @@ from opncafyr.installer.pins import Pins
 from opncafyr.installer.steps import datum as datum_step
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION_JSON = b'{"format":"datum-report/1","version":"1.7.0","features":["git"]}\n'
 PLATFORMS = ("windows-x86_64", "macos-arm64", "macos-x86_64", "linux-x86_64", "linux-aarch64")
 ASSET_NAME = {
-    "windows-x86_64": "datum_1.6.0_windows_amd64.zip",
-    "macos-arm64": "datum_1.6.0_darwin_arm64.tar.gz",
-    "macos-x86_64": "datum_1.6.0_darwin_amd64.tar.gz",
-    "linux-x86_64": "datum_1.6.0_linux_amd64.tar.gz",
-    "linux-aarch64": "datum_1.6.0_linux_arm64.tar.gz",
+    "windows-x86_64": "datum_1.7.0_windows_amd64.zip",
+    "macos-arm64": "datum_1.7.0_darwin_arm64.tar.gz",
+    "macos-x86_64": "datum_1.7.0_darwin_amd64.tar.gz",
+    "linux-x86_64": "datum_1.7.0_linux_amd64.tar.gz",
+    "linux-aarch64": "datum_1.7.0_linux_arm64.tar.gz",
 }
 
 
@@ -50,7 +51,7 @@ def with_datum_step(fakes, monkeypatch):
 @pytest.fixture
 def datum_answers(monkeypatch):
     calls: list[list[str]] = []
-    answer = {"code": 0, "out": b"datum v1.6.0\n"}
+    answer = {"code": 0, "out": VERSION_JSON}
     real = proc.capture
 
     def capture(argv, *, env, **kw):
@@ -73,11 +74,11 @@ def test_real_pins_have_datum_for_every_platform_by_default(platform):
     pins = Pins.load(ROOT / "runtime")
     section = pins.pins["optional"]["datum"]
     assert section["status"] == "optional" and section["default"] is True
-    assert section["license"] == "MIT" and section["version"] == "1.6.0"
+    assert section["license"] == "MIT" and section["version"] == "1.7.0"
     (asset,) = [a for a in pins.assets(platform, allow_pending=True) if a.component == "datum"]
     assert asset.optional and asset.best_effort
     assert asset.url == (
-        f"https://github.com/jprybylski/datum/releases/download/v1.6.0/{ASSET_NAME[platform]}"
+        f"https://github.com/jprybylski/datum/releases/download/v1.7.0/{ASSET_NAME[platform]}"
     )
     assert len(asset.sha256) == 64
     names = {a.component for a in pins.assets(platform, datum=False, allow_pending=True)}
@@ -93,18 +94,21 @@ def test_datum_is_installed_by_default_and_recorded(
     assert _runtime(layout)["executables"]["datum"] == str(exe)
     if sys.platform != "win32":
         assert os.access(exe, os.X_OK)
-    assert calls == [[str(exe), "--version"]]
+    assert calls == [[str(exe), "--json", "--version"]]
     record = layout.record(layout.read_current())
     validate(record, "install-v1")
     assert record["optional"] == [
-        {"name": "datum", "status": "installed", "detail": "datum v1.6.0"}
+        {"name": "datum", "status": "installed", "detail": "datum v1.7.0"}
     ]
     component = next(c for c in record["components"] if c["name"] == "datum")
-    assert component["version"] == "1.6.0"
+    assert component["version"] == "1.7.0"
     assert component["files"][0]["file"] == DATUM_ARCHIVE
 
 
-@pytest.mark.parametrize("case", ["does not start", "wrong version", "no binary", "not an archive"])
+@pytest.mark.parametrize(
+    "case",
+    ["does not start", "wrong version", "plain version", "no git", "no binary", "not an archive"],
+)
 def test_a_failing_datum_leaves_a_working_install_without_it(
     tmp_path, layout, with_datum_step, datum_answers, case
 ):
@@ -113,7 +117,11 @@ def test_a_failing_datum_leaves_a_working_install_without_it(
     if case == "does not start":
         answer["code"] = 1
     elif case == "wrong version":
-        answer["out"] = b"datum v1.5.0\n"
+        answer["out"] = VERSION_JSON.replace(b"1.7.0", b"1.5.0")
+    elif case == "plain version":  # a datum before 1.7.0 has no --json --version
+        answer["out"] = b"datum v1.7.0\n"
+    elif case == "no git":
+        answer["out"] = VERSION_JSON.replace(b'"git"', b"")
     elif case == "no binary":
         archive = datum_archive({"LICENSE": b"MIT\n"})
     else:
@@ -131,6 +139,8 @@ def test_a_failing_datum_leaves_a_working_install_without_it(
     assert {
         "does not start": "datum reports",
         "wrong version": "1.5.0",
+        "plain version": "pinned 1.7.0",
+        "no git": "without its Git handler",
         "no binary": "has no datum",
         "not an archive": "ReadError",
     }[case] in outcome["detail"]

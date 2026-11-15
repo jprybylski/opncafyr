@@ -1,9 +1,10 @@
 """External data through a managed datum (#83, ADR 0012), with a stand-in datum.
 
-The stand-in (``fake_datum.py``) behaves like datum 1.6.0 for ``file`` sources and reads
-``http``/``git`` bytes from a table, so these tests need no network. Like datum, it runs
-``git``/``svn`` from PATH when its cwd is inside a working copy, which is what the
-no-PATH-git test watches for.
+The stand-in (``fake_datum.py``) behaves like datum 1.7.0 for ``file`` sources and reads
+``http``/``git`` bytes from a table, so these tests need no network. It enforces the
+managed-mode flags the adapter passes (#85) the way datum does. Like datum without
+``--no-vcs``, it runs ``git``/``svn`` from PATH when its cwd is inside a working copy,
+which is what the no-PATH-git test watches for.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ pytest.importorskip("opncafyr.workflows.datafetch")
 
 from opncafyr.adapters.datum import approvals as appr  # noqa: E402
 from opncafyr.adapters.datum import config as cfg  # noqa: E402
-from opncafyr.adapters.datum import promote, state  # noqa: E402
+from opncafyr.adapters.datum import promote, staging, state  # noqa: E402
 from opncafyr.core.registry import load_descriptors  # noqa: E402
 from opncafyr.core.runtime import Runtime  # noqa: E402
 from publish_helpers import publish_client, wait_job  # noqa: E402
@@ -349,9 +350,12 @@ def test_fetch_changes_nothing_until_apply(client):
     assert (study / "source-data" / "pk.csv").read_bytes() == CSV
     assert (study / ".data.lock.yaml").is_file()
     doc = state.read(study)
-    assert doc["datasets"]["pk"]["files"] == [
-        {"path": "source-data/pk.csv", "sha256": sha(CSV), "size": len(CSV)}
-    ]
+    assert set(doc["datasets"]["pk"]) == {"applied_at"}
+    # The lockfile (datum's --lock-out) records the file's hash and size.
+    item = yaml.safe_load((study / ".data.lock.yaml").read_text())["items"]["pk"]
+    assert (item["local_sha256"], item["size"]) == (sha(CSV), len(CSV))
+    status = client.get("/api/datafetch/status").json()["datasets"][0]
+    assert status["audit"]["drift"] == "ok" and status["matches_fetched"] is True
     # The review folder is gone, and the lockfile names no absolute or snapshot paths.
     assert not (study / ".opncafyr/datafetch/reviews" / review["review_id"]).exists()
     assert str(study) not in (study / ".data.lock.yaml").read_text()
@@ -448,7 +452,9 @@ def test_interrupted_apply_is_flagged_and_recovers(client, monkeypatch, stop_at,
     current = (study / "source-data" / "pk.csv").read_bytes()
     if recover == "finish":
         assert current == changed
-        assert state.read(study)["datasets"]["pk"]["files"][0]["sha256"] == sha(changed)
+        lock = yaml.safe_load((study / ".data.lock.yaml").read_text())
+        assert lock["items"]["pk"]["local_sha256"] == sha(changed)
+        assert "applied_at" in state.read(study)["datasets"]["pk"]
     else:
         assert current == CSV
         assert (study / ".data.lock.yaml").read_bytes() == old_lock
@@ -504,9 +510,12 @@ def test_check_is_report_only_even_under_update(client):
     assert job["state"] == "completed", job["message"]
     assert study_bytes(study) == before
     last = state.read(study)["last_check"]
-    assert last["results"][0]["status"] == "updated"
+    assert last["results"][0]["status"] == "stale"
+    assert last["results"][0]["message"].startswith("An update is available.")
     status = client.get("/api/datafetch/status").json()
-    assert status["datasets"][0]["last_check"]["status"] == "updated"
+    assert status["datasets"][0]["last_check"]["status"] == "stale"
+    [call] = calls(client.base, "check")
+    assert "--report-only" in call["argv"]
 
 
 def test_datum_never_runs_git_or_svn(client, tmp_path):
@@ -532,7 +541,8 @@ def test_datum_never_runs_git_or_svn(client, tmp_path):
     for call in calls(client.base, "fetch") + calls(client.base, "check"):
         cwd = Path(call["cwd"]).resolve()
         assert not cwd.is_relative_to(study.resolve())
-    # Control: the stand-in does run PATH git when its cwd is in the study.
+        assert "--no-vcs" in call["argv"]
+    # Control: the stand-in does run PATH git without --no-vcs when its cwd is in the study.
     import subprocess
 
     subprocess.run(
@@ -599,7 +609,6 @@ def test_credentials_never_leak(client, security):
         allowed = {
             "TOKEN",
             "NO_COLOR",
-            "XDG_CACHE_HOME",
             "PATH",
             "TMPDIR",
             "TMP",
@@ -617,9 +626,11 @@ def test_credentials_never_leak(client, security):
         }
         extra = {k for k in env if k not in allowed and not k.startswith("LC_")}
         assert extra == set(), extra
-        assert not any(k.startswith(("SSH_", "GIT_")) for k in env)
+        assert not any(k.startswith(("SSH_", "GIT_", "XDG_")) for k in env)
+        args = call["argv"]
+        assert args[args.index("--env-allow") + 1] == "TOKEN"
         assert (
-            Path(env["XDG_CACHE_HOME"])
+            Path(args[args.index("--cache-dir") + 1])
             .resolve()
             .is_relative_to((Path(os.environ["OPNCAFYR_APP_ROOT"])).resolve())
         )
@@ -688,8 +699,8 @@ def test_delete_keeps_a_copy_and_undelete_and_forget_edit_the_lock(client):
 
 
 def test_one_datasets_credentials_never_block_or_reach_another(client):
-    # datum substitutes every ${NAME} in the config it loads, so the snapshot holds only
-    # the datasets a command is about (found with the real binary, #83).
+    # datum 1.7.0 substitutes ${NAME} only in the datasets it fetches (U8, #85), and the
+    # adapter passes only those datasets' credentials.
     study = client.study
     (study / "upstream").mkdir()
     (study / "upstream" / "pk.csv").write_bytes(CSV)
@@ -712,3 +723,211 @@ def test_one_datasets_credentials_never_block_or_reach_another(client):
     assert client.post("/api/datafetch/datasets/pk/delete").status_code == 200
     # A check covers every dataset, so it needs every credential.
     assert client.post("/api/datafetch/check", json={}).status_code == 400
+
+
+# --- datum 1.7.0's own guarantees (#85) ---------------------------------------------------------
+
+POLICY_FLAGS = ("--no-vcs", "--https-only", "--git-https-only")
+
+
+def flag(call: dict, name: str) -> str | None:
+    args = call["argv"]
+    return args[args.index(name) + 1] if name in args else None
+
+
+def test_every_datum_call_carries_the_policy_flags(client):
+    study = client.study
+    (study / "upstream").mkdir()
+    (study / "upstream" / "pk.csv").write_bytes(CSV)
+    write_config(study, [file_dataset()])
+    client.post(
+        f"/api/datafetch/reviews/{fetch_and_review(client)['review_id']}/apply"
+    ).raise_for_status()
+    job = wait_job(client, client.post("/api/datafetch/check", json={}).json()["job_id"])
+    assert job["state"] == "completed", job["message"]
+    assert client.get("/api/datafetch/status").json()["datasets"][0]["audit"]["status"] == "ok"
+    client.post("/api/datafetch/datasets/pk/delete").raise_for_status()
+    cache = Path(os.environ["OPNCAFYR_APP_ROOT"]).resolve()
+    seen = set()
+    for call in calls(client.base):
+        args = call["argv"]
+        command = next(a for a in reversed(args) if a in COMMANDS) if set(args) & COMMANDS else ""
+        if command in ("", "schema", "types"):
+            continue  # describing commands read no config
+        seen.add(command)
+        assert all(f in args for f in POLICY_FLAGS), args
+        assert flag(call, "--allow-types") == "http,file,git"
+        # No credentials declared: the reserved name, never an empty (unrestricted) list.
+        assert flag(call, "--env-allow") == "OPNCAFYR_NO_CREDENTIALS"
+        assert Path(flag(call, "--cache-dir")).resolve().is_relative_to(cache)
+        root = Path(flag(call, "--root")).resolve()
+        if command in ("check", "fetch", "audit"):
+            assert root == study.resolve()
+        else:
+            assert not root.is_relative_to(study.resolve())  # lock edits: an empty folder
+        if command in ("check", "fetch"):
+            assert flag(call, "--target-prefix") == "source-data"
+        if command == "fetch":
+            stage = Path(flag(call, "--stage-dir")).resolve()
+            assert stage.is_relative_to((study / ".opncafyr/datafetch/reviews").resolve())
+            assert Path(flag(call, "--lock-out")).parent.resolve() == stage.parent
+        if command == "audit":
+            assert "--verify-local" in args
+    assert seen == {"check", "fetch", "audit", "delete"}
+
+
+COMMANDS = {"check", "fetch", "audit", "delete", "undelete", "unlock", "schema", "types"}
+
+
+def test_datum_never_runs_git_even_when_its_folder_is_a_working_copy(client, tmp_path, monkeypatch):
+    # Before #85 the adapter refused to run when the temp folder was inside a working copy;
+    # with --no-vcs datum never starts git or svn wherever it runs.
+    import tempfile
+
+    wc = tmp_path / "wc"
+    (wc / ".git").mkdir(parents=True)
+    (wc / "tmp").mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(wc / "tmp"))
+    sentinel = tmp_path / "vcs-ran"
+    for tool in ("git", "svn"):
+        exe = client.base / "bin" / tool
+        exe.write_text(f'#!/bin/sh\necho "{tool} $*" >> "{sentinel}"\nexit 1\n')
+        exe.chmod(0o755)
+    study = client.study
+    (study / "upstream").mkdir()
+    (study / "upstream" / "pk.csv").write_bytes(CSV)
+    write_config(study, [file_dataset()])
+    review = fetch_and_review(client)
+    client.post(f"/api/datafetch/reviews/{review['review_id']}/apply").raise_for_status()
+    job = wait_job(client, client.post("/api/datafetch/check", json={}).json()["job_id"])
+    assert job["state"] == "completed", job["message"]
+    assert client.get("/api/datafetch/status").json()["datasets"][0]["audit"]["status"] == "ok"
+    assert any(Path(c["cwd"]).resolve().is_relative_to(wc.resolve()) for c in calls(client.base))
+    assert not sentinel.exists()
+
+
+def test_local_changes_show_through_audit_drift(client):
+    study = client.study
+    (study / "upstream" / "dir").mkdir(parents=True)
+    (study / "upstream" / "pk.csv").write_bytes(CSV)
+    (study / "upstream" / "dir" / "a.txt").write_text("a")
+    write_config(
+        study,
+        [
+            file_dataset(),
+            {**file_dataset(path="upstream/dir", target="source-data/d"), "id": "d"},
+        ],
+    )
+    client.post(
+        f"/api/datafetch/reviews/{fetch_and_review(client)['review_id']}/apply"
+    ).raise_for_status()
+    by_id = {d["id"]: d for d in client.get("/api/datafetch/status").json()["datasets"]}
+    assert by_id["pk"]["matches_fetched"] is True and by_id["d"]["matches_fetched"] is True
+    (study / "source-data/pk.csv").write_bytes(b"edited by hand\n")
+    (study / "source-data/d/a.txt").write_text("edited")
+    by_id = {d["id"]: d for d in client.get("/api/datafetch/status").json()["datasets"]}
+    assert by_id["pk"]["audit"]["drift"] == "changed" and by_id["pk"]["matches_fetched"] is False
+    assert by_id["d"]["matches_fetched"] is False
+    preview = client.post("/api/datasets/preview", json={"path": "source-data/pk.csv"}).json()
+    note = preview["dataset"]["annotations"]["datafetch"]
+    assert note["dataset"] == "pk" and note["matches_fetched"] is False
+
+
+def test_state_v1_is_read_as_v2(tmp_path):
+    v1 = {
+        "schema_version": 1,
+        "last_check": {"at": "2026-11-01T00:00:00Z", "results": [{"id": "pk", "status": "ok"}]},
+        "datasets": {
+            "pk": {
+                "fetched_at": "2026-11-02T00:00:00Z",
+                "remote_fingerprint": "sha256:abc",
+                "files": [{"path": "source-data/pk.csv", "sha256": "0" * 64, "size": 3}],
+            }
+        },
+    }
+    path = tmp_path / ".opncafyr/datafetch/state.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(v1))
+    doc = state.read(tmp_path)
+    assert doc == {
+        "schema_version": 2,
+        "last_check": v1["last_check"],
+        "datasets": {"pk": {"applied_at": "2026-11-02T00:00:00Z"}},
+    }
+    state.forget(tmp_path, "nope")  # any update writes v2
+    assert json.loads(path.read_text())["schema_version"] == 2
+    path.write_text(json.dumps({**v1, "datasets": {"pk": {"files": "bad"}}}))
+    assert state.read(tmp_path) == state.empty()
+
+
+def test_one_bad_dataset_does_not_hide_the_others_status(client, tmp_path):
+    study = client.study
+    (study / "upstream").mkdir()
+    (study / "upstream" / "pk.csv").write_bytes(CSV)
+    write_config(study, [file_dataset()])
+    client.post(
+        f"/api/datafetch/reviews/{fetch_and_review(client)['review_id']}/apply"
+    ).raise_for_status()
+    bad = {
+        "id": "shell",
+        "desc": "",
+        "source": {"type": "command", "command": "echo ${HOME}"},
+        "target": "/etc/x",
+    }
+    write_config(study, [file_dataset(), bad])
+    status = client.get("/api/datafetch/status").json()
+    assert "audit_error" not in status, status.get("audit_error")
+    by_id = {d["id"]: d for d in status["datasets"]}
+    assert by_id["pk"]["audit"]["status"] == "ok" and by_id["pk"]["matches_fetched"] is True
+    assert {p["dataset"] for p in status["problems"]} == {"shell"}
+    snap = staging.make_snapshot(study, cfg.load(study), tmp_path / "s", harmless=True)
+    written = yaml.safe_load(snap.config.read_text())
+    shell = next(d for d in written["datasets"] if d["id"] == "shell")
+    assert shell["source"]["type"] == "file" and shell["target"] == ".invalid/shell"
+    assert "${HOME}" not in snap.config.read_text()
+
+
+def test_a_lock_edit_datum_skips_is_an_error(client):
+    study = client.study
+    (study / "upstream").mkdir()
+    (study / "upstream" / "pk.csv").write_bytes(CSV)
+    write_config(study, [file_dataset()])
+    client.post(
+        f"/api/datafetch/reviews/{fetch_and_review(client)['review_id']}/apply"
+    ).raise_for_status()
+    lock = (study / ".data.lock.yaml").read_bytes()
+    (client.base / "mode.txt").write_text("lock-edit-skip")
+    r = client.post("/api/datafetch/datasets/pk/forget")
+    assert r.status_code >= 400
+    assert "nothing to do" in json.dumps(r.json())
+    assert (study / ".data.lock.yaml").read_bytes() == lock
+    r = client.post("/api/datafetch/datasets/pk/delete")
+    assert r.status_code >= 400
+    assert (study / "source-data/pk.csv").read_bytes() == CSV
+    assert (study / ".data.lock.yaml").read_bytes() == lock
+
+
+def test_datum_itself_refuses_what_the_policy_refuses(env, tmp_path):
+    # Defence in depth: even a config the launcher's check never saw is refused by datum
+    # under the adapter's flags (here, the stand-in that mirrors datum 1.7.0).
+    import subprocess
+
+    from opncafyr.adapters import datum
+
+    base, study, rt = env
+    cases = [
+        {"type": "command", "command": "echo hi"},
+        {"type": "http", "url": "http://data.example.org/a.csv"},
+        {"type": "git", "url": "git@example.org:a/b.git", "ref": "main", "path": "a"},
+        {"type": "http", "url": "https://data.example.org/a.csv?k=${HOME}"},
+    ]
+    for source in [*cases, None]:
+        ds = {"id": "x", "desc": "", "source": source, "target": "source-data/x.csv"}
+        if source is None:
+            ds = {**file_dataset(), "target": "../outside.csv"}
+        config = tmp_path / "c.yaml"
+        config.write_text(yaml.safe_dump({"version": 1, "datasets": [ds]}))
+        args = datum.argv(rt, config, tmp_path / "l.yaml", "check", root=study)
+        done = subprocess.run(args, capture_output=True, text=True, check=False)  # noqa: S603
+        assert done.returncode == 2, (source, done.stdout)
+        assert "error" in json.loads(done.stdout)

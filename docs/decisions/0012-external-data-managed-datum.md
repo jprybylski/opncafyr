@@ -2,6 +2,8 @@
 
 - Status: accepted (owner, 2026-11-15). The owner answered D1–D8 of #83 as listed below,
   and asked for phases 1–3 (everything except adopting upstream changes) in one change.
+  Amended the same day for datum 1.7.0 (phase 4, #85): see
+  [Update: datum 1.7.0](#update-datum-170-85).
 - Date: 2026-11-15
 - Issues: #83; follows #56 and ADR 0008 (a managed tool), #70 and ADR 0011 (an on-request
   fetch with a session token); #41 (removable tools), #44 (offline), #42 and ADR 0009
@@ -114,11 +116,51 @@ Neither names a tool. `core/` still imports no adapter or workflow.
 
 ## Consequences
 
-- Each interim safeguard has a matching upstream change, U1–U11 in
-  [upstream.md](../upstream.md#jprybylskidatum-public). When datum releases them, the
-  safeguards can shrink to defence in depth (phase 4 of #83, tracked in #85).
-- A redirect from https to http is not caught until U10.
+- Each interim safeguard had a matching upstream change, U1–U11 in
+  [upstream.md](../upstream.md#jprybylskidatum-public). All were released in datum 1.7.0
+  and adopted in #85 (below); the launcher's own checks stay as defence in depth.
+- A redirect from https to http was not caught until U10; since 1.7.0 datum refuses it.
 - Fetching proves which bytes the study has and where they came from, not that the data
   is fit for analysis. The research-use wording is unchanged.
 - Writing datum provenance into the run manifest is out of scope: it would need a
   `run-manifest` schema change.
+
+## Update: datum 1.7.0 (#85)
+
+datum 1.7.0 ships U1–U11, so datum now enforces the policy itself, and the launcher keeps
+its own checks as a second line. What changed in the decision above:
+
+- **Every datum process** gets `--no-vcs`, `--allow-types http,file,git`, `--https-only`,
+  `--git-https-only`, an app-owned `--cache-dir` (instead of `XDG_CACHE_HOME`),
+  `--env-allow` with the config's declared credentials and `--root <study>`; check and
+  fetch also get `--target-prefix source-data`. datum refuses a config that breaks any of
+  these at load, before it contacts a source. `--env-allow` with no names means "no
+  restriction" in datum, so a config without credentials allows only the reserved name
+  `OPNCAFYR_NO_CREDENTIALS`, which the policy refuses and nothing sets.
+- **No rewritten snapshot.** datum reads the checked config (still with `ignore: false`)
+  and a copy of the lockfile from a launcher-owned folder; targets and relative `file`
+  sources resolve in the study through `--root`. Targets are no longer pointed into the
+  snapshot, no target files are copied, and the config is no longer cut down to the
+  datasets in scope: datum substitutes `${NAME}` only in the datasets it fetches, and audit,
+  undelete and unlock need no variables.
+- **Check** is `--report-only`: it reads the study's targets in place and writes nothing.
+  An `update` dataset that would be re-fetched is reported as `stale` ("An update is
+  available").
+- **Fetch** is staged: `--stage-dir` writes the new files to the review folder's
+  `files/<target>` and `--lock-out` the new lockfile next to them, the layout Apply already
+  used.
+- **The cwd.** Jobs keep `isolated_cwd`, but the adapter no longer refuses a temp folder
+  inside a working copy: with `--no-vcs` datum never starts `git` or `svn` anywhere.
+- **Hashes live in the lockfile.** datum records each file's SHA-256 and size (`size`,
+  `dir_files`), and `audit --verify-local` reports whether the study still matches.
+  `state.json` moves to schema v2: the last check and, per dataset, when it was applied.
+  A v1 file is read as v2.
+- **Delete, undelete, forget** use datum's `--json` results; delete runs with `--root` at
+  an empty folder, so datum removes nothing real. Audit and the lock edits reduce a
+  dataset the policy refuses to a harmless placeholder, so one bad dataset doesn't hide
+  the others' status.
+- **Install** checks `datum --json --version`: the pinned version, built with `git`.
+
+Kept as defence in depth: the policy check (it names the field for the form), the
+minimal environment with only the fetched datasets' credentials, redaction of every
+message and log (datum redacts too), the review and the journalled Apply.

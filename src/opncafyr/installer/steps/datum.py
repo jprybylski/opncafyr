@@ -1,19 +1,22 @@
 """Optional datum for external data (#83): the pinned release binary (``[optional.datum]``).
 
 Installed by default, but best effort, like Git (#56). Any failure here (a damaged archive,
-a missing file, a binary that won't start or reports another version) is reported in
+a missing file, a binary that won't start, reports another version or was built without
+its Git handler) is reported in
 ``ctx.optional``, which goes into the install record and the installation report, and the
 install goes on without datum: the External data page is unavailable and nothing else
 depends on it. The launcher uses only this binary, never one found on ``PATH``.
 
 The release archive holds ``datum`` (``datum.exe`` on Windows), ``LICENSE`` and
-``README.md`` at its root; it unpacks into ``versions/<id>/datum``.
+``README.md`` at its root; it unpacks into ``versions/<id>/datum``. The check is
+``datum --json --version`` (datum 1.7.0, #85): ``{"format", "version", "features"}``, where
+``version`` must be the pinned one and ``features`` must list ``git``.
 """
 
 from __future__ import annotations
 
+import json
 import os
-import re
 import shutil
 from pathlib import Path
 
@@ -67,14 +70,22 @@ def _install(ctx: Context, dest: Path) -> str:
         raise FileNotFoundError(f"the datum archive has no {name}")
     if not WINDOWS and not os.access(exe, os.X_OK):
         raise PermissionError(f"{name} is not executable")
-    done = proc.capture([exe, "--version"], env=ctx.env())
+    done = proc.capture([exe, "--json", "--version"], env=ctx.env())
     out = done.stdout.decode(errors="replace").strip()
-    if done.returncode != 0 or not re.fullmatch(rf"datum v{re.escape(asset.version)}", out):
+    try:
+        doc = json.loads(out)
+    except ValueError:
+        doc = None
+    version = doc.get("version") if isinstance(doc, dict) else None
+    if done.returncode != 0 or version != asset.version:
         err = done.stderr.decode(errors="replace").strip()
         raise RuntimeError(f"datum reports {(out or err)[-200:]!r}, pinned {asset.version}")
+    features = doc.get("features") if isinstance(doc, dict) else None
+    if not isinstance(features, list) or "git" not in features:
+        raise RuntimeError(f"datum {version} was built without its Git handler")
     ctx.executables[EXECUTABLE] = exe
     ctx.record(DATUM, asset.version, [asset])
-    return out
+    return f"datum v{version}"
 
 
 def _log(ctx: Context, line: str) -> None:

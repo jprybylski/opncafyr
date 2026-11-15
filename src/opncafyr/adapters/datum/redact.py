@@ -3,7 +3,9 @@
 datum substitutes ``${NAME}`` into URLs and headers, and its messages can echo a URL with
 the value in it. Before a message is stored, shown or logged, ``Redactor.text`` replaces
 every value the user entered for the job, every URL query string and every
-``user:pass@``. ``scrub_file`` does the same to a job's ``stdout.log``/``stderr.log``.
+``user:pass@``. ``scrub_file`` does the same to a job's ``stdout.log``/``stderr.log``. datum 1.7.0
+redacts substituted values itself (``[redacted]``); this stays as defence in depth, and
+also covers URL-encoded and base64 forms.
 """
 
 from __future__ import annotations

@@ -1,8 +1,9 @@
 # datum (#83, ADR 0012): declared external data for a study, fetched on request and checked
 # for upstream changes. datum is a pinned, prebuilt Go binary ([optional.datum] in
 # runtime/pins.toml, best effort). The launcher runs it in a managed mode: every config is
-# checked against a policy first, datum runs on a snapshot outside the study, and only a
-# reviewed Apply changes study files. Only workflows/datafetch uses this adapter; leaving
+# checked against a policy first, datum 1.7.0 enforces the same policy through its flags,
+# never writes the study (report-only checks, staged fetches), and only a reviewed Apply
+# changes study files. Only workflows/datafetch uses this adapter; leaving
 # both out changes nothing else in the app.
 schema_version: "1.0"
 id: datum

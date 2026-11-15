@@ -7,20 +7,25 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
-- **External data through a managed datum** (#83, ADR 0012). A new, optional **External
-  data** page lists the data a study depends on (an https file, a file on a share, one file
-  from a Git repository) in `.data.yaml`, fetches it into `source-data/` on request and
-  checks whether upstream changed. It uses [datum](https://github.com/jprybylski/datum)
-  1.6.0, pinned per platform (`[optional.datum]`, best effort; `--without-datum`).
-  - **Checked before anything runs.** datum's `command` sources, targets outside
+- **External data through a managed datum** (#83, #85, ADR 0012). A new, optional
+  **External data** page lists the data a study depends on (an https file, a file on a
+  share, one file from a Git repository) in `.data.yaml`, fetches it into `source-data/` on
+  request and checks whether upstream changed. It uses
+  [datum](https://github.com/jprybylski/datum) 1.7.0, pinned per platform
+  (`[optional.datum]`, best effort; `--without-datum`).
+  - **Checked before anything runs, twice.** datum's `command` sources, targets outside
     `source-data/`, plain `http://`, SSH Git, URLs with credentials and undeclared or
-    reserved `${NAME}`s are refused. A refusal names the dataset and field.
-  - **Never on the study.** datum runs on a snapshot, in a folder outside every Git or SVN
-    working copy, so it never runs `git`/`svn` and never edits `.gitignore`. A check only
-    reports, whatever the policy. A fetch ends in a review (new / unchanged / will replace
-    / will remove, with SHA-256s). Only **Apply** changes `source-data/`; it keeps replaced
-    files in `.opncafyr/datafetch/previous/`, and an interrupted Apply can be finished or
-    rolled back.
+    reserved `${NAME}`s are refused by the launcher, naming the dataset and field. datum
+    refuses them too, through the flags every process gets (`--allow-types`, `--root`,
+    `--target-prefix`, `--https-only`, `--git-https-only`, `--env-allow`), and also
+    refuses an https-to-http redirect.
+  - **Never writes the study.** datum runs with `--no-vcs`, so it never runs `git`/`svn`
+    and never edits `.gitignore`. A check is `--report-only`, whatever the policy. A fetch
+    is staged into a review (new / unchanged / will replace / will remove, with SHA-256s).
+    Only **Apply** changes `source-data/`; it keeps replaced files in
+    `.opncafyr/datafetch/previous/`, and an interrupted Apply can be finished or rolled
+    back. The lockfile records each fetched file's SHA-256 and size, and the page shows
+    when a local file no longer matches it.
   - **Credentials for one job.** `${NAME}` values are typed on the page, reach only that
     job's datum process, and are scrubbed from its logs and messages.
   - **File sources outside the study** need a per-machine approval, kept outside the study.

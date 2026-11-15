@@ -3,6 +3,9 @@
 Apply is the only thing that changes study files. The caller holds the workspace lease
 and has checked that no job is running. Steps:
 
+The review folder is datum's staged fetch (``--stage-dir``: ``files/<target>``;
+``--lock-out``: ``lock.yaml``).
+
 1. **Verify.** The review folder's files still have the hashes the review lists; every
    study file still has the hash the review showed as "current"; ``.data.yaml`` and the
    lockfile have not changed since the fetch.
@@ -12,7 +15,8 @@ and has checked that no job is running. Steps:
 3. **Keep replaced bytes** (D2) under ``previous/<dataset>/<sha256>``.
 4. **Move** each new file into place with an atomic replace; remove files a directory
    source dropped (only paths the dataset itself wrote).
-5. **Lockfile last**, with an atomic replace, then ``state.json``; then the journal and
+5. **Lockfile last**, with an atomic replace (datum's ``--lock-out``, which records each
+   file's SHA-256 and size), then the Apply time in ``state.json``; then the journal and
    the review folder go.
 
 Completed runs are never affected: each run keeps its own copy of its input, and the
@@ -45,10 +49,8 @@ from opncafyr.adapters.datum.staging import (
     SNAPSHOT_LOCK,
     SnapshotError,
     lock_sha256,
-    read_lock,
     review_dir,
     study_file,
-    tracked_files,
 )
 from opncafyr.core.manifest import atomic_write_bytes, atomic_write_json
 
@@ -250,18 +252,7 @@ def _finish_lock_and_state(study: Path, folder: Path, doc: dict[str, Any]) -> No
     if staged_lock.is_file():
         atomic_write_bytes(study / LOCK_FILE, staged_lock.read_bytes())
     _step("lock")
-    new_items = read_lock(study / LOCK_FILE)
-    for ds in doc["datasets"]:
-        if not ds["files"]:
-            continue
-        files = []
-        for rel in tracked_files(study, ds["target"], new_items.get(ds["id"])):
-            path = study_file(study, rel)
-            if path.is_file():
-                size, sha = state.fingerprint(path)
-                files.append({"path": rel, "sha256": sha, "size": size})
-        remote = ds.get("remote_fingerprint")
-        state.record_fetch(study, ds["id"], remote if isinstance(remote, str) else None, files)
+    state.record_apply(study, [ds["id"] for ds in doc["datasets"] if ds["files"]])
     _step("state")
     (study / JOURNAL_FILE).unlink(missing_ok=True)
     (study / OLD_LOCK).unlink(missing_ok=True)

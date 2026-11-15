@@ -43,13 +43,13 @@ def _file(world: World, component: str, name: str, data: bytes | None = None) ->
 
 
 GIT_ARCHIVE = "dugite-native-v2.56.0-a44aeca-macOS-arm64.tar.gz"
-DATUM_ARCHIVE = "datum_1.6.0_darwin_arm64.tar.gz"
+DATUM_ARCHIVE = "datum_1.7.0_darwin_arm64.tar.gz"
 
 
 def datum_archive(members: dict[str, bytes] | None = None) -> bytes:
     """A tiny tar.gz laid out like a datum release archive (``datum`` at the root)."""
     if members is None:
-        members = {"datum": b"#!/bin/sh\necho datum v1.6.0\n", "LICENSE": b"MIT\n"}
+        members = {"datum": b"#!/bin/sh\necho datum v1.7.0\n", "LICENSE": b"MIT\n"}
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tf:
         for name, data in members.items():
@@ -181,7 +181,7 @@ def make_world(
     if datum is not None:
         url, digest = _file(world, "datum", DATUM_ARCHIVE, datum)
         pins += ["", "[optional.datum]", 'status = "optional"', "default = true"]
-        pins += ['version = "1.6.0"', 'license = "MIT"']
+        pins += ['version = "1.7.0"', 'license = "MIT"']
         pins += [f"[optional.datum.assets.{PLATFORM}]", f'url = "{url}"', f'sha256 = "{digest}"']
     pins += ["", "[r_packages]", 'lockfile = "runtime/r/renv.lock"']
     pins += ['binaries = "runtime/r/binaries.toml"']

@@ -619,26 +619,36 @@ changes nothing else (CI job `without-datafetch`).
   - `${NAME}`s are user-entered and never ones the launcher sets;
   - a `file` source outside the study needs a per-machine approval, stored in the launcher
     state (`approvals.py`).
-- **Snapshot** (`staging.py`). datum runs on a copy of the config and the lock, with
-  `ignore: false`, targets pointed into the snapshot and the current target files copied
-  in. Its cwd comes from the job manager's `isolated_cwd`, outside the study; the adapter
-  refuses one inside a Git or SVN working copy.
-  - The `data_check` job writes only `.opncafyr/datafetch/state.json`.
-  - The `data_fetch` job leaves a review folder, `.opncafyr/datafetch/reviews/<id>`, made
-    complete by the job manager's staging rename.
+
+  datum 1.7.0 enforces the same rules itself through the flags every process gets
+  (`argv`): `--no-vcs`, `--allow-types`, `--https-only`, `--git-https-only`,
+  `--env-allow`, `--root <study>` and `--target-prefix source-data`, plus an app-owned
+  `--cache-dir` (#85).
+- **Runs** (`staging.py`). datum reads the checked config (`ignore: false`) and a copy of
+  the lockfile from a launcher-owned folder; targets resolve in the study through `--root`.
+  Jobs run in the job manager's `isolated_cwd`, outside the study.
+  - The `data_check` job is `--report-only` and writes only
+    `.opncafyr/datafetch/state.json`.
+  - The `data_fetch` job is staged (`--stage-dir`, `--lock-out`) into a review folder,
+    `.opncafyr/datafetch/reviews/<id>`, made complete by the job manager's staging rename.
+  - The page's status runs `audit --verify-local`, which also says whether the study's
+    files still match the lockfile.
 - **Apply** (`promote.py`). Runs in process under the workspace lease, and refuses while a
   job runs:
   1. verify the review's hashes, the config and the lock;
   2. write a journal (`promote.json`);
   3. keep replaced bytes in `previous/<id>/<sha256>`;
   4. move files with atomic replaces;
-  5. write the lockfile last, then `state.json`.
+  5. write the lockfile last (with each file's SHA-256 and size), then the Apply time in
+     `state.json`.
 
   An interrupted Apply leaves the journal, and the page offers Finish or Roll back.
 - **Secrets.** Credentials go only into that job's datum environment. The job's `cleanup`
-  scrubs its logs and forgets them; every message is redacted (`redact.py`).
+  scrubs its logs and forgets them; every message is redacted (`redact.py`), on top of
+  datum's own redaction.
 - **Annotations.** `FetchedAnnotator` labels a fetched file in the dataset scan from
-  `state.json` (dataset, when applied, whether it still matches, last check).
+  `state.json` (dataset, when applied, last check) and the lockfile's hash (whether it
+  still matches).
 
 ## Project-file editor (#52)
 

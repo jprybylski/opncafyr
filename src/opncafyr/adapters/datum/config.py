@@ -15,8 +15,11 @@ value.
   files. A path outside the study needs a per-machine approval (D3, ``approvals``).
 - **${NAME} references** may name only credentials the user enters for the session; a
   name must be valid and must not be one the launcher sets itself.
-- **ignore** is treated as false: the launcher never lets datum touch ``.gitignore`` or
-  ``svn:ignore``.
+- **ignore** is treated as false: datum runs with ``--no-vcs`` and never touches
+  ``.gitignore`` or ``svn:ignore``.
+
+datum 1.7.0 refuses the same configs itself under the adapter's flags (``argv``); this
+check comes first so the page can name the field (#85).
 
 Edits are structural (D6 b): the file is parsed, changed and written again, so comments
 are lost; ``has_comments`` lets the page warn before that happens.
@@ -371,7 +374,7 @@ def _schema_problems(data: Any, schema: dict[str, Any], add: Any) -> None:
 
 
 def managed_copy(data: dict[str, Any]) -> dict[str, Any]:
-    """A deep copy with ``ignore`` false everywhere (the snapshot never touches VCS files)."""
+    """A deep copy with ``ignore`` false everywhere, so ``--no-vcs`` has nothing to warn about."""
     copy_ = copy.deepcopy(data)
     defaults = copy_.get("defaults")
     if not isinstance(defaults, dict):

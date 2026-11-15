@@ -519,32 +519,32 @@ sha256 = "f1e17876337d7be143e5d51976da36643d65528125cfbc14d57f171de0fd5f14"
 # Go binary (CGO_ENABLED=0, built with -tags git, so its Git handler needs no external
 # Git). Installed by default, but optional: if it can't be fetched or unpacked the install
 # still succeeds and the External data page shows it unavailable (`--without-datum` leaves
-# it out). The launcher runs it only in a managed mode (snapshot, review, apply).
+# it out). The launcher runs it only in a managed mode (policy flags, staged fetch, review, apply).
 # Source: https://github.com/jprybylski/datum releases; SHA-256s from the release's
 # checksums.txt, re-verified with scripts/verify_pins.py --network. Each archive holds
 # datum (datum.exe on Windows), LICENSE and README.md at its root.
 status = "optional"
 default = true
-version = "1.6.0"
-release = "v1.6.0"
+version = "1.7.0"
+release = "v1.7.0"
 license = "MIT"
 
 [optional.datum.assets.macos-arm64]
-url = "https://github.com/jprybylski/datum/releases/download/v1.6.0/datum_1.6.0_darwin_arm64.tar.gz"
-sha256 = "614033c2f2c606d7991e9f27674e66001b1198aa6e6861740cfb7e50bd89e6e3"
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_darwin_arm64.tar.gz"
+sha256 = "43f979cf25bc2b79334a1af007862f6b693c2b83f9fe84b2c6650b5ecf392ce2"
 
 [optional.datum.assets.macos-x86_64]
-url = "https://github.com/jprybylski/datum/releases/download/v1.6.0/datum_1.6.0_darwin_amd64.tar.gz"
-sha256 = "1b0f6484a8d93b3e57dab5e795779c71e0f43a27bb1d5d66b2677f7b4aa5d7de"
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_darwin_amd64.tar.gz"
+sha256 = "3091fec1ff29a9fb1ad35a2eaae7be41d6173e4561cfb35344a2dbb41453f81d"
 
 [optional.datum.assets.linux-x86_64]
-url = "https://github.com/jprybylski/datum/releases/download/v1.6.0/datum_1.6.0_linux_amd64.tar.gz"
-sha256 = "899b99ea0d47145dae770065d095ae63dfcc1d7eb050d2fd8237c0567436c45d"
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_linux_amd64.tar.gz"
+sha256 = "0c1bf75791137b0d88e21d5150026a570d4edf02feaf4e8ad8efa4141a3081d0"
 
 [optional.datum.assets.linux-aarch64]
-url = "https://github.com/jprybylski/datum/releases/download/v1.6.0/datum_1.6.0_linux_arm64.tar.gz"
-sha256 = "f5b4f21e703a53a99ed86de23938b863ab5e4008f29068a2d1f0a0790c51c5ae"
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_linux_arm64.tar.gz"
+sha256 = "7315eb393bc756d31195108e132ad833f280c4ff9289250cd11950da0c97211b"
 
 [optional.datum.assets.windows-x86_64]
-url = "https://github.com/jprybylski/datum/releases/download/v1.6.0/datum_1.6.0_windows_amd64.zip"
-sha256 = "d95537995505f3041a4533f842ed77eab754508d7963207f4140896a6cf87dd5"
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_windows_amd64.zip"
+sha256 = "c68b3a2255397cef16ff5ca183f4332d07268a037fc3af24c2fad4db92eec0fa"

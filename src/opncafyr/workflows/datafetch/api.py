@@ -286,10 +286,13 @@ def mount(app: FastAPI) -> None:
                     "path": outside[did],
                     "approved": approvals.approved(key, did, outside[did]),
                 }
-            fetched = doc["datasets"].get(did)
-            if fetched:
-                entry["fetched_at"] = fetched["fetched_at"]
-                entry["matches_fetched"] = _matches(root, fetched["files"])
+            applied = doc["datasets"].get(did)
+            if applied:
+                entry["fetched_at"] = applied["applied_at"]
+            # datum's audit --verify-local compares the study's files with the lockfile.
+            drift = (audit.get(did) or {}).get("drift")
+            if drift in ("ok", "changed", "missing"):
+                entry["matches_fetched"] = drift == "ok"
             target = ds.get("target")
             if isinstance(target, str) and not cfg._target_problem(root, target):
                 with contextlib.suppress(staging.SnapshotError):
@@ -434,9 +437,9 @@ def mount(app: FastAPI) -> None:
                     "datasets": waiting,
                 },
             )
-        # Only the chosen datasets' credentials reach datum (the snapshot holds only
-        # them); others the page holds for this session are dropped here, and a name the
-        # settings never declare is refused.
+        # Only the chosen datasets' credentials reach datum (it substitutes ${NAME} only in
+        # the datasets it fetches); others the page holds for this session are dropped
+        # here, and a name the settings never declare is refused.
         needed = set(_names(loaded, root, ids))
         given = body.credentials
         extra = sorted(set(given) - set(result.credentials))
@@ -594,16 +597,6 @@ def _names(loaded: cfg.Loaded, root: Path, ids: list[str]) -> list[str]:
     """The ${NAME} credentials the datasets in ``ids`` use."""
     subset = {**loaded.data, "datasets": [d for d in loaded.datasets if d.get("id") in ids]}
     return cfg.check(subset, root).credentials
-
-
-def _matches(root: Path, files: list[dict[str, Any]]) -> bool:
-    for f in files:
-        path = root / f["path"]
-        if not path.is_file():
-            return False
-        if path.stat().st_size != f["size"] or state.fingerprint(path)[1] != f["sha256"]:
-            return False
-    return True
 
 
 def _form_source(source: dict[str, Any]) -> dict[str, Any]:

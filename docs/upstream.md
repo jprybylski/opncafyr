@@ -123,25 +123,25 @@ a later merge leaves `VERSION` unchanged, so pin only a release whose version wa
 
 ## jprybylski/datum (public)
 
-For #83 (ADR 0012). Pinned at **1.6.0** (`[optional.datum]`). The adapter runs datum in a
-managed mode that works with 1.6.0 as released. Each change below would let a launcher-side
-safeguard shrink to defence in depth (#83 phase 4). Upstream issues must contain no study
-data and nothing about private repositories. All were filed on 2026-11-15; U1–U3 and U8
-matter most. Adopting them as they are released is tracked in #85.
+For #83 (ADR 0012). Pinned at **1.7.0** (`[optional.datum]`), which released every change
+below. They were filed on 2026-11-15 and adopted in #85: datum now enforces the managed
+mode itself, and the launcher's safeguards stay as defence in depth where they still add
+something. Upstream issues must contain no study data and nothing about private
+repositories.
 
-| # | Change | Status | Interim safeguard here |
+| # | Change | Status | Adopted (#85), and what stays here |
 |---|---|---|---|
-| [U1 (#35)](https://github.com/jprybylski/datum/issues/35) | `--no-vcs` (or `DATUM_NO_VCS=1`): never run `git`/`svn`, never edit `.gitignore`/`svn:ignore` | Open (filed 2026-11-15) | cwd outside any working copy (`isolated_cwd`, `check_cwd`), `ignore: false` in the snapshot |
-| [U2 (#36)](https://github.com/jprybylski/datum/issues/36) | `--allow-types http,file,git`: refuse other source types at config load | Open (filed 2026-11-15) | Adapter policy check before any process (`config.py`) |
-| [U3 (#37)](https://github.com/jprybylski/datum/issues/37) | `--root DIR` (and a target prefix): refuse absolute targets, `..` and link escapes | Open (filed 2026-11-15) | `resolve_in_root` checks; targets point into the snapshot |
-| [U4 (#38)](https://github.com/jprybylski/datum/issues/38) | Staged fetch: `fetch --stage-dir DIR --lock-out PATH`, sources relative to the config, atomic directory sync | Open (filed 2026-11-15) | Snapshot plus the launcher's own Apply (`promote.py`) |
-| [U5 (#39)](https://github.com/jprybylski/datum/issues/39) | `--json` for `delete`, `undelete`, `unlock`, `init`; a `format` field; `--json --version` with build features | Open (filed 2026-11-15) | Exit codes for the non-JSON commands; capabilities pinned per version |
-| [U6 (#40)](https://github.com/jprybylski/datum/issues/40) | `check --report-only`: never apply `update`, never write the lock | Open (filed 2026-11-15) | Check runs on the snapshot |
-| [U7 (#41)](https://github.com/jprybylski/datum/issues/41) | Content SHA-256 and size of every written target in the lock (directories too) | Open (filed 2026-11-15) | Applied hashes kept in `.opncafyr/datafetch/state.json` |
-| [U8 (#42)](https://github.com/jprybylski/datum/issues/42) | `--env-allow NAME,…` for `${NAME}`, substitution only for the selected datasets (1.6.0 expands the whole config, so `fetch A` needs B's variables), and redaction of substituted values | Open (filed 2026-11-15) | Minimal environment; the snapshot holds only the datasets in scope, audit and lock edits use placeholder sources; adapter-side redaction (`redact.py`) |
-| [U9 (#43)](https://github.com/jprybylski/datum/issues/43) | `--git-https-only` and `--cache-dir` | Open (filed 2026-11-15) | URL policy, no `SSH_*` in the environment, `XDG_CACHE_HOME` |
-| [U10 (#44)](https://github.com/jprybylski/datum/issues/44) | Refuse an https→http redirect; optional `--https-only` | Open (filed 2026-11-15) | URL policy on the configured URL only; a downgrade redirect is not caught yet |
-| [U11 (#45)](https://github.com/jprybylski/datum/issues/45) | Release hygiene: re-release only under a bumped `VERSION`; confirm the binaries need nothing beyond the OS | Open (filed 2026-11-15) | Pin a bumped release; a changed asset fails its checksum |
+| [U1 (#35)](https://github.com/jprybylski/datum/issues/35) | `--no-vcs` (or `DATUM_NO_VCS=1`): never run `git`/`svn`, never edit `.gitignore`/`svn:ignore` | Released in 1.7.0 | Every process passes `--no-vcs`. The adapter's refusal of a temp folder inside a working copy is gone. Kept: `isolated_cwd`, and `ignore: false` in the config datum reads (so `--no-vcs` emits no warnings). |
+| [U2 (#36)](https://github.com/jprybylski/datum/issues/36) | `--allow-types http,file,git`: refuse other source types at config load | Released in 1.7.0 | `--allow-types http,file,git`. Kept: the policy check, which names the field for the form. |
+| [U3 (#37)](https://github.com/jprybylski/datum/issues/37) | `--root DIR` (and a target prefix): refuse absolute targets, `..` and link escapes | Released in 1.7.0 | `--root <study>`, and `--target-prefix source-data` for check and fetch. Targets are no longer rewritten into a snapshot. Kept: `resolve_in_root` checks in the form and in Apply. |
+| [U4 (#38)](https://github.com/jprybylski/datum/issues/38) | Staged fetch: `fetch --stage-dir DIR --lock-out PATH`, sources relative to the config, atomic directory sync | Released in 1.7.0 (relative sources resolve against `--root`) | Fetch is staged into the review folder (`files/<target>`, `lock.yaml`). No target copies, no absolute file sources. Kept: the review and the journalled Apply (`promote.py`), which move only reviewed files. |
+| [U5 (#39)](https://github.com/jprybylski/datum/issues/39) | `--json` for `delete`, `undelete`, `unlock`, `init`; a `format` field; `--json --version` with build features | Released in 1.7.0 | Lock edits parse datum's JSON results; `skipped` and `error` are reported. The installer checks `--json --version` (version and the `git` feature). `init` is still never run: the launcher writes the scaffold. |
+| [U6 (#40)](https://github.com/jprybylski/datum/issues/40) | `check --report-only`: never apply `update`, never write the lock | Released in 1.7.0 (reports `stale`, "would update") | Check passes `--report-only` and reads the study in place. |
+| [U7 (#41)](https://github.com/jprybylski/datum/issues/41) | Content SHA-256 and size of every written target in the lock (directories too) | Released in 1.7.0 (`size`, `dir_files`; `audit --verify-local`) | The page and the dataset scan read hashes from the lockfile and `audit --verify-local`. `state.json` is schema v2: the last check and each dataset's Apply time (a v1 file is read as v2). A directory fetched by 1.6.0 has no per-file hashes until it is fetched again. |
+| [U8 (#42)](https://github.com/jprybylski/datum/issues/42) | `--env-allow NAME,…` for `${NAME}`, substitution only for the selected datasets, and redaction of substituted values | Released in 1.7.0 | `--env-allow` with the declared credentials (or the reserved `OPNCAFYR_NO_CREDENTIALS` when there are none: an empty list means no restriction). The config is no longer cut down to the datasets in scope, and audit and lock edits no longer use placeholder sources (only a dataset the policy refuses is reduced to one, so the others' status still shows). Kept: the minimal environment with only the fetched datasets' credentials, and `redact.py`. |
+| [U9 (#43)](https://github.com/jprybylski/datum/issues/43) | `--git-https-only` and `--cache-dir` | Released in 1.7.0 | Both passed; `--cache-dir` replaces `XDG_CACHE_HOME`. Kept: the URL policy, and no `SSH_*` in the environment. |
+| [U10 (#44)](https://github.com/jprybylski/datum/issues/44) | Refuse an https→http redirect; optional `--https-only` | Released in 1.7.0 | `--https-only`. A downgrade redirect is refused (`tests/test_datum_real.py`, Linux). |
+| [U11 (#45)](https://github.com/jprybylski/datum/issues/45) | Release hygiene: re-release only under a bumped `VERSION`; confirm the binaries need nothing beyond the OS | Released in 1.7.0 | Nothing to remove. Release archives never change (a different build gets a new version), and the binaries are static (`CGO_ENABLED=0`), so a pin by `checksums.txt` SHA-256 holds. |
 
 datur (the R wrapper) is not used: the adapter calls datum directly with argv arrays.
 

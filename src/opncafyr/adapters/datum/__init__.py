@@ -1,22 +1,24 @@
-"""datum: declared external data for a study, in a managed mode (#83, ADR 0012).
+"""datum: declared external data for a study, in a managed mode (#83, #85, ADR 0012).
 
 datum (https://github.com/jprybylski/datum, MIT) keeps ``.data.yaml`` (what to fetch) and
 ``.data.lock.yaml`` (fingerprints) at the study root and has a CLI only. This adapter is
 the launcher's side of it:
 
-- **argv only.** Every datum process is ``[<pinned datum>, --json, --no-color, --config,
-  …, --lock, …, --timeout, …, --concurrency, 1, <command>, …]``. The binary comes from the
-  runtime record, never from a study, and workspace files supply data, never commands.
+- **argv only.** Every datum process is ``[<pinned datum>, --json, --no-color, <policy
+  flags>, --config, …, --lock, …, <command>, …]``. The binary comes from the runtime
+  record, never from a study, and workspace files supply data, never commands.
+- **datum enforces the policy too** (datum 1.7.0): ``--no-vcs`` (never runs Git or SVN,
+  never edits ignore rules), ``--allow-types http,file,git``, ``--https-only`` and
+  ``--git-https-only`` (no SSH), ``--env-allow`` (only the declared credentials),
+  ``--root <study>`` with ``--target-prefix source-data`` and an app-owned ``--cache-dir``.
+- **A policy first** (``config``): the same rules are checked by the launcher before any
+  process starts, so a problem names the dataset and field in the form.
 - **A minimal environment** (``datum_env``): ``core.proctree.child_env`` plus
-  ``NO_COLOR``, an app-owned ``XDG_CACHE_HOME``, the launcher's proxy and CA-bundle
-  variables, and the credentials the user entered for that one job. Nothing else.
-- **Never on the study.** datum runs on a snapshot in a job folder whose cwd is outside
-  every Git or SVN working copy (``staging``), so its ignore-file reconciliation, its
-  non-atomic directory sync, the ``update`` policy and check's lock writes stay in the
-  snapshot. Only a reviewed Apply (``promote``) changes study files.
-- **A policy first** (``config``): ``command`` sources, targets outside ``source-data/``,
-  non-https URLs and undeclared ``${NAME}`` references are refused before any process
-  starts.
+  ``NO_COLOR``, the launcher's proxy and CA-bundle variables, and the credentials the
+  user entered for that one job. Nothing else.
+- **Never writes the study.** A check is ``--report-only``; a fetch is staged
+  (``--stage-dir``/``--lock-out``) into a review folder (``staging``). Only a reviewed
+  Apply (``promote``) changes study files.
 
 Only ``opncafyr.workflows.datafetch`` imports this package; nothing in ``core`` or the NCA
 workflow names it (``tests/test_boundaries.py``).
@@ -58,6 +60,11 @@ CHECK_CAPABILITY = "data_check"
 FETCH_CAPABILITY = "data_fetch"
 REVIEW_DOCUMENT = "review.json"
 
+ALLOW_TYPES = "http,file,git"
+# --env-allow with no names means "no restriction" in datum, so a config without
+# credentials allows only this name, which the policy reserves (OPNCAFYR_*) and nothing sets.
+NO_CREDENTIALS = "OPNCAFYR_NO_CREDENTIALS"
+
 DATUM_TIMEOUT = "5m"  # per-request timeout inside datum; the job has its own limit
 QUICK_TIMEOUT_S = 60.0
 # Passed through from the launcher's environment, like core.gitfetch's proxy variables.
@@ -84,7 +91,7 @@ class DatumError(RuntimeError):
 
 
 def cache_dir() -> Path:
-    """datum's Git cache (``XDG_CACHE_HOME``): app-owned, never in a study."""
+    """datum's Git cache (``--cache-dir``): app-owned, never in a study."""
     return app_root() / "cache" / "datum"
 
 
@@ -104,13 +111,43 @@ def executable(runtime: Runtime) -> Path:
 
 
 def argv(
-    runtime: Runtime, config: Path, lock: Path, command: str, *args: str, yes: bool = False
+    runtime: Runtime,
+    config: Path,
+    lock: Path,
+    command: str,
+    *args: str,
+    root: Path,
+    credentials: Sequence[str] = (),
+    yes: bool = False,
+    confine: bool = True,
+    extra: Sequence[str] = (),
 ) -> list[str]:
-    """A datum command line. Global flags come before the command, as datum requires."""
+    """A datum command line. Global flags come before the command, as datum requires.
+
+    ``root`` is where targets and relative ``file`` sources resolve (the study, or an
+    empty scratch folder for lock edits). ``credentials`` are the ``${NAME}``s the config
+    may use. ``confine`` adds ``--target-prefix source-data``. ``extra`` holds more global
+    flags (``--report-only``, ``--stage-dir``, ``--verify-local``).
+    """
     out = [
         str(executable(runtime)),
         "--json",
         "--no-color",
+        "--no-vcs",
+        "--allow-types",
+        ALLOW_TYPES,
+        "--https-only",
+        "--git-https-only",
+        "--cache-dir",
+        str(cache_dir()),
+        "--env-allow",
+        ",".join(sorted(credentials)) or NO_CREDENTIALS,
+        "--root",
+        str(root),
+    ]
+    if confine:
+        out += ["--target-prefix", SOURCE_DATA]
+    out += [
         "--config",
         str(config),
         "--lock",
@@ -119,6 +156,7 @@ def argv(
         DATUM_TIMEOUT,
         "--concurrency",
         "1",
+        *extra,
     ]
     if yes:
         out.append("--yes")
@@ -129,10 +167,10 @@ def datum_env(credentials: Mapping[str, str] | None = None) -> dict[str, str]:
     """The extra variables for a datum process (``child_env`` adds the minimal base).
 
     Credentials are added by name only for the job that needs them; ``config`` has already
-    checked that every name is declared and none is reserved.
+    checked that every name is declared and none is reserved. datum's Git cache is passed
+    as ``--cache-dir``, so no ``XDG_*`` variable is set.
     """
-    cache = cache_dir()
-    env = {"NO_COLOR": "1", "XDG_CACHE_HOME": str(cache)}
+    env = {"NO_COLOR": "1"}
     env.update({k: v for k, v in os.environ.items() if k in PASS_THROUGH})
     env.update(credentials or {})
     return env
@@ -155,8 +193,9 @@ def quick(
 ) -> QuickResult:
     """Run a short, local datum command (``audit``, ``types``, ``schema``, lock edits).
 
-    ``args`` is a complete argv from ``argv``. These commands never use the network and
-    never write study files: they run on a snapshot in ``cwd``, a launcher-owned folder.
+    ``args`` is a complete argv from ``argv`` (or the binary plus a describing command).
+    These commands never use the network and never write study files; ``cwd`` is a
+    launcher-owned folder.
     """
     cwd.mkdir(parents=True, exist_ok=True)
     proc = spawn(list(args), env=process_env(runtime), cwd=cwd, stdout=PIPE, stderr=DEVNULL)

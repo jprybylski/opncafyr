@@ -1,23 +1,19 @@
-"""Run datum on a snapshot, never on the study (#83, ADR 0012).
+"""Run datum so it never writes the study (#83, #85, ADR 0012).
 
-datum writes straight to its targets and lockfile, reconciles Git/SVN ignore rules for
-any working copy around its cwd, and under the ``update`` policy re-fetches during a
-check. So every datum process gets:
+datum 1.7.0 does the confinement itself (``argv``: ``--no-vcs``, ``--root``,
+``--allow-types`` and the rest); this module adds what the launcher keeps around it:
 
-1. **A snapshot.** The checked config is written to a launcher-owned folder with
-   ``ignore: false`` everywhere, relative ``file`` sources made absolute (under the study)
-   and every target made absolute under the snapshot's ``files/`` folder. The study's
-   lockfile is copied next to it, and the current target files are copied into
-   ``files/`` so datum sees the same local state it would see in the study.
-2. **A cwd outside every working copy.** Jobs use the job manager's ``isolated_cwd``; the
-   adapter refuses to run if any folder above it holds ``.git`` or ``.svn``.
+1. **A fixed input.** The checked config (``cfg.managed_copy``: ``ignore: false``
+   everywhere) and a copy of the study's lockfile are written to a launcher-owned folder,
+   so datum reads exactly what was checked and the review knows which lock it started
+   from. Targets and relative ``file`` sources resolve in the study through ``--root``.
+2. **No writes.** A check is ``--report-only``. A fetch is staged: ``--stage-dir`` puts
+   every new file under the review folder's ``files/<target>`` and ``--lock-out`` the new
+   lockfile next to it. Jobs still get the job manager's ``isolated_cwd``.
 3. **A review.** datum's ``--json`` output is redacted, checked and turned into a review
    document. A check stops there (it records the result in ``state.json`` only); a fetch
    leaves a review folder with the new files that ``promote.apply`` moves into place
    after the user confirms.
-
-The lockfile stores no target paths (ids to hashes, fingerprints and ``dir_paths``), so
-the absolute snapshot targets never reach the study.
 """
 
 from __future__ import annotations
@@ -65,7 +61,18 @@ STATUSES = ("ok", "updated", "fetched", "stale", "fail", "warn", "error", "delet
 SNAPSHOT_CONFIG = "config.yaml"
 SNAPSHOT_LOCK = "lock.yaml"
 FILES = "files"
-VCS_MARKERS = (".git", ".svn")
+NO_SOURCE = "no-source"
+# datum's check --report-only messages for an ``update`` dataset, and what the page says.
+REPORT_ONLY = {
+    "remote changed; would update (--report-only)": (
+        "An update is available. Fetch it to review the change before it is applied."
+    ),
+    "target missing; would update (--report-only)": (
+        "Not in this study yet. Fetch it to review the files before they are added."
+    ),
+}
+DRIFT = ("ok", "changed", "missing", "unknown")  # audit --verify-local
+LOCK_EDITS = {"delete": "deleted", "undelete": "undeleted", "unlock": "unlocked"}
 
 
 class SnapshotError(RuntimeError):
@@ -120,6 +127,30 @@ def tracked_files(study: Path, target: str, item: Mapping[str, Any] | None) -> l
     return [f"{target}/{p}" for p in paths]
 
 
+def recorded_files(target: str, item: Mapping[str, Any] | None) -> list[tuple[str, str | None]]:
+    """Study-relative paths and SHA-256s the lockfile records for a dataset (datum 1.7.0).
+
+    A single-file target has its hash in ``local_sha256``; a directory has ``dir_files``.
+    A directory fetched by datum 1.6 has only ``dir_paths``, so its hashes are ``None``.
+    """
+    if not item:
+        return []
+    files = item.get("dir_files")
+    if isinstance(files, list):
+        out: list[tuple[str, str | None]] = []
+        for f in files:
+            if isinstance(f, dict) and isinstance(f.get("path"), str):
+                rel = dir_paths({"dir_paths": [f["path"]]})
+                sha = f.get("sha256")
+                out.append((f"{target}/{rel[0]}", sha if isinstance(sha, str) else None))
+        return out
+    paths = dir_paths(item)
+    if paths is not None:
+        return [(f"{target}/{p}", None) for p in paths]
+    sha = item.get("local_sha256")
+    return [(target, sha if isinstance(sha, str) else None)]
+
+
 def study_file(study: Path, rel: str) -> Path:
     """``rel`` (under source-data/) resolved inside the study; refuses anything else."""
     if not rel.startswith(f"{SOURCE_DATA}/"):
@@ -134,19 +165,6 @@ def study_file(study: Path, rel: str) -> Path:
     return path
 
 
-def check_cwd(cwd: Path) -> None:
-    """Refuse a cwd inside a Git or SVN working copy: datum would edit its ignore rules."""
-    folder = Path(cwd).resolve()
-    for candidate in (folder, *folder.parents):
-        for marker in VCS_MARKERS:
-            if (candidate / marker).exists():
-                raise SnapshotError(
-                    "datum's working folder is inside a version-control working copy "
-                    f"({candidate}), so it can't run safely. Set TMPDIR to a folder outside "
-                    "it and restart the app."
-                )
-
-
 # --- snapshot ------------------------------------------------------------------------------
 
 
@@ -155,75 +173,58 @@ class Snapshot:
     folder: Path
     config: Path
     lock: Path
-    datasets: dict[str, str]  # id -> study-relative target
-    lock_items: dict[str, dict[str, Any]]
+    lock_sha256: str | None  # of the copy datum reads; None when the study has no lock
 
 
 def make_snapshot(
-    study: Path,
-    loaded: cfg.Loaded,
-    folder: Path,
-    ids: list[str] | None = None,
-    *,
-    seed: bool = True,
-    targets_in: Path | None = None,
-    neutral: bool = False,
+    study: Path, loaded: cfg.Loaded, folder: Path, *, harmless: bool = False
 ) -> Snapshot:
-    """Write the managed copy of the config and lock into ``folder``.
+    """Write the checked config and a copy of the study's lockfile into ``folder``.
 
-    Only the datasets in ``ids`` (all when None) are in the copy: datum substitutes every
-    ``${NAME}`` in the config it loads, so a fetch of one dataset must not need another's
-    credentials. The lockfile keeps the other datasets' entries as they are.
-
-    ``targets_in`` is where targets point (default ``folder/files``). With ``seed``, the
-    current target files of those datasets are copied there. With ``neutral``, every
-    source is replaced by a missing local file: for commands that read only ids, policies
-    and targets (``audit``, ``delete``, ``undelete``, ``unlock``), so they need no
-    credentials and can reach nothing.
+    With ``harmless`` (``audit`` and lock edits only, which may see a config with
+    problems), every dataset the policy refuses is reduced to its id with a missing local
+    source and a target under ``.invalid/``, so one bad dataset doesn't make datum refuse
+    the whole config and the others' lock status still shows.
     """
     study = study.resolve()
     folder.mkdir(parents=True, exist_ok=True)
-    files = targets_in or folder / FILES
     data = cfg.managed_copy(loaded.data)
-    lock_items = read_lock(study / LOCK_FILE)
-    targets: dict[str, str] = {}
-    if ids is not None:
-        data["datasets"] = [
-            d for d in data.get("datasets") or [] if isinstance(d, dict) and d.get("id") in ids
-        ]
-    for ds in data.get("datasets") or []:
-        if neutral:
-            ds.pop("sources", None)
-            ds["source"] = {"type": "file", "path": str(folder / "no-source")}
-        did, target = str(ds.get("id")), ds.get("target")
-        if cfg._target_problem(study, target) is not None:
-            # Only an audit sees a config with problems; point it somewhere harmless.
-            ds["target"] = str(files / ".invalid" / did)
-            continue
-        targets[did] = target
-        ds["target"] = str(files / target)
-        for _, source in cfg._sources(ds):
-            if isinstance(source, dict) and source.get("type") == "file":
-                path = str(source["path"])
-                if not Path(path).is_absolute():
-                    source["path"] = str(study / path)
-        if seed:
-            _seed(study, target, lock_items.get(did), files)
+    if harmless:
+        data = _harmless(data, study, folder)
     snapshot_config = folder / SNAPSHOT_CONFIG
     snapshot_config.write_text(cfg.dump(data), "utf-8")
     snapshot_lock = folder / SNAPSHOT_LOCK
+    snapshot_lock.unlink(missing_ok=True)
+    lock_sha = None
     if (study / LOCK_FILE).is_file():
         shutil.copyfile(study / LOCK_FILE, snapshot_lock)
-    return Snapshot(folder, snapshot_config, snapshot_lock, targets, lock_items)
+        lock_sha = state.fingerprint(snapshot_lock)[1]
+    return Snapshot(folder, snapshot_config, snapshot_lock, lock_sha)
 
 
-def _seed(study: Path, target: str, item: Mapping[str, Any] | None, files: Path) -> None:
-    for rel in tracked_files(study, target, item):
-        src = study_file(study, rel)
-        if src.is_file() and not src.is_symlink():
-            dest = files / rel
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(src, dest)
+def _harmless(data: dict[str, Any], study: Path, folder: Path) -> dict[str, Any]:
+    problems = cfg.check(data, study).problems
+    bad = {p.dataset for p in problems if p.dataset is not None}
+    defaults = data.get("defaults") if isinstance(data.get("defaults"), dict) else {}
+    if defaults.get("policy") not in (None, *cfg.POLICIES):
+        defaults.pop("policy")
+    datasets, seen = [], set()
+    for ds in data.get("datasets") if isinstance(data.get("datasets"), list) else []:
+        did = ds.get("id") if isinstance(ds, dict) else None
+        if not isinstance(did, str) or not cfg.ID_RE.match(did) or did in seen:
+            continue
+        seen.add(did)
+        if did in bad:
+            ds = {
+                "id": did,
+                "desc": "",
+                "source": {"type": "file", "path": str(folder / NO_SOURCE)},
+                "target": f".invalid/{did}",
+                "ignore": False,
+            }
+        datasets.append(ds)
+    data["datasets"] = datasets
+    return data
 
 
 # --- datum's JSON --------------------------------------------------------------------------
@@ -251,6 +252,8 @@ def _clean_result(raw: Any, redactor: Redactor) -> dict[str, Any] | None:
     for key in ("message", "lock_fingerprint", "remote_fingerprint"):
         if isinstance(raw.get(key), str) and raw[key]:
             out[key] = redactor.text(raw[key])[:500]
+    if out.get("message") in REPORT_ONLY:
+        out["message"] = REPORT_ONLY[out["message"]]
     message = out.get("message", "")
     if out["status"] == "error" and any(h in message.lower() for h in NETWORK_HINTS):
         out["message"] = f"{OFFLINE_HINT} ({message})"[:500]
@@ -298,6 +301,7 @@ def review_dir(study: Path, review_id: str) -> Path:
 class _Held:
     redactor: Redactor
     credentials: dict[str, str]
+    lock_sha256: str | None = None  # the lock the job's datum started from
 
     def forget(self, job_dir: Path) -> None:
         for name in ("stdout.log", "stderr.log"):
@@ -337,20 +341,37 @@ def _build(
     held: _Held,
     command: str,
     ids: list[str] | None,
-    into_staging: bool,
 ) -> Callable[[JobContext], CommandSpec]:
     def build(ctx: JobContext) -> CommandSpec:
-        problems = cfg.check(loaded.data, study).problems
-        if problems:
-            raise JobPrepareError(problems[0].text())
+        checked = cfg.check(loaded.data, study)
+        if checked.problems:
+            raise JobPrepareError(checked.problems[0].text())
         try:
-            check_cwd(ctx.cwd)
             exe = executable(ctx.runtime)
-            base = ctx.staging if into_staging and ctx.staging is not None else ctx.cwd
-            snap = make_snapshot(study, loaded, base, ids)
+            snap = make_snapshot(study, loaded, ctx.cwd / "snapshot")
         except (SnapshotError, DatumError) as exc:
             raise JobPrepareError(exc.message) from None
-        args = argv(ctx.runtime, snap.config, snap.lock, command, *(ids or []))
+        held.lock_sha256 = snap.lock_sha256
+        if command == "fetch":
+            assert ctx.staging is not None  # noqa: S101 - the request has an output
+            extra = [
+                "--stage-dir",
+                str(ctx.staging / FILES),
+                "--lock-out",
+                str(ctx.staging / SNAPSHOT_LOCK),
+            ]
+        else:
+            extra = ["--report-only"]
+        args = argv(
+            ctx.runtime,
+            snap.config,
+            snap.lock,
+            command,
+            *(ids or []),
+            root=study,
+            credentials=checked.credentials,
+            extra=extra,
+        )
         return CommandSpec(args, datum_env(held.credentials), [exe.parent])
 
     return build
@@ -359,10 +380,10 @@ def _build(
 def check_request(
     study: Path, loaded: cfg.Loaded, credentials: Mapping[str, str] | None = None
 ) -> JobRequest:
-    """The ``data_check`` job: report-only, even under the ``update`` policy.
+    """The ``data_check`` job: ``--report-only``, even under the ``update`` policy.
 
-    The snapshot lives in the job's isolated cwd, outside the study; the only study file
-    the job writes is ``state.json`` (the last check).
+    datum reads the study's targets in place and writes nothing; the only study file the
+    job writes is ``state.json`` (the last check).
     """
     study = study.resolve()
     held = _Held(Redactor((credentials or {}).values()), dict(credentials or {}))
@@ -391,7 +412,7 @@ def check_request(
     return JobRequest(
         kind="datum.check",
         label="Check external data for updates",
-        build=_build(study, loaded, held, "check", None, into_staging=False),
+        build=_build(study, loaded, held, "check", None),
         timeout_s=job.timeout_s,
         isolated_cwd=True,
         ok_exit_codes=(0, 1),
@@ -415,23 +436,26 @@ def fetch_request(
     review_id: str,
     credentials: Mapping[str, str] | None = None,
 ) -> JobRequest:
-    """The ``data_fetch`` job: datum fetches into a review folder; nothing else changes.
+    """The ``data_fetch`` job: a staged datum fetch into a review folder.
 
-    datum writes straight into the job's output staging (``.opncafyr/datafetch/reviews/
-    <id>.staging``); the job manager renames it to the review folder only after a clean
-    exit and a passing review, so a review folder is always complete.
+    ``--stage-dir`` and ``--lock-out`` point into the job's output staging
+    (``.opncafyr/datafetch/reviews/<id>.staging``: ``files/<target>`` and ``lock.yaml``);
+    the job manager renames it to the review folder only after a clean exit and a passing
+    review, so a review folder is always complete. The study's targets and lockfile are
+    only read.
     """
     study = study.resolve()
     held = _Held(Redactor((credentials or {}).values()), dict(credentials or {}))
     job = contract(FETCH_CAPABILITY)
     assert job.timeout_s is not None  # noqa: S101 - the descriptor sets one
-    old_lock = lock_sha256(study)
 
     def review(ctx: JobContext) -> ReviewResult:
         assert ctx.staging is not None  # noqa: S101 - the request has an output
         try:
             results = parse_results(_job_text(ctx, held), held.redactor)
-            doc = build_review(study, loaded, ctx.staging, ids, results, review_id, old_lock)
+            doc = build_review(
+                study, loaded, ctx.staging, ids, results, review_id, held.lock_sha256
+            )
         except (DatumError, SnapshotError) as exc:
             return ReviewResult(False, exc.message)
         doc["exit_code"] = _exit_code(results)
@@ -445,7 +469,7 @@ def fetch_request(
     return JobRequest(
         kind="datum.fetch",
         label=label,
-        build=_build(study, loaded, held, "fetch", ids, into_staging=True),
+        build=_build(study, loaded, held, "fetch", ids),
         timeout_s=job.timeout_s,
         isolated_cwd=True,
         output=f"{REVIEWS_DIR}/{review_id}",
@@ -466,7 +490,11 @@ def build_review(
     review_id: str,
     old_lock: str | None,
 ) -> dict[str, Any]:
-    """What Apply would change, per dataset and file, from the snapshot after datum ran."""
+    """What Apply would change, per dataset and file, from the staged fetch.
+
+    ``old_lock`` is the SHA-256 of the lockfile datum started from; Apply refuses if the
+    study's lockfile is no longer that one.
+    """
     old_items = read_lock(study / LOCK_FILE)
     new_items = read_lock(staging / SNAPSHOT_LOCK)
     by_id = {r["id"]: r for r in results}
@@ -547,14 +575,28 @@ def _file_actions(
     return out
 
 
-# --- quick commands on a snapshot -----------------------------------------------------------
+# --- quick commands -----------------------------------------------------------------------
 
 
 def audit(study: Path, loaded: cfg.Loaded, runtime: Any, scratch: Path) -> list[dict[str, Any]]:
-    """``datum --json audit`` on a snapshot: config and lock only, offline, no writes."""
-    check_cwd(scratch)
-    snap = make_snapshot(study, loaded, scratch / "snapshot", seed=False, neutral=True)
-    result = quick(runtime, argv(runtime, snap.config, snap.lock, "audit"), scratch / "cwd")
+    """``datum --verify-local --json audit``: config and lock, plus a hash of each target.
+
+    Offline and read-only. ``drift`` says whether the study's files still match what the
+    lockfile recorded (``ok``, ``changed``, ``missing`` or ``unknown``).
+    """
+    study = study.resolve()
+    snap = make_snapshot(study, loaded, scratch / "snapshot", harmless=True)
+    args = argv(
+        runtime,
+        snap.config,
+        snap.lock,
+        "audit",
+        root=study,
+        credentials=cfg.check(loaded.data, study).credentials,
+        confine=False,
+        extra=["--verify-local"],
+    )
+    result = quick(runtime, args, scratch / "cwd")
     doc = parse_json(result.stdout)
     if result.code != 0 or not isinstance(doc, dict):
         message = doc.get("error") if isinstance(doc, dict) else None
@@ -566,6 +608,7 @@ def audit(study: Path, loaded: cfg.Loaded, runtime: Any, scratch: Path) -> list[
     for e in entries:
         if not isinstance(e, dict) or not isinstance(e.get("id"), str):
             continue
+        drift = e.get("drift")
         out.append(
             {
                 "id": e["id"],
@@ -577,6 +620,7 @@ def audit(study: Path, loaded: cfg.Loaded, runtime: Any, scratch: Path) -> list[
                 "checked_at": e.get("checked_at"),
                 "deleted_at": e.get("deleted_at"),
                 "inaccessible_at": e.get("inaccessible_at"),
+                "drift": drift if drift in DRIFT else None,
             }
         )
     return out
@@ -590,27 +634,42 @@ def lock_edit(
     command: str,
     dataset: str,
 ) -> bytes:
-    """Run ``delete``/``undelete``/``unlock`` on a snapshot and return the new lock bytes.
+    """Run ``delete``/``undelete``/``unlock`` on a lock copy and return the new lock bytes.
 
-    Targets point at an empty scratch folder, so ``delete`` removes nothing real; the
-    caller moves the study's files to ``previous/`` itself.
+    ``--root`` is an empty scratch folder, so ``delete`` removes nothing real; the caller
+    moves the study's files to ``previous/`` itself.
     """
-    if command not in ("delete", "undelete", "unlock"):
+    if command not in LOCK_EDITS:
         raise ValueError(command)
-    check_cwd(scratch)
-    snap = make_snapshot(
-        study,
-        loaded,
-        scratch / "snapshot",
-        [dataset],
-        seed=False,
-        targets_in=scratch / "empty",
-        neutral=True,
-    )
+    study = study.resolve()
+    snap = make_snapshot(study, loaded, scratch / "snapshot", harmless=True)
     if not snap.lock.is_file():
         raise DatumError("no_lock", "Nothing has been fetched for this dataset yet.")
-    args = argv(runtime, snap.config, snap.lock, command, dataset, yes=command != "undelete")
+    empty = scratch / "empty"
+    empty.mkdir(parents=True, exist_ok=True)
+    args = argv(
+        runtime,
+        snap.config,
+        snap.lock,
+        command,
+        dataset,
+        root=empty,
+        credentials=cfg.check(loaded.data, study).credentials,
+        confine=False,
+        yes=True,
+    )
     result = quick(runtime, args, scratch / "cwd")
-    if result.code != 0:
-        raise DatumError(f"{command}_failed", f"datum could not {command} this dataset.")
+    redactor = Redactor()
+    try:
+        doc = parse_json(result.stdout)
+    except DatumError:
+        doc = None
+    if isinstance(doc, dict) and isinstance(doc.get("error"), str):
+        raise DatumError(f"{command}_failed", redactor.text(doc["error"])[:500])
+    results = doc.get("results") if isinstance(doc, dict) else None
+    mine = [r for r in results or [] if isinstance(r, dict) and r.get("id") == dataset]
+    if result.code != 0 or not mine or mine[0].get("status") != LOCK_EDITS[command]:
+        message = mine[0].get("message") if mine else None
+        detail = f" ({redactor.text(message)[:300]})" if isinstance(message, str) else ""
+        raise DatumError(f"{command}_failed", f"datum could not {command} this dataset{detail}.")
     return snap.lock.read_bytes()
