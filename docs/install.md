@@ -43,6 +43,7 @@ Options for `install` and `repair`:
 | `--assets DIR` | A folder of pinned files to use before downloading (repeatable). Files are found by name and must match their pinned SHA-256. |
 | `--with-libreoffice` | Also install LibreOffice, for deckifyr slide previews (optional; [spikes/libreoffice.md](spikes/libreoffice.md)). |
 | `--without-git` | Leave out the pinned Git for version history (installed by default, best effort; [ADR 0008](decisions/0008-git-version-history.md)). |
+| `--without-datum` | Leave out datum for the External data page (installed by default, best effort; [ADR 0012](decisions/0012-external-data-managed-datum.md)). |
 | `--reinstall` | Install again even if this version is already installed. |
 | `--dry-run` | Report what would happen; change nothing. |
 | `--cacert FILE`, `--proxy URL` | For HTTPS through a corporate proxy. The installer uses the system `curl`, so the OS trust store and `HTTPS_PROXY` apply too. |
@@ -275,6 +276,7 @@ install.bat bundle --platform macos-arm64 --out bundles --archive --assets <fold
 - `--archive` also writes `opncafyr-bundle-<version>-<platform>.zip`.
 - `--with-libreoffice` adds LibreOffice (optional, for slide previews; about 300–400 MB).
 - Git for version history is included by default (about 50–70 MB); `--without-git` leaves it out.
+- datum for external data is included by default (about 4 MB); `--without-datum` leaves it out.
 - `--with-source-build` adds what `repair --build-from-source` needs: opnca-r's vendored
   tarball, the Rust toolchain and, for Windows, Rtools45 (about 600 MB more). Not on Linux.
 - `--mirror mirror.toml` fetches from internal mirrors instead (below).

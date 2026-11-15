@@ -50,6 +50,9 @@ Event records
 Exclusion
 : A row marked as not counting in the analysis, with a reason. Excluded rows stay in the run's data and opnca-r sees them as excluded. Compare **removed** rows, which go to the rejected-row log. Samples you exclude inside opnca-r are recorded too, but without a reason, and the app adds a warning to the run.
 
+External data
+: Data a study depends on that lives somewhere else (a portal file, a network share, one file in a Git repository), listed in the study's `.data.yaml`. The optional [External data]({{ '/guides/external-data/' | relative_url }}) page fetches it into `source-data/` when you ask, shows what would change, and changes nothing until you apply. A check for updates never changes files.
+
 Fingerprint (SHA-256)
 : A code computed from a file's exact bytes. If even one byte changes, the fingerprint changes. The app records fingerprints of source files, run files, published files and builds, and checks them again later.
 

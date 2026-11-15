@@ -1,6 +1,6 @@
 # Dependency graph
 
-**Updated:** 2026-11-06 (#5). Exact versions and checksums live in
+**Updated:** 2026-11-15 (#83). Exact versions and checksums live in
 [`runtime/pins.toml`](../runtime/pins.toml); this page says which component needs what
 and why. Edges come from each tool's DESCRIPTION / pyproject at the pinned release.
 
@@ -23,9 +23,13 @@ launcher (opncafyr)        uv 0.13.7 ─► Python 3.13.18 ─► launcher venv 
  │                          tools venv as QUARTIFYR_PYTHON_ENV (python-docx, PyYAML, Pillow)
  │                          optional: LibreOffice (field recalculation, #8)
  │
- └─ gitneighbr adapter ───► R 4.6.2 ─► gitneighbr 0.2.1 (cellar) + plumber2, processx,
-                            curl, openssl, fs, jsonlite, R6, reqres
-                            optional: Git 2.56.0 (dugite-native, [optional.git], #56)
+ ├─ gitneighbr adapter ───► R 4.6.2 ─► gitneighbr 0.2.1 (cellar) + plumber2, processx,
+ │                          curl, openssl, fs, jsonlite, R6, reqres
+ │                          optional: Git 2.56.0 (dugite-native, [optional.git], #56)
+ │
+ └─ datum adapter ────────► datum 1.6.0 (static Go binary, [optional.datum], #83)
+                            used only by workflows/datafetch; its git handler is built in
+                            (go-git), so it needs no Git
 
 repair path only (ADR 0004): Rust 1.99.1 (+ Rtools45 on Windows, Command Line Tools on
 macOS) to build opnca_0.3.3-vendored.tar.gz
@@ -47,6 +51,7 @@ macOS) to build opnca_0.3.3-vendored.tar.gz
 | Quarto 1.11.9 | — | `[quarto]` macOS tarball (universal), Windows zip | `quarto add` is never run. |
 | Tools Python env | Python 3.13 | `[python_envs.tools]` (`runtime/python/tools/uv.lock`, 23 packages) | deckifyr `[web,preview]` + python-docx 1.1.2, PyYAML 6.0.2, Pillow 11.1.0 (pyro's pins, compatible with deckifyr's lower bounds), and pymupdf 1.28.2: pymupdf 2.x has no macOS x86_64 wheel. One env for deckifyr and for quartifyr/reportifyr, so pyro never creates one. |
 | Rust 1.99.1, Rtools45 | repair path only | `[rust]`, `[rtools]` | rustup-init (online) and standalone toolchain archives (offline). |
+| datum 1.6.0 | optional; nothing at run time (static, `CGO_ENABLED=0`, built with `-tags git`) | `[optional.datum]`: one release archive per platform, SHA-256 from its `checksums.txt` | External data (#83, ADR 0012), run in a managed mode only. Best effort at install (`--without-datum`). MIT. Re-releases only under a bumped `VERSION` are expected (upstream U11). |
 | LibreOffice 26.2.7.1 | optional | `[optional.libreoffice]` | Optional per-user download for deckifyr previews only; quartifyr's field recalculation doesn't work with it yet ([spikes/libreoffice.md](spikes/libreoffice.md)). |
 | Container image (#42) | Docker or Podman on Linux x86_64/arm64 | `[container]` (digest-pinned base, TDF LibreOffice `.deb` sets), `[ci.linux-*]` runtimes, `container/apt/lock-<platform>-<stage>.txt` | Everything above, built for Linux: R from Posit's `.deb` (tree copied, no compilers kept), the R library and opnca-r from source, Git from the locked Ubuntu set. [container.md](container.md), ADR 0009. |
 

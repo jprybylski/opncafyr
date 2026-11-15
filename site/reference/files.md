@@ -26,6 +26,7 @@ opncafyr keeps two kinds of files apart. Your **study folders** hold your data, 
 | `deck/build/` | you build inside the deck editor | unrecorded draft builds | Yours to look at; the app doesn't use them. |
 | `.git/` | you select **Start version history here** ([version history]({{ '/guides/version-history/' | relative_url }}), optional) | Git's snapshots of the files you chose. Hidden on most computers. | **No.** Use the version history page. |
 | `.gitignore` | you set up version history and keep its suggestions | the files left out of snapshots, each with its reason | Yes, but only if you know Git: it changes what snapshots can include. |
+| `.data.yaml`, `.data.lock.yaml` | you select **Set up** on **External data** ([external data]({{ '/guides/external-data/' | relative_url }}), optional) | the external data the study depends on, and what was last fetched | Edit datasets on the External data page. The lock file is datum's; don't edit it. |
 | `deck/builds/<build-id>/` | you select **Build** on **Publish** | one recorded build: the PPTX, `deck-manifest.json`, `build-result.json`, `build.json`, and `previews/` if you asked for slide previews | **No.** Download or copy the PPTX instead. |
 
 `report/` and `deck/` each also hold an `OUTPUTS/` copy of the publication's files. The app manages these copies; checks and builds use their own checked copies of the publication's files, not these.
@@ -49,6 +50,7 @@ opncafyr keeps two kinds of files apart. Your **study folders** hold your data, 
 | `standards/` | a read-only, checked copy of each imported bundle or template |
 | `publish-checks/` | results of report checks |
 | `jobs/<job-id>/` | each job's state, events, output logs and diagnostics |
+| `datafetch/` | [external data]({{ '/guides/external-data/' | relative_url }}): the last check (`state.json`), fetch reviews waiting for **Apply**, and `previous/`, the earlier copies of replaced or deleted files |
 
 ### Inside a run folder
 

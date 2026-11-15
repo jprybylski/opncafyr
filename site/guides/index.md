@@ -2,7 +2,7 @@
 title: Guides
 nav_order: 3
 has_children: true
-description: Task guides for installing offline, keeping opncafyr up to date, cleaning data, understanding run provenance, reviewing a run (QC), publishing, reports and decks, optional version history, and troubleshooting.
+description: Task guides for installing offline, keeping opncafyr up to date, cleaning data, understanding run provenance, reviewing a run (QC), publishing, reports and decks, optional version history and external data, and troubleshooting.
 permalink: /guides/
 ---
 
@@ -31,6 +31,10 @@ Task-by-task help once you know the basics.
 **Keeping history (optional)**
 
 - [Version history]({{ '/guides/version-history/' | relative_url }}): Git snapshots of files you choose, and reviewed sending to a shared copy.
+
+**External data (optional)**
+
+- [External data]({{ '/guides/external-data/' | relative_url }}): declare data from a portal, a share or a Git repository, fetch it into `source-data/` after a review, and check for upstream changes.
 
 **When something goes wrong**
 
