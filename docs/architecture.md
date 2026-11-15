@@ -603,6 +603,53 @@ which tool's own template layout it accepts (`StandardsType.native`).
   `.opncafyr/standards/.fetched/<id>/files/`. A token goes only into that process's
   environment as an `http.<url>.extraHeader`.
 
+## External data (#83, ADR 0012)
+
+An optional adapter, `adapters/datum`, and its workflow pack, `workflows/datafetch` (routes
+under `/api/datafetch`, the **External data** view). Only the pack imports the adapter, and
+neither `core/` nor `workflows/nca` names either (`tests/test_boundaries.py`). Leaving datum
+out of an install shows the view as unavailable; leaving both packages out of a build
+changes nothing else (CI job `without-datafetch`).
+
+- **Policy** (`adapters/datum/config.py`). `.data.yaml` is checked against `datum schema`
+  and the managed-mode rules before any datum process starts:
+  - `http`, `file` and `git` sources only, never `command`;
+  - targets under `source-data/`, still inside it after following links;
+  - https URLs only, with no credentials and a literal host;
+  - `${NAME}`s are user-entered and never ones the launcher sets;
+  - a `file` source outside the study needs a per-machine approval, stored in the launcher
+    state (`approvals.py`).
+
+  datum 1.7.0 enforces the same rules itself through the flags every process gets
+  (`argv`): `--no-vcs`, `--allow-types`, `--https-only`, `--git-https-only`,
+  `--env-allow`, `--root <study>` and `--target-prefix source-data`, plus an app-owned
+  `--cache-dir` (#85).
+- **Runs** (`staging.py`). datum reads the checked config (`ignore: false`) and a copy of
+  the lockfile from a launcher-owned folder; targets resolve in the study through `--root`.
+  Jobs run in the job manager's `isolated_cwd`, outside the study.
+  - The `data_check` job is `--report-only` and writes only
+    `.opncafyr/datafetch/state.json`.
+  - The `data_fetch` job is staged (`--stage-dir`, `--lock-out`) into a review folder,
+    `.opncafyr/datafetch/reviews/<id>`, made complete by the job manager's staging rename.
+  - The page's status runs `audit --verify-local`, which also says whether the study's
+    files still match the lockfile.
+- **Apply** (`promote.py`). Runs in process under the workspace lease, and refuses while a
+  job runs:
+  1. verify the review's hashes, the config and the lock;
+  2. write a journal (`promote.json`);
+  3. keep replaced bytes in `previous/<id>/<sha256>`;
+  4. move files with atomic replaces;
+  5. write the lockfile last (with each file's SHA-256 and size), then the Apply time in
+     `state.json`.
+
+  An interrupted Apply leaves the journal, and the page offers Finish or Roll back.
+- **Secrets.** Credentials go only into that job's datum environment. The job's `cleanup`
+  scrubs its logs and forgets them; every message is redacted (`redact.py`), on top of
+  datum's own redaction.
+- **Annotations.** `FetchedAnnotator` labels a fetched file in the dataset scan from
+  `state.json` (dataset, when applied, last check) and the lockfile's hash (whether it
+  still matches).
+
 ## Project-file editor (#52)
 
 A generic launcher capability: a tool opts in, and the launcher's own page edits the

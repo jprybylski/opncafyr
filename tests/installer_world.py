@@ -43,6 +43,21 @@ def _file(world: World, component: str, name: str, data: bytes | None = None) ->
 
 
 GIT_ARCHIVE = "dugite-native-v2.56.0-a44aeca-macOS-arm64.tar.gz"
+DATUM_ARCHIVE = "datum_1.7.0_darwin_arm64.tar.gz"
+
+
+def datum_archive(members: dict[str, bytes] | None = None) -> bytes:
+    """A tiny tar.gz laid out like a datum release archive (``datum`` at the root)."""
+    if members is None:
+        members = {"datum": b"#!/bin/sh\necho datum v1.7.0\n", "LICENSE": b"MIT\n"}
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+        for name, data in members.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            info.mode = 0o755
+            tf.addfile(info, io.BytesIO(data))
+    return buf.getvalue()
 
 
 def git_archive(members: dict[str, bytes | None] | None = None) -> bytes:
@@ -75,10 +90,12 @@ def make_world(
     *,
     source_build: bool = False,
     git: bytes | None = None,
+    datum: bytes | None = None,
 ) -> World:
     """``source_build`` also pins what ``repair --build-from-source`` needs (#34): a
     vendored opnca-r tarball (in the manifest too) and a standalone Rust archive. ``git``
-    pins that archive as the best-effort ``[optional.git]`` (#56; see ``git_archive``)."""
+    pins that archive as the best-effort ``[optional.git]`` (#56; see ``git_archive``), and
+    ``datum`` as ``[optional.datum]`` (#83; see ``datum_archive``)."""
     world = World(
         root=tmp,
         assets=tmp / "assets",
@@ -161,6 +178,11 @@ def make_world(
         pins += ["", "[optional.git]", 'status = "optional"', "default = true"]
         pins += ['version = "2.56.0"', 'license = "GPL-2.0-only AND MIT"']
         pins += [f"[optional.git.assets.{PLATFORM}]", f'url = "{url}"', f'sha256 = "{digest}"']
+    if datum is not None:
+        url, digest = _file(world, "datum", DATUM_ARCHIVE, datum)
+        pins += ["", "[optional.datum]", 'status = "optional"', "default = true"]
+        pins += ['version = "1.7.0"', 'license = "MIT"']
+        pins += [f"[optional.datum.assets.{PLATFORM}]", f'url = "{url}"', f'sha256 = "{digest}"']
     pins += ["", "[r_packages]", 'lockfile = "runtime/r/renv.lock"']
     pins += ['binaries = "runtime/r/binaries.toml"']
     (runtime / "pins.toml").write_text("\n".join(pins) + "\n", "utf-8")

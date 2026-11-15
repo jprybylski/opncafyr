@@ -33,11 +33,36 @@ jobs:
         run: uv lock --locked --project runtime/python/tools
       - name: Tests
         run: uv run pytest -v
+      # #83: the managed mode against the real, pinned datum (checksum-checked download).
+      - name: Real datum (file and local https sources)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          exe="$(uv run python scripts/fetch_datum.py --out "$RUNNER_TEMP/datum")"
+          OPNCAFYR_TEST_DATUM="$exe" uv run pytest -v -rs tests/test_datum_real.py
       - name: Release wheel leaves out development-only tools (#41)
         if: runner.os == 'Linux'
         run: |
           uv build --wheel --out-dir dist-check
           uv run python scripts/check_wheel.py dist-check/*.whl
+
+  # #83: external data is removable. The datum adapter and the datafetch pack are deleted
+  # from the checkout, and lint and the full suite must still pass.
+  without-datafetch:
+    name: test without external data (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Leave out the datum adapter and the datafetch pack
+        run: rm -rf src/opncafyr/adapters/datum src/opncafyr/workflows/datafetch
+      - name: Sync locked environment
+        run: uv sync --locked
+      - name: Lint
+        run: uv run ruff check
+      - name: Tests
+        run: uv run pytest -v
 
   # #49: the home page in headless Chromium (render, origin, keyboard walk, axe). No R and
   # no child apps.

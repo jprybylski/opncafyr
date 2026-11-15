@@ -1,0 +1,22 @@
+# datum (#83, ADR 0012): declared external data for a study, fetched on request and checked
+# for upstream changes. datum is a pinned, prebuilt Go binary ([optional.datum] in
+# runtime/pins.toml, best effort). The launcher runs it in a managed mode: every config is
+# checked against a policy first, datum 1.7.0 enforces the same policy through its flags,
+# never writes the study (report-only checks, staged fetches), and only a reviewed Apply
+# changes study files. Only workflows/datafetch uses this adapter; leaving
+# both out changes nothing else in the app.
+schema_version: "1.0"
+id: datum
+version: 1
+display_name: datum (external data)
+runtime: binary
+# data_fetch_local: audit, editing and file sources. data_fetch_remote: https and git
+# sources. data_check and data_fetch are the two jobs.
+capabilities: [data_fetch_local, data_fetch_remote, data_check, data_fetch]
+executables: [datum]
+health: {kind: version_flag, executable: datum}
+# Output schemas are bundled in schemas/. The review document is written by the adapter
+# from datum's --json output, then checked against the schema before the job completes.
+jobs:
+  data_check: {output_schema: datum-check-v1, timeout_s: 900}
+  data_fetch: {output_schema: datum-fetch-review-v1, timeout_s: 3600}

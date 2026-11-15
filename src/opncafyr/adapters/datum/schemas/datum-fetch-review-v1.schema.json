@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "datum-fetch-review-v1",
+  "title": "datum fetch review",
+  "description": "Written by the datum adapter's data_fetch job (#83). It lists, per dataset, what Apply would change in the study: each file's action with its current and new size and SHA-256. Paths are study-relative. No data values and no credentials.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "review_id", "at", "exit_code", "config_sha256", "lock_sha256", "datasets"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "kind": {"const": "fetch"},
+    "review_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+    "at": {"type": "string"},
+    "exit_code": {"type": "integer"},
+    "config_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "lock_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "datasets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "target", "files"],
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"enum": ["ok", "updated", "fetched", "stale", "fail", "warn", "error", "deleted", "missing"]},
+          "message": {"type": "string"},
+          "lock_fingerprint": {"type": "string"},
+          "remote_fingerprint": {"type": "string"},
+          "warnings": {"type": "array", "items": {"type": "string"}},
+          "target": {"type": "string", "pattern": "^source-data/"},
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "action"],
+              "properties": {
+                "path": {"type": "string", "pattern": "^source-data/"},
+                "action": {"enum": ["new", "unchanged", "replace", "remove"]},
+                "current_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+                "current_size": {"type": ["integer", "null"], "minimum": 0},
+                "new_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+                "new_size": {"type": ["integer", "null"], "minimum": 0}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

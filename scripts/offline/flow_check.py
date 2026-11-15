@@ -7,7 +7,8 @@ launch`` serves, with its own supervisor and job manager) and drives it the way 
 page does: import ``tests/fixtures/two_analyte.csv`` -> clean -> map -> for each analyte a
 one-analyte snapshot -> save in opnca-r (through ``/apps/opnca/``) -> replay -> complete
 -> publish -> render the DOCX report -> import a standards bundle from an archive (#70)
-and build the PPTX deck from its deck template. Nothing here calls a tool
+-> set up external data and fetch and apply a ``file`` source through datum (#83, when
+datum is installed) and build the PPTX deck from its deck template. Nothing here calls a tool
 directly: every R, Quarto, uv or deckifyr process is started by an adapter, which also
 applies the offline settings (docs/offline.md). Start it with a clean environment so that
 none of the caller's ``UV_*`` or ``R_*`` variables help.
@@ -198,6 +199,43 @@ def import_standards(api, work: Path) -> dict[str, Any]:
     return {"snapshot": r.json()["snapshot"], "sha256": preview["inventory_sha256"]}
 
 
+def external_data(api, study: Path) -> dict[str, Any]:
+    """#83: the External data page offline: audit, then fetch and apply a file source."""
+    deadline = time.monotonic() + 60
+    while not api.get("/api/datafetch/status").json()["available"]:
+        check(time.monotonic() < deadline, "datum never became available")
+        time.sleep(0.2)
+    check(api.post("/api/datafetch/setup", json={}).status_code == 200, "external data setup")
+    upstream = study / "upstream"
+    upstream.mkdir(exist_ok=True)
+    data = b"ID,TIME,CONC\n1,0,0\n1,1,4.2\n"
+    (upstream / "external.csv").write_bytes(data)
+    status = api.get("/api/datafetch/status").json()
+    form = {
+        "id": "external",
+        "desc": "Offline check",
+        "target": "source-data/external.csv",
+        "source": {"type": "file", "path": "upstream/external.csv"},
+    }
+    r = api.post(
+        "/api/datafetch/datasets", json={"dataset": form, "expected_sha256": status["sha256"]}
+    )
+    check(r.status_code == 200, f"add dataset: {r.text}")
+    audit = api.get("/api/datafetch/status").json()["datasets"][0]["audit"]
+    check(audit is not None and audit["status"] == "pending", f"audit: {audit}")
+    r = api.post("/api/datafetch/fetch", json={})
+    check(r.status_code == 200, f"fetch: {r.text}")
+    ok_job(api, r.json()["job_id"], 300, "external data fetch")
+    review = r.json()["review_id"]
+    r = api.post(f"/api/datafetch/reviews/{review}/apply")
+    check(r.status_code == 200, f"apply: {r.text}")
+    check((study / "source-data" / "external.csv").read_bytes() == data, "fetched bytes")
+    ok_job(api, api.post("/api/datafetch/check", json={}).json()["job_id"], 300, "check")
+    after = api.get("/api/datafetch/status").json()["datasets"][0]
+    check(after["audit"]["status"] == "ok" and after["matches_fetched"], f"status: {after}")
+    return {"dataset": "external", "review_id": review, "last_check": after["last_check"]}
+
+
 def flow(work: Path, results: Path) -> dict[str, Any]:
     steps = Steps(results)
     runtime = load_runtime()
@@ -270,6 +308,12 @@ def flow(work: Path, results: Path) -> dict[str, Any]:
 
         with steps.step("standards"):
             summary["standards"] = import_standards(api, work)
+
+        if runtime.has("datum"):
+            with steps.step("external data"):
+                summary["external_data"] = external_data(api, study)
+        else:
+            summary["external_data"] = "datum is not installed"
 
         with steps.step("deck"):
             r = api.post(

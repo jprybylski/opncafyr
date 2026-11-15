@@ -32,6 +32,7 @@ import os
 import re
 import secrets
 import shutil
+import tempfile
 import threading
 import time
 from collections.abc import Callable, Mapping
@@ -142,7 +143,13 @@ class JobRequest:
     are the exit codes that count as a clean exit (a check tool may exit 1 to say it found
     something). ``output_document`` names a JSON file in ``output`` that ``output_check``
     validates before ``review`` runs, usually a descriptor job contract's
-    ``JobContract.check_output``; its problems fail the job like a failed review. None of
+    ``JobContract.check_output``; its problems fail the job like a failed review.
+    ``isolated_cwd`` runs the command in a fresh, empty folder outside the workspace
+    (removed when the job ends) instead of ``cwd``, for a tool that must not see the
+    folder it runs in as part of the study (for example one that looks for an enclosing
+    version-control working copy). ``cleanup`` runs once after every outcome (completed,
+    failed, cancelled or timed out), with the job's folder, before the terminal state is
+    written: a request that holds secrets scrubs its logs and forgets them there. None of
     these callables are persisted.
     """
 
@@ -160,6 +167,8 @@ class JobRequest:
     ok_exit_codes: tuple[int, ...] = (0,)
     output_document: str | None = None
     output_check: Callable[[Any, str], list[str]] | None = None
+    isolated_cwd: bool = False
+    cleanup: Callable[[Path], None] | None = None
 
     def check(self) -> None:
         if not _KIND_RE.match(self.kind):
@@ -174,6 +183,8 @@ class JobRequest:
             raise ValueError("A job's timeout must be positive.")
         if not self.ok_exit_codes or not all(isinstance(c, int) for c in self.ok_exit_codes):
             raise ValueError("ok_exit_codes must list at least one integer exit code.")
+        if self.isolated_cwd and self.cwd is not None:
+            raise ValueError("A job takes either cwd or isolated_cwd, not both.")
         if (self.output_document is None) != (self.output_check is None):
             raise ValueError("output_document and output_check go together.")
         if self.output_document is not None:
@@ -195,6 +206,7 @@ class _Job:
     thread: threading.Thread | None = None
     seq: int = 0
     tmpdir: Path | None = None  # set when the job's tmp is outside its folder (see _tmpdir)
+    isolated: Path | None = None  # the request's isolated_cwd folder, outside the workspace
 
     @property
     def id(self) -> str:
@@ -494,10 +506,17 @@ class JobManager:
             message = f"The {job.label} job stopped because of an internal error in the launcher."
         try:
             # Clean up before the terminal state is written, so terminal means finished.
+            request = job.request
+            if request is not None and request.cleanup is not None:
+                try:
+                    request.cleanup(job.dir)
+                except Exception as exc:  # noqa: BLE001 - cleanup must not keep a job open
+                    log.error("job %s cleanup raised %s", job.id, type(exc).__name__)
             for name in ("tmp", "work"):
                 _remove_tree(job.dir / name)
-            if job.tmpdir is not None:
-                _remove_tree(job.tmpdir)
+            for extra in (job.tmpdir, job.isolated):
+                if extra is not None:
+                    _remove_tree(extra)
         finally:
             self._finish(job, state, message, reason=reason)
             with self._lock:
@@ -610,6 +629,10 @@ class JobManager:
         try:
             target = resolve_in_root(workspace, request.output) if request.output else None
             cwd = resolve_in_root(workspace, request.cwd) if request.cwd else job.dir / "work"
+            if request.isolated_cwd:
+                job.isolated = cwd = Path(
+                    tempfile.mkdtemp(prefix=f"opncafyr-job-{job.id}-")
+                ).resolve()
         except WorkspaceAccessError:
             raise _Stop(
                 JobState.FAILED,

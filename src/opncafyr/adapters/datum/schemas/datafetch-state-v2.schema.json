@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "datafetch-state-v2",
+  "title": "External data state (.opncafyr/datafetch/state.json)",
+  "description": "The launcher's own record for datum-managed external data (#83, #85): the last check and, per dataset, when the last Apply put its files in the study. The files' hashes and sizes are in datum's lockfile (datum 1.7.0), which audit --verify-local compares with the study. Ids, fingerprints and times only; never a data value or a credential.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "last_check",
+    "datasets"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "last_check": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "at",
+            "results"
+          ],
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/result"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "datasets": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_-]{1,64}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applied_at"
+        ],
+        "properties": {
+          "applied_at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "lock_fingerprint": {
+          "type": "string"
+        },
+        "remote_fingerprint": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

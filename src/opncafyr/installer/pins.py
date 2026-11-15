@@ -22,6 +22,7 @@ from opncafyr.installer.verify import InstallError
 CELLAR = ("quartifyr", "reportifyr", "pyro", "gitneighbr")
 OPNCA = "opnca-r"
 GIT = "git"  # [optional.git]: the portable Git for version history (#56)
+DATUM = "datum"  # [optional.datum]: datum for external data (#83)
 
 
 class PinsError(InstallError):
@@ -105,13 +106,15 @@ class Pins:
         *,
         libreoffice: bool = False,
         git: bool = True,
+        datum: bool = True,
         source_build: bool = False,
         allow_pending: bool = False,
     ) -> list[Asset]:
         """Every pinned file an install of ``platform`` needs.
 
         ``git`` adds the pinned portable Git (``[optional.git]``, #56) when the pins have
-        it, as a best-effort asset. ``source_build`` adds what ``repair
+        it, as a best-effort asset; ``datum`` does the same for ``[optional.datum]`` (#83).
+        ``source_build`` adds what ``repair
         --build-from-source`` needs (#34): opnca-r's vendored source tarball, the
         standalone Rust toolchain and, on Windows, Rtools.
 
@@ -147,6 +150,8 @@ class Pins:
             out.append(self._runtime("libreoffice", platform, section=("optional",)))
         if git and GIT in self.pins.get("optional", {}):
             out.append(self._runtime(GIT, platform, section=("optional",)))
+        if datum and DATUM in self.pins.get("optional", {}):
+            out.append(self._runtime(DATUM, platform, section=("optional",)))
         if source_build:
             out += self._source_build(platform)
         seen: dict[str, Asset] = {}

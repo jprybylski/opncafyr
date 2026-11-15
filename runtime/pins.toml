@@ -512,3 +512,39 @@ sha256 = "d5ce120515bf3013a014e6a918aa87ec0f7a6f5f9687c48d50127e637cb9b6c2"
 [optional.git.assets.windows-x86_64]
 url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-windows-x64.tar.gz"
 sha256 = "f1e17876337d7be143e5d51976da36643d65528125cfbc14d57f171de0fd5f14"
+
+[optional.datum]
+# datum for external data (#83, ADR 0012, datum adapter + workflows/datafetch): declared
+# data a study depends on, fetched on request and checked for upstream changes. A static
+# Go binary (CGO_ENABLED=0, built with -tags git, so its Git handler needs no external
+# Git). Installed by default, but optional: if it can't be fetched or unpacked the install
+# still succeeds and the External data page shows it unavailable (`--without-datum` leaves
+# it out). The launcher runs it only in a managed mode (policy flags, staged fetch, review, apply).
+# Source: https://github.com/jprybylski/datum releases; SHA-256s from the release's
+# checksums.txt, re-verified with scripts/verify_pins.py --network. Each archive holds
+# datum (datum.exe on Windows), LICENSE and README.md at its root.
+status = "optional"
+default = true
+version = "1.7.0"
+release = "v1.7.0"
+license = "MIT"
+
+[optional.datum.assets.macos-arm64]
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_darwin_arm64.tar.gz"
+sha256 = "43f979cf25bc2b79334a1af007862f6b693c2b83f9fe84b2c6650b5ecf392ce2"
+
+[optional.datum.assets.macos-x86_64]
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_darwin_amd64.tar.gz"
+sha256 = "3091fec1ff29a9fb1ad35a2eaae7be41d6173e4561cfb35344a2dbb41453f81d"
+
+[optional.datum.assets.linux-x86_64]
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_linux_amd64.tar.gz"
+sha256 = "0c1bf75791137b0d88e21d5150026a570d4edf02feaf4e8ad8efa4141a3081d0"
+
+[optional.datum.assets.linux-aarch64]
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_linux_arm64.tar.gz"
+sha256 = "7315eb393bc756d31195108e132ad833f280c4ff9289250cd11950da0c97211b"
+
+[optional.datum.assets.windows-x86_64]
+url = "https://github.com/jprybylski/datum/releases/download/v1.7.0/datum_1.7.0_windows_amd64.zip"
+sha256 = "c68b3a2255397cef16ff5ca183f4332d07268a037fc3af24c2fad4db92eec0fa"

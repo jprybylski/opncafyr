@@ -118,20 +118,35 @@ step r
   "$REPO/runtime/r/renv.lock" "$ASSETS/rrepo" "$ASSETS/cellar" "$PREFIX/rlib"
 done_step
 
+# datum for external data (#83), when fetch.py fetched it: a static binary, best effort.
+DATUM_EXE=""
+datum_archives=("$ASSETS"/runtime/datum_*_linux_*.tar.gz)
+if [[ -f "${datum_archives[0]}" ]]; then
+  step datum
+  mkdir -p "$RT/datum"
+  tar --no-same-owner -xzf "${datum_archives[0]}" -C "$RT/datum"
+  if "$RT/datum/datum" --version | grep -qx 'datum v[0-9.]*'; then
+    DATUM_EXE="$RT/datum/datum"
+  else
+    echo "datum did not start; external data will be unavailable" >&2
+  fi
+  done_step
+fi
+
 if [[ "${KEEP_RUST:-0}" != 1 ]]; then
   rm -rf "$RT/rust"
 fi
 rm -rf "$PREFIX/.build"
 
 # The runtime record the installer would write, naming the pinned executables. Optional
-# executables (git, soffice) are added when they exist at the given paths.
+# executables (git, soffice, datum) are added when they exist at the given paths.
 mkdir -p "$PREFIX/runtime"
 "$PYTHON" - "$PREFIX/runtime/runtime.json" "$RSCRIPT" "$QUARTO" "$UV_DIR/uv" \
-  "$TOOLS_ENV/bin/python" "$PREFIX/rlib" "${GIT_EXE:-}" "${SOFFICE_EXE:-}" <<'PY'
+  "$TOOLS_ENV/bin/python" "$PREFIX/rlib" "${GIT_EXE:-}" "${SOFFICE_EXE:-}" "$DATUM_EXE" <<'PY'
 import json, os, sys
-out, rscript, quarto, uv, tools_python, rlib, git, soffice = sys.argv[1:]
+out, rscript, quarto, uv, tools_python, rlib, git, soffice, datum = sys.argv[1:]
 executables = {"rscript": rscript, "quarto": quarto, "uv": uv, "deckifyr_python": tools_python}
-for name, path in (("git", git), ("soffice", soffice)):
+for name, path in (("git", git), ("soffice", soffice), ("datum", datum)):
     if path and os.path.isfile(path):
         executables[name] = path
 json.dump(

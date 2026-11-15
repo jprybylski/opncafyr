@@ -18,6 +18,8 @@ On **Home**, each tool in the **Tools** card shows its health. **Unavailable** m
 
 **Version history (gitneighbr)** is optional too. If it shows "The installed runtime has no 'git'", Git wasn't installed, for example because it couldn't be downloaded. The install report says so under **Optional components**. Everything else works without it. To add it later, reinstall: see [Checking and repairing an install](install.md#checking-and-repairing-an-install).
 
+**datum (external data)** is optional in the same way. If it shows "The installed runtime has no 'datum'", the **External data** page is unavailable and everything else works. Reinstall to add it.
+
 ## A job failed
 
 1. Select **Jobs** on the left.

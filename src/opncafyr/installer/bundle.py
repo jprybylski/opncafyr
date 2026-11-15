@@ -1,10 +1,12 @@
 """The offline bundle builder (#36, option 2): every pinned file for one platform, plus
-the installer, ready to carry across a firewall. The pinned Git for version history (#56) is
-included by default and best effort: if it can't be fetched, the bundle is built without
-it (and says so), and installs from it go on without version history.
+the installer, ready to carry across a firewall. The pinned Git for version history (#56)
+and datum for external data (#83) are included by default and best effort: if one can't
+be fetched, the bundle is built without it (and says so), and installs from it go on
+without that feature.
 
     install.sh bundle --platform windows-x86_64 --out <dir> [--archive] [--mirror mirror.toml]
                       [--assets <dir>] [--with-libreoffice] [--without-git]
+                      [--without-datum]
     opncafyr bundle   (the same, from an installed launcher)
 
 It runs on any connected machine, for any supported platform, and fetches every file from
@@ -128,6 +130,7 @@ def build(
     say: Say,
     with_libreoffice: bool = False,
     with_git: bool = True,
+    with_datum: bool = True,
     with_source_build: bool = False,
     allow_pending: bool = False,
     assets_dirs: list[Path] | None = None,
@@ -145,6 +148,7 @@ def build(
         platform,
         libreoffice=with_libreoffice,
         git=with_git,
+        datum=with_datum,
         source_build=with_source_build,
         allow_pending=allow_pending,
     )

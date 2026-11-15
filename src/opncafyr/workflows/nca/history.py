@@ -90,8 +90,8 @@ def policy() -> dict[str, Any]:
                 "id": "sources",
                 "label": "Editable sources",
                 "description": (
-                    "Cleaning recipes, study profiles, tutorials, and the report and deck "
-                    "projects you edit."
+                    "Cleaning recipes, study profiles, tutorials, the report and deck "
+                    "projects you edit, and the external data settings and lockfile."
                 ),
                 "globs": [
                     f"{RECIPES_DIR}/**",
@@ -99,6 +99,9 @@ def policy() -> dict[str, Any]:
                     "tutorials/**",
                     "report/**",
                     "deck/**",
+                    # External data (#83): plain names, so this needs no optional pack.
+                    ".data.yaml",
+                    ".data.lock.yaml",
                 ],
             },
             {
@@ -171,6 +174,13 @@ def policy() -> dict[str, Any]:
             {
                 "rule": f"{META}/standards/.*",
                 "reason": "Standards being inspected or fetched; only installed ones are kept.",
+            },
+            {
+                "rule": f"{META}/datafetch/",
+                "reason": (
+                    "External data: earlier copies of fetched files, fetch reviews and the "
+                    "last check. The fetched files themselves are in source-data/."
+                ),
             },
             {"rule": "report/.quarto/", "reason": "Quarto's render cache."},
             {"rule": "report/.rpfy-logs/", "reason": "Render logs from reportifyr."},

@@ -69,5 +69,10 @@ src = ["src", "tests"]
 select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
 ignore = []
 
+[tool.ruff.lint.isort]
+# First party even when a removable pack (adapters/datum, workflows/datafetch) is left out,
+# as the without-datafetch CI job does (#83).
+known-first-party = ["opncafyr"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S603"]

@@ -1,0 +1,22 @@
+/* External data page (#83). Shell tokens only, so light, dark and high-contrast themes
+   carry over. */
+.df-body { display: grid; gap: var(--space-3); }
+.df-table { width: 100%; border-collapse: collapse; }
+.df-table th, .df-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.df-table th[scope="row"] { font-weight: 600; }
+.df-id { display: block; }
+.df-desc { display: block; font-weight: 400; }
+.df-row-actions { flex-wrap: wrap; gap: var(--space-1); }
+.df-hint { margin: var(--space-1) 0 0; color: var(--muted); font-size: 0.9em; }
+.df-warn { color: var(--warn); }
+.df-problems { margin: 0; padding-left: 1.25em; color: var(--danger); }
+.df-mono { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.9em; }
+.df-confirm, .df-interrupted { display: grid; gap: var(--space-2); }
+.df-confirm ul { margin: 0; padding-left: 1.25em; }
+.df-target { white-space: nowrap; }
+.df-table tbody tr:last-child > * { border-bottom: none; }

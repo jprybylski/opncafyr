@@ -30,6 +30,7 @@ are right.
 - [Security rules](#security-rules)
 - [Shipping a tool](#shipping-a-tool)
 - [Keeping a tool out of releases](#keeping-a-tool-out-of-releases)
+- [An optional, removable tool](#an-optional-removable-tool)
 - [Known limits](#known-limits)
 - [Testing checklist](#testing-checklist)
 
@@ -489,6 +490,25 @@ where the registry finds it in a checkout. To keep it out of the release wheel:
 
 A test-only tool that needs no web app can instead live under `tests/`, loaded with
 `load_descriptors(root)`, like `tests/toy_adapters/toy_notes/`.
+
+## An optional, removable tool
+
+datum (#83, ADR 0012) is the worked example of a shipped tool that a build can leave out,
+together with the workflow pack that uses it. It is also the first `runtime: binary` tool
+with a `version_flag` health check.
+
+1. **One adapter, one pack.** Only the pack imports the adapter, and nothing else names
+   either; `tests/test_boundaries.py` asserts this.
+2. **Optional at install.** The binary is pinned as `[optional.<name>]` with
+   `default = true` (best effort), has an install step like `installer/steps/datum.py`, a
+   `--without-<name>` flag and an entry in `runtime_record`. Without the binary, its health
+   is `unavailable` and the pack's page says why.
+3. **Removable from a build.** Its id goes in `REMOVABLE` in `tests/tool_sets.py` (counted
+   only when present), its tests use `pytest.importorskip`, and the CI job
+   `without-datafetch` deletes both folders and runs the full suite.
+4. **A tool that must not see the study as its cwd** (one that looks for an enclosing Git
+   working copy, for example) uses `JobRequest(isolated_cwd=True)`. A request that holds
+   secrets scrubs its logs in `cleanup`, which runs after every outcome.
 
 ## Known limits
 
