@@ -37,6 +37,7 @@ class Context:
     say: Callable[[str], None]
     with_libreoffice: bool = False
     with_git: bool = True  # #56: the pinned portable Git, best effort
+    with_datum: bool = True  # #83: the pinned datum binary, best effort
     build_from_source: bool = False  # #34: opnca-r from its vendored source
     without_opnca: bool = False  # development install of a pending platform: no opnca-r
     executables: dict[str, Path] = field(default_factory=dict)
@@ -108,7 +109,7 @@ def venv_python(venv: Path, *, windowed: bool = False) -> Path:
 
 def steps() -> list[tuple[str, Callable[[Context], None]]]:
     """The staging steps in order: (name, function)."""
-    from opncafyr.installer.steps import git, libreoffice, r, runtimes, venvs
+    from opncafyr.installer.steps import datum, git, libreoffice, r, runtimes, venvs
 
     return [
         ("python", runtimes.python),
@@ -121,6 +122,7 @@ def steps() -> list[tuple[str, Callable[[Context], None]]]:
         ("quarto", runtimes.quarto),
         ("libreoffice", libreoffice.install),
         ("git", git.install),
+        ("datum", datum.install),
         ("runtime_record", runtimes.runtime_record),
         ("installer_copy", runtimes.installer_copy),
         ("quarantine", runtimes.clear_quarantine),

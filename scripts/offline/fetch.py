@@ -218,6 +218,14 @@ class Fetcher:
         self._get(url, self.out / "runtime" / filename, sha)
         return filename
 
+    def datum(self) -> str:
+        """datum for external data ([optional.datum], #83): the static Linux binary."""
+        asset = self.pins["optional"]["datum"]["assets"][self.platform]
+        url, sha = asset["url"], asset["sha256"]
+        filename = url.rsplit("/", 1)[1]
+        self._get(url, self.out / "runtime" / filename, sha)
+        return filename
+
     def cellar(self, opnca_vendored: Path | None, opnca_release: bool = False) -> list[str]:
         packages = self.pins["packages"]
         kept = []
@@ -414,6 +422,11 @@ def main(argv: list[str] | None = None) -> int:
         "--with-libreoffice", action="store_true", help="also LibreOffice, for the -full image"
     )
     parser.add_argument(
+        "--without-datum",
+        action="store_true",
+        help="leave out datum for external data (#83; included by default)",
+    )
+    parser.add_argument(
         "--no-launcher-wheel",
         action="store_true",
         help="leave out opncafyr's own wheel (the container builds it in its own stage)",
@@ -427,6 +440,8 @@ def main(argv: list[str] | None = None) -> int:
         runtimes = fetcher.runtimes()
         if args.with_libreoffice:
             runtimes["libreoffice"] = fetcher.libreoffice()
+        if not args.without_datum:
+            runtimes["datum"] = fetcher.datum()
         cellar = fetcher.cellar(args.opnca_vendored, args.opnca_release)
         count = fetcher.r_repository()
         fetcher.wheelhouse(args.uv, launcher_wheel=not args.no_launcher_wheel)

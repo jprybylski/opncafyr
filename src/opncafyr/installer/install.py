@@ -56,6 +56,7 @@ class Options:
     mirror: Path | None = None
     with_libreoffice: bool = False
     with_git: bool = True  # #56: best effort; --without-git leaves it out
+    with_datum: bool = True  # #83: best effort; --without-datum leaves it out
     dry_run: bool = False
     cacert: Path | None = None
     proxy: str | None = None
@@ -93,6 +94,8 @@ def identity(payload: Payload, platform: str, opts: Options) -> str:
         "libreoffice": opts.with_libreoffice,
         "git": opts.with_git,
     }
+    if not opts.with_datum:
+        doc["datum"] = False  # only when left out, so existing installs keep their id
     if opts.allow_pending:
         doc["allow_pending"] = True  # a different install from the complete one
     return sha256_bytes(json.dumps(doc, sort_keys=True).encode())
@@ -274,6 +277,7 @@ class Installer:
             platform,
             libreoffice=self.opts.with_libreoffice,
             git=self.opts.with_git,
+            datum=self.opts.with_datum,
             source_build=self.opts.build_from_source,
             allow_pending=self.opts.allow_pending,
         )
@@ -397,6 +401,7 @@ class Installer:
             say=self.say,
             with_libreoffice=self.opts.with_libreoffice,
             with_git=self.opts.with_git,
+            with_datum=self.opts.with_datum,
             build_from_source=self.opts.build_from_source,
             without_opnca=self._without_opnca(pins),
         )
