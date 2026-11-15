@@ -116,7 +116,7 @@ Neither names a tool. `core/` still imports no adapter or workflow.
 
 - Each interim safeguard has a matching upstream change, U1–U11 in
   [upstream.md](../upstream.md#jprybylskidatum-public). When datum releases them, the
-  safeguards can shrink to defence in depth (phase 4 of #83).
+  safeguards can shrink to defence in depth (phase 4 of #83, tracked in #85).
 - A redirect from https to http is not caught until U10.
 - Fetching proves which bytes the study has and where they came from, not that the data
   is fit for analysis. The research-use wording is unchanged.
