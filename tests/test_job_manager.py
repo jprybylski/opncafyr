@@ -481,3 +481,36 @@ def test_killing_the_launcher_mid_job(workspace, tmp_path):
     assert gone(child) and gone(grandchild)
     diag = json.loads((jobs[0] / "diagnostic.json").read_text())
     assert diag["state_at_stop"] == "running"
+
+
+# --- isolated_cwd and cleanup (#83) -------------------------------------------------------
+
+
+def test_isolated_cwd_runs_outside_the_workspace_and_is_removed(manager, workspace, tmp_path):
+    seen: dict[str, object] = {}
+    record = tmp_path / "cwd.txt"
+    job = manager.submit(
+        py_job(
+            "import os, sys; open(sys.argv[2], 'w').write(os.getcwd())",
+            str(record),
+            isolated_cwd=True,
+            cleanup=lambda d: seen.setdefault("cleanup", d),
+        )
+    )
+    assert wait_state(manager, job, {JobState.COMPLETED}) == JobState.COMPLETED
+    cwd = Path(record.read_text())
+    assert not cwd.resolve().is_relative_to(workspace.resolve())
+    assert not cwd.exists()  # removed when the job ended
+    assert Path(seen["cleanup"]).resolve() == job_dir(workspace, job).resolve()
+
+
+def test_cleanup_runs_after_a_failure_too(manager):
+    seen: list[Path] = []
+    job = manager.submit(py_job("raise SystemExit(3)", cleanup=seen.append))
+    assert wait_state(manager, job, {JobState.FAILED}) == JobState.FAILED
+    assert len(seen) == 1
+
+
+def test_isolated_cwd_and_cwd_are_exclusive():
+    with pytest.raises(ValueError, match="either cwd or isolated_cwd"):
+        py_job("pass", cwd="x", isolated_cwd=True).check()
