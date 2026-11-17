@@ -46,7 +46,7 @@ Select assets by `manifest.json` fields, never by file name. Since v0.2.7 every 
 ## jprybylski/deckifyr (public)
 
 #82–#86 were released in v0.3.4 (PR #87), #88–#91 in v0.3.5 (PR #92, 2026-11-06) and
-#93–#94 in v0.3.6 (PR #95, 2026-11-07) and #96 in v0.3.7 (2026-11-09). All were reviewed except v0.3.7, which was pinned after its asset hashes matched the release's `SHA256SUMS` and a diff of the fix. Remaining gaps are handled in
+#93–#94 in v0.3.6 (PR #95, 2026-11-07), #96 in v0.3.7 (2026-11-09), and #103 and #105 in v0.3.9 (PR #106, 2026-11-17). All were reviewed except v0.3.7, which was pinned after its asset hashes matched the release's `SHA256SUMS` and a diff of the fix. Remaining gaps are handled in
 our adapter (#33).
 
 | Issue | What | Status | Needed by |
@@ -64,8 +64,8 @@ our adapter (#33).
 | [#96](https://github.com/jprybylski/deckifyr/issues/96) | Build fails with `IndexError` when a table cell is empty (opnca-r's tables have empty cells) | Done (v0.3.7, 2026-11-09), pinned in #62. Empty header and data cells stay empty in the PPTX. The offline flow's deck holds tables again (`scripts/offline/flow_check.py`). A formatted `.rds` table still has to be a `reportifyr` element, not `table`: that is the adapter's job (#62) | Gate 3 |
 | [#94](https://github.com/jprybylski/deckifyr/issues/94) | Accept project YAML that starts with a UTF-8 BOM | Done (v0.3.6); all project YAML/JSON/CSV/QMD reads drop a BOM, and reads no longer fall back to the Windows locale encoding | Gate 3 |
 | [#97](https://github.com/jprybylski/deckifyr/issues/97) | Record project-relative paths in `deck-manifest.json` | Open (filed 2026-11-08, found by the container image check, #42). Its input, element and output paths are absolute, so a deck build names the folder it was built in (a container's `/workspace`, or a user's home folder). Until it is pinned, `scripts/container/check_image.sh` excepts that one file from the path scan (labelled temporary); our own manifests are relative | #42 |
-| [#103](https://github.com/jprybylski/deckifyr/issues/103) | `init --from-dir`/`--from-repo`: copy the local assets a template references (background image, images, footnotes) | Open (filed 2026-11-12). Temporary workaround here: deck setup copies an imported template's other verified files after `init` (`workflows/nca/publish/deck.py` `apply_template`, tested); its removal is tracked in #80 | #70, #80 |
-| [#105](https://github.com/jprybylski/deckifyr/issues/105) | Web editor guidance hook for an embedding host: `data-target` on Save, the Build tab and Build, a same-origin `postMessage` highlight, ids listed in health (ADR 0013) | Open (filed 2026-11-17) | #77 |
+| [#103](https://github.com/jprybylski/deckifyr/issues/103) | `init --from-dir`/`--from-repo`: copy the local assets a template references (background image, images, footnotes) | Done (v0.3.9, 2026-11-17, pinned in #80). Checked with the real 0.3.9: the house deck's background image is copied and the deck builds; an unreferenced file is not copied; a missing reference is a plain-string warning, which now fails deck setup. The launcher's temporary copy is gone | #70, #80 |
+| [#105](https://github.com/jprybylski/deckifyr/issues/105) | Web editor guidance hook for an embedding host: `data-target` on Save, the Build tab and Build, a same-origin `postMessage` highlight, ids listed in health (ADR 0013) | Done (v0.3.9, 2026-11-17, pinned in #77); its health lists every id our descriptor declares (`tests/integration/proxy/test_deckifyr_proxy.py`) | #77 |
 
 ## jprybylski/quartifyr (public)
 

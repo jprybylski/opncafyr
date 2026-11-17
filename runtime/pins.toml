@@ -186,23 +186,26 @@ r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.deckifyr]
 license = "GPL-3.0-or-later"
-version = "0.3.7"
+version = "0.3.9"
 source = "github:jprybylski/deckifyr"
-release_url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/"
+release_url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.9/"
 extras = ["web", "preview"]
 # Installed as a wheel into [python_envs.tools]; that uv.lock pins it by this URL and
 # hash, and pins every transitive dependency (the wheel's own are lower bounds only).
 # v0.3.5 (2026-11-06) added the request guard, trust policy and atomic builds (#88-#91).
 # v0.3.6 (2026-11-07, tag dccb088) adds offline mode for the R wrappers and BOM-tolerant
 # project files (#93, #94). Its release workflow no longer re-tags or replaces a release.
-# v0.3.7 (2026-11-09) builds a table with an empty cell (#96).
-wheel = "deckifyr-0.3.7-py3-none-any.whl"
+# v0.3.7 (2026-11-09) builds a table with an empty cell (#96). v0.3.8 (2026-11-09) lets
+# the web editor fill an incomplete slide (#101). v0.3.9 (2026-11-17, commit d612116)
+# copies the files a template references on init (#103, our #80) and answers the
+# launcher's guidance messages (#105, our #77); dependencies are unchanged.
+wheel = "deckifyr-0.3.9-py3-none-any.whl"
 
 [packages.deckifyr.assets]
-"deckifyr-0.3.7-py3-none-any.whl" = "9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe"
-"deckifyr-0.3.7.tar.gz" = "00632691aa6eda327514cccd821999b94dc6b73a6d8d0af6a372cad65141d5d3"
-"deckifyr_0.3.7.tar.gz" = "86555d3f65c4a126195e2b58da06a5b80b00b051f12a93ef0b8d0c0356138d3b"  # R wrapper, not installed
-"SHA256SUMS" = "a769cdac83c45e1cb512e17a64218b246afec928a9480987b2a7e3e438241f54"
+"deckifyr-0.3.9-py3-none-any.whl" = "108763327e514bb36178bcf36d319d29c164d2b2981cc2f4fa6fbdaa8cf7764c"
+"deckifyr-0.3.9.tar.gz" = "324d34b9e2face254cd67a31e4ec5d83e0a1692305528cba62cb9916f8bb5581"
+"deckifyr_0.3.9.tar.gz" = "cacad94657760800d92632f04762a103d8006619d9b49e73f057dcbe4db72163"  # R wrapper, not installed
+"SHA256SUMS" = "139007428f2c90e809d040850e3808ecdd0d51000e6185b3ca668da2ec9b999e"
 
 [packages.quartifyr]
 license = "GPL-3.0-or-later"

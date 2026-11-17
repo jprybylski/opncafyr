@@ -177,11 +177,11 @@ def test_tools_lock_must_pin_the_deckifyr_wheel_hash(tree):
     _edit(
         tree,
         "runtime/python/tools/uv.lock",
-        "sha256:9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe",
+        "sha256:108763327e514bb36178bcf36d319d29c164d2b2981cc2f4fa6fbdaa8cf7764c",
         "sha256:" + "0" * 64,
     )
     errors, _ = _check(tree)
-    assert any("does not pin deckifyr-0.3.7-py3-none-any.whl" in e for e in errors)
+    assert any("does not pin deckifyr-0.3.9-py3-none-any.whl" in e for e in errors)
 
 
 def test_r_packages_come_only_from_the_snapshot(tree):
@@ -220,7 +220,7 @@ def test_every_section_needs_a_license(tree):
 
 
 def test_wheels_toml_must_pin_the_deckifyr_wheel(tree):
-    _edit(tree, "runtime/python/wheels.toml", "9ce26f749c17dfe9", "0000000000000000")
+    _edit(tree, "runtime/python/wheels.toml", "108763327e514bb3", "0000000000000000")
     errors, _ = _check(tree)
     assert any("does not pin the deckifyr wheel" in e for e in errors)
 

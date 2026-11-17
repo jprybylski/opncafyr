@@ -52,7 +52,7 @@ def test_generated_deck_validates_and_builds(api, deck):
     validate(build, "publish-build-v1")
     assert sorted(build["runs"]) == sorted([a, b])
     assert [i["sha256"] for i in build["items"]] == [i["published_sha256"] for i in pub["items"]]
-    assert build["tools"]["deckifyr"] == "0.3.7"
+    assert build["tools"]["deckifyr"] == "0.3.9"
     pptx = api.study / "deck" / "builds" / build["build_id"] / "nca-results.pptx"
     assert R.sha256_file(pptx) == next(o["sha256"] for o in build["outputs"] if o["role"] == "pptx")
     with zipfile.ZipFile(pptx) as z:

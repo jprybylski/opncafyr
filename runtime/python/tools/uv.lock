@@ -53,8 +53,8 @@ wheels = [
 
 [[package]]
 name = "deckifyr"
-version = "0.3.7"
-source = { url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/deckifyr-0.3.7-py3-none-any.whl" }
+version = "0.3.9"
+source = { url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.9/deckifyr-0.3.9-py3-none-any.whl" }
 dependencies = [
     { name = "pillow" },
     { name = "pydantic" },
@@ -62,7 +62,7 @@ dependencies = [
     { name = "pyyaml" },
 ]
 wheels = [
-    { url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/deckifyr-0.3.7-py3-none-any.whl", hash = "sha256:9ce26f749c17dfe9c98b62c8d8b20dd312a9660d1f169a963e6dab7758a922fe" },
+    { url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.9/deckifyr-0.3.9-py3-none-any.whl", hash = "sha256:108763327e514bb36178bcf36d319d29c164d2b2981cc2f4fa6fbdaa8cf7764c" },
 ]
 
 [package.optional-dependencies]
@@ -182,7 +182,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "deckifyr", extras = ["web", "preview"], url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.7/deckifyr-0.3.7-py3-none-any.whl" },
+    { name = "deckifyr", extras = ["web", "preview"], url = "https://github.com/jprybylski/deckifyr/releases/download/v0.3.9/deckifyr-0.3.9-py3-none-any.whl" },
     { name = "pillow", specifier = "==11.1.0" },
     { name = "pymupdf", specifier = "==1.28.2" },
     { name = "python-docx", specifier = "==1.1.2" },
