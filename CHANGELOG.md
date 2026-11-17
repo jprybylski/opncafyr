@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Deck setup relies on deckifyr for a template's images** (#80). deckifyr 0.3.9
+  ([deckifyr#103](https://github.com/jprybylski/deckifyr/issues/103)) is pinned, and its
+  `init --from-dir` copies the files a deck template's design and layouts refer to, such
+  as the background image and layout images, tables and fragments. The launcher's
+  temporary copy of every other template file is gone. A file the template holds but
+  nothing refers to, such as a README or a spare image, is no longer copied into `deck/`.
+  If the template refers to a file it doesn't hold, **Set up deck** now stops and names
+  it, where before the build failed. The offline CI flow's deck now carries the template's
+  background image.
+
 ### Fixed
 - **Version history no longer loads a Windows PC while it's shown** (#82). gitneighbr 0.2.2
   ([gitneighbr#50](https://github.com/jprybylski/gitneighbr/issues/50)) is pinned. Its

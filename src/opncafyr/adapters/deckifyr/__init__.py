@@ -180,6 +180,18 @@ def init_command(
     return cli_command(runtime, "init", *args, trusted=False)
 
 
+def init_problems(result: CliResult, base: Path | None = None) -> list[str]:
+    """The template references a successful ``init --from-dir`` could not copy.
+
+    Since deckifyr 0.3.9 (jprybylski/deckifyr#103) ``init`` copies the local files a
+    template references, and reports each one it could not copy (missing, absolute, ``..``,
+    a symlink, outside the template) as a plain-string warning. Those are the only
+    warnings ``init`` gives, and a deck set up without the file would fail at build.
+    """
+    doc = result.document or {}
+    return [plain(w, base) for w in doc.get("warnings") or [] if isinstance(w, str) and w]
+
+
 def validate_command(runtime: Runtime, presentation: Path) -> CommandSpec:
     return cli_command(runtime, "validate", str(presentation), "--strict")
 
