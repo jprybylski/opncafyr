@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Version history no longer loads a Windows PC while it's shown** (#82). gitneighbr 0.2.2
+  ([gitneighbr#50](https://github.com/jprybylski/gitneighbr/issues/50)) is pinned. Its
+  2-second poll is now one request that starts one Git process instead of about twenty.
+  On the Windows test machine from #67, `status` went from 894 ms to 91 ms, and a whole
+  poll from about 2.2 s to 199 ms (`docs/spikes/windows-runtime.md`).
+  `scripts/bench/interact.py` now also measures `changes`, `identity` and the combined
+  request.
 - **macOS install: R packages from the 2026-11-16 Posit snapshot.** CRAN removed the macOS
   gdtools 0.5.3 binaries the installer pinned from CRAN itself (gdtools 0.6.0 came out on
   2026-11-13), so every macOS install and the Installer workflow failed. Every R package

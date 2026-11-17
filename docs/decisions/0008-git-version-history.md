@@ -4,7 +4,7 @@
   the default ignore suggestions and the review labels.
 - Date: 2026-11-08
 - Issue: #56
-- Upstream: [gitneighbr#35–#44](../upstream.md#jprybylskigitneighbr-public), released in gitneighbr 0.2.0; 0.2.1 is pinned
+- Upstream: [gitneighbr#35–#44](../upstream.md#jprybylskigitneighbr-public), released in gitneighbr 0.2.0; 0.2.2 is pinned
 
 ## Context
 

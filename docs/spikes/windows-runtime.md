@@ -70,7 +70,7 @@ R's own startup is not slower on Windows. File and Git process costs are.
 | Operation | How often | Before | After | Container (before) |
 |---|---|---:|---:|---:|
 | gitneighbr status polls with another view shown (per 20 s, browser) | every 2 s after History was opened once | 5 | **0** | — |
-| gitneighbr `status` (one request) | each poll while History is shown | 916 ms | 916 ms ¹ | 220 ms |
+| gitneighbr `status` (one request) | each poll while History is shown | 916 ms | **91 ms** ¹ | 220 ms |
 | `GET /api/nca/publish/runs` | opening Publish | 803 ms, 587 opens | **84 ms, 0 opens** | 277 ms |
 | `GET /api/workspace/artifacts` | poll, every 15 s | 99 ms, 45 opens | **37 ms, 0 opens** | 80 ms |
 | `GET /api/nca/runs` | views | 84 ms | **30 ms** | 68 ms |
@@ -79,8 +79,8 @@ R's own startup is not slower on Windows. File and Git process costs are.
 | report render (job) | click | 12.7 s | 12.7 s | 9.2 s |
 | open run in opnca-r | click | 2.6 s | 2.6 s | 1.5 s |
 
-¹ Upstream: [gitneighbr#50](https://github.com/jprybylski/gitneighbr/issues/50), fewer Git
-processes per poll while History is shown (tracked in #82).
+¹ With gitneighbr 0.2.2 ([gitneighbr#50](https://github.com/jprybylski/gitneighbr/issues/50),
+#82); see "Version history poll" below.
 
 The first look at the publish list in a session still hashes each completed run once
 (589 ms for 32 runs here). After that, a run is hashed again only when one of its
@@ -106,6 +106,34 @@ files changed size or time.
   They also check that a changed run is shown as unpublishable, and that an evasive edit
   (same size, restored time) is still refused when publishing and by **Check files**.
 
+## Version history poll (#82, gitneighbr 0.2.2)
+
+While History is shown, its page polls every 2 s. With gitneighbr 0.2.1 a poll was three
+requests (`status`, `changes`, `identity`) that together started about 20 Git processes.
+gitneighbr 0.2.2 sends one request, `status?include=changes`. It answers from a single
+`git status` and reuses what hasn't changed: settings, the folder check, line counts of
+files not edited since, and the policy's compiled globs.
+
+Measured with `scripts/bench/interact.py --only history --reps 30` on the same machine
+(2026-11-17), against the installed build. The "after" run used the same install with the
+released gitneighbr 0.2.2 tarball in a copy of its R library (`OPNCAFYR_RUNTIME_FILE` pointing at a
+`runtime.json` naming that library). Medians:
+
+| Request (through the proxy) | 0.2.1 | 0.2.2 |
+|---|---:|---:|
+| `status` | 894 ms | **91 ms** |
+| `changes` | 917 ms | 175 ms |
+| `identity` | 365 ms | 149 ms |
+| One poll: 0.2.1's three requests → 0.2.2's `status?include=changes` | ≈2.2 s | **199 ms** |
+
+Opening History is unchanged at 1.3 s. The first poll after opening takes about 630 ms,
+because it fills the reuse cache. In a freshly written R library, the first start of any
+gitneighbr version took 3.4 s; that is the first load of new files, not the package.
+
+A poll used to take longer than the 2 s interval, so R and Git ran continuously while
+History was shown. Now a poll takes about a tenth of the interval. The bench measured
+the remaining cost, Git plus R's JSON, only on this machine.
+
 ## Ruled out
 
 - Disk latency: NVMe, local paths, and the same pattern on the same disk from WSL2.
@@ -124,8 +152,6 @@ never the study folder or broad patterns. opncafyr doesn't change security setti
 
 ## Still open
 
-- Upstream issue for gitneighbr to cut the Git processes per status poll:
-  [gitneighbr#50](https://github.com/jprybylski/gitneighbr/issues/50), tracked in #82.
 - `POST` publication hashes the same outputs several times in one request (124 ms here).
   A smaller gain, left as is.
 - Dropped from #67 by the owner: keeping per-step durations in installer reports.

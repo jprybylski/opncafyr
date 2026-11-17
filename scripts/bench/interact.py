@@ -571,9 +571,26 @@ class Flow:
             print(f"   git init through gitneighbr failed ({r.status_code}): status not measured")
             self.git_api = None
             return
-        # What the History page asks every 2 s while it is visible (gitneighbr App.svelte).
+        # The status request on its own, comparable across gitneighbr versions.
         self.m(
             "history", "gitneighbr status poll (proxy)", lambda: ok(c.get(api + "status"), "status")
+        )
+        # The other two requests a gitneighbr 0.2.1 page sent with each status poll.
+        self.m(
+            "history", "gitneighbr changes (proxy)", lambda: ok(c.get(api + "changes"), "changes")
+        )
+        self.m(
+            "history",
+            "gitneighbr identity (proxy)",
+            lambda: ok(c.get(api + "identity"), "identity"),
+        )
+        # What the History page asks every 2 s while it is visible (gitneighbr App.svelte):
+        # from gitneighbr 0.2.2 the status and the changed-file list from one `git status`
+        # (an older gitneighbr ignores the parameter and answers the status alone).
+        self.m(
+            "history",
+            "gitneighbr poll with changes (proxy)",
+            lambda: ok(c.get(api + "status?include=changes"), "status"),
         )
 
     def grow(self) -> None:
