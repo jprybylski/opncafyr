@@ -88,14 +88,29 @@ steps:
       and method: there is no default. Start analysis makes a run with this one analyte.
 
   - id: review
-    title: Review, save and complete the run
+    title: Open the run in opnca-r
+    view: analysis
+    target: nca.runs.card
+    text: >-
+      Open the run in opnca-r, which does the NCA. Run the analysis there and review the
+      results, then open Export in opnca-r's sidebar.
+
+  - id: save
+    title: Save the run from opnca-r
+    target: opnca.export.save
+    wait_for: opnca.run.saved
+    text: >-
+      In opnca-r's Export view, choose what to save with the run, then select Save to run
+      folder. Next is enabled once opnca-r has saved the run on screen.
+
+  - id: complete
+    title: Complete the run
     view: analysis
     target: nca.runs.card
     wait_for: nca.run.completed
     text: >-
-      Open the run in opnca-r, which does the NCA. Review it there and save from its Export
-      view; this tutorial can't point inside opnca-r. Back here, the run is replayed, and
-      Confirm and complete seals it. A completed run never changes.
+      Back here, the run is replayed from what opnca-r saved, and Confirm and complete seals
+      it. A completed run never changes.
 
   - id: publish
     title: Publish tables and figures

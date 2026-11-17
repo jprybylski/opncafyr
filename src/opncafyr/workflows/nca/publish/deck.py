@@ -143,27 +143,16 @@ def current_names(project: Path) -> tuple[str, str]:
     return "design.yaml", "layouts.yaml"
 
 
-def apply_template(project: Path, material: Material | None) -> tuple[str, str]:
-    """After ``deckifyr init``: the design and layouts names, and the template's other files.
+def template_names(material: Material | None) -> tuple[str, str]:
+    """The design and layouts names ``deckifyr init`` laid out, or the defaults.
 
-    deckifyr copies only the design and layouts files of a template folder; the launcher
-    copies the template's other verified files (logos, images) beside them, never over a
-    file deckifyr wrote. Temporary until deckifyr's ``init --from-dir`` copies referenced
-    assets itself (jprybylski/deckifyr#103, docs/upstream.md).
+    deckifyr copies a template's design and layouts files and the local files they
+    reference (jprybylski/deckifyr#103); the launcher copies nothing itself. A file the
+    template holds but nothing references (a README, a spare image) is not in the deck.
     """
     if material is None:
         return "design.yaml", "layouts.yaml"
-    base, design, layouts = templates.deck_layout(material)
-    for rel, source in sorted(material.files.items()):
-        if not rel.startswith(base):
-            continue
-        name = rel[len(base) :]
-        if name in (D.PRESENTATION, design, layouts) or name.lower().endswith(".md"):
-            continue
-        target = project.joinpath(*name.split("/"))
-        if not target.exists():
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, target)
+    _base, design, layouts = templates.deck_layout(material)
     return design, layouts
 
 
@@ -328,7 +317,14 @@ class DeckService(projects.ProjectJobs):
                 or used.provenance["component_sha256"] != material.provenance["component_sha256"]
             ):
                 return ReviewResult(False, "The selected deck template changed. Set up again.")
-            design, layouts = apply_template(project, used)
+            uncopied = D.init_problems(result, project)
+            if uncopied:
+                return ReviewResult(
+                    False,
+                    "The deck template refers to a file deckifyr couldn't copy, so the "
+                    "deck wasn't set up: " + "; ".join(uncopied),
+                )
+            design, layouts = template_names(used)
             missing = [n for n in (design, layouts) if not (project / n).is_file()]
             if missing:
                 return ReviewResult(False, f"deckifyr init did not create {', '.join(missing)}.")

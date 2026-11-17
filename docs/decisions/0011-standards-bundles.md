@@ -89,9 +89,11 @@ Two constraints shaped the design:
   path" is this selection. Without an imported template nothing changes.
 - New offline touchpoint R20 (`docs/offline.md`): the user-invoked Git fetch. Local folders
   and archives make no network attempt; the offline CI flow imports one.
-- deckifyr's `init --from-dir` copies only the design and layouts files; the launcher copies
-  a template's other files itself (temporary, tested) until deckifyr does (upstream issue in
-  `docs/upstream.md`).
+- deckifyr's `init --from-dir` copies the design and layouts files and the local files they
+  reference (deckifyr#103, pinned in #80); the launcher copies nothing itself. A template
+  file that nothing references (a README, a spare image) is not in the deck, and a
+  reference deckifyr can't copy fails deck setup with its reason. *Until #80 the launcher
+  copied a template's other files itself, as a tested temporary workaround.*
 - Import is guidance and formatting only. It never adopts a profile, changes a setting,
   starts a run or validates anything.
 

@@ -33,6 +33,57 @@ def _read_body(handler: BaseHTTPRequestHandler) -> bytes:
     return handler.rfile.read(length) if length else b""
 
 
+# The toy page and its embedded-guidance hook (ADR 0013, #77), like opnca-r's embed.js:
+# it outlines its own marked controls and reports whether Send was pressed. It never
+# answers for "toy.legacy.thing", like an app version without the hook.
+STYLE = b"p { color: teal; } .ring { outline: 3px solid teal; }"
+PAGE = b"""<!doctype html><link rel="stylesheet" href="style.css"><p>toy</p>
+<button type="button" id="send" data-target="toy.form.send">Send</button>
+<div hidden><button type="button" data-target="toy.form.hidden">Hidden</button></div>
+<p id="sent"></p>
+<script src="guide.js"></script>"""
+
+GUIDE_JS = b"""(function () {
+  var TARGETS = ["toy.form.send", "toy.form.hidden"];
+  var sent = false, ringed = null;
+  document.getElementById("send").addEventListener("click", function () {
+    sent = true;
+    document.getElementById("sent").textContent = "Sent";
+  });
+  function find(id) {
+    var all = document.querySelectorAll("[data-target]");
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.getAttribute("data-target") === id && !el.closest("[hidden]")) return el;
+    }
+    return null;
+  }
+  function clear() { if (ringed) ringed.classList.remove("ring"); ringed = null; }
+  window.toyGuidance = [];
+  window.addEventListener("message", function (ev) {
+    if (ev.origin !== location.origin || ev.source !== window.parent) return;
+    var d = ev.data;
+    if (!d || d.type !== "guidance" || d.v !== 1) return;
+    window.toyGuidance.push(d);
+    if (d.op === "clear") return clear();
+    if (d.id === "toy.legacy.thing") return;
+    var state;
+    if (d.op === "highlight") {
+      if (TARGETS.indexOf(d.id) < 0) { clear(); state = "unknown"; }
+      else {
+        var el = find(d.id);
+        clear();
+        if (el) { el.classList.add("ring"); ringed = el; state = "shown"; } else state = "absent";
+      }
+    } else if (d.op === "condition") {
+      state = d.id === "toy.form.sent" ? sent : "unknown";
+    } else return;
+    ev.source.postMessage({type: "guidance-reply", v: 1, op: d.op, id: d.id, seq: d.seq,
+                           state: state}, location.origin);
+  });
+})();"""
+
+
 class _Server(ThreadingHTTPServer):
     def server_bind(self) -> None:
         # HTTPServer.server_bind calls socket.getfqdn(), a reverse-DNS lookup that can
@@ -89,10 +140,11 @@ def main() -> int:
                 return
             body = _read_body(self)
             if rel == "":
-                html = b'<!doctype html><link rel="stylesheet" href="style.css"><p>toy</p>'
-                self._send(200, html, "text/html")
+                self._send(200, PAGE, "text/html")
             elif rel == "style.css":
-                self._send(200, b"p { color: teal; }", "text/css")
+                self._send(200, STYLE, "text/css")
+            elif rel == "guide.js":
+                self._send(200, GUIDE_JS, "text/javascript")
             elif rel == "api/health":
                 if args.never_ready:
                     self._json(503, {"ok": False})

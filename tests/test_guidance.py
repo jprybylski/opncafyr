@@ -21,10 +21,13 @@ from opncafyr.core.guidance import (
     read_study_file,
 )
 from opncafyr.core.registry import (
+    DescriptorError,
     GuideCondition,
     GuideTarget,
+    ToolDescriptor,
     WorkflowPack,
     WorkflowView,
+    load_descriptors,
     load_workflows,
 )
 
@@ -74,6 +77,86 @@ def test_a_duplicate_or_foreign_id_stops_the_catalog():
         build_catalog(
             [WorkflowPack(id="p", views=(WorkflowView(id="data", title="D", module="d.js"),))]
         )
+
+
+# --- controls inside an embedded app (ADR 0013, #77) --------------------------------------
+
+
+def _tool(tool_id="app", **guidance):
+    data = {
+        "schema_version": "1.0",
+        "id": tool_id,
+        "version": 1,
+        "runtime": "python",
+        "capabilities": ["thing"],
+        "executables": ["python"],
+        "health": {"kind": "python_import", "executable": "python", "target": "json"},
+    }
+    data["web_app"] = {"route": f"/apps/{tool_id}/", "readiness": "/h"}
+    if guidance:
+        data["web_app"]["guidance"] = guidance
+    return ToolDescriptor.from_mapping(data, "test")
+
+
+def test_a_tools_declared_ids_join_the_catalog_with_their_app():
+    tool = _tool(
+        targets=[{"id": "app.form.send", "title": "Send"}],
+        conditions=[{"id": "app.form.sent", "title": "It was sent"}],
+    )
+    catalog = build_catalog(load_workflows(), [tool, _tool("bare")])
+    assert catalog.targets["app.form.send"].app == "app"
+    assert catalog.conditions["app.form.sent"].app == "app"
+    listed = catalog.as_json()
+    assert {"id": "app.form.send", "title": "Send", "view": None, "app": "app"} in listed["targets"]
+    assert {"id": "app.form.sent", "title": "It was sent", "app": "app"} in listed["conditions"]
+    assert listed["apps"] == [{"id": "app", "title": "app"}]
+    # Page targets say they are not in an app.
+    assert {t["app"] for t in listed["targets"] if t["id"].startswith("shell.")} == {None}
+
+
+def test_the_shipped_tools_declare_their_guidance_ids():
+    catalog = build_catalog(load_workflows(), load_descriptors().values())
+    assert catalog.targets["opnca.export.save"].app == "opnca"
+    assert catalog.conditions["opnca.run.saved"].app == "opnca"
+    assert catalog.targets["deckifyr.build.run"].app == "deckifyr"
+    assert set(catalog.apps) == {"opnca", "deckifyr"}
+
+
+def test_a_tools_guidance_ids_must_be_its_own():
+    with pytest.raises(DescriptorError, match="must start with the tool id"):
+        _tool(targets=[{"id": "shell.sneaky", "title": "A"}])
+    with pytest.raises(DescriptorError, match="must start with the tool id"):
+        _tool(conditions=[{"id": "other.done", "title": "A"}])
+    with pytest.raises(DescriptorError):
+        _tool(targets=[{"id": "app.x", "title": "A", "selector": "#x"}])  # closed schema
+    with pytest.raises(GuidanceError, match="same id as a workflow pack"):
+        build_catalog([WorkflowPack(id="app")], [_tool(targets=[{"id": "app.x", "title": "A"}])])
+    clash = [WorkflowPack(id="p", targets=(GuideTarget("p.a", "A"),))]
+    tools = [_tool(targets=[{"id": "app.a", "title": "A"}, {"id": "app.a", "title": "B"}])]
+    with pytest.raises(GuidanceError, match="Duplicate"):
+        build_catalog(clash, tools)
+
+
+def test_only_the_bridge_posts_to_another_window():
+    bridge = (CORE_STATIC / "js" / "framebridge.js").read_text("utf-8")
+    for path in CORE_STATIC.rglob("*.js"):
+        if path.name != "framebridge.js":
+            assert "postMessage" not in path.read_text("utf-8"), path.name
+    # One post, to this page's own origin, of one fixed shape built in one place.
+    assert bridge.count(".postMessage(") == 1
+    assert "postMessage(message(op, id, n), location.origin)" in bridge
+    shapes = re.findall(r"\{ type: \"guidance\", v: VERSION,[^}]*\}", bridge)
+    assert shapes == [
+        '{ type: "guidance", v: VERSION, op: "clear", seq: n }',
+        '{ type: "guidance", v: VERSION, op, id, seq: n }',
+    ]
+    # A reply counts only from this origin and the asked frame's own window.
+    assert "if (ev.origin !== location.origin) return;" in bridge
+    assert "ev.source !== w.frame.contentWindow" in bridge
+    # It never reaches into the app's page beyond asking whether it has loaded.
+    for forbidden in ("innerHTML", "querySelector", "classList", ".click(", ".focus(", "eval("):
+        assert forbidden not in bridge, forbidden
+    assert bridge.count("contentDocument") == 1 and "readyState" in bridge
 
 
 def test_unknown_references_are_named_by_place_not_value():
@@ -203,6 +286,8 @@ def test_guidance_catalog_route(security, tmp_path):
     assert {"shell.workspace.pick", "nca.start.button", "shell.nav.publish"} <= ids
     assert {"nca.mapping.ready", "shell.workspace.open"} <= {c["id"] for c in body["conditions"]}
     assert "analysis" in body["views"]
+    assert {a["id"] for a in body["apps"]} == {"opnca", "deckifyr"}
+    assert next(t for t in body["targets"] if t["id"] == "opnca.export.save")["app"] == "opnca"
 
 
 @pytest.mark.parametrize(

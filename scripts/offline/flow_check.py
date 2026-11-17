@@ -173,12 +173,12 @@ def no_errors(findings: list[dict[str, Any]], what: str) -> None:
 
 
 def import_standards(api, work: Path) -> dict[str, Any]:
-    """A standards bundle from a .zip (no network): a deck template, selected for the deck."""
-    files = {
-        f"deck/{k}": (v.replace(b"  background_image: logo.png\n", b"") if "design" in k else v)
-        for k, v in SH.deck_files().items()
-        if k != "logo.png"
-    }
+    """A standards bundle from a .zip (no network): a deck template, selected for the deck.
+
+    Its design has a background image, which deckifyr's ``init`` copies into the deck
+    (deckifyr#103, #80), so the build below shows the referenced asset reached the deck.
+    """
+    files = {f"deck/{k}": v for k, v in SH.deck_files().items()}
     source = SH.write_bundle(
         work / "house-standards",
         [{"id": "house-deck", "type": "deck-template", "title": "House deck", "files": files}],
@@ -325,6 +325,11 @@ def flow(work: Path, results: Path) -> dict[str, Any]:
             r = api.post("/api/nca/deck", json={"publication_id": deck_pub})
             check(r.status_code == 200, f"deck setup: {r.text}")
             ok_job(api, r.json()["job_id"], 600, "deck setup")
+            check(
+                (study / "deck/logo.png").is_file()
+                and (study / "deck/logo.png").read_bytes() == SH.LOGO,
+                "deckifyr init didn't copy the template's background image (#80)",
+            )
             ok_job(api, api.post("/api/nca/deck/check").json()["job_id"], 600, "deck check")
             no_errors(api.get("/api/nca/deck").json()["check"]["findings"], "deck")
             r = api.post("/api/nca/deck/build", json={"previews": False})

@@ -314,8 +314,8 @@ def pending(pins):
 @pytest.mark.parametrize(
     ("platform", "binary"),
     [
-        ("linux-x86_64", "opnca_0.3.3_R4.6_linux-x86_64.tar.gz"),
-        ("linux-aarch64", "opnca_0.3.3_R4.6_linux-arm64.tar.gz"),  # opnca-r says arm64
+        ("linux-x86_64", "opnca_0.3.4_R4.6_linux-x86_64.tar.gz"),
+        ("linux-aarch64", "opnca_0.3.4_R4.6_linux-arm64.tar.gz"),  # opnca-r says arm64
     ],
 )
 def test_linux_installs_opnca_r_from_its_published_binary(pins, platform, binary):

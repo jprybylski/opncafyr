@@ -43,7 +43,7 @@ Templates stay in the bundle's fixed copy until you choose one for **new** repor
 The template of a report or deck that is already set up can't be changed, and **Use this publication** doesn't change it. When there is one, the **Standards** page says so beside each choice, and its card on **Publish** says which template it uses. To use a new template, rename or move the `report` (or `deck`) folder, then select **Set up report** (or **Set up deck**). Each build records which template it used, with its fingerprint and source commit, next to the exact runs and files it was built from.
 
 - A **report template** may hold `org-reference.docx`, `standard_footnotes.yaml`, `config.yaml` and quartifyr's `style.yaml` (it may hold only what differs: it is merged over quartifyr's default style); anything it lacks keeps the bundled file.
-- A **deck template** is a deckifyr template (`presentation.yaml` naming its design and layouts files, plus images). The layouts must include `blank` and `title-content`, which the "NCA results" deck uses.
+- A **deck template** is a deckifyr template (`presentation.yaml` naming its design and layouts files, plus images). The layouts must include `blank` and `title-content`, which the "NCA results" deck uses. Deck setup copies only the files the design and layouts refer to (the background image, a layout's logo). Other files in the template are not copied, and a file the template refers to but doesn't hold stops setup with its name.
 
 ## One house style for every bundle
 

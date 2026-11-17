@@ -10,6 +10,13 @@ web_app:
   route: /apps/deckifyr/
   readiness: /api/health
   max_body_bytes: 67108864
+  # Controls a tutorial may point at inside the deck editor, which outlines them itself
+  # (ADR 0013; deckifyr#105, 0.3.9). Its /api/health lists the same ids.
+  guidance:
+    targets:
+      - {id: deckifyr.session.save, title: "Save in the deck editor"}
+      - {id: deckifyr.nav.build, title: "The deck editor's Build tab"}
+      - {id: deckifyr.build.run, title: "Build (deck editor, Build tab)"}
 # The deck workflow (workflows/nca/publish/deck.py) reads these time limits (#33).
 jobs:
   validate_deck: {input_schema: publication-v1, output_schema: preflight-v1, timeout_s: 300}

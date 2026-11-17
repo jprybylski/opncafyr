@@ -11,7 +11,7 @@
 - **Preview probe.** LibreOffice previews are offered only when a short conversion
   finishes in time (docs/spikes/libreoffice.md).
 
-deckifyr is pinned in ``runtime/pins.toml`` (0.3.7). Executables come from the installed
+deckifyr is pinned in ``runtime/pins.toml`` (0.3.9). Executables come from the installed
 runtime, never from workspace content. Deck logic stays in deckifyr. Deck projects are
 treated as trusted user-authored projects: Quarto fragments and ``.rds`` flextables may
 run R (docs/plan.md, risk table).
@@ -180,6 +180,18 @@ def init_command(
     return cli_command(runtime, "init", *args, trusted=False)
 
 
+def init_problems(result: CliResult, base: Path | None = None) -> list[str]:
+    """The template references a successful ``init --from-dir`` could not copy.
+
+    Since deckifyr 0.3.9 (jprybylski/deckifyr#103) ``init`` copies the local files a
+    template references, and reports each one it could not copy (missing, absolute, ``..``,
+    a symlink, outside the template) as a plain-string warning. Those are the only
+    warnings ``init`` gives, and a deck set up without the file would fail at build.
+    """
+    doc = result.document or {}
+    return [plain(w, base) for w in doc.get("warnings") or [] if isinstance(w, str) and w]
+
+
 def validate_command(runtime: Runtime, presentation: Path) -> CommandSpec:
     return cli_command(runtime, "validate", str(presentation), "--strict")
 
@@ -234,7 +246,7 @@ def _doc(text: str) -> dict[str, Any] | None:
 
 
 def parse_cli(code: int, stdout: str, stderr: str, base: Path | None = None) -> CliResult:
-    """Decide a CLI run from its exit code and JSON (deckifyr 0.3.7 contract).
+    """Decide a CLI run from its exit code and JSON (deckifyr 0.3.7+ contract).
 
     Success is exit 0 with ``{"status": "ok", "result_version": 1}`` on stdout. A deckifyr
     error is JSON on stderr. Usage errors (exit 2), signals and crashes print no JSON:

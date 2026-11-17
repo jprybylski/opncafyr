@@ -35,6 +35,22 @@ def mode(root: Path, name: str) -> str:
     return path.read_text("utf-8").strip() if path.exists() else "ok"
 
 
+def references(source: Path, names: list[str]) -> list[tuple[str, str]]:
+    """``(where, path)`` for the design's background image and the layouts' sources."""
+    design = yaml.safe_load((source / names[0]).read_text("utf-8")) or {}
+    layouts = yaml.safe_load((source / names[1]).read_text("utf-8")) or {}
+    found = []
+    image = (design.get("slide") or {}).get("background_image")
+    if isinstance(image, str) and "://" not in image:
+        found.append((f"{names[0]}'s slide.background_image", image))
+    for name, layout in (layouts.get("layouts") or {}).items():
+        for key, element in ((layout or {}).get("elements") or {}).items():
+            ref = (element or {}).get("source")
+            if isinstance(ref, str) and "://" not in ref and not ref.startswith("{rpfy}:"):
+                found.append((f"{names[1]}'s layouts.{name}.elements.{key}.source", ref))
+    return found
+
+
 def init(root: Path, folder: Path, rest: list[str]) -> int:
     folder.mkdir(parents=True, exist_ok=True)
     (root / "init-args.json").write_text(json.dumps(rest), "utf-8")
@@ -50,7 +66,18 @@ def init(root: Path, folder: Path, rest: list[str]) -> int:
         for name in names:
             shutil.copyfile(source / name, folder / name)
         (folder / "presentation.yaml").write_text("deckifyr: '0.1'\nslides: []\n", "utf-8")
-        return ok(directory=str(folder), created=[*names, "presentation.yaml"])
+        # Like deckifyr 0.3.9 (#103): copy the files the design and layouts reference, and
+        # warn (a plain string) about one it can't copy. Nothing else is copied.
+        created, warnings = [*names, "presentation.yaml"], []
+        for where, ref in references(source, names):
+            path = source / ref
+            if ".." in Path(ref).parts or Path(ref).is_absolute() or not path.is_file():
+                warnings.append(f"{where} ({ref!r}) was not copied: not a file in the template")
+                continue
+            (folder / ref).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, folder / ref)
+            created.append(ref)
+        return ok(directory=str(folder), created=created, warnings=warnings)
     (folder / "design.yaml").write_text("deckifyr: '0.1'\n", "utf-8")
     (folder / "layouts.yaml").write_text("deckifyr: '0.1'\nlayouts: {blank: {}}\n", "utf-8")
     (folder / "presentation.yaml").write_text("deckifyr: '0.1'\nslides: []\n", "utf-8")

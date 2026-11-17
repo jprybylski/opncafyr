@@ -5,16 +5,20 @@
 // clicks a control, calls a workflow endpoint or picks an option. Text is set with
 // textContent; a step can name only a target, a view or a condition from the catalog.
 // Edit buttons only announce "tutorial-edit"; the editor is tutorial-editor.js (#76).
+// A target inside an embedded app is outlined by the app itself, on request
+// (framebridge.js, ADR 0013); the panel says so in words as well.
 
 import { getJSON, send } from "./api.js";
 import { $, el, emit, on, setStatus } from "./dom.js";
-import { checkCondition, findTarget, guidanceCatalog, viewHash } from "./guidance.js";
+import { appClear, appHighlight, appHighlightState } from "./framebridge.js";
+import { appName, checkCondition, findTarget, guidanceCatalog, targetApp, viewHash } from "./guidance.js";
 
 const TICK_MS = 400;
 
 let catalog = null;
 let run = null; // { key, doc, index, paused, unhighlighted: Set<step id>, found: step id }
 let highlighted = null;
+let litApp = null; // the embedded app asked to outline the step's control
 let opener = null;
 let timer = null;
 let listing = null;
@@ -39,10 +43,19 @@ function saveProgress({ active = true, finished = false } = {}) {
   return saving;
 }
 
-function clearHighlight() {
+function clearPageHighlight() {
   highlighted?.classList.remove("tutorial-target");
   highlighted = null;
 }
+
+function clearHighlight() {
+  clearPageHighlight();
+  if (litApp) appClear(litApp);
+  litApp = null;
+}
+
+// What an app last said about the step's control. While no answer has come, nothing.
+const APP_SHOWS_RECOVERY = new Set(["closed", "absent", "unknown", "unsupported"]);
 
 // Highlight the step's target if it is on the page; otherwise explain and offer a way on.
 function refreshHighlight() {
@@ -51,6 +64,15 @@ function refreshHighlight() {
   if (!s.target || run.unhighlighted.has(s.id)) {
     clearHighlight();
     recover.hidden = true;
+    return;
+  }
+  const app = targetApp(s.target);
+  if (app) {
+    clearPageHighlight();
+    if (litApp && litApp !== app) appClear(litApp);
+    litApp = app;
+    appHighlight(app, s.target); // the answer comes back as "guidance-changed"
+    recover.hidden = !APP_SHOWS_RECOVERY.has(appHighlightState(app, s.target));
     return;
   }
   const node = findTarget(s.target);
@@ -79,9 +101,31 @@ function waitText(s) {
   return `Next is enabled when: ${c ? c.title.toLowerCase() : "this step is done"}. Skip moves on anyway.`;
 }
 
+// The panel's words for a control inside an embedded app, so the step reads the same with
+// or without the outline (keyboard and screen-reader users, an older app, a closed app).
+function appText(t) {
+  const name = appName(t.app);
+  switch (appHighlightState(t.app, t.id)) {
+    case "shown":
+      return `“${t.title}” is outlined in ${name}.`;
+    case "closed":
+      return `“${t.title}” is in ${name}, which isn't open right now. Open ${name} to see it outlined.`;
+    case "absent":
+      return `“${t.title}” isn't on ${name}'s screen right now. It may appear after an earlier step.`;
+    case "unknown":
+      return `This version of ${name} doesn't have “${t.title}”. Follow the directions above.`;
+    case "unsupported":
+      return `This version of ${name} can't outline its controls. Follow the directions above.`;
+    default:
+      return "";
+  }
+}
+
 function missingText(s) {
-  if (!s.target || run.unhighlighted.has(s.id) || findTarget(s.target)) return "";
+  if (!s.target || run.unhighlighted.has(s.id)) return "";
   const t = catalog.targets.find((x) => x.id === s.target);
+  if (t && t.app) return appText(t);
+  if (findTarget(s.target)) return "";
   return `“${t ? t.title : "The control"}” isn't on the page right now. It may appear after an ` +
     "earlier step, or it may not be in this version of the app or this state of the study.";
 }
@@ -97,6 +141,7 @@ function refreshState() {
 }
 
 function showStep(moveFocus = true, save = true) {
+  clearHighlight(); // the last step's outline, here or in an app, goes first
   const s = step();
   run.paused = false;
   panel().classList.remove("paused");

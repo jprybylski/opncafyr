@@ -250,11 +250,13 @@ export async function openGuidanceForm(host, { api, open, unsavedKey, onClose, o
       for (const c of catalog.conditions) add(select, c.id, c.title);
     } else {
       // Targets by view. A tutorial step that shows a view lists that view's targets and
-      // the ones on every page (the sidebar).
+      // the ones on every page (the sidebar). Controls inside an embedded app (ADR 0013)
+      // are grouped under the app.
       const groups = new Map();
+      const appTitle = (id) => (catalog.apps.find((a) => a.id === id) || { title: id }).title;
       for (const t of catalog.targets) {
         if (step && step.view && t.view && t.view !== step.view) continue;
-        const g = t.view ? viewTitle(t.view) : "On every page";
+        const g = t.app ? `Inside ${appTitle(t.app)}` : t.view ? viewTitle(t.view) : "On every page";
         if (!groups.has(g)) groups.set(g, []);
         groups.get(g).push(t);
       }

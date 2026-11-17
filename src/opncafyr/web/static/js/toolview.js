@@ -135,6 +135,14 @@ function reload() {
   }
 }
 
+// The frame kept for an app, shown or not (null if it was never opened); and the frame
+// only while it is the one on screen. Embedded guidance (framebridge.js) asks through these.
+export const appFrame = (id) => frames.get(id) || null;
+export function shownFrame(id) {
+  const frame = frames.get(id);
+  return frame && !frame.hidden && currentId() === id ? frame : null;
+}
+
 export function initToolView() {
   $("tool-reload").addEventListener("click", reload);
   // A module that restarted an app's session (a workflow opening another run) asks for a

@@ -13,7 +13,17 @@ from opncafyr.adapters import quartifyr as Q
 from opncafyr.core.manifest import validate
 from opncafyr.core.runtime import Runtime
 from publish_helpers import completed_run, picks, publish_client, wait_job, writable
-from standards_helpers import CONFIG, DESIGN, FOOTNOTES, LOGO, deck_files, mixed_bundle, sha
+from standards_helpers import (
+    CONFIG,
+    DESIGN,
+    FOOTNOTES,
+    LAYOUTS,
+    LOGO,
+    deck_files,
+    mixed_bundle,
+    sha,
+    write_bundle,
+)
 from test_publish_deck import StubSupervisor, fake_deck_runtime
 from test_publish_report import fake_runtime
 
@@ -158,7 +168,7 @@ def test_deck_setup_uses_the_selected_template(api, tmp_path):
     assert args[args.index("--from-dir") + 1] == str(snapshot / "deck")
     assert "--from-repo" not in args
     assert (project / "house-design.yaml").read_bytes() == DESIGN
-    assert (project / "logo.png").read_bytes() == LOGO  # copied by the launcher
+    assert (project / "logo.png").read_bytes() == LOGO  # referenced, so deckifyr copied it
     pres = yaml.safe_load((project / D.PRESENTATION).read_text("utf-8"))
     assert pres["design"] == {"base": "house-design.yaml"}
     assert pres["layouts"] == "house-layouts.yaml"
@@ -196,6 +206,53 @@ def test_a_typed_native_deck_template_passes_its_type(api, tmp_path):
     args = json.loads((api.fake_deck / "init-args.json").read_text("utf-8"))
     assert args[args.index("--type") + 1] == "nca"
     assert (api.study / "deck/logo.png").is_file()
+
+
+def install_deck(api, folder, files):
+    src = write_bundle(
+        folder, [{"id": "house-deck", "type": "deck-template", "title": "Deck", "files": files}]
+    )
+    preview = api.post(
+        "/api/standards/inspect", json={"source": {"kind": "path", "path": str(src)}}
+    ).json()
+    assert preview["problems"] == [], preview["problems"]
+    body = {"preview_id": preview["preview_id"], "select": ["house-deck"]}
+    out = api.post("/api/standards/install", json=body)
+    assert out.status_code == 200, out.text
+
+
+def test_deck_setup_has_only_the_files_the_template_references(api, tmp_path):
+    # #80: deckifyr copies referenced files (deckifyr#103); the launcher copies nothing else.
+    install_deck(
+        api,
+        tmp_path / "src",
+        {**deck_files("deck/"), "deck/img/spare.png": LOGO, "deck/README.md": b"# House deck\n"},
+    )
+    setup(api, "deck", publication(api))
+    project = api.study / "deck"
+    assert (project / "logo.png").read_bytes() == LOGO
+    assert not (project / "img").exists()
+    assert not (project / "README.md").exists()
+
+
+def test_deck_setup_fails_when_a_referenced_file_is_missing(api, tmp_path):
+    # The import checks the background image; a layout's image source is checked at setup.
+    files = deck_files("deck/")
+    files["deck/house-layouts.yaml"] = LAYOUTS.replace(
+        b"  blank:\n    elements: {}\n",
+        b"  blank:\n    elements:\n      mark:\n        type: image\n"
+        b"        source: img/missing.png\n"
+        b"        box: {x: 0in, y: 0in, width: 1in, height: 1in}\n",
+    )
+    assert files["deck/house-layouts.yaml"] != LAYOUTS
+    install_deck(api, tmp_path / "src", files)
+    out = api.post("/api/nca/deck", json={"publication_id": publication(api)["publication_id"]})
+    assert out.status_code == 200, out.text
+    job = wait_job(api, out.json()["job_id"], 60)
+    assert job["state"] == "failed"
+    assert "couldn't copy" in job["message"] and "img/missing.png" in job["message"]
+    assert str(tmp_path) not in job["message"]
+    assert not (api.study / "deck").exists()
 
 
 def test_setup_refuses_a_changed_template(api, tmp_path):

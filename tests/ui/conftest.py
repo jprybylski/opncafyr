@@ -25,9 +25,10 @@ from opncafyr.core.app import create_app
 from opncafyr.core.bootstrap import mint_open_token, open_url
 from opncafyr.core.jobmanager import CommandSpec, JobManager, JobRequest
 from opncafyr.core.lifecycle import LifecycleConfig, Settings
+from opncafyr.core.registry import load_descriptors
 from opncafyr.core.security import SESSION_HEADER, SecurityConfig
 from opncafyr.core.workspace import RecentWorkspaces
-from toy_adapter import toy_supervisor
+from toy_adapter import TOY_DESCRIPTOR, toy_supervisor
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
@@ -91,6 +92,7 @@ def home(tmp_path: Path, monkeypatch):
         settings=Settings(tmp_path / "state" / "settings.json"),
         lifecycle=LifecycleConfig(),
         open_tokens=tmp_path / "state" / "open-tokens",
+        tools={**load_descriptors(), "toy": TOY_DESCRIPTOR},
     )
     server = uvicorn.Server(
         uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning", lifespan="on")

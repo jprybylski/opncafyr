@@ -1,4 +1,4 @@
-"""#16: deckifyr 0.3.7 behind /apps/deckifyr/, including the attacks from the upstream review."""
+"""#16: deckifyr 0.3.9 behind /apps/deckifyr/, including the attacks from the upstream review."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ import time
 import httpx
 import pytest
 from proxy_harness import EVIL, assert_stays_under, load_page, tree_pids, wait_gone
+
+from opncafyr.core.registry import load_descriptors
 
 pytestmark = pytest.mark.integration
 ROUTE = "/apps/deckifyr/"
@@ -56,6 +58,16 @@ def test_page_and_assets_stay_under_the_prefix(browser, controller, child):
     record = load_page(browser, controller, ROUTE)
     assert_stays_under(record, controller, ROUTE)
     assert any("/api/" in u for u in record.requests), "the page made no API calls"
+
+
+def test_health_lists_the_declared_guidance_ids(controller, child):
+    # ADR 0013: the pinned deckifyr answers for every id its descriptor declares.
+    declared = load_descriptors()["deckifyr"]
+    with controller.client() as c:
+        guidance = c.get(API + "health").json()["guidance"]
+    assert guidance["version"] == 1
+    assert {t.id for t in declared.guidance_targets} <= set(guidance["targets"])
+    assert {x.id for x in declared.guidance_conditions} <= set(guidance["conditions"])
 
 
 def test_save_build_and_download(controller, child):

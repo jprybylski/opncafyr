@@ -9,6 +9,7 @@ import httpx
 import pytest
 from proxy_harness import EVIL, assert_stays_under, load_page, tree_pids, wait_gone
 
+from opncafyr.core.registry import load_descriptors
 from opncafyr.core.supervisor import ChildState
 
 pytestmark = pytest.mark.integration
@@ -69,6 +70,16 @@ def test_page_and_assets_stay_under_the_prefix(browser, controller, child):
     record = load_page(browser, controller, ROUTE)
     assert_stays_under(record, controller, ROUTE)
     assert any("/api/v1/" in u for u in record.requests), "the page made no API calls"
+
+
+def test_health_lists_the_declared_guidance_ids(controller, child):
+    # ADR 0013: the pinned opnca-r answers for every id its descriptor declares.
+    declared = load_descriptors()["opnca"]
+    with controller.client() as c:
+        guidance = c.get(API + "health").json()["data"]["guidance"]
+    assert guidance["version"] == 1
+    assert {t.id for t in declared.guidance_targets} <= set(guidance["targets"])
+    assert {x.id for x in declared.guidance_conditions} <= set(guidance["conditions"])
 
 
 def test_schema_and_calculate_through_the_proxy(controller, child):

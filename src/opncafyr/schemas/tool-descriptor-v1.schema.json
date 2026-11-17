@@ -8,7 +8,20 @@
   "required": ["schema_version", "id", "version", "runtime", "capabilities", "executables", "health"],
   "$defs": {
     "executable_name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
-    "capability": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+    "capability": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "guide_items": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)+$", "maxLength": 80},
+          "title": {"type": "string", "minLength": 1, "maxLength": 120}
+        }
+      }
+    }
   },
   "properties": {
     "schema_version": {"const": "1.0"},
@@ -73,6 +86,15 @@
         "guard_mutations": {
           "type": "boolean",
           "description": "The app changes workspace files directly (#56). Each state-changing request it gets is refused while jobs run or other tools have unsaved or busy work, and otherwise holds the workspace lease while it runs. Optional; default false."
+        },
+        "guidance": {
+          "description": "Controls and read-only milestones inside the app that tutorials may name (ADR 0013, #77). The app marks each control with data-target and answers the launcher's guidance messages; ids start with the tool id. Optional.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "targets": {"$ref": "#/$defs/guide_items"},
+            "conditions": {"$ref": "#/$defs/guide_items"}
+          }
         }
       }
     },

@@ -10,5 +10,13 @@ web_app:
   route: /apps/opnca/
   readiness: /api/v1/health
   max_body_bytes: 25165824
+  # Controls a tutorial may point at inside opnca-r, which outlines them itself (ADR 0013;
+  # opnca-r#63, 0.3.4). Its /api/v1/health lists the same ids; tests/integration checks it.
+  guidance:
+    targets:
+      - {id: opnca.nav.export, title: "Export in opnca-r's sidebar"}
+      - {id: opnca.export.save, title: "Save to run folder (opnca-r Export)"}
+    conditions:
+      - {id: opnca.run.saved, title: "The results shown in opnca-r are saved to the run folder"}
 jobs:
   replay_nca: {input_schema: run-manifest-v1, output_schema: run-manifest-v1, timeout_s: 1800}
