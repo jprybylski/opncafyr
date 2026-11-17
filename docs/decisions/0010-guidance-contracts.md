@@ -69,7 +69,9 @@ nothing from elsewhere (ADR 0006). Workspace files hold data and options only.
      (`tutorial-progress-v1`). Browser storage is lost every launch (ADR 0006 amendment).
    - It never submits a form, never calls a workflow endpoint and never picks an option.
    - Inside an embedded app it gives instructions at the launcher's toolstrip only. Hooks
-     into opnca-r or deckifyr would be a separate upstream request.
+     into opnca-r or deckifyr would be a separate upstream request. *Amended by ADR 0013
+     (#77):* an app that offers the embedded-guidance contract draws its own highlight on
+     request, and the launcher still never writes into its page.
 7. **Study profiles are NCA-pack data.**
    - **Step types:** instruction, checklist, action, run slot, review checkpoint and
      publication. A profile has no field for an analyte value, dose, unit, BLQ rule,
