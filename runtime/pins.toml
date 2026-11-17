@@ -30,7 +30,7 @@ windows_min = "11"
 linux_os = "ubuntu"        # /etc/os-release ID and VERSION_ID of the one supported Linux (#65)
 linux_os_version = "24.04"
 linux_glibc_min = "2.39"   # Posit's R and Posit's noble R binaries are built on Ubuntu 24.04
-macos_min = "15"           # opnca-r 0.3.3 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
+macos_min = "15"           # opnca-r 0.3.4 binaries need 13.0 (arm64) / 11.0 (x86_64); lowering
                            # this waits on Quarto, uv Python, wheel and CRAN-binary checks (ADR 0003, #1)
 
 # --- Python ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ deckifyr = true
 
 [r]
 license = "GPL-2.0-or-later"
-version = "4.6.2"          # ADR 0003. opnca-r 0.3.3 binaries are built on R 4.6.2.
+version = "4.6.2"          # ADR 0003. opnca-r 0.3.4 binaries are built on R 4.6.2.
 # CRAN installers, used as pinned files only (rig's user mode downloads its own copy).
 # Windows: the Inno Setup installer in /CURRENTUSER mode (#6). macOS: the .pkg payload is
 # expanded and R.framework relocated, editing only text files, to an R root whose path
@@ -149,10 +149,10 @@ sha256 = "eda220a2f39c392f622049de013ddf7b4dfdf019ba877f251be14ce43e5734d1"
 
 [packages.opnca-r]
 license = "Apache-2.0"
-version = "0.3.3"
+version = "0.3.4"
 source = "github:mantra-opnca/opnca-r"
 private = true             # verify_pins.py --network needs GH_TOKEN
-release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.3/"
+release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.4/"
 # v0.2.7 (2026-11-06) added the launcher API token, --no-overwrite and --require-blq-rules
 # (#40-#43). v0.2.8 (2026-11-07) sent the whole shutdown response (#47), built macOS
 # binaries for R's own minimum (#45) and added the save lock and effective_settings (#46).
@@ -165,24 +165,26 @@ release_url = "https://github.com/mantra-opnca/opnca-r/releases/download/v0.3.3/
 # leaves the flextable caption off the saved formatted tables (#59). v0.3.3 (2026-11-09,
 # commit 9f7cd63) publishes Linux binaries for x86_64 and arm64, built on Ubuntu 24.04 with
 # glibc_min 2.39 and linking only glibc, libstdc++, libgcc and R (#61), and fixes row states
-# in FIM (#60). Imports are unchanged (R6); flextable, a new Suggests, is already in
+# in FIM (#60). v0.3.4 (2026-11-17, commit 471e24a) adds the embedded-guidance hook (#63,
+# our #77) and links Windows' synchronization library for Rust 1.100; the platform
+# minimums and Imports are unchanged. Imports are unchanged (R6); flextable, a new Suggests, is already in
 # renv.lock. The manifest spells the Linux arch arm64, where our platform is linux-aarch64
 # (installer/platforms.py maps it). Select assets by manifest.json fields
 # (kind/platform/arch/r_minor), never by file name. manifest.json (schema_version 1) is
 # not in SHA256SUMS, so pin its hash here.
-manifest_sha256 = "2342ab85d6b4d55ada8bee5aa2519f868bd24b41fd3b9ce185d7172466769744"
-sha256sums_sha256 = "ab3ebf46b9f0cc9d5bc987a5bde4ca6ccdc96072e1e0a4dc8f11f48017fe3a36"
-source_commit = "9f7cd63af2a1ed0202a8a2ff473fb6df4a3abb41"
+manifest_sha256 = "4d08df2cbad95636257f70f5783d978e6306454f6477e83adb2d05e286249a6e"
+sha256sums_sha256 = "ea78d5ca5ebdbe5890d15404c5ca6a21742850def8a144a31ce3c47e383af256"
+source_commit = "471e24a46fde56f233be0e2806d2bf9183b45ac7"
 r_minor = "4.6"            # binaries built on R 4.6.2
 
 [packages.opnca-r.assets]
-"manifest.json" = "2342ab85d6b4d55ada8bee5aa2519f868bd24b41fd3b9ce185d7172466769744"
-"opnca_0.3.3_R4.6_linux-x86_64.tar.gz" = "958d38d8418d1bd263083d4e0ac2a3b823d84dc59083b289132f99d3a377cfe6"
-"opnca_0.3.3_R4.6_linux-arm64.tar.gz" = "a7f9044b4f76a292c46d2584b126fed72b5b78cd91067a7eeabb250d2a460b9b"
-"opnca_0.3.3_R4.6_macos-arm64.tgz" = "5e99b9de6d316f38bb679992b6d23db0dcc39d28760e25cd46136802313a224b"
-"opnca_0.3.3_R4.6_macos-x86_64.tgz" = "292a1b2ab08d00ec0ae8c86d9d9c8baf8ca0d7d6ec602ef8035ebd33fccb3970"
-"opnca_0.3.3_R4.6_windows-x86_64.zip" = "d85e8d576fd692d428d90fbddc53d5128530c853e1a5d0566db9385527e5ae63"
-"opnca_0.3.3-vendored.tar.gz" = "e918cf8a6de80a63ef795250abf061fac75b5b440a2e816b9bcfab0d4da848cb"  # offline source fallback
+"manifest.json" = "4d08df2cbad95636257f70f5783d978e6306454f6477e83adb2d05e286249a6e"
+"opnca_0.3.4_R4.6_linux-x86_64.tar.gz" = "c0fb84d8091de5201f8f65d694e42f20a61bbe1cdd13254030d439267fc53f94"
+"opnca_0.3.4_R4.6_linux-arm64.tar.gz" = "8b9dfed95cbf2e46e48b377f7b5e28de8223f373d65d8240421b9a7f54e92e49"
+"opnca_0.3.4_R4.6_macos-arm64.tgz" = "ea57865095005e823cc63de6b994723f4dc5182632325f9d9b40d7e78e2dc791"
+"opnca_0.3.4_R4.6_macos-x86_64.tgz" = "ae007044d79bef5a2880e3064f7031d1aa452b4b31dda837e7a13357177db809"
+"opnca_0.3.4_R4.6_windows-x86_64.zip" = "0e31a8a857a3b4f262b3815e51598e42245b03505d021b8c6f02cd86df75a67f"
+"opnca_0.3.4-vendored.tar.gz" = "5d5eedc0319c8a23ec57cc5dafeed02e54e62de44e7e71e39009b503028b6d8c"  # offline source fallback
 
 [packages.deckifyr]
 license = "GPL-3.0-or-later"
@@ -275,7 +277,7 @@ commit = "429410c4a84c106550610efcd6c3341603f716a1"
 "SHA256SUMS" = "2cff376ec65185effe91f1b01ceb292164e7f5d2c04042dd3ed9f5dd1423b733"
 
 # --- Repair path only (ADR 0004) ---------------------------------------------------------
-# Never installed on a normal install. Only to build opnca_0.3.3-vendored.tar.gz when a
+# Never installed on a normal install. Only to build opnca_0.3.4-vendored.tar.gz when a
 # binary can't be used (e.g. macOS below the binary's minimum). macOS also needs the
 # Command Line Tools for this path (#7).
 
