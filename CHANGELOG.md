@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Runs of the same analyte are told apart in reports and decks** (#75). When two runs in
+  one publication have analyte texts that look the same (label, or exact value without
+  one; case and punctuation ignored), the publication **Check** warns, naming the text and
+  the runs; publishing still works. The report then gives each such run its own heading, and
+  its heading, captions and slide titles add the run ID's suffix, e.g. "PARENT (run ce4b)"
+  (the whole ID if two suffixes match). Publications without such runs render exactly as
+  before (golden tests). On **Start analysis**, a study profile step's suggested label is
+  offered with a **Use this label** button, never filled in on its own. Both user guides
+  explain how to label runs.
 - **External data through a managed datum** (#83, #85, ADR 0012). A new, optional
   **External data** page lists the data a study depends on (an https file, a file on a
   share, one file from a Git repository) in `.data.yaml`, fetches it into `source-data/` on

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -14,8 +15,16 @@ import pytest
 from opncafyr.adapters import quartifyr as Q
 from opncafyr.core.manifest import validate
 from opncafyr.core.runtime import Runtime
+from opncafyr.workflows.nca.publish import report as report_flow
 from process_helpers import wait_gone
-from publish_helpers import completed_run, picks, publish_client, wait_job, writable
+from publish_helpers import (
+    completed_run,
+    fixed_publication,
+    picks,
+    publish_client,
+    wait_job,
+    writable,
+)
 
 pytestmark = pytest.mark.skipif(os.name == "nt", reason="the stand-in Rscript is a shell script")
 FAKE = Path(__file__).parent / "fake_rscript.py"
@@ -165,6 +174,101 @@ def test_a_formatted_table_is_placed_like_a_csv_one():
     lines = text.splitlines()
     i = lines.index("{rpfy}:a_b_summary-formatted.rds")
     assert lines[i - 2] == '{{< tbl_caption "Tbl1" "Summary (formatted), A" >}}'
+
+
+GOLDEN_REPORT = """\
+---
+title: "Noncompartmental analysis results"
+subtitle: "PARENT and METAB"
+document-status: "draft"
+date: "<date>"
+format: docx
+filters:
+  - quarto-plus
+  - quartifyr
+---
+
+::: {custom-style="Heading 1"}
+Table of Contents
+:::
+
+::: .toc
+:::
+
+{{< pagebreak >}}
+
+{{< body-start >}}
+
+# Introduction
+
+This report was assembled by opncafyr from publication pub-20261104T090000Z-1a2b. It shows \
+the tables and figures saved by opnca-r for the runs below, each run holding one analyte. \
+Research use only: it has not been validated for clinical or regulatory decisions.
+
+| Run | Analyte |
+|---|---|
+| 20261103T142512Z-7c4e | Parent drug |
+| 20261103T150000Z-1a2b | METAB |
+
+# Results
+
+## Parent drug
+
+{{< tbl_caption "Tbl1" "Summary of the parameters, Parent drug" >}}
+
+{rpfy}:parent-drug_20261103T142512Z-7c4e_summary.csv
+
+From run 20261103T142512Z-7c4e.
+
+{{< fig_caption "Fig1" "Individual profiles (linear), Parent drug" >}}
+
+{rpfy}:parent-drug_20261103T142512Z-7c4e_profiles-linear.png
+
+From run 20261103T142512Z-7c4e.
+
+## METAB
+
+{{< tbl_caption "Tbl2" "Summary of the parameters, METAB" >}}
+
+{rpfy}:metab_20261103T150000Z-1a2b_summary.csv
+
+From run 20261103T150000Z-1a2b.
+
+{{< fig_caption "Fig2" "Individual profiles (linear), METAB" >}}
+
+{rpfy}:metab_20261103T150000Z-1a2b_profiles-linear.png
+
+From run 20261103T150000Z-1a2b.
+
+"""
+
+
+def report_qmd(tmp_path, publication) -> str:
+    report_flow.write_report_qmd(tmp_path, publication)
+    text = (tmp_path / Q.REPORT_QMD).read_text("utf-8")
+    return re.sub(r'^date: "[0-9-]+"$', 'date: "<date>"', text, count=1, flags=re.MULTILINE)
+
+
+def test_a_report_without_shared_analyte_texts_is_unchanged(tmp_path):
+    """Golden (#75): telling same-analyte runs apart changes nothing when no texts collide."""
+    pub = fixed_publication({"value": "PARENT", "label": "Parent drug"}, {"value": "METAB"})
+    assert report_qmd(tmp_path, pub) == GOLDEN_REPORT
+
+
+def test_runs_of_one_analyte_get_a_heading_each_and_unique_captions(api):
+    """#75: two runs labelled alike are told apart by run, not merged under one heading."""
+    a, _ = completed_run(api.study, "PARENT")
+    b, _ = completed_run(api.study, "PARENT")
+    set_up(api, publish(api, a, b))
+    text = (api.study / "report" / "report.qmd").read_text("utf-8")
+    ta, tb = a.rpartition("-")[2], b.rpartition("-")[2]
+    tags = (ta, tb) if ta != tb else (a, b)
+    headings = [line for line in text.splitlines() if line.startswith("## ")]
+    assert headings == [f"## {Q._md(f'PARENT (run {t})')}" for t in tags]
+    captions = re.findall(r'_caption "(?:Tbl|Fig)[0-9]+" "([^"]+)"', text)
+    assert len(captions) == 4 and len(set(captions)) == 4
+    assert f"Parameter summary, PARENT (run {tags[0]})" in captions
+    assert f"| {a} | PARENT |" in text and f"| {b} | PARENT |" in text
 
 
 def test_parse_render_names_the_files_whose_placeholders_stayed_unfilled():

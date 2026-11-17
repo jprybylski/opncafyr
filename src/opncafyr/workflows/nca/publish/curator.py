@@ -30,6 +30,7 @@ import shutil
 import sys
 import tempfile
 import threading
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -115,6 +116,11 @@ class Plan:
             "conflicts": len(self.conflicts),
             "blocking": bool(self.conflicts) or sidecars.blocking(self.findings),
             "report": sidecars.preflight(self.findings),
+            # Not a preflight finding: those never carry data values, and an unlabelled
+            # run's text is its analyte value (#75). A warning only; publishing still works.
+            "shared_analyte_texts": shared_analyte_texts(
+                (run_id, manifest["analyte"]) for run_id, (_, manifest) in self.runs.items()
+            ),
         }
 
 
@@ -178,8 +184,54 @@ def publishable_runs(root: Path) -> list[dict[str, Any]]:
 # --- names and sidecars --------------------------------------------------------------------
 
 
+def analyte_text(analyte: dict[str, Any]) -> str:
+    """How reports and decks name a run's analyte: its label, or its exact value."""
+    return analyte.get("label") or analyte["value"]
+
+
+def _collision_key(text: str) -> str:
+    """Texts a reader can't tell apart: same words, ignoring case and punctuation.
+
+    Stricter than the report's ``safe_text``, so two texts that look the same in a DOCX
+    after it drops characters always count as the same."""
+    return " ".join(re.findall(r"\w+", text.casefold()))
+
+
+def shared_analyte_texts(runs: Iterable[tuple[str, dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Groups of runs whose analyte texts look the same (#75), in the order first seen.
+
+    ``runs`` are ``(run_id, analyte)`` pairs. Each group is ``{"text", "run_ids"}``, with the
+    first run's text. A publication may hold such runs; reports and decks then tell them
+    apart by run (``run_display``)."""
+    groups: dict[str, dict[str, Any]] = {}
+    for run_id, analyte in runs:
+        text = analyte_text(analyte)
+        group = groups.setdefault(_collision_key(text), {"text": text, "run_ids": []})
+        if run_id not in group["run_ids"]:
+            group["run_ids"].append(run_id)
+    return [g for g in groups.values() if len(g["run_ids"]) > 1]
+
+
+def run_display(runs: Iterable[tuple[str, dict[str, Any]]]) -> dict[str, str]:
+    """Each run's analyte text as a report heading or slide title shows it (#75).
+
+    The plain text, unless another run in the same publication has a text that looks the
+    same: then ``"<text> (run <tag>)"``, where the tag is the run ID's random suffix, or the
+    whole run ID when two of those runs share the suffix. Nothing is inferred from the data.
+    """
+    runs = list(runs)
+    out = {run_id: analyte_text(analyte) for run_id, analyte in runs}
+    for group in shared_analyte_texts(runs):
+        ids = group["run_ids"]
+        suffixes = [r.rpartition("-")[2] for r in ids]
+        for run_id, suffix in zip(ids, suffixes, strict=True):
+            tag = suffix if suffixes.count(suffix) == 1 else run_id
+            out[run_id] = f"{out[run_id]} (run {tag})"
+    return out
+
+
 def analyte_slug(manifest: dict[str, Any]) -> str:
-    text = manifest["analyte"].get("label") or manifest["analyte"]["value"]
+    text = analyte_text(manifest["analyte"])
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40].strip("-")
     return slug or "analyte"
 
@@ -225,8 +277,7 @@ def build_sidecar(
     script = manifest.get("script", {}).get("path", "analysis.R")
     saved = manifest.get("export", {}).get("saved_at") or manifest["created_at"]
     sealed = manifest.get("sealed", {}).get("at") or saved
-    analyte = manifest["analyte"]
-    name = analyte.get("label") or analyte["value"]
+    name = analyte_text(manifest["analyte"])
     base = entry.artifact.removesuffix(FORMATTED)  # a formatted table uses its CSV's
     wanted = ABBREVIATIONS.get(base, DEFAULT_ABBREVIATIONS)
     tools = {f"{k}.version": str(v) for k, v in sorted(manifest.get("tools", {}).items())}

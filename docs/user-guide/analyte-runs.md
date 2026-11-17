@@ -80,7 +80,7 @@ Each analyte is its own run. To analyse a second analyte from the same data:
 
 1. In **5. Analyte and checks**, choose the other analyte and specimen.
 2. Select **Run checks**, and acknowledge its warnings.
-3. In **6. Start analysis**, check the label and the BLQ choices, then select **Start analysis**.
+3. In **6. Start analysis**, check the label and the BLQ choices, then select **Start analysis**. A second run of the *same* analyte, for example the fed arm, needs its own label, such as `Fed`, so that reports and decks can tell the runs apart.
 4. Open, save, replay and complete the new run as above.
 
 The two runs share the recipe, but each has its own frozen rows, script and results. Rows of one analyte never appear in the other's run.

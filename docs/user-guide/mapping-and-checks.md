@@ -120,7 +120,7 @@ Notes need no action. They include rows that are out of time order, profiles wit
 
 Card 6 sets the run's choices.
 
-1. **Label for this analyte (shown in reports)** is filled in from the analyte label column if you mapped one. Change it if you want.
+1. **Label for this analyte (shown in reports)** is filled in from the analyte label column if you mapped one. Change it if you want. Reports and decks name each run by this label. If you will publish more than one run of the same analyte, for example fed and fasted, give each its own label, such as `Fed` and `Fasted`. Two runs labelled alike are still told apart, by their run IDs, but a label reads better. A completed run's label can't change: to relabel, make a new run. If you chose a study profile step that suggests a label, **Use this label** fills it in; nothing is filled in on its own.
 2. Choose how BLQ samples are handled. There is no default: opnca-r uses exactly what you pick.
    - **BLQ before the dose**
    - **BLQ after the dose**

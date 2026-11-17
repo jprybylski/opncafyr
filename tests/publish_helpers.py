@@ -232,3 +232,36 @@ def wait_job(client, job_id: str, timeout: float = 300.0) -> dict:
             return job
         time.sleep(0.1)
     raise TimeoutError(job_id)
+
+
+GOLDEN_RUNS = ("20261103T142512Z-7c4e", "20261103T150000Z-1a2b")
+
+
+def fixed_publication(*analytes: dict, run_ids=GOLDEN_RUNS) -> dict:
+    """A publication document with fixed ids: a summary table and a linear profiles figure
+    for each run, one run per ``analytes`` entry (``{"value", "label"?}``). For golden
+    tests of the report and deck sources (#75)."""
+    runs, items = [], []
+    for run_id, analyte in zip(run_ids, analytes, strict=True):
+        runs.append({"run_id": run_id, "analyte": {"column": "PARAM", "label": None} | analyte})
+        slug = (analyte.get("label") or analyte["value"]).lower().replace(" ", "-")
+        for artifact, kind, title, ext in (
+            ("summary", "table", "Summary of the parameters", "csv"),
+            ("profiles-linear", "figure", "Individual profiles (linear)", "png"),
+        ):
+            folder = "figures" if kind == "figure" else "tables"
+            items.append(
+                {
+                    "run_id": run_id,
+                    "artifact": artifact,
+                    "kind": kind,
+                    "title": title,
+                    "published_path": f"OUTPUTS/{folder}/{slug}_{run_id}_{artifact}.{ext}",
+                }
+            )
+    return {
+        "publication_id": "pub-20261104T090000Z-1a2b",
+        "label": "PARENT and METAB",
+        "runs": runs,
+        "items": items,
+    }

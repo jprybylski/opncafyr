@@ -60,7 +60,7 @@ Your progress is saved in the study folder, in `.opncafyr/study-profile.json`, s
 
 ## Record the step with a run or publication
 
-While you follow a profile, **Start analysis** and **Choose tables and figures** show **Study profile step (optional)**, set to **None**. If you choose a step there, the run or publication records the profile's name, version, file fingerprint (SHA-256) and step. That record is provenance only: it does not change the analysis, and a completed run is never changed afterwards. The **Run for slot** list marks runs made for that step, but you still choose the run yourself.
+While you follow a profile, **Start analysis** and **Choose tables and figures** show **Study profile step (optional)**, set to **None**. If you choose a step there, the run or publication records the profile's name, version, file fingerprint (SHA-256) and step. That record is provenance only: it does not change the analysis, and a completed run is never changed afterwards. The **Run for slot** list marks runs made for that step, but you still choose the run yourself. If a run step has a `suggested_label`, **Start analysis** shows it next to the step with a **Use this label** button; the label is only filled in when you select it.
 
 ## When the profile file changes
 

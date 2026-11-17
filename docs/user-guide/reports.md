@@ -11,7 +11,7 @@ A report that builds without errors shows that the files were assembled as recor
 1. Under **Publication**, choose a publication. Each shows its ID, its label and its analytes.
 2. Select **Set up report**. This runs as a job. When it finishes, the card says which publication `report` uses.
 
-The new report has one captioned table or figure for each published file, with footnotes taken from the files' descriptions.
+The new report has one captioned table or figure for each published file, with footnotes taken from the files' descriptions. They are grouped under one heading per analyte, named by the run's label. When two runs in the publication have the same label, each run gets its own heading, and the heading and captions add the end of its run ID, for example "PARENT (run ce4b)". To avoid this, label each run on **Start analysis** (see [Mapping and checks](mapping-and-checks.md)).
 
 To use a different publication later, choose it and select **Use this publication**. If you have edited the report text, the app asks first: **Replace report.qmd** starts again from the template, **Keep my report.qmd** keeps your text.
 

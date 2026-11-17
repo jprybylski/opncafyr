@@ -244,6 +244,7 @@ def test_dry_run_writes_nothing(api):
     assert r.status_code == 200
     plan = r.json()["plan"]
     assert plan["blocking"] is False and plan["report"]["findings"] == []
+    assert plan["shared_analyte_texts"] == []
     assert {i["status"] for i in plan["items"]} == {"new"}
     assert not (api.study / "OUTPUTS").exists()
     assert not (api.study / ".opncafyr" / "publications").exists()
@@ -311,6 +312,40 @@ def test_two_analytes_in_one_publication(api):
     names = sorted(i["published_path"] for i in doc["items"])
     assert len(set(names)) == 3
     assert any("metabolite-b" in n for n in names) and any("drug-a" in n for n in names)
+
+
+def test_checking_runs_with_the_same_analyte_label_warns_but_publishes(api):
+    """#75: two runs of one analyte with one label are named, not blocked."""
+    a, _ = completed_run(api.study, "PARENT", label="Parent drug")
+    b, _ = completed_run(api.study, "PARENT", label="parent drug.")  # looks the same
+    c, _ = completed_run(api.study, "METAB")
+    items = picks(a, ["summary"]) + picks(b, ["summary"]) + picks(c, ["summary"])
+    plan = post(api, items, dry_run=True).json()["plan"]
+    assert plan["shared_analyte_texts"] == [{"text": "Parent drug", "run_ids": [a, b]}]
+    assert plan["blocking"] is False and plan["report"]["findings"] == []
+    assert post(api, items).status_code == 201
+
+
+def test_run_display_names_the_run_only_when_texts_collide():
+    a, b, c = "20261103T142512Z-7c4e", "20261103T150000Z-1a2b", "20261104T090000Z-1a2b"
+    parent = {"column": "PARAM", "value": "PARENT"}
+    assert C.run_display([(a, parent), (b, {"column": "PARAM", "value": "METAB"})]) == {
+        a: "PARENT",
+        b: "METAB",
+    }
+    # An unlabelled value collides with another run's label of the same text.
+    labelled = {"column": "PARAM", "value": "P1", "label": "parent"}
+    assert C.run_display([(a, parent), (b, labelled)]) == {
+        a: "PARENT (run 7c4e)",
+        b: "parent (run 1a2b)",
+    }
+    # Two colliding runs that share the random suffix are named in full.
+    assert C.run_display([(a, parent), (b, parent), (c, parent)]) == {
+        a: "PARENT (run 7c4e)",
+        b: f"PARENT (run {b})",
+        c: f"PARENT (run {c})",
+    }
+    assert C.shared_analyte_texts([(a, parent)]) == []
 
 
 def test_an_interrupted_publish_records_nothing(api, monkeypatch):

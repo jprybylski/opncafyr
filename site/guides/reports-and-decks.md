@@ -42,7 +42,10 @@ The report is a quartifyr project in the study folder's `report` folder, made fr
 {: .expect }
 > "Setting up the report finished." The card says which publication `report/` uses, the button now reads **Use this publication**, and **Edit report** appears.
 
-The new report has one captioned table or figure for each published file, with footnotes taken from the files' description files.
+The new report has one captioned table or figure for each published file, with footnotes taken from the files' description files. They are grouped under one heading per analyte, named by the run's label.
+
+{: .note }
+> **Runs of the same analyte.** When two runs in the publication have the same label, for example two runs labelled "PARENT", each run gets its own heading, and its heading, captions and slide titles add the end of its run ID, such as "PARENT (run ce4b)". The publication **Check** warns about this. For a report that reads better, give each run its own label, such as `Fed` and `Fasted`, in **6. Start analysis**.
 
 {: .fix }
 > **"Choose a publication first."** — pick one under **Publication**. If the list is empty, publish first.
@@ -133,6 +136,8 @@ A table with an empty cell builds: the cell stays empty on the slide. opnca-r's 
 
 {: .expect }
 > "Setting up the deck finished." The card says which publication `deck/` uses, the button now reads **Use this publication**, and **Edit fragments** appears.
+
+Each slide title names the item and the run's label, such as "Parameter summary: PARENT". Runs labelled alike get the end of their run ID added, as in the report.
 
 The new deck is an "NCA results" deck: a title slide, then one slide for each published table or figure. Slide footers come from the files' description files.
 
