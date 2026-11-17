@@ -3,7 +3,9 @@
 Core knows three things about guidance, and nothing about what a workflow does:
 
 - **Targets**: named controls and cards on the home page (``data-target="<id>"``). Core
-  declares the shell's own (``shell.*``); each workflow pack declares its own.
+  declares the shell's own (``shell.*``); each workflow pack declares its own. A tool's
+  descriptor may declare controls inside its embedded web app (ADR 0013); the app marks
+  and outlines those itself when the launcher asks (``web/static/js/framebridge.js``).
 - **Conditions**: read-only milestones a page reports from its in-memory state, such as
   "a study folder is open". Guidance only asks whether one holds.
 - **Guidance files**: user-authored YAML (a tutorial, a study profile). They are data
@@ -24,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from opncafyr.core.manifest import load_schema, schema_problems
-from opncafyr.core.registry import GuideCondition, GuideTarget, WorkflowPack
+from opncafyr.core.registry import GuideCondition, GuideTarget, ToolDescriptor, WorkflowPack
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
 
 MAX_GUIDANCE_BYTES = 256_000
@@ -74,14 +76,20 @@ class Catalog:
     views: tuple[str, ...]
     # Pack ids, to tell a file's owner apart from a typo.
     owners: tuple[str, ...] = field(default=())
+    # Tool id -> display name, for the embedded apps that answer guidance (ADR 0013).
+    apps: dict[str, str] = field(default_factory=dict)
 
     def as_json(self) -> dict[str, Any]:
         return {
             "targets": [
-                {"id": t.id, "title": t.title, "view": t.view} for t in self.targets.values()
+                {"id": t.id, "title": t.title, "view": t.view, "app": t.app}
+                for t in self.targets.values()
             ],
-            "conditions": [{"id": c.id, "title": c.title} for c in self.conditions.values()],
+            "conditions": [
+                {"id": c.id, "title": c.title, "app": c.app} for c in self.conditions.values()
+            ],
             "views": list(self.views),
+            "apps": [{"id": k, "title": v} for k, v in self.apps.items()],
         }
 
     def unknown(self, refs: Iterable[tuple[str, str, str]]) -> list[str]:
@@ -98,12 +106,18 @@ class Catalog:
         ]
 
 
-def build_catalog(packs: Iterable[WorkflowPack]) -> Catalog:
-    """The catalog for the shell plus ``packs``. Refuses a duplicate or misplaced id."""
+def build_catalog(packs: Iterable[WorkflowPack], tools: Iterable[ToolDescriptor] = ()) -> Catalog:
+    """The catalog for the shell, ``packs`` and the web apps of ``tools``.
+
+    Refuses a duplicate or misplaced id. A tool's ids are declared in its descriptor for
+    the version the launcher pins, so a tutorial naming one is valid whether the app is
+    running or not; the running app confirms each one when asked (ADR 0013).
+    """
     targets: dict[str, GuideTarget] = {}
     conditions: dict[str, GuideCondition] = {}
     views = list(SHELL_VIEWS)
     owners: list[str] = []
+    apps: dict[str, str] = {}
 
     def add(owner: str, items: Iterable[Any], into: dict[str, Any], kind: str) -> None:
         for item in items:
@@ -134,7 +148,18 @@ def build_catalog(packs: Iterable[WorkflowPack]) -> Catalog:
             )
         add(pack.id, pack.targets, targets, "target")
         add(pack.id, pack.conditions, conditions, "condition")
-    return Catalog(targets, conditions, tuple(views), tuple(owners))
+    for tool in tools:
+        if not (tool.guidance_targets or tool.guidance_conditions):
+            continue
+        if tool.web_route is None:
+            raise GuidanceError(f"Tool {tool.id!r} declares guidance but has no web app.")
+        if tool.id == SHELL or tool.id in owners:
+            raise GuidanceError(f"Tool {tool.id!r} has the same id as a workflow pack.")
+        owners.append(tool.id)
+        apps[tool.id] = tool.display_name or tool.id
+        add(tool.id, tool.guidance_targets, targets, "target")
+        add(tool.id, tool.guidance_conditions, conditions, "condition")
+    return Catalog(targets, conditions, tuple(views), tuple(owners), apps)
 
 
 # --- Guidance files --------------------------------------------------------------------

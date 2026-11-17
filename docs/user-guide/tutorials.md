@@ -24,7 +24,15 @@ Some controls appear only after an earlier step. For example, **Import** shows o
 - **Look again** looks for it once more.
 - **Continue without highlight** keeps the directions without the ring.
 
-Inside an app with its own screens, such as opnca-r, the tutorial can't point at controls. It gives directions in the panel instead.
+## Inside opnca-r and the deck editor
+
+A step can also point at a control inside opnca-r or the deck editor, such as **Save to run folder** in opnca-r's Export view. The app outlines its own control, and the panel names it, for example "“Save to run folder (opnca-r Export)” is outlined in opnca-r." The tutorial never clicks, types or changes anything in the app, and never moves your focus into it.
+
+- If the app isn't open, the panel says which app the control is in. Open the app from the sidebar.
+- If the app is open but the control isn't on its screen, for example because the analysis hasn't run yet, you get the same **Look again** and **Continue without highlight** as on the app's own pages.
+- An older version of an app can't outline its controls. The panel then says to follow the directions in the step instead.
+
+A step can also wait on something opnca-r reports: **Next** is enabled once opnca-r has saved the results on its screen to the run folder.
 
 ## Write your own
 
@@ -62,5 +70,6 @@ Each step needs an `id`, a `title` and plain `text`. It can also name one `view`
 
 - **Views**: `home`, `data`, `jobs`, `settings`, `guide`, `tutorials`, `profile`, `analysis`, `publish`, `history`.
 - **Targets and conditions**: the same names as in a study profile. See [Study profiles](study-profiles.md#targets-and-hints). The left-side links are targets too, such as `shell.nav.data` or `shell.nav.analysis`. So are the jobs list (`shell.jobs.list`) and the bar above an embedded app (`shell.tool.toolstrip`).
+- **Inside the apps**: `opnca.nav.export` (Export in opnca-r's sidebar), `opnca.export.save` (Save to run folder), `deckifyr.session.save` (Save in the deck editor), `deckifyr.nav.build` (the deck editor's Build tab) and `deckifyr.build.run` (Build). The condition `opnca.run.saved` holds once opnca-r has saved the results on its screen. In the editor, **Point at** lists these under "Inside opnca-r" and "Inside deckifyr". A step that points inside an app doesn't need a `view`.
 
 A file can be at most 256 kB. Your place in a study's tutorial is kept by its file name. If the file changes, the panel says so and carries on from the same step if it still exists.

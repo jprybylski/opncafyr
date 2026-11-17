@@ -22,12 +22,12 @@ from opncafyr.core.guidance import (
     shipped_files,
 )
 from opncafyr.core.manifest import load_schema
-from opncafyr.core.registry import load_workflows
+from opncafyr.core.registry import load_descriptors, load_workflows
 from opncafyr.core.workspace import init_workspace, open_workspace
 from opncafyr.workflows.nca import study_profile as sp
 from publish_helpers import writable
 
-CATALOG = build_catalog(load_workflows())
+CATALOG = build_catalog(load_workflows(), load_descriptors().values())
 SECRET = "zz-secret.value"
 TUTORIAL_EXAMPLES = ("opncafyr.workflows.nca", "tutorials")
 

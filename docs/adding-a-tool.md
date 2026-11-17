@@ -244,6 +244,34 @@ prefix, run the base-path check from #16 (`docs/spikes/basepath.md`).
 The toy's child, `adapters/example_echo/server.py`, is about 120 lines of standard
 library code that does all of the above.
 
+**Tutorial highlights inside the app (optional, ADR 0013).** A tutorial can point at
+controls inside a tool's web app. The app outlines them itself; the launcher never reads
+or writes the app's page. Three things are needed:
+
+- **Markers and a listener in the app.** Mark each control with
+  `data-target="<tool id>.<name>"`. Answer `message` events only when
+  `event.origin === location.origin` and `event.source === window.parent`, and only in
+  the shape `{type: "guidance", v: 1, op, id, seq}`:
+  - `highlight` outlines the visible control and replies `"shown"`, or replies `"absent"`;
+  - `clear` removes the outline and gets no reply;
+  - `condition` replies `true` or `false`;
+  - an id the app doesn't have gets `"unknown"`.
+
+  Reply with `{type: "guidance-reply", v: 1, op, id, seq, state}` to `event.source`, with
+  `location.origin` as the target origin. Never move focus, change view, click or change
+  state. A repeated request for the control already outlined should change nothing,
+  because the launcher asks again while the step is open.
+- **Ids in the descriptor.** List the ids for the pinned version under
+  `web_app.guidance` (`targets` and `conditions`, each an `id` and a `title`). They join
+  the guidance catalog with `app: <tool id>`, so tutorials can name them while the app is
+  stopped.
+- **Ids in health.** The app's health response lists the same ids
+  (`guidance: {version: 1, targets, conditions}`). A test in `tests/integration` checks
+  that the pinned app has every declared id.
+
+An app version without the hook simply never replies. After a second the tutorial says
+so and falls back to its text. `tests/toy_child.py` has a minimal listener.
+
 ## 3b. Jobs
 
 A job is a command the launcher runs for the user in the background: a check, a render, a

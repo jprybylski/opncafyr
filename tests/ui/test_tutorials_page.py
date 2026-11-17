@@ -59,7 +59,7 @@ def test_walk_highlight_recover_and_navigate(tour):
     )
     page.get_by_role("button", name="Start Your first analysis").click()
     box = panel(page)
-    box.get_by_text("Step 1 of 11").wait_for()
+    box.get_by_text("Step 1 of 13").wait_for()
     assert page.url.endswith("#/")
     assert highlighted(page, ["shell.workspace.pick"]) == ["shell.workspace.pick"]
     # The folder is open in the seeded study, so Next is enabled.
@@ -67,7 +67,7 @@ def test_walk_highlight_recover_and_navigate(tour):
     assert focused_id(page, "tutorial-step-title") == "tutorial-step-title"
 
     box.get_by_role("button", name="Next").click()
-    box.get_by_text("Step 2 of 11").wait_for()
+    box.get_by_text("Step 2 of 13").wait_for()
     page.wait_for_url("**#/data")
     assert highlighted(page, ["shell.data.datasets"]) == ["shell.data.datasets"]
     # The step moved to another view; focus stays in the panel, not the view's heading.
@@ -75,7 +75,7 @@ def test_walk_highlight_recover_and_navigate(tour):
 
     # Step 3 points at Import, which shows only after a preview: explain and offer a way on.
     box.get_by_role("button", name="Next").click()
-    box.get_by_text("Step 3 of 11").wait_for()
+    box.get_by_text("Step 3 of 13").wait_for()
     box.get_by_text("isn't on the page right now").wait_for()
     assert box.get_by_role("button", name="Next").is_disabled()  # nothing imported yet
     box.get_by_text("Next is enabled when: the study has an imported data file.").wait_for()
@@ -83,11 +83,11 @@ def test_walk_highlight_recover_and_navigate(tour):
     assert box.get_by_text("isn't on the page right now").count() == 0
 
     box.get_by_role("button", name="Skip").click()
-    box.get_by_text("Step 4 of 11").wait_for()
+    box.get_by_text("Step 4 of 13").wait_for()
     page.wait_for_url("**#/analysis")
     assert highlighted(page, ["nca.recipe.card"]) == ["nca.recipe.card"]
     box.get_by_role("button", name="Back").click()
-    box.get_by_text("Step 3 of 11").wait_for()
+    box.get_by_text("Step 3 of 13").wait_for()
     page.wait_for_url("**#/data")
 
     # The walk changed nothing but the user's own progress.
@@ -111,7 +111,7 @@ def test_next_then_pause_saves_in_order(tour, home):
     page = tour
     page.get_by_role("button", name="Start Your first analysis").click()
     box = panel(page)
-    box.get_by_text("Step 1 of 11").wait_for()
+    box.get_by_text("Step 1 of 13").wait_for()
     with page.expect_response(is_pause_save):
         box.get_by_role("button", name="Next").click()
         box.get_by_role("button", name="Pause").click()
@@ -126,7 +126,7 @@ def test_pause_resume_after_reload_and_exit(tour, home):
     page.get_by_role("button", name="Start Your first analysis").click()
     box = panel(page)
     box.get_by_role("button", name="Next").click()
-    box.get_by_text("Step 2 of 11").wait_for()
+    box.get_by_text("Step 2 of 13").wait_for()
     with page.expect_response(is_pause_save):
         box.get_by_role("button", name="Pause").click()
     box.get_by_text("Paused. Resume to carry on from this step.").wait_for()
@@ -137,7 +137,7 @@ def test_pause_resume_after_reload_and_exit(tour, home):
     box.get_by_role("button", name="Resume").wait_for()
     assert box.is_visible() and highlighted(page) == []
     box.get_by_role("button", name="Resume").click()
-    box.get_by_text("Step 2 of 11").wait_for()
+    box.get_by_text("Step 2 of 13").wait_for()
     assert highlighted(page, ["shell.data.datasets"]) == ["shell.data.datasets"]
 
     page.locator("#tutorial-step-title").focus()
@@ -147,7 +147,7 @@ def test_pause_resume_after_reload_and_exit(tour, home):
     page.goto(page.url.split("#")[0] + "#/tutorials")
     page.get_by_text("Stopped at step “data”.").wait_for()
     page.get_by_role("button", name="Resume Your first analysis").click()
-    box.get_by_text("Step 2 of 11").wait_for()
+    box.get_by_text("Step 2 of 13").wait_for()
     box.get_by_role("button", name="Exit tutorial").click()
     box.wait_for(state="hidden")
     page.goto(page.url.split("#")[0] + "#/tutorials")  # Exit leaves you where you are
@@ -172,5 +172,106 @@ def test_tutorials_page_and_panel_axe(tour):
     page = tour
     _axe(page)
     page.get_by_role("button", name="Start Your first analysis").click()
-    panel(page).get_by_text("Step 1 of 11").wait_for()
+    panel(page).get_by_text("Step 1 of 13").wait_for()
     _axe(page)
+
+
+# --- controls inside an embedded app (ADR 0013, #77) --------------------------------------
+
+TOY_TOUR = """\
+schema_version: "1.0"
+id: toy-tour
+version: "1"
+title: Toy tour
+steps:
+  - id: send
+    title: Send the form
+    target: toy.form.send
+    wait_for: toy.form.sent
+    text: Open the toy app and select Send.
+  - id: hidden
+    title: A hidden control
+    target: toy.form.hidden
+    text: This control isn't on the toy app's screen.
+  - id: legacy
+    title: An old control
+    target: toy.legacy.thing
+    text: This version of the toy app doesn't answer for it.
+"""
+
+
+def toy_frame(page):
+    return page.frame_locator("iframe[data-app='toy']")
+
+
+def toy_ringed(page, wanted):
+    """The toy page's outlined controls, polled until they match ``wanted``."""
+    frame = page.frame_locator("iframe[data-app='toy']").locator(".ring")
+    for _ in range(40):
+        got = [frame.nth(i).get_attribute("data-target") for i in range(frame.count())]
+        if got == wanted:
+            return got
+        page.wait_for_timeout(100)
+    return got
+
+
+def test_a_step_inside_an_embedded_app(tour, home):
+    page = tour
+    (home.study / "tutorials").mkdir(exist_ok=True)
+    (home.study / "tutorials" / "toy-tour.yaml").write_text(TOY_TOUR, "utf-8")
+    page.get_by_role("button", name="Check again").click()
+    page.get_by_role("button", name="Start Toy tour").click()
+    box = panel(page)
+    box.get_by_text("Step 1 of 3").wait_for()
+
+    # The app isn't on screen: the panel says where the control is.
+    box.get_by_text("“Send (toy app)” is in toy, which isn't open right now.").wait_for()
+    assert box.get_by_role("button", name="Look again").is_visible()
+    assert box.get_by_role("button", name="Next").is_disabled()
+
+    # The user opens the app; the app outlines its own control, and the panel says so.
+    page.locator("a.nav-app[data-app='toy']").click()
+    page.wait_for_url("**#/apps/toy")
+    assert toy_ringed(page, ["toy.form.send"]) == ["toy.form.send"]
+    box.get_by_text("“Send (toy app)” is outlined in toy.").wait_for()
+    assert not box.get_by_role("button", name="Look again").is_visible()
+    assert highlighted(page) == []  # nothing on the launcher's own page
+    assert box.get_by_role("button", name="Next").is_disabled()
+
+    # The user presses Send in the app; the app reports the milestone and Next opens.
+    toy_frame(page).get_by_role("button", name="Send").click()
+    toy_frame(page).get_by_text("Sent").wait_for()
+    for _ in range(40):
+        if box.get_by_role("button", name="Next").is_enabled():
+            break
+        page.wait_for_timeout(100)
+    assert box.get_by_role("button", name="Next").is_enabled()
+
+    # A control the app has but isn't showing: recovery, and the old outline is gone.
+    box.get_by_role("button", name="Next").click()
+    box.get_by_text("Step 2 of 3").wait_for()
+    box.get_by_text("“Hidden (toy app)” isn't on toy's screen right now.").wait_for()
+    assert toy_ringed(page, []) == []
+    assert box.get_by_role("button", name="Continue without highlight").is_visible()
+
+    # An app version without the hook never answers: the panel falls back to its words.
+    box.get_by_role("button", name="Next").click()
+    box.get_by_text("Step 3 of 3").wait_for()
+    box.get_by_text("This version of toy can't outline its controls.").wait_for()
+    box.get_by_role("button", name="Continue without highlight").click()
+    assert box.get_by_text("can't outline its controls").count() == 0
+
+    # Every message the launcher sent was the fixed shape, from its own page.
+    body = page.frame_locator("iframe[data-app='toy']").locator("body")
+    for _ in range(20):
+        sent = body.evaluate("() => window.toyGuidance")
+        if any(m["op"] == "clear" for m in sent):
+            break
+        page.wait_for_timeout(100)
+    assert sent
+    for m in sent:
+        assert set(m) <= {"type", "v", "op", "id", "seq"}, m
+        assert m["type"] == "guidance" and m["v"] == 1
+        assert m["op"] in {"highlight", "clear", "condition"}
+    assert {m["op"] for m in sent} == {"highlight", "clear", "condition"}
+    assert page.errors == []

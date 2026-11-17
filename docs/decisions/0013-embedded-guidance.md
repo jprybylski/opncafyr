@@ -68,6 +68,9 @@ Two facts limit the design:
      element with a `hidden` ancestor counts as absent) and scrolls it into view.
    - **`clear`:** removes the ring.
    - **`condition`:** reads the child's own state.
+   - **Repeats:** the launcher repeats `highlight` while a step is open (about every
+     400 ms), so a request for the control already outlined must change nothing, and the
+     page scrolls only when the outline moves.
    - **What it must not do:** move focus, change view, click, submit or change state. A
      highlight is visual only, and the launcher's tutorial panel says the same in its
      live region for screen-reader users. The ring respects forced colours and reduced

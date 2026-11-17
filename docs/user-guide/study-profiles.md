@@ -138,6 +138,10 @@ A profile can't contain anything else. It has no place for code, web addresses, 
 | `nca.publications.card` | Publish: 2. Publications |
 | `nca.report.card`, `nca.deck.card` | Publish: 4. Report, 5. Deck |
 | `shell.workspace.pick`, `shell.data.datasets` | Home: Choose study folder, Data: the list of data files |
+| `opnca.nav.export`, `opnca.export.save` | Inside opnca-r: Export in its sidebar, Save to run folder |
+| `deckifyr.session.save`, `deckifyr.nav.build`, `deckifyr.build.run` | Inside the deck editor: Save, the Build tab, Build |
+
+**Go to** for a control inside opnca-r or the deck editor opens that app and asks it to outline the control for a few seconds. Your focus stays where it is.
 
 | Hint condition | Means |
 |---|---|
@@ -149,6 +153,7 @@ A profile can't contain anything else. It has no place for code, web addresses, 
 | `nca.checks.ready` | The checks ran for one analyte with nothing blocking |
 | `nca.run.created`, `nca.run.completed` | The study has a run, a completed run |
 | `nca.publication.recorded` | The study has a recorded publication |
+| `opnca.run.saved` | opnca-r has saved the results on its screen to the run folder |
 
 ## Several runs, one report
 

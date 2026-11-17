@@ -215,7 +215,7 @@ def create_app(
     project_files = ProjectFiles(installed, editors)
     packs = workflows if workflows is not None else load_workflows()
     # Targets, conditions and views guidance may name (ADR 0010); a clash stops the launch.
-    guidance = build_catalog(packs)
+    guidance = build_catalog(packs, installed.values())
     datasets = DatasetService(
         importers=[i for p in packs for i in p.importers],
         annotators=[a for p in packs for a in p.annotators],

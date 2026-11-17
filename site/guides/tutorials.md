@@ -34,7 +34,7 @@ Your place is saved by the app, so a reload or the next launch brings the tutori
 {: .fix }
 If the panel says a control isn't on the page right now, it may appear after an earlier step (for example, **Import** shows after a preview). Select **Look again**, or **Continue without highlight** to keep the directions without the ring.
 
-Inside an app with its own screens, such as opnca-r, a tutorial gives directions in the panel; it can't point at that app's controls.
+A step can also point at a control inside opnca-r or the deck editor, such as **Save to run folder**. The app outlines its own control, and the panel says so in words. The tutorial never clicks, types or moves your focus inside the app. If the app isn't open, the panel says which app to open. An older app version can't outline its controls, so the panel says to follow the step's directions. A step can also wait until opnca-r has saved the run on its screen.
 
 ## Write your own
 

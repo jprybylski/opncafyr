@@ -11,11 +11,39 @@ from typing import Any
 import httpx
 
 from opncafyr.core.adapter import ChildView, LaunchContext, LaunchSpec
+from opncafyr.core.registry import ToolDescriptor
 from opncafyr.core.runtime import Runtime
 from opncafyr.core.supervisor import Supervisor, WebAppConfig
 
 TOY_SCRIPT = Path(__file__).with_name("toy_child.py")
 TOKEN_HEADER = "X-Toy-Token"
+
+# The toy's descriptor, for tests that need its guidance ids in the catalog (ADR 0013).
+# "toy.legacy.thing" is declared but never answered, like an app without the hook.
+TOY_DESCRIPTOR = ToolDescriptor.from_mapping(
+    {
+        "schema_version": "1.0",
+        "id": "toy",
+        "version": 1,
+        "runtime": "python",
+        "capabilities": ["toy"],
+        "executables": ["python"],
+        "health": {"kind": "python_import", "executable": "python", "target": "json"},
+        "web_app": {
+            "route": "/apps/toy/",
+            "readiness": "/api/health",
+            "guidance": {
+                "targets": [
+                    {"id": "toy.form.send", "title": "Send (toy app)"},
+                    {"id": "toy.form.hidden", "title": "Hidden (toy app)"},
+                    {"id": "toy.legacy.thing", "title": "An old control (toy app)"},
+                ],
+                "conditions": [{"id": "toy.form.sent", "title": "The toy form was sent"}],
+            },
+        },
+    },
+    "toy descriptor",
+)
 
 
 class ToyAdapter:

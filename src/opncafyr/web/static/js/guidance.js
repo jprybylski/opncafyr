@@ -6,12 +6,16 @@
 //   page registers a function; guidance only asks whether it holds. A condition function
 //   must not fetch, post or change anything.
 // - notifyGuidance() tells whoever is waiting on a condition to look again.
+// - A target or condition whose catalog entry has "app" lives inside that embedded app
+//   (ADR 0013): the app outlines or answers it itself, through framebridge.js.
 
 import { getJSON } from "./api.js";
 import { emit } from "./dom.js";
+import { appClear, appCondition, appHighlight, appShown } from "./framebridge.js";
 
 const conditions = new Map();
 let catalog = null;
+const appOf = new Map(); // target or condition id -> the app it lives in
 
 export function markTarget(node, id) {
   node.dataset.target = id;
@@ -22,10 +26,14 @@ export function registerCondition(id, fn) {
   conditions.set(id, fn);
 }
 
-// true, false, or undefined when no page reports this condition (yet).
+// true, false, or undefined when no page reports this condition (yet). A condition an
+// embedded app reports is asked of the app; its answer arrives as "guidance-changed".
 export function checkCondition(id) {
   const fn = conditions.get(id);
-  if (!fn) return undefined;
+  if (!fn) {
+    const app = appOf.get(id);
+    return app ? appCondition(app, id) : undefined;
+  }
   try {
     return Boolean(fn());
   } catch (e) {
@@ -38,8 +46,22 @@ export function notifyGuidance() {
 }
 
 export async function guidanceCatalog() {
-  if (!catalog) catalog = await getJSON("api/guidance");
+  if (!catalog) {
+    catalog = await getJSON("api/guidance");
+    for (const item of [...catalog.targets, ...catalog.conditions]) {
+      if (item.app) appOf.set(item.id, item.app);
+    }
+  }
   return catalog;
+}
+
+// The embedded app a target lives in, or null for a launcher control.
+export const targetApp = (id) => appOf.get(id) || null;
+
+// An embedded app's display name, from the catalog.
+export function appName(app) {
+  const found = catalog && catalog.apps.find((a) => a.id === app);
+  return found ? found.title : app;
 }
 
 const isShown = (node) => node.isConnected && !node.closest("[hidden]") && node.getClientRects().length > 0;
@@ -60,6 +82,7 @@ export const viewHash = (view) => (view === "home" ? "#/" : `#/${view}`);
 export async function goToTarget(id) {
   const known = (await guidanceCatalog()).targets.find((t) => t.id === id);
   if (!known) return null;
+  if (known.app) return goToAppTarget(known);
   if (known.view && location.hash !== viewHash(known.view)) {
     location.hash = viewHash(known.view);
     // The router shows the view (and focuses its heading) on hashchange: wait for that, so
@@ -76,6 +99,19 @@ export async function goToTarget(id) {
 }
 
 const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
+const APP_OUTLINE_MS = 5000;
+
+// A control inside an embedded app: show the app and ask it to outline the control for a
+// few seconds. Focus stays where it is: the launcher never moves focus inside an app.
+async function goToAppTarget(known) {
+  const hash = `#/apps/${encodeURIComponent(known.app)}`;
+  if (location.hash !== hash) location.hash = hash;
+  for (let i = 0; i < 60 && !appShown(known.app); i++) await nextFrame();
+  const state = await appHighlight(known.app, known.id);
+  if (state !== "shown") return null;
+  setTimeout(() => appClear(known.app), APP_OUTLINE_MS);
+  return document.querySelector(`iframe[data-app="${CSS.escape(known.app)}"]`);
+}
 
 const FOCUSABLE ="a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]";
 

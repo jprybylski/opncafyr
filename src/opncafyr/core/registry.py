@@ -122,6 +122,9 @@ class ToolDescriptor:
     jobs: dict[str, JobContract] | None = None
     optional_requirements: tuple[OptionalRequirement, ...] = ()
     project_editor: ProjectEditorSpec | None = None
+    # Controls and milestones inside the web app that tutorials may name (ADR 0013).
+    guidance_targets: tuple[GuideTarget, ...] = ()
+    guidance_conditions: tuple[GuideCondition, ...] = ()
 
     @classmethod
     def from_mapping(
@@ -136,6 +139,7 @@ class ToolDescriptor:
         _check_references(data, source)
         jobs = _job_contracts(data, source, bundle)
         web = data.get("web_app") or {}
+        guide = web.get("guidance") or {}
         health = data["health"]
         editor = data.get("project_editor")
         return cls(
@@ -169,6 +173,12 @@ class ToolDescriptor:
                 )
                 if editor
                 else None
+            ),
+            guidance_targets=tuple(
+                GuideTarget(t["id"], t["title"], None, data["id"]) for t in guide.get("targets", ())
+            ),
+            guidance_conditions=tuple(
+                GuideCondition(c["id"], c["title"], data["id"]) for c in guide.get("conditions", ())
             ),
         )
 
@@ -215,6 +225,15 @@ def _check_references(data: dict[str, Any], source: str) -> None:
                     source,
                     f"optional_requirements[{i}].capabilities[{j}]",
                     f"{cap!r} is not a declared capability",
+                )
+    guide = (data.get("web_app") or {}).get("guidance") or {}
+    for kind in ("targets", "conditions"):
+        for i, item in enumerate(guide.get(kind, ())):
+            if not item["id"].startswith(f"{data['id']}."):
+                raise DescriptorError(
+                    source,
+                    f"web_app.guidance.{kind}[{i}].id",
+                    "must start with the tool id and a dot",
                 )
     editor = data.get("project_editor")
     if editor:
@@ -413,12 +432,15 @@ class GuideTarget:
 
     The page marks it with ``data-target="<id>"``. ``view`` is the view it lives in
     (``None`` when it is not tied to one view, such as an embedded app's toolstrip).
-    Ids are dotted and start with the owner: ``shell.`` for core, the pack id for a pack.
+    Ids are dotted and start with the owner: ``shell.`` for core, the pack id for a pack,
+    the tool id for a control inside an embedded app. ``app`` is that tool id: the app
+    marks and outlines the control itself, on the launcher's request (ADR 0013).
     """
 
     id: str
     title: str
     view: str | None = None
+    app: str | None = None
 
     def check(self, owner: str) -> None:
         if not GUIDE_ID_RE.match(self.id) or not self.id.startswith(f"{owner}."):
@@ -430,11 +452,13 @@ class GuideCondition:
     """A read-only milestone a page can report, such as "a run is completed".
 
     The page registers a function that reads its own in-memory state; guidance only asks
-    whether the condition holds and never changes anything.
+    whether the condition holds and never changes anything. ``app`` names the embedded app
+    that answers it instead (ADR 0013).
     """
 
     id: str
     title: str
+    app: str | None = None
 
     def check(self, owner: str) -> None:
         if not GUIDE_ID_RE.match(self.id) or not self.id.startswith(f"{owner}."):

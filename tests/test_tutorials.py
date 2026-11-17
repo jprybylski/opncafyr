@@ -14,12 +14,12 @@ from nca_helpers import make_study
 from opncafyr.core.app import create_app
 from opncafyr.core.guidance import build_catalog
 from opncafyr.core.manifest import load_schema, validate
-from opncafyr.core.registry import load_workflows
+from opncafyr.core.registry import load_descriptors, load_workflows
 from opncafyr.core.security import SESSION_HEADER
 from opncafyr.core.tutorials import examine
 from opncafyr.core.workspace import RecentWorkspaces
 
-CATALOG = build_catalog(load_workflows())
+CATALOG = build_catalog(load_workflows(), load_descriptors().values())
 EXAMPLE = "example/nca/first-analysis.yaml"
 STATIC = Path(str(resources.files("opncafyr.web").joinpath("static")))
 SECRET = "SUBJ-0042"

@@ -41,6 +41,14 @@ duplicate or misplaced ids. User-written guidance files (tutorials, study profil
 read through `core.guidance.parse_guidance`: size-capped, no YAML aliases, a closed schema,
 and every name checked against the catalog. They can't name code, URLs, endpoints or paths.
 
+A tool's descriptor may declare controls and milestones inside its web app
+(`web_app.guidance`, ADR 0013, #77). They join the catalog tagged with the tool id. For those
+ids, `web/static/js/framebridge.js` posts one fixed message shape to the app's own frame,
+with the launcher's origin as the target origin. The app outlines its own control or
+answers, and the bridge accepts a reply only from that frame's window on the same origin.
+It is the only core file that calls `postMessage`, and it never reads or writes the app's
+page.
+
 The registry (`core/registry.py`) reads descriptors only from the installed
 `opncafyr.adapters` package, never from a workspace or the working directory. A descriptor
 names its format (`schema_version: "1.0"`), the adapter's own `version`, its capabilities,
