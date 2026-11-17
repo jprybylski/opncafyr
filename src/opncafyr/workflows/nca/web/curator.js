@@ -47,7 +47,7 @@ export function initCurator(stack, state) {
       const shared = (out.plan.shared_analyte_texts || []).length;
       setStatus(sec.status, out.plan.blocking
         ? "This selection can't be published as it is; see below."
-        : `${items.length} file(s) ready to publish.${shared ? " See the warning below." : ""}`, out.plan.blocking);
+        : `${items.length} file(s) ready to publish.${shared ? " See the warning above." : ""}`, out.plan.blocking);
     } catch (e) {
       setStatus(sec.status, e.message, true);
     } finally {
