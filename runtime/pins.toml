@@ -257,18 +257,19 @@ commit = "66065c19a9aad1cf2cc4718aee9da013e6a3209f"
 license = "MIT"
 # Version history (#56, ADR 0008), in managed mode only. Pure R; its dependencies were
 # already in the lock. v0.2.0 (2026-11-08) released gitneighbr#35-#44 (PRs #45, #46);
-# v0.2.1 (PR #47) drops GitHub wording from the managed status summary. Tag v0.2.1 points
-# at a353093. Its release workflow replaces a release's tarball when a later
-# merge to main leaves VERSION unchanged, so pin only a release whose version was bumped
-# and expect a checksum mismatch, never a silent change, otherwise.
-version = "0.2.1"
+# v0.2.1 (PR #47) drops GitHub wording from the managed status summary. v0.2.2 (PR #51,
+# gitneighbr#50, #82) makes the 2-second status poll start one Git process instead of
+# about twenty. Tag v0.2.2 points at 429410c. Its release workflow replaces a release's
+# tarball when a later merge to main leaves VERSION unchanged, so pin only a release whose
+# version was bumped and expect a checksum mismatch, never a silent change, otherwise.
+version = "0.2.2"
 source = "github:jprybylski/gitneighbr"
-release_url = "https://github.com/jprybylski/gitneighbr/releases/download/v0.2.1/"
-commit = "a353093d82b6e46cf91a374f4e1b96450d08c780"
+release_url = "https://github.com/jprybylski/gitneighbr/releases/download/v0.2.2/"
+commit = "429410c4a84c106550610efcd6c3341603f716a1"
 
 [packages.gitneighbr.assets]
-"gitneighbr_0.2.1.tar.gz" = "cfe0e467837c59d61cdfaca786fcd6bbdd540ae1dc18632085ebdf91a87ad588"
-"SHA256SUMS" = "2121877aba60c17866cb7ae0ad3b0b3edca4a0e8a8dd67ae504c54bd59b7d7cf"
+"gitneighbr_0.2.2.tar.gz" = "5573db75c6df05d286620e483ebe6f6f04fcbebff4fff8f08c35bb6ebdd993eb"
+"SHA256SUMS" = "2cff376ec65185effe91f1b01ceb292164e7f5d2c04042dd3ed9f5dd1423b733"
 
 # --- Repair path only (ADR 0004) ---------------------------------------------------------
 # Never installed on a normal install. Only to build opnca_0.3.3-vendored.tar.gz when a
