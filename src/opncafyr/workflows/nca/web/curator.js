@@ -44,9 +44,10 @@ export function initCurator(stack, state) {
       showPlan(out.plan);
       checkedKey = out.plan.blocking ? null : key();
       publish.disabled = checkedKey === null;
+      const shared = (out.plan.shared_analyte_texts || []).length;
       setStatus(sec.status, out.plan.blocking
         ? "This selection can't be published as it is; see below."
-        : `${items.length} file(s) ready to publish.`, out.plan.blocking);
+        : `${items.length} file(s) ready to publish.${shared ? " See the warning above." : ""}`, out.plan.blocking);
     } catch (e) {
       setStatus(sec.status, e.message, true);
     } finally {
@@ -87,6 +88,14 @@ export function initCurator(stack, state) {
       el("span", i.published_path, "path"), el("span", i.run_id, "path"), i.contains_subject_ids ? "Yes" : "No",
       el("span", statusWord[i.status] || i.status, i.status === "conflict" ? "nca-danger" : ""),
     ]), "What would be published"));
+    // Runs whose analyte texts look the same (#75): a warning, never a block.
+    for (const g of p.shared_analyte_texts || []) {
+      const runs = g.run_ids.join(", ");
+      plan.append(el("p", `Warning: runs ${runs} have the same analyte label "${g.text}". ` +
+        "The report and deck will add each run's ID to its headings, captions and slide titles. " +
+        "To name them yourself, give each run its own label on Start analysis " +
+        '(for example "Fed" and "Fasted"); that makes a new run.', "nca-warn"));
+    }
     if (p.report.findings.length) {
       plan.append(table(["Level", "Check", "File", "Finding"], p.report.findings.map((f) => [
         f.severity === "error" ? "Blocks" : "Warning", f.check, el("span", f.path || "", "path"), f.message,

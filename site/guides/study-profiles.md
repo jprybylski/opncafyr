@@ -57,7 +57,7 @@ Progress is saved in the study folder, so it is still there the next time you op
   <figcaption>Each run slot holds a completed run you chose; the publication step checks that it holds exactly those runs.</figcaption>
 </figure>
 
-While you follow a profile, **Start analysis** and **Choose tables and figures** offer **Study profile step (optional)**, set to **None**. Choosing a step records the profile's name, version, fingerprint and step with the new run or publication, as provenance. It does not change the analysis.
+While you follow a profile, **Start analysis** and **Choose tables and figures** offer **Study profile step (optional)**, set to **None**. Choosing a step records the profile's name, version, fingerprint and step with the new run or publication, as provenance. It does not change the analysis. If a run step has a suggested label, such as `Fed`, **Start analysis** shows it with a **Use this label** button. The label is filled in only when you select the button; a label of its own for each run keeps reports and decks easy to read.
 
 ## When someone edits the profile
 

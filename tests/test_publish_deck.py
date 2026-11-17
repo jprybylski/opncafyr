@@ -15,7 +15,15 @@ from opncafyr.core.adapter import ChildActivity
 from opncafyr.core.manifest import validate
 from opncafyr.core.runtime import Runtime
 from opncafyr.core.supervisor import ChildState
-from publish_helpers import completed_run, picks, publish_client, wait_job, writable
+from opncafyr.workflows.nca.publish import deck as deck_flow
+from publish_helpers import (
+    completed_run,
+    fixed_publication,
+    picks,
+    publish_client,
+    wait_job,
+    writable,
+)
 
 pytestmark = pytest.mark.skipif(os.name == "nt", reason="the stand-in deckifyr is a shell script")
 FAKE = Path(__file__).parent / "fake_deckifyr.py"
@@ -188,6 +196,54 @@ def test_a_formatted_table_is_a_picture_slide_and_a_csv_table_a_native_one():
     assert "source" not in formatted
     native = doc["slides"][2]["elements"]["content"]
     assert native["type"] == "table" and native["source"] == "{rpfy}:a_b_summary.csv"
+
+
+def slide_texts(publication) -> list[tuple[str, str]]:
+    text = D.nca_results_presentation(
+        deck_flow.deck_items(publication), publication["publication_id"], None
+    )
+    return [
+        (s["elements"]["title"]["value"], s["elements"]["content"]["alt_text"])
+        for s in yaml.safe_load(text)["slides"][1:]
+    ]
+
+
+def test_a_deck_without_shared_analyte_texts_is_unchanged():
+    """Golden (#75): telling same-analyte runs apart changes nothing when no texts collide."""
+    pub = fixed_publication({"value": "PARENT", "label": "Parent drug"}, {"value": "METAB"})
+    a, b = "20261103T142512Z-7c4e", "20261103T150000Z-1a2b"
+    assert slide_texts(pub) == [
+        (
+            "Summary of the parameters: Parent drug",
+            f"Summary of the parameters for Parent drug, run {a}.",
+        ),
+        (
+            "Individual profiles (linear): Parent drug",
+            f"Individual profiles (linear) for Parent drug, run {a}.",
+        ),
+        ("Summary of the parameters: METAB", f"Summary of the parameters for METAB, run {b}."),
+        (
+            "Individual profiles (linear): METAB",
+            f"Individual profiles (linear) for METAB, run {b}.",
+        ),
+    ]
+
+
+def test_slides_of_runs_of_one_analyte_name_their_run():
+    """#75: slide titles stay distinct when two runs share an analyte text."""
+    a, b = "20261103T142512Z-7c4e", "20261103T150000Z-1a2b"
+    pub = fixed_publication(
+        {"value": "PARENT", "label": "Fed"}, {"value": "PARENT", "label": "fed"}
+    )
+    titles = [t for t, _ in slide_texts(pub)]
+    assert titles == [
+        "Summary of the parameters: Fed (run 7c4e)",
+        "Individual profiles (linear): Fed (run 7c4e)",
+        "Summary of the parameters: fed (run 1a2b)",
+        "Individual profiles (linear): fed (run 1a2b)",
+    ]
+    assert slide_texts(pub)[2][1] == f"Summary of the parameters for fed (run 1a2b), run {b}."
+    assert a in slide_texts(pub)[0][1]
 
 
 def test_an_unexpected_deckifyr_error_is_readable_and_names_the_exception():

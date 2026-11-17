@@ -85,6 +85,9 @@ The check lists **What would be published**, one line per file:
 {: .expect }
 > Every file shows **New copy** or **Already published (same bytes)**, and there are no **Sidecar findings**.
 
+{: .warning }
+> **"Runs … have the same analyte label …"** — two runs in the selection, for example fed and fasted runs of PARENT, would read the same in a report or deck. This doesn't block publishing: reports and decks then add each run's ID to its headings, captions and slide titles, such as "PARENT (run ce4b)". To name the runs yourself, make a new run of each with its own label, such as `Fed` and `Fasted`, in **6. Start analysis**, and publish those. A completed run's label can't change.
+
 {: .fix }
 > **"This selection can't be published as it is; see below."** — read the table. If a file shows **Name taken by different content**, don't overwrite or delete it by hand to make the name free: ask the person who supports opncafyr at your site, or make a new run, which gives new file names.
 

@@ -27,6 +27,20 @@ export function initChecks(stack, state) {
   const profileStep = profileStepField("run",
     "Records which step of the study profile this run is for. It does not change the analysis.");
 
+  // A run step's suggested label (#75), offered next to the step and never filled in on its
+  // own: the label is always the user's text.
+  const LABEL_HINT = "Reports and decks name the run by this label. Give runs of the same analyte " +
+    "different labels, such as \"Fed\" and \"Fasted\", so their tables and figures can be told apart.";
+  const suggestion = el("div", null, "nca-row");
+  suggestion.hidden = true;
+  profileStep.onChange((step) => {
+    suggestion.replaceChildren();
+    suggestion.hidden = !(step && step.suggested_label && labelInput);
+    if (suggestion.hidden) return;
+    suggestion.append(el("p", `This step suggests the label "${step.suggested_label}".`, "hint"),
+      button("Use this label", () => { labelInput.value = step.suggested_label; }, "btn btn-sm"));
+  });
+
   let analytes = null;
   let result = null;
   const acked = new Set();
@@ -180,7 +194,7 @@ export function initChecks(stack, state) {
     method = choice(BLQ_METHODS);
     method.addEventListener("change", updateStart);
     grid.append(field("BLQ method", method));
-    start.body.append(field("Label for this analyte (shown in reports)", label), grid, profileStep.node);
+    start.body.append(field("Label for this analyte (shown in reports)", label, LABEL_HINT), grid, profileStep.node, suggestion);
     blockedNote = el("p", null, "status");
     startButton = markTarget(button("Start analysis", startRun, "btn btn-primary"), "nca.start.button");
     start.body.append(blockedNote, startButton);

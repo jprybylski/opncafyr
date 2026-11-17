@@ -60,7 +60,7 @@ from opncafyr.core.provenance import base_tools
 from opncafyr.core.runtime import RuntimeUnavailable
 from opncafyr.core.standards import Material
 from opncafyr.paths import WORKSPACE_META_DIR, app_root
-from opncafyr.workflows.nca.publish import projects, sidecars, templates
+from opncafyr.workflows.nca.publish import curator, projects, sidecars, templates
 from opncafyr.workflows.nca.publish.curator import PublishError
 from opncafyr.workflows.nca.publish.rds_check import rds_findings
 
@@ -144,23 +144,21 @@ def write_sources(
 
 
 def write_report_qmd(project: Path, publication: dict[str, Any]) -> None:
-    runs = {r["run_id"]: r for r in publication["runs"]}
-
-    def analyte(run_id: str) -> str:
-        a = runs[run_id]["analyte"]
-        return a.get("label") or a["value"]
-
+    runs = [(r["run_id"], r["analyte"]) for r in publication["runs"]]
+    # Runs whose analyte texts look the same get their own heading and captions, each
+    # naming its run (#75); the run table already has a Run column, so it keeps the text.
+    shown = curator.run_display(runs)
     items = [
         Q.ReportItem(
             file_name=Path(i["published_path"]).name,
             kind=i["kind"],
             title=i.get("title") or i["artifact"],
-            analyte=analyte(i["run_id"]),
+            analyte=shown[i["run_id"]],
             run_id=i["run_id"],
         )
         for i in publication["items"]
     ]
-    rows = [{"run_id": r, "analyte": analyte(r)} for r in runs]
+    rows = [{"run_id": r, "analyte": curator.analyte_text(a)} for r, a in runs]
     text = Q.report_source(items, publication["publication_id"], publication.get("label"), rows)
     atomic_write_text(project / Q.REPORT_QMD, text + "\n")
     atomic_write_text(project / Q.QUARTO_YML, Q.QUARTO_PROJECT)

@@ -39,6 +39,8 @@ Runs saved by an earlier opnca-r keep their earlier names, such as "Parameter su
 3. Select **Check**. The app shows the name each file will have in `OUTPUTS`, which run it comes from, whether it shows subject IDs, and whether it is a **New copy** or **Already published (same bytes)**. Nothing is written yet.
 4. If the check is clean, select **Publish**. If you change the selection after checking, check again first.
 
+If two runs in the selection have the same analyte label, for example two runs labelled "PARENT", the check warns and names the label and the runs. You can still publish: reports and decks then add each run's ID to its headings, captions and slide titles, such as "PARENT (run ce4b)". To name the runs yourself, make a new run of each with its own label, such as `Fed` and `Fasted`, on **Start analysis**, and publish those.
+
 The message then names the new publication and counts its files and runs, for example "12 file(s) from 2 run(s)".
 
 ## What publishing does

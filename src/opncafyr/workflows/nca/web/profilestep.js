@@ -11,6 +11,11 @@ export function profileStepField(kind, hint) {
   wrap.hidden = true;
   const note = el("p", null, "hint");
   wrap.append(note);
+  let steps = [];
+  const listeners = [];
+  const step = () => steps.find((s) => s.id === select.value) || null;
+  const changed = () => listeners.forEach((cb) => cb(step()));
+  select.addEventListener("change", changed);
 
   async function refresh() {
     let current = null;
@@ -20,7 +25,7 @@ export function profileStepField(kind, hint) {
       current = null;
     }
     const usable = current && current.profile && !current.changed && !(current.problems || []).length;
-    const steps = usable ? current.profile.steps.filter((s) => s.type === kind) : [];
+    steps = usable ? current.profile.steps.filter((s) => s.type === kind) : [];
     const keep = select.value;
     select.replaceChildren(...choice(steps.map((s) => [s.id, s.title]), "", "None").children);
     select.value = steps.some((s) => s.id === keep) ? keep : "";
@@ -29,11 +34,13 @@ export function profileStepField(kind, hint) {
     note.textContent = !current || !current.selected ? ""
       : current.changed ? "The profile file changed: adopt it on the Study profile page to record a step."
       : !steps.length ? "The profile has no step of this kind." : "";
+    changed();
   }
 
   on("profile-changed", refresh);
   on("workspace-changed", refresh);
   on("view-changed", (route) => { if (route.name === "analysis" || route.name === "publish") refresh(); });
   refresh();
-  return { node: wrap, value: () => select.value || null };
+  // step(): the chosen step, or null. onChange(cb): called with it whenever it may change.
+  return { node: wrap, value: () => select.value || null, step, onChange: (cb) => listeners.push(cb) };
 }

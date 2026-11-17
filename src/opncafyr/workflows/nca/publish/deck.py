@@ -58,7 +58,7 @@ from opncafyr.core.provenance import base_tools
 from opncafyr.core.runtime import Runtime, RuntimeUnavailable
 from opncafyr.core.standards import Material
 from opncafyr.core.workspace import WorkspaceAccessError, resolve_in_root
-from opncafyr.workflows.nca.publish import projects, sidecars, templates
+from opncafyr.workflows.nca.publish import curator, projects, sidecars, templates
 from opncafyr.workflows.nca.publish.curator import PublishError
 from opncafyr.workflows.nca.publish.report import CHECKS_DIR
 
@@ -95,13 +95,14 @@ def _prepare(exc: Exception) -> JobPrepareError:
 
 
 def deck_items(publication: dict[str, Any]) -> list[D.DeckItem]:
-    runs = {r["run_id"]: r["analyte"] for r in publication["runs"]}
+    # Runs whose analyte texts look the same get slide titles naming their run (#75).
+    shown = curator.run_display((r["run_id"], r["analyte"]) for r in publication["runs"])
     return [
         D.DeckItem(
             file_name=Path(i["published_path"]).name,
             kind=i["kind"],
             title=i.get("title") or i["artifact"],
-            analyte=runs[i["run_id"]].get("label") or runs[i["run_id"]]["value"],
+            analyte=shown[i["run_id"]],
             run_id=i["run_id"],
         )
         for i in publication["items"]
