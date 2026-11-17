@@ -114,12 +114,11 @@ sha256 = "b0b0053baa1963b6d8a28c9642d50107ef9ce2f41c8b9a90e952846c8918b38a"
 # uses base R's install.packages() from that repository and checks every version against
 # renv.lock: renv::restore() runs `R CMD config CC`, which needs the Command Line Tools
 # (#7). The repository's source index lists every package (#6). The packages in
-# [packages.*] come from the renv cellar. Exception: P3M's macOS gdtools links XQuartz
-# (/opt/X11, admin install), so macOS gdtools comes from CRAN's self-contained build
-# (`origin = "cran"` in binaries.toml).
+# [packages.*] come from the renv cellar. Every other file comes from the dated P3M
+# snapshot, never from CRAN, which drops a binary when its package updates.
 lockfile = "runtime/r/renv.lock"
 binaries = "runtime/r/binaries.toml"
-repository = "https://packagemanager.posit.co/cran/2026-11-06"
+repository = "https://packagemanager.posit.co/cran/2026-11-16"
 renv = "1.3.1"            # must match renv in renv.lock
 
 # --- Quarto -----------------------------------------------------------------------------

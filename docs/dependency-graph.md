@@ -47,7 +47,7 @@ macOS) to build opnca_0.3.3-vendored.tar.gz
 | gitneighbr 0.2.1 | R ≥ 4.2; curl, fs, jsonlite, openssl, plumber2 ≥ 0.2.0, processx, R6, reqres; Git (the pinned `[optional.git]`, never `PATH`) | `[packages.gitneighbr]` source tarball and `SHA256SUMS` from its GitHub release (pure R) | Runs in managed mode only (`scripts/serve.R`, ADR 0008). Its dependencies were already in the lock. Its release workflow replaces a release's tarball when a later merge leaves `VERSION` unchanged, so only a bumped version is pinned. |
 | pyro 0.1.1 (external) | R ≥ 4.1; here, log4r, processx, rlang | `[packages.pyro]` source tarball (pure R) | Would curl-install uv and run `uv lock`/`uv sync` if asked to build a Python env; we never ask (the tools venv is passed in). Its bundled spec pins python-docx 1.1.2, PyYAML 6.0.2, Pillow 11.1.0 and needs Python ≥ 3.12. |
 | R 4.6.2 | Linux: the 36 shared libraries in `installer/linux_libs.py` (checked, never installed), glibc 2.39 | `[r]` CRAN installers; Linux: Posit's Ubuntu 24.04 `.deb` (`[ci.linux-*.r]`) | Windows: R's Inno Setup installer in `/CURRENTUSER` mode (#6). macOS: the `.pkg` payload is expanded and relocated to a space-free R root (#7). Linux: the `.deb` is unpacked in user space and relocated, and its library comes from Posit's noble binaries (#65). rig's user mode works without admin but downloads its own unpinned installer, so it isn't used. |
-| R packages | — | `[r_packages]`: `runtime/r/renv.lock` + `runtime/r/binaries.toml` | 130 packages: 126 from the P3M snapshot of 2026-11-06 plus the 4 cellar packages. 67 have compiled code, so users get **binaries** only. Installed with base R's `install.packages()` from a local repository and checked against the lock (renv's restore needs the Command Line Tools on macOS, #7). |
+| R packages | — | `[r_packages]`: `runtime/r/renv.lock` + `runtime/r/binaries.toml` | 131 packages: 126 from the P3M snapshot of 2026-11-16 plus the 5 cellar packages. 67 have compiled code, so users get **binaries** only. Installed with base R's `install.packages()` from a local repository and checked against the lock (renv's restore needs the Command Line Tools on macOS, #7). |
 | Quarto 1.11.9 | — | `[quarto]` macOS tarball (universal), Windows zip | `quarto add` is never run. |
 | Tools Python env | Python 3.13 | `[python_envs.tools]` (`runtime/python/tools/uv.lock`, 23 packages) | deckifyr `[web,preview]` + python-docx 1.1.2, PyYAML 6.0.2, Pillow 11.1.0 (pyro's pins, compatible with deckifyr's lower bounds), and pymupdf 1.28.2: pymupdf 2.x has no macOS x86_64 wheel. One env for deckifyr and for quartifyr/reportifyr, so pyro never creates one. |
 | Rust 1.99.1, Rtools45 | repair path only | `[rust]`, `[rtools]` | rustup-init (online) and standalone toolchain archives (offline). |
@@ -66,12 +66,13 @@ Posit Package Manager (P3M) snapshot. The same date always gives the same lock.
 that each macOS binary links nothing outside `/usr/lib`, `/System` and `R.framework`.
 
 Findings while pinning:
-- **P3M's macOS gdtools links XQuartz** (`/opt/X11/lib/libX11`, `libXrender`, …), which a
-  standard user cannot install. gdtools is needed by flextable, so by reportifyr. CRAN's
-  own macOS build of gdtools 0.5.3 is self-contained, so the two macOS gdtools files come
-  from CRAN (`origin = "cran"` in `binaries.toml`). CRAN keeps only the current binary,
-  so those two URLs break when gdtools is next updated; the offline bundle (#36) must
-  keep a copy, and the pin moves with the next snapshot.
+- **Every R package file comes from the dated snapshot, never from CRAN.** CRAN keeps only
+  the current build of a binary. P3M's macOS gdtools 0.5.3 linked XQuartz (`/opt/X11`),
+  which a standard user cannot install, so its two macOS files were pinned to CRAN's
+  self-contained build instead. CRAN removed them when gdtools 0.6.0 came out
+  (2026-11-13), which broke every macOS install. P3M's gdtools 0.6.0 links only system
+  libraries, so the snapshot moved to 2026-11-16 and the exception is gone. If a P3M
+  binary fails the `otool` check again, move the snapshot date or ask upstream.
 - Package binaries hard-code `/Library/Frameworks/R.framework` only in two places:
   `opnca.so` links `…/Versions/4.6/Resources/lib/libR.dylib` and `data.table` links
   `…/lib/libomp.dylib`. Everything else resolves R symbols at load time. The macOS
@@ -81,8 +82,9 @@ Findings while pinning:
 ## Regenerating and verifying
 
 ```sh
-# 1. Lock (no installs). <cellar> holds the pinned opnca, quartifyr, reportifyr, pyro, gitneighbr tarballs.
-Rscript --vanilla scripts/lock_r.R --snapshot 2026-11-06 --cellar <cellar>
+# 1. Lock (no installs). <cellar> holds the pinned opnca, quartifyr, reportifyr, pyro, gitneighbr tarballs
+#    (opnca as opnca_<version>.tar.gz: a copy of the -vendored tarball, whose DESCRIPTION is the same).
+Rscript --vanilla scripts/lock_r.R --snapshot 2026-11-16 --cellar <cellar>
 # 2. Pin every file per platform (downloads ~450 MB; --cache keeps them).
 uv run python scripts/pin_r_binaries.py --cache <dir>
 # 3. Tools env lock.

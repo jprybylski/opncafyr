@@ -18,13 +18,12 @@ in the output); the script fails when a download is not a binary built for the p
 Packages from the cellar (opnca, quartifyr, reportifyr, pyro, gitneighbr) are pinned in
 runtime/pins.toml instead.
 
-Some P3M macOS builds link libraries a standard user can't install: P3M's gdtools links
-XQuartz (/opt/X11), which needs an admin install. CRAN's own macOS build of the same
-version is self-contained, so the packages in CRAN_MACOS come from CRAN for macOS
-(``origin = "cran"``). CRAN keeps only the current version of a binary, so these URLs
-stop working when the package is updated; the bundle builder (#36) keeps a copy. On
-macOS, ``otool -L`` checks every downloaded macOS binary and the script fails if one
-links anything outside /usr/lib, /System or R.framework.
+Every file comes from the dated snapshot, never from CRAN itself: CRAN keeps only the
+current build of a binary, so a CRAN URL stops working when the package is next updated.
+On macOS, ``otool -L`` checks every downloaded macOS binary and the script fails if one
+links anything outside /usr/lib, /System or R.framework, such as XQuartz (/opt/X11), which
+a standard user can't install. If that happens, move the snapshot date or ask upstream;
+don't pin CRAN's own build (gdtools 0.5.3 was, until CRAN removed it).
 """
 
 from __future__ import annotations
@@ -66,11 +65,6 @@ LINUX_BUILT = {"linux-x86_64": "x86_64-pc-linux-gnu", "linux-aarch64": "aarch64-
 
 USER_AGENT = "opncafyr-pin/1"
 
-CRAN_MACOS = {"gdtools"}
-CRAN_MACOS_PATHS = {
-    "macos-arm64": "https://cran.r-project.org/bin/macosx/sonoma-arm64/contrib/{minor}",
-    "macos-x86_64": "https://cran.r-project.org/bin/macosx/big-sur-x86_64/contrib/{minor}",
-}
 ALLOWED_LINKS = (
     "/usr/lib/",
     "/System/",
@@ -191,8 +185,6 @@ def main() -> int:
                 base = f"{root_url}/{path.format(minor=minor, date=date)}"
             else:
                 base = f"{repo}/{path.format(minor=minor)}"
-            if name in CRAN_MACOS and platform in CRAN_MACOS_PATHS:
-                base = CRAN_MACOS_PATHS[platform].format(minor=minor)
             have = index(base).get(name)
             if have != version:
                 problems.append(f"{platform}: {name} {version} not in {base} (has {have})")
@@ -247,10 +239,8 @@ def main() -> int:
                 f'version = "{wanted[name]}"',
                 f'url = "{url}"',
                 f'sha256 = "{sha}"',
+                "",
             ]
-            if not url.startswith((repo, f"{root_url}/__linux__/")):
-                lines.append('origin = "cran"')
-            lines.append("")
     args.out.write_text("\n".join(lines), "utf-8")
     print(f"{args.out}: {len(results)} packages x {len(PLATFORMS)} platforms")
     return 0

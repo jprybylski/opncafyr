@@ -34,7 +34,7 @@ An online install downloads each pinned file from its original source, over HTTP
 | `https://github.com/` | Python, uv, Quarto, deckifyr, quartifyr, reportifyr and the other tool releases; the opnca-r release |
 | `https://files.pythonhosted.org/` | Python packages (wheels) |
 | `https://packagemanager.posit.co/` | R packages, from a dated snapshot |
-| `https://cran.r-project.org/` | R itself, and a few R package binaries |
+| `https://cran.r-project.org/` | R itself |
 | `https://downloadarchive.documentfoundation.org/` | LibreOffice (only with `--with-libreoffice`) |
 | `https://static.rust-lang.org/` | Rust (only for `repair --build-from-source`) |
 
@@ -118,7 +118,7 @@ If your site mirrors GitHub releases, PyPI files and CRAN (with Artifactory, Nex
 [mirrors]
 "https://github.com/" = "https://artifacts.example.org/github-releases/"
 "https://files.pythonhosted.org/" = "https://artifacts.example.org/pypi-files/"
-"https://packagemanager.posit.co/cran/2026-11-06/" = "https://artifacts.example.org/cran-snapshot/"
+"https://packagemanager.posit.co/cran/" = "https://artifacts.example.org/posit-cran/"
 "https://cran.r-project.org/" = "https://artifacts.example.org/cran/"
 ```
 

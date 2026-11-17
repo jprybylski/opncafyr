@@ -360,7 +360,7 @@ like), you don't need to carry a bundle. Describe the mirrors in a `mirror.toml`
 [mirrors]
 "https://github.com/" = "https://artifacts.example.org/github-releases/"
 "https://files.pythonhosted.org/" = "https://artifacts.example.org/pypi-files/"
-"https://packagemanager.posit.co/cran/2026-11-06/" = "https://artifacts.example.org/cran-snapshot/"
+"https://packagemanager.posit.co/cran/" = "https://artifacts.example.org/posit-cran/"
 "https://cran.r-project.org/" = "https://artifacts.example.org/cran/"
 ```
 

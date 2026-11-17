@@ -54,9 +54,6 @@ MOVING = re.compile(
     r"/(main|master|HEAD|latest)(/|$)|releases/latest|r-universe\.dev(?!/.+/[0-9a-f]{40})",
     re.IGNORECASE,
 )
-# Packages pinned from CRAN's own macOS build instead of the snapshot (binaries.toml
-# `origin = "cran"`; see scripts/pin_r_binaries.py).
-CRAN_BIN = "https://cran.r-project.org/bin/macosx/"
 CELLAR = ("opnca-r", "quartifyr", "reportifyr", "pyro", "gitneighbr")
 CELLAR_R_NAMES = {"opnca-r": "opnca"}
 # Release packages a platform binary must exist for, and how to spot it in a file name.
@@ -363,9 +360,9 @@ def _check_r_packages(
                     continue
                 if b["version"] != entry["Version"]:
                     errors.append(f"binaries.toml {name} {platform} is {b['version']}")
-                from_cran = b.get("origin") == "cran" and b["url"].startswith(CRAN_BIN)
+                # Only the dated snapshot: CRAN drops a binary when its package updates.
                 own = b["url"].startswith((f"{repo}/", f"{linux_repo}/"))
-                if not (own or from_cran) or not SHA_RE.match(b["sha256"]):
+                if not own or not SHA_RE.match(b["sha256"]):
                     errors.append(f"binaries.toml {name} {platform} has a bad url or sha256")
                 assets.append(
                     Asset(

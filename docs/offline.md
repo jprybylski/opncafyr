@@ -33,7 +33,7 @@ at its pinned release, and traced runs (`strace` in a Linux network namespace, W
 | I13 | Quarto | GitHub releases | Pinned (`[quarto.assets]`), extracted under the app root. | #5 |
 | I14 | Quarto extensions `quartifyr`, `A2-ai/quarto-plus` | `quarto add` from GitHub | Both ship inside the pinned quartifyr tarball. `quartifyr::install_quarto_extensions()` and `install_quartifyr_extension()` copy them into a report project. **Traced**: no attempts. `quarto add` is never run. | #32 |
 | I15 | Report and deck templates | `from_repo` git clones | Bundled templates only (ADR 0007): `from_dir` for quartifyr, the bundled minimal project for `deckifyr init`. | #32, #33 |
-| I16 | macOS `gdtools` binary | P3M's macOS build links XQuartz (`/opt/X11`, an admin install) | Pinned CRAN's self-contained build instead (`origin = "cran"` in `binaries.toml`). CRAN keeps only current binaries, so the offline bundle must keep its own copy. | #5, #36 |
+| I16 | macOS `gdtools` binary | P3M's 0.5.3 build linked XQuartz (`/opt/X11`, an admin install) | **Resolved**: P3M's gdtools 0.6.0 (snapshot 2026-11-16) links only system libraries, so it comes from the snapshot like every other package. The earlier CRAN-hosted pin broke when CRAN removed the 0.5.3 binaries. | #5, #36 |
 | I17 | LibreOffice (optional) | Vendor download | Optional pinned per-user download (`[optional.libreoffice]`, archive URLs), an optional component of offline bundles. Needs no network at install or run time. See [spikes/libreoffice.md](spikes/libreoffice.md). | #8, #36 |
 | I18 | Linux system libraries | apt | A native Linux install (#65) installs nothing: it checks the 36 libraries the stack links (`installer/linux_libs.py`) and names what an administrator must add. For the container and the CI job: The CI job installs them online before cutting the network (`container/apt/build.txt`). The container image (#42) installs them at the exact versions in `container/apt/lock-<platform>-<stage>.txt` in its online stages; the runtime install itself then runs with `--network=none`, and the final image needs no apt. | #42, #65 |
 | I19 | R `openssl` 2.5.0 built from source (Linux CI and container only) | Its `tools/cacert.R` tries to download `https://curl.se/ca/cacert.pem` during the build, and uses only the system CA bundle when that fails | **Traced** (2 DNS lookups by R running `--file=tools/cacert.R`). Non-fatal and can't be switched off, so it is an entry in `scripts/offline/allowed_attempts.toml`; still printed and recorded by the check. Desktop installs use the pinned binary, which doesn't run it. | #42, #44 |
@@ -191,8 +191,7 @@ firewall.
 `install.sh bundle` / `install.bat bundle` (and `opncafyr bundle`) write a bundle with
 every pinned file for a platform, the installer, a manifest, `SHA256SUMS`, an SPDX SBOM
 and a licence inventory ([install.md](install.md#offline-installation-for-it-administrators-36)).
-`install --from-bundle` installs from it and never touches the network. The bundle keeps
-its own copy of CRAN-only binaries such as macOS `gdtools` (I16).
+`install --from-bundle` installs from it and never touches the network.
 
 The `Installer` workflow builds the bundle twice per platform and compares the manifests.
 It then installs, updates and repairs from it as a standard user with the network

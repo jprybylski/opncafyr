@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **macOS install: R packages from the 2026-11-16 Posit snapshot.** CRAN removed the macOS
+  gdtools 0.5.3 binaries the installer pinned from CRAN itself (gdtools 0.6.0 came out on
+  2026-11-13), so every macOS install and the Installer workflow failed. Every R package
+  now comes from the dated P3M snapshot, never from CRAN: P3M's gdtools 0.6.0 no longer
+  links XQuartz, so the CRAN exception and `origin = "cran"` are gone, and `verify_pins.py`
+  refuses a package URL outside the snapshot. The new snapshot also brings flextable
+  0.10.4, ggplot2 4.0.4, officer 0.7.8 and otel 0.3.0. The mirror examples now map
+  `https://packagemanager.posit.co/cran/`, so they survive snapshot moves.
+
 ### Added
 - **Runs of the same analyte are told apart in reports and decks** (#75). When two runs in
   one publication have analyte texts that look the same (label, or exact value without

@@ -4,7 +4,7 @@
     "Repositories": [
       {
         "Name": "P3M",
-        "URL": "https://packagemanager.posit.co/cran/2026-11-06"
+        "URL": "https://packagemanager.posit.co/cran/2026-11-16"
       }
     ]
   },
@@ -197,7 +197,7 @@
     },
     "flextable": {
       "Package": "flextable",
-      "Version": "0.10.3",
+      "Version": "0.10.4",
       "Source": "Repository",
       "Repository": "P3M"
     },
@@ -233,7 +233,7 @@
     },
     "gdtools": {
       "Package": "gdtools",
-      "Version": "0.5.3",
+      "Version": "0.6.0",
       "Source": "Repository",
       "Repository": "P3M"
     },
@@ -251,7 +251,7 @@
     },
     "ggplot2": {
       "Package": "ggplot2",
-      "Version": "4.0.3",
+      "Version": "4.0.4",
       "Source": "Repository",
       "Repository": "P3M"
     },
@@ -388,7 +388,7 @@
     },
     "officer": {
       "Package": "officer",
-      "Version": "0.7.7",
+      "Version": "0.7.8",
       "Source": "Repository",
       "Repository": "P3M"
     },
@@ -405,7 +405,7 @@
     },
     "otel": {
       "Package": "otel",
-      "Version": "0.2.0",
+      "Version": "0.3.0",
       "Source": "Repository",
       "Repository": "P3M"
     },

@@ -1,6 +1,7 @@
 """scripts/verify_pins.py structure checks (no network)."""
 
 import importlib.util
+import re
 import shutil
 import sys
 import tomllib
@@ -183,8 +184,16 @@ def test_tools_lock_must_pin_the_deckifyr_wheel_hash(tree):
     assert any("does not pin deckifyr-0.3.7-py3-none-any.whl" in e for e in errors)
 
 
-def test_cran_binaries_only_with_origin(tree):
-    _edit(tree, "runtime/r/binaries.toml", 'origin = "cran"\n', "")
+def test_r_packages_come_only_from_the_snapshot(tree):
+    """CRAN drops a binary when its package updates, which broke macOS gdtools 0.5.3."""
+    pins = (tree / "runtime/r/binaries.toml").read_text("utf-8")
+    snapshot = re.search(r'^repository = "([^"]+)"', pins, re.MULTILINE).group(1)
+    _edit(
+        tree,
+        "runtime/r/binaries.toml",
+        f"{snapshot}/bin/macosx/sonoma-arm64/contrib/4.6/gdtools_",
+        "https://cran.r-project.org/bin/macosx/sonoma-arm64/contrib/4.6/gdtools_",
+    )
     errors, _ = _check(tree)
     assert any("gdtools macos-arm64 has a bad url" in e for e in errors)
 
